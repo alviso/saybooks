@@ -217,7 +217,11 @@ const server = http.createServer((req, res) => {
                : path.basename(p);
     const full = path.join(UI, file);
     if (full.startsWith(UI) && fs.existsSync(full) && fs.statSync(full).isFile()) {
-      return send(res, 200, fs.readFileSync(full), full.endsWith('.html') ? 'text/html; charset=utf-8' : 'text/plain');
+      const MIME = { '.html': 'text/html; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml',
+                     '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.ico': 'image/x-icon' };
+      // The social card may be cached hard; everything else stays no-store.
+      const headers = full.endsWith('.png') ? { 'cache-control': 'public, max-age=86400' } : {};
+      return send(res, 200, fs.readFileSync(full), MIME[path.extname(full)] || 'application/octet-stream', headers);
     }
   }
   return send(res, 404, { error: 'not found' });

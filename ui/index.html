@@ -1,5 +1,6 @@
 <!doctype html>
 <meta charset="utf-8"><title>Saybooks</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📒</text></svg>">
 <style>
   :root { --bg:#fbfbfa; --panel:#fff; --line:#e4e2dd; --ink:#1c1b19; --dim:#78736b; --accent:#2f5d50; --warn:#a33; --agent:#6b4fa8; }
   * { box-sizing:border-box }
@@ -267,9 +268,9 @@ async function render() {
   if (view === 'items') {
     head('Items', 'Stock cannot go negative; a short ship leaves the balance open on the order.');
     const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('item').forEach(b => bar.append(b)); main.append(bar);
-    const t = $('<table><thead><tr><th>SKU</th><th>Name</th><th class="num">Price</th><th class="num">On hand</th></tr></thead><tbody></tbody></table>');
-    for (const i of (await api('core_search', { q:'' })).items)
-      t.querySelector('tbody').append($(`<tr><td>${i.id}</td><td>${i.name}</td><td class="num">${cents(i.unit_price)}</td><td class="num">${i.on_hand}</td></tr>`));
+    const t = $('<table><thead><tr><th>SKU</th><th>Name</th><th class="num">Price</th><th class="num">On hand</th><th class="num">Tax</th></tr></thead><tbody></tbody></table>');
+    for (const i of REG.items)
+      t.querySelector('tbody').append($(`<tr><td>${i.id}</td><td>${i.name}${i.stocked ? '' : ' <span class="pill">service</span>'}</td><td class="num">${cents(i.unit_price)}</td><td class="num">${i.stocked ? i.on_hand : '—'}</td><td class="num">${i.tax_rate_bp ? (i.tax_rate_bp/100).toFixed(2)+'%' : '—'}</td></tr>`));
     main.append(t);
   }
   if (view === 'ar') {
