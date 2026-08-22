@@ -122,6 +122,7 @@ const server = http.createServer((req, res) => {
         orders: H.db().prepare(`SELECT o.*, c.name AS customer_name,
             (SELECT COALESCE(SUM(qty*unit_price),0) FROM order_line WHERE order_id = o.id) AS total
           FROM "order" o JOIN customer c ON c.id = o.customer_id ORDER BY o.id DESC`).all(),
+        items: H.db().prepare('SELECT * FROM item ORDER BY id').all(),
         lookups: {
           customer: H.db().prepare('SELECT id, name AS label FROM customer ORDER BY name').all(),
           item:     H.db().prepare('SELECT id, name AS label FROM item ORDER BY id').all(),
@@ -209,7 +210,11 @@ const server = http.createServer((req, res) => {
   }
 
   if (req.method === 'GET') {
-    const file = p === '/' ? 'index.html' : path.basename(p);
+    // In demo mode the root is the landing page and the workbench lives at /app;
+    // locally the root stays the workbench.
+    const file = p === '/' ? (DEMO ? 'landing.html' : 'index.html')
+               : (p === '/app' || p === '/app/') ? 'index.html'
+               : path.basename(p);
     const full = path.join(UI, file);
     if (full.startsWith(UI) && fs.existsSync(full) && fs.statSync(full).isFile()) {
       return send(res, 200, fs.readFileSync(full), full.endsWith('.html') ? 'text/html; charset=utf-8' : 'text/plain');

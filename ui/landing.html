@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saybooks — the books you can talk to, that stay books</title>
+<meta name="description" content="A conversational ERP where the agent and the interface are the same system: one command registry, one rulebook, one audit trail. Try the live demo — no signup.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#faf9f5; --panel:#ffffff; --ink:#23211c; --dim:#6e6960; --rule:#e4e1d8;
+  --green:#2f5d50; --green-soft:#e8efec; --agent:#6b4fa8; --agent-soft:#efe8f8;
+  --human:#2c5d84; --human-soft:#e4eef6; --warn:#8a3b2e; --warn-soft:#f6e7e3; --mono-bg:#f1efe9;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 17.5px/1.65 "Source Serif 4",Georgia,serif}
+.wrap{max-width:76ch;margin:0 auto;padding:0 24px}
+h1,h2,h3{font-family:"Libre Franklin",system-ui,sans-serif;text-wrap:balance}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+a{color:var(--green)}
+.btn{display:inline-block;font:600 15px "Libre Franklin",sans-serif;padding:11px 22px;border-radius:7px;
+  text-decoration:none;border:1.5px solid var(--green)}
+.btn.solid{background:var(--green);color:#fff}
+.btn.ghost{color:var(--green);background:transparent}
+.btn:hover{filter:brightness(1.08)}
+
+header.hero{padding:72px 0 46px;border-bottom:1px solid var(--rule)}
+.wordmark{font:700 15px "Libre Franklin",sans-serif;letter-spacing:.22em;color:var(--green);margin:0 0 30px}
+h1{font-size:clamp(34px,6vw,52px);font-weight:800;line-height:1.08;margin:0 0 18px;letter-spacing:-.015em}
+h1 .quiet{color:var(--dim);font-weight:700}
+.lede{font-size:20px;max-width:58ch;margin:0 0 30px;color:#3d3a34}
+.ctas{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.ctas .fine{font-size:13.5px;color:var(--dim)}
+
+section{padding:52px 0;border-bottom:1px solid var(--rule)}
+h2{font-size:26px;font-weight:700;margin:0 0 8px}
+.kicker{font:600 12px "Libre Franklin",sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--green);margin:0 0 10px}
+p{margin:0 0 15px}
+.sub{color:var(--dim)}
+
+/* the trail — real rows from a real session */
+.trail{background:var(--panel);border:1px solid var(--rule);border-radius:10px;overflow-x:auto;margin:22px 0 10px}
+.trail table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:560px}
+.trail td{padding:9px 14px;border-bottom:1px solid #f2f0ec;vertical-align:top}
+.trail tr:last-child td{border-bottom:none}
+.who{font:600 11px "Libre Franklin",sans-serif;padding:2px 9px;border-radius:4px;white-space:nowrap}
+.who.agent{background:var(--agent-soft);color:var(--agent)} .who.human{background:var(--human-soft);color:var(--human)}
+.trail .cmd{font-family:"IBM Plex Mono",monospace;font-size:12.5px;white-space:nowrap}
+.trail .why{color:var(--dim);font-size:13px}
+.trail .refused{color:var(--warn)}
+.caption{font-size:14px;color:var(--dim)}
+
+.refusal{background:var(--warn-soft);border-left:4px solid var(--warn);border-radius:0 8px 8px 0;
+  padding:18px 22px;margin:22px 0;font-family:"IBM Plex Mono",monospace;font-size:14px;line-height:1.6;color:#5c2418}
+
+.claims{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));margin-top:26px}
+.claim{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:20px 22px}
+.claim h3{font-size:16.5px;margin:0 0 8px}
+.claim p{font-size:14.5px;margin:0;color:#4a463f}
+.claim .proof{display:block;margin-top:12px;font-size:13px;color:var(--dim)}
+.claim .proof b{color:var(--green);font-weight:600}
+
+.story{counter-reset:beat;margin:24px 0 0;padding:0;list-style:none}
+.story li{display:grid;grid-template-columns:34px 1fr;gap:14px;padding:13px 0;border-bottom:1px solid var(--rule)}
+.story li:last-child{border-bottom:none}
+.story li::before{counter-increment:beat;content:counter(beat);font:700 14px "Libre Franklin",sans-serif;
+  color:var(--green);background:var(--green-soft);width:28px;height:28px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;margin-top:2px}
+.story b{font-weight:600}
+.story .aside{color:var(--dim);font-size:14.5px}
+
+.steps{display:grid;gap:14px;margin-top:24px}
+.step{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:16px 20px;display:grid;grid-template-columns:30px 1fr;gap:14px}
+.step .n{font:700 15px "Libre Franklin",sans-serif;color:var(--green)}
+.step p{margin:0;font-size:15.5px}
+.step code{background:var(--mono-bg);padding:2px 7px;border-radius:4px;font-size:12.5px;word-break:break-all}
+
+.honest{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-top:24px}
+.honest > div{border:1px solid var(--rule);border-radius:10px;padding:18px 22px;background:var(--panel)}
+.honest h3{font-size:15px;margin:0 0 10px}
+.honest ul{margin:0;padding-left:1.2em;font-size:14.5px}
+.honest li{margin-bottom:7px}
+.honest .not h3{color:var(--warn)}
+
+footer{padding:36px 0 56px;font-size:13.5px;color:var(--dim)}
+footer .mono{font-size:12px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <p class="wordmark">SAYBOOKS</p>
+  <h1>The books you can talk to.<br><span class="quiet">The books that stay books.</span></h1>
+  <p class="lede">Saybooks is an ERP where your agent and your interface are the same system —
+  one command registry, one rulebook, one audit trail. Tell Claude to ship the order, or click
+  the button. Same command, same rules, same record of who did what and why.</p>
+  <div class="ctas">
+    <a class="btn solid" href="/app">Try the live demo</a>
+    <a class="btn ghost" href="#refusal">Watch a rule refuse an agent</a>
+    <span class="fine">No signup. You get a private sandbox with example books; it resets daily.</span>
+  </div>
+</header>
+
+<section>
+  <p class="kicker">one log, two kinds of hands</p>
+  <h2>This is a real audit trail from a real session.</h2>
+  <p>The purple rows are Claude, connected over MCP. The blue rows are a person, clicking. They
+  are not two systems reconciled — they are one system, and the log can tell you, for any number
+  in the books, who put it there and the reason they gave.</p>
+  <div class="trail"><table>
+    <tr><td><span class="who agent">claude</span></td><td class="cmd">confirm_order</td><td class="why refused">✗ refused — Credit check failed for Contoso Ltd… Short by $1500.00</td></tr>
+    <tr><td><span class="who agent">claude</span></td><td class="cmd">invoice_shipped</td><td class="why">INV-0002, $400.00 — billed what shipped, never what was ordered</td></tr>
+    <tr><td><span class="who agent">claude</span></td><td class="cmd">ship_order</td><td class="why">the open 5 × Widget B — carrier left blank rather than invented</td></tr>
+    <tr><td><span class="who agent">claude</span></td><td class="cmd">receive_stock</td><td class="why">“Supplier delivery received; no PO reference supplied”</td></tr>
+    <tr><td><span class="who human">sam</span></td><td class="cmd">record_payment</td><td class="why">“bank feed — no remittance advice yet”</td></tr>
+    <tr><td><span class="who agent">claude</span></td><td class="cmd">apply_payment</td><td class="why">“remittance confirmed by their AP clerk on the phone”</td></tr>
+    <tr><td><span class="who human">sam</span></td><td class="cmd">invoice_shipped</td><td class="why">“billing what shipped, never what was ordered”</td></tr>
+  </table></div>
+  <p class="caption">Refusals are logged too — a blocked agent action is exactly the thing you want to be able to review later.</p>
+</section>
+
+<section id="refusal">
+  <p class="kicker">rules that refuse, in sentences</p>
+  <h2>When the agent asked to confirm an order past its credit limit, this happened:</h2>
+  <div class="refusal">Credit check failed for Contoso Ltd. Order $2500.00; available $1000.00
+  (limit $1000.00 less open AR $0.00 and committed $0.00). Short by $1500.00.</div>
+  <p>That sentence is written once, in the rule itself. The greyed-out button shows it as a
+  tooltip. The agent receives it verbatim and relays it. The test suite fails if they ever
+  differ. And the rule's own documentation tells the agent what <em>not</em> to do next:
+  don't split the order, don't invoice early, don't quietly raise the limit — report the
+  shortfall and let a person decide. In our sessions, that is what it does.</p>
+</section>
+
+<section>
+  <p class="kicker">why it can't drift</p>
+  <h2>Every capability is declared once. Everything else is derived.</h2>
+  <div class="claims">
+    <div class="claim">
+      <h3>Two surfaces, one declaration</h3>
+      <p>Each business act — confirm an order, apply a payment, write off a balance — is defined
+      one time. The agent's tool, the form in the UI, and its validation are all generated from
+      that single definition.</p>
+      <span class="proof"><b>Enforced:</b> a contract test asserts field-for-field parity. Hand-write a form and the build fails.</span>
+    </div>
+    <div class="claim">
+      <h3>A spec you can replay</h3>
+      <p>The order-to-cash area is governed by a written spec: 21 invariants, every act, every
+      lifecycle. Nine executable scenarios prove the implementation follows it — including the
+      refusals.</p>
+      <span class="proof"><b>See it:</b> the demo's Spec tab walks every scenario as filled-in forms, one step at a time, running live.</span>
+    </div>
+    <div class="claim">
+      <h3>Nothing writes off the record</h3>
+      <p>There is exactly one door to the books. A click and a tool call go through the same
+      command, the same guards, the same transaction — and land in the same log, with an actor.</p>
+      <span class="proof"><b>Including no:</b> a refused command is recorded with who asked and why it was refused.</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <p class="kicker">a governed agent, end to end</p>
+  <h2>The Contoso order, as it actually played out</h2>
+  <ol class="story">
+    <li><span><b>The gate refused the agent.</b> <span class="aside">Order $2,500 against a $1,000 limit — refusal logged, with the arithmetic.</span></span></li>
+    <li><span><b>The agent stopped and laid out options.</b> <span class="aside">Raise the limit, split, prepay, or decline — noting it had raised nothing and split nothing, and that Contoso had no payment history to justify more credit.</span></span></li>
+    <li><span><b>A person decided.</b> <span class="aside">The limit moved to $3,000 as its own logged act, with the approver's reason on the record, verbatim.</span></span></li>
+    <li><span><b>The same order confirmed.</b> <span class="aside">The earlier refusal stays in the log beside the approval — the trail you'd want when someone asks why the limit moved.</span></span></li>
+    <li><span><b>Asked to do something the books contradicted, it declined.</b> <span class="aside">Told to apply “the rest” of a payment that was already fully applied, it checked the log, found $0.00 unapplied, cited the evidence, and made no write. The books beat the prompt.</span></span></li>
+  </ol>
+</section>
+
+<section>
+  <p class="kicker">try it in two minutes</p>
+  <h2>Your sandbox is already waiting.</h2>
+  <div class="steps">
+    <div class="step"><span class="n">1</span><p><a href="/app">Open the demo</a>. You get a private set of books, seeded with a small
+    distributor's morning: a part-shipped order, an open invoice, cash without a remittance, and
+    one draft order left there deliberately — confirming it trips the credit gate. Try it.</p></div>
+    <div class="step"><span class="n">2</span><p>Point your own Claude at the same books. The sidebar shows your command —
+    <code>claude mcp add -t http saybooks https://saybooks.io/mcp/&lt;your-sandbox&gt;</code> —
+    or add the URL as a custom connector on claude.ai. Then just talk:
+    <em>“receive 20 Widget B and finish Northwind's order.”</em></p></div>
+    <div class="step"><span class="n">3</span><p>Keep the Audit trail tab open while you do. Watching your own words become
+    attributed, reasoned entries in a ledger — next to the human ones — is the product.</p></div>
+  </div>
+</section>
+
+<section>
+  <p class="kicker">plainly</p>
+  <h2>What Saybooks is, and isn't, today</h2>
+  <div class="honest">
+    <div>
+      <h3>IS</h3>
+      <ul>
+        <li>A working order-to-cash vertical: quotes, orders, a real credit gate, partial fulfilment and backorders, invoicing from fulfilment, returns and credit notes, cash application, write-offs, statements, aging.</li>
+        <li>Spec-governed: 21 invariants, 25 acts, 9 replayable conformance scenarios.</li>
+        <li>Calibrated for a 5–200 person company selling goods or services on account.</li>
+        <li>This demo — free to play with, wired for both hands.</li>
+      </ul>
+    </div>
+    <div class="not">
+      <h3>ISN'T — yet, or on purpose</h3>
+      <ul>
+        <li>Not multi-currency, multi-entity, or a tax engine — tax is captured and frozen per line; computing rates is an integration's job.</li>
+        <li>It never emails a customer, charges a card, or books a shipment. It records what happened. Outbound is other software's work.</li>
+        <li>Not a place for your real books today — the demo resets daily, and we'd rather tell you that here than let you find out.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p><b style="color:var(--ink)">Saybooks</b> — the books you can talk to, that stay books.</p>
+  <p class="mono">demo sandboxes are private, seeded, and swept daily · every quote on this page is verbatim from the system or a session transcript</p>
+</footer>
+
+</div>
+</body>
+</html>

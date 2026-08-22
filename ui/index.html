@@ -261,7 +261,7 @@ async function render() {
     head('Customers', 'Credit position is live: limit less open AR less the uninvoiced value of confirmed orders.');
     const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('customer').forEach(b => bar.append(b)); main.append(bar);
     const t = $('<table><thead><tr><th>Id</th><th>Name</th><th>Terms</th><th class="num">Limit</th><th class="num">Open AR</th><th class="num">Available</th></tr></thead><tbody></tbody></table>');
-    const rows = await Promise.all((await api('core_search', { q:'C-' })).customers.map(c => api('o2c_get_customer', { customer_id:c.id })));
+    const rows = await Promise.all(REG.lookups.customer.map(c => api('o2c_get_customer', { customer_id: c.id })));
     rowsInto(t, rows, r => `<td>${r.id}</td><td>${r.name}</td><td>${r.terms}</td><td class="num">${r.credit_limit_display}</td><td class="num">${r.open_balance_display}</td><td class="num">${r.credit_available_display}</td>`, 'customer');
   }
   if (view === 'items') {

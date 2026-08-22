@@ -23,7 +23,7 @@ function buildServer(workspace, demo) {
 
 You are connected to sandbox workspace "${workspace}" on the Saybooks hosted demo. It is private
 to whoever holds this URL, seeded with example data, and swept after 24 hours. The same sandbox
-is visible in the browser at https://saybooks.io/?ws=${workspace} — share that link with the
+is visible in the browser at https://saybooks.io/app?ws=${workspace} — share that link with the
 person you are working with and they will see your writes appear live, attributed to
 actor_kind=agent, in the same audit trail as their clicks. Play freely; nothing here is real.` : '';
 
