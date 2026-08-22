@@ -478,9 +478,18 @@ const boot = async () => {
   REG = await fetch(wsUrl('/api/registry')).then(r => r.json());
   const sel = document.getElementById('wsSel');
   if (REG.demo) {
+    const mcpUrl = location.origin + '/mcp/' + REG.workspace;
     sel.parentElement.innerHTML = `<div style="font-size:11px;color:var(--dim);line-height:1.6;border:1px solid var(--line);border-radius:6px;padding:8px 10px">
       <b style="color:var(--accent)">your sandbox</b><br>${REG.workspace}<br>private to you · swept after 24h
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><b style="color:var(--accent)">talk to it</b><br>
+      point Claude at this sandbox:<br>
+      <code style="font-size:10px;word-break:break-all;user-select:all">claude mcp add -t http saybooks ${mcpUrl}</code>
+      <button id="mcpCopy" style="margin-top:5px;font-size:11px;padding:3px 8px;width:100%">Copy command</button></div>
       <button id="demoReset" style="margin-top:6px;font-size:11px;padding:3px 8px;width:100%">Reset demo data</button></div>`;
+    document.getElementById('mcpCopy').onclick = (e) => {
+      navigator.clipboard.writeText('claude mcp add -t http saybooks ' + mcpUrl);
+      e.target.textContent = 'Copied ✓'; setTimeout(() => e.target.textContent = 'Copy command', 1500);
+    };
     document.getElementById('demoReset').onclick = async () => {
       await api('core_reset_workspace', { fixture: 'try', _reason: 'visitor reset their sandbox' });
       await boot(); render();

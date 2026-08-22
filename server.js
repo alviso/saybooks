@@ -32,11 +32,9 @@ const HOST = DEMO ? '0.0.0.0' : '127.0.0.1';
 const UI = path.join(__dirname, 'ui');
 const crypto = require('crypto');
 
-const newVisitorWs = () => {
-  const ws = `try-${crypto.randomBytes(5).toString('hex')}`;
-  require('./src/fixtures.js').load('try', ws);
-  return ws;
-};
+const sandboxExists = (name) => fs.existsSync(path.join(wsp.DATA_DIR, `ws_${name}.db`));
+const seedSandbox = (name) => { require('./src/fixtures.js').load('try', name); return name; };
+const newVisitorWs = () => seedSandbox(`try-${crypto.randomBytes(5).toString('hex')}`);
 
 if (DEMO) {
   // Sweep: sandboxes older than 24h go; if a crowd shows up, cap at the 400 newest.
@@ -62,7 +60,7 @@ const wsOf = (req, url) => {
   if (DEMO) {
     // Cookie only, and only try-* names: visitors cannot address each other's sandboxes.
     const m = /(?:^|;\s*)otc_ws=(try-[a-z0-9]+)/.exec(req.headers.cookie || '');
-    if (m && fs.existsSync(path.join(wsp.DATA_DIR, `ws_${m[1]}.db`))) return m[1];
+    if (m && sandboxExists(m[1])) return m[1];
     return newVisitorWs();
   }
   const q = url.searchParams.get('ws');
@@ -78,6 +76,30 @@ const server = http.createServer((req, res) => {
   if (!DEMO && !['127.0.0.1', 'localhost', '[::1]', '::1'].includes(host)) return send(res, 403, { error: 'localhost only' });
   const url = new URL(req.url, `http://${req.headers.host}`);
   const p = url.pathname;
+
+  // Hosted MCP: /mcp/<workspace>. The workspace is the URL — no cookie, no session store.
+  // In demo mode only try-* names are addressable, and an unknown one is seeded on first
+  // contact so an agent can arrive before a browser ever has.
+  const mcpMatch = /^\/mcp(?:\/([a-z0-9][a-z0-9_-]{0,40}))?$/.exec(p);
+  if (mcpMatch) {
+    let mws = mcpMatch[1] || (DEMO ? null : 'main');
+    if (DEMO) {
+      if (!mws || !/^try-[a-z0-9]{6,24}$/.test(mws)) {
+        return send(res, 404, { error: 'connect to /mcp/<your-sandbox> — the browser demo at https://saybooks.io shows your sandbox name, or invent one matching try-<6..24 lowercase alphanumerics>' });
+      }
+      if (!sandboxExists(mws)) seedSandbox(mws);
+    }
+    let raw = '';
+    req.on('data', c => { raw += c; if (raw.length > 4e6) req.destroy(); });
+    req.on('end', () => {
+      let body;
+      try { body = raw ? JSON.parse(raw) : undefined; } catch { return send(res, 400, { error: 'invalid JSON body' }); }
+      require('./src/mcp-http.js').handleMcp(req, res, body, mws, DEMO)
+        .catch(e => { if (!res.headersSent) send(res, 500, { error: e.message }); });
+    });
+    return undefined;
+  }
+
   const ws = wsOf(req, url);
   const cookie = { 'set-cookie': `otc_ws=${ws}; Path=/; SameSite=Lax` };
 
