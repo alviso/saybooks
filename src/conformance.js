@@ -65,10 +65,10 @@ const excerpt = (v, n = 400) => {
 };
 
 /** Run one scenario file in its scratch workspace; return the step-by-step evidence. */
-function runScenario(area, file, { actor = 'conformance' } = {}) {
+function runScenario(area, file, { actor = 'conformance', wsSuffix = '' } = {}) {
   const scenario = loadScenario(area, file);
   const { table } = actTable(area);
-  const ws = `spec-${area}-${file.replace(/\.json$/, '').replace(/[^a-z0-9_-]/gi, '')}`.toLowerCase();
+  const ws = `spec-${area}-${file.replace(/\.json$/, '').replace(/[^a-z0-9_-]/gi, '')}${wsSuffix}`.toLowerCase();
   wsp.wipe(ws);
   const ctx = { workspace: ws, actor, actor_kind: 'agent', session: `conformance:${file}` };
 

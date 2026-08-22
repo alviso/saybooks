@@ -88,4 +88,19 @@ function wipe(workspace) {
   handle.pragma('foreign_keys = ON');
 }
 
-module.exports = { registerMigrations, dbFor, use, db, currentName, list, wipe, DATA_DIR };
+/** Close an open handle and delete the workspace's files. Demo cleanup only. */
+function destroy(workspace) {
+  if (!NAME_RE.test(workspace)) return;
+  const h = open.get(workspace);
+  if (h) { try { h.close(); } catch {} open.delete(workspace); }
+  for (const ext of ['', '-shm', '-wal']) {
+    try { fs.unlinkSync(path.join(DATA_DIR, `ws_${workspace}.db${ext}`)); } catch {}
+  }
+}
+
+/** mtime of a workspace's db file, 0 if missing. */
+function ageOf(workspace) {
+  try { return fs.statSync(path.join(DATA_DIR, `ws_${workspace}.db`)).mtimeMs; } catch { return 0; }
+}
+
+module.exports = { registerMigrations, dbFor, use, db, currentName, list, wipe, destroy, ageOf, DATA_DIR };

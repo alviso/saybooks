@@ -18,8 +18,9 @@ function load(name, workspace) {
   const steps = JSON.parse(fs.readFileSync(file, 'utf8'));
   const { execute } = require('./registry.js');
   let n = 0;
-  for (const [command, args, reason] of steps) {
-    execute(command, args || {}, { workspace, actor: 'fixture', actor_kind: 'human', session: `fixture:${name}`, reason: reason || `fixture ${name}` });
+  for (const [command, args, reason, actor, actor_kind] of steps) {
+    execute(command, args || {}, { workspace, actor: actor || 'fixture', actor_kind: actor_kind || 'human',
+      session: `fixture:${name}`, reason: reason || `fixture ${name}` });
     n++;
   }
   return n;

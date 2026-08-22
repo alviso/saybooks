@@ -21,8 +21,37 @@ const H = require('./src/db.js');
 R.loadModules();
 
 const PORT = Number(process.env.OTC_PORT || 8140);
-const HOST = '127.0.0.1';
+/**
+ * Demo mode (OTC_DEMO=1): the hosted try-it deployment. Public bind; every visitor gets a
+ * private sandbox workspace seeded with a story (fixtures/try.json), pinned by cookie, never
+ * shown anyone else's data, and swept after 24h. The registry, guards and audit trail are the
+ * real ones — the demo IS the product, scoped to a throwaway database per visitor.
+ */
+const DEMO = process.env.OTC_DEMO === '1';
+const HOST = DEMO ? '0.0.0.0' : '127.0.0.1';
 const UI = path.join(__dirname, 'ui');
+const crypto = require('crypto');
+
+const newVisitorWs = () => {
+  const ws = `try-${crypto.randomBytes(5).toString('hex')}`;
+  require('./src/fixtures.js').load('try', ws);
+  return ws;
+};
+
+if (DEMO) {
+  // Sweep: sandboxes older than 24h go; if a crowd shows up, cap at the 400 newest.
+  const sweep = () => {
+    try {
+      const tries = wsp.list().filter(w => w.startsWith('try-'))
+        .map(w => ({ w, at: wsp.ageOf(w) })).sort((a, b) => b.at - a.at);
+      const cutoff = Date.now() - 24 * 3600 * 1000;
+      for (const t of tries.slice(400)) wsp.destroy(t.w);
+      for (const t of tries.slice(0, 400)) if (t.at < cutoff) wsp.destroy(t.w);
+    } catch (e) { console.error('sweep failed:', e.message); }
+  };
+  setInterval(sweep, 30 * 60 * 1000).unref();
+  sweep();
+}
 
 const send = (res, code, body, type = 'application/json; charset=utf-8', headers = {}) => {
   res.writeHead(code, { 'content-type': type, 'cache-control': 'no-store', ...headers });
@@ -30,6 +59,12 @@ const send = (res, code, body, type = 'application/json; charset=utf-8', headers
 };
 
 const wsOf = (req, url) => {
+  if (DEMO) {
+    // Cookie only, and only try-* names: visitors cannot address each other's sandboxes.
+    const m = /(?:^|;\s*)otc_ws=(try-[a-z0-9]+)/.exec(req.headers.cookie || '');
+    if (m && fs.existsSync(path.join(wsp.DATA_DIR, `ws_${m[1]}.db`))) return m[1];
+    return newVisitorWs();
+  }
   const q = url.searchParams.get('ws');
   if (q) return q;
   const m = /(?:^|;\s*)otc_ws=([a-z0-9_-]+)/.exec(req.headers.cookie || '');
@@ -38,7 +73,7 @@ const wsOf = (req, url) => {
 
 const server = http.createServer((req, res) => {
   const host = (req.headers.host || '').split(':')[0];
-  if (!['127.0.0.1', 'localhost', '[::1]', '::1'].includes(host)) return send(res, 403, { error: 'localhost only' });
+  if (!DEMO && !['127.0.0.1', 'localhost', '[::1]', '::1'].includes(host)) return send(res, 403, { error: 'localhost only' });
   const url = new URL(req.url, `http://${req.headers.host}`);
   const p = url.pathname;
   const ws = wsOf(req, url);
@@ -49,7 +84,8 @@ const server = http.createServer((req, res) => {
     if (req.method === 'GET' && p === '/api/registry') {
       return wsp.use(ws, () => send(res, 200, {
         workspace: ws,
-        workspaces: [...new Set([ws, ...wsp.list()])].filter(w => w === ws || !/^(spec-|test-)/.test(w)).sort(),
+        demo: DEMO,
+        workspaces: DEMO ? [ws] : [...new Set([ws, ...wsp.list()])].filter(w => w === ws || !/^(spec-|test-|try-)/.test(w)).sort(),
         doctrine: R.instructions(BASE),
         modules: R.MODULES.map(m => ({ name: m.name, doctrine: m.doctrine.trim() })),
         commands: R.formSpec(),
@@ -81,8 +117,10 @@ const server = http.createServer((req, res) => {
       const area = url.searchParams.get('area') || 'o2c';
       const file = url.searchParams.get('file');
       try {
-        const result = C.runScenario(area, file, { actor: process.env.USER || 'operator' });
-        C.runArea(area, { actor: process.env.USER || 'operator' });   // refresh persisted evidence
+        const result = C.runScenario(area, file, { actor: DEMO ? 'visitor' : (process.env.USER || 'operator'),
+          wsSuffix: DEMO ? `-${crypto.randomBytes(3).toString('hex')}` : '' });
+        if (!DEMO) C.runArea(area, { actor: process.env.USER || 'operator' });   // refresh persisted evidence
+        else wsp.destroy(result.workspace);                                      // demo scratch: replay, show, discard
         return send(res, 200, result);
       } catch (e) { return send(res, 400, { error: e.message }); }
     }
@@ -131,5 +169,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`otc workbench → http://${HOST}:${PORT}   (workspaces in ${wsp.DATA_DIR})`);
+  console.log(`${DEMO ? 'Saybooks demo' : 'otc workbench'} → http://${HOST}:${PORT}   (workspaces in ${wsp.DATA_DIR})`);
 });
