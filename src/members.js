@@ -53,7 +53,7 @@ const resolve = (token) => {
 };
 
 const list = (workspace) => db().prepare(
-  'SELECT name, role, created_at, revoked_at, substr(token, 1, 6) || "…" AS token_hint FROM member WHERE workspace = ? ORDER BY created_at').all(workspace);
+  "SELECT name, role, created_at, revoked_at, substr(token, 1, 6) || '…' AS token_hint FROM member WHERE workspace = ? ORDER BY created_at").all(workspace);
 
 function revoke(workspace, name) {
   const r = db().prepare('UPDATE member SET revoked_at = ? WHERE workspace = ? AND lower(name) = lower(?) AND revoked_at IS NULL')
