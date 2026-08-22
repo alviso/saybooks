@@ -1,0 +1,37 @@
+{
+  "name": "pursuit ends where trading begins",
+  "spec": "crm@0.1",
+  "notes": "CRM-6/7 (reasoned statuses, nothing deleted), CRM-5 (occurred_at), CRM-8 (promotion: won only, once, via core's API). The bridge between areas, as a logged act.",
+  "env": [],
+  "steps": [
+    { "act": "add_account", "args": { "name": "Northwind Traders", "why_them": "existing global JobCTRL customer opening a US region",
+        "trigger_event": "US subsidiary registered in Delaware, April 2026", "source_url": "https://example.com/nw-filing" },
+      "expect": { "ok": true } },
+    { "act": "set_account_status", "args": { "account": "A-0001", "status": "researching" }, "expect": { "ok": true } },
+    { "act": "log_activity", "args": { "account": "A-0001", "occurred_at": "2026-08-10",
+        "summary": "intro call with their US GM; wants a pilot scoped by October", "medium": "call", "direction": "outbound" },
+      "expect": { "ok": true },
+      "notes": "CRM-5: it happened on the 10th; today is when it got typed — the record keeps the 10th" },
+
+    { "act": "set_account_status", "args": { "account": "A-0001", "status": "excluded" },
+      "expect": { "refused": "reason" },
+      "notes": "CRM-7: killing a researched account without saying why is refused — the list's value is that every change to it can be read back" },
+
+    { "act": "promote_to_customer", "args": { "account": "A-0001" },
+      "expect": { "refused": "won" },
+      "notes": "CRM-8: promotion is for won accounts — pursuit and trade have a boundary, and this is it" },
+
+    { "act": "set_account_status", "args": { "account": "A-0001", "status": "approaching" }, "expect": { "ok": true } },
+    { "act": "set_account_status", "args": { "account": "A-0001", "status": "active" }, "expect": { "ok": true } },
+    { "act": "set_account_status", "args": { "account": "A-0001", "status": "won", "reason": "pilot signed 2026-08-20" },
+      "expect": { "ok": true } },
+    { "act": "promote_to_customer", "args": { "account": "A-0001", "terms": "net30", "credit_limit": 2000000 },
+      "expect": { "ok": true },
+      "notes": "creates the core customer through core's exported API — one logged act marking where crm's job ends and o2c's begins" },
+    { "act": "account", "args": { "account": "A-0001" },
+      "expect": { "ok": true, "include": { "status": "won" } } },
+    { "act": "promote_to_customer", "args": { "account": "A-0001" },
+      "expect": { "refused": "already" },
+      "notes": "CRM-8: at most once — the link exists; a second customer would be a reconciliation problem wearing a convenience" }
+  ]
+}
