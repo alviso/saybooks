@@ -1,0 +1,30 @@
+{
+  "name": "tax is frozen at issuance; the statement adds up",
+  "spec": "o2c@0.1",
+  "notes": "INV-14 (tax snapshot), INV-15 (due date from terms), INV-8 (statement shows payments, not applications). The billing math a controller will re-check by hand exactly once.",
+  "env": [
+    ["create_customer", { "name": "Wingtip Ltd", "terms": "net30", "credit_limit": 2000000 }],
+    ["create_item", { "sku": "TAXED-W", "name": "Taxed widget", "unit_price": 10000, "on_hand": 20, "tax_rate_bp": 875 }, "8.75% default rate — determination is freedom, capture is contract"]
+  ],
+  "steps": [
+    { "act": "create_order", "args": { "customer": "C-0001", "lines": [ { "item": "TAXED-W", "qty": 10 } ] },
+      "expect": { "ok": true, "include": { "total": 100000 } },
+      "notes": "order totals are net — tax is a billing fact, not an ordering fact, because the rate belongs to the moment of issuance" },
+    { "act": "confirm_order", "args": { "order": "SO-0001" }, "expect": { "ok": true } },
+    { "act": "fulfil_order", "args": { "order": "SO-0001" }, "expect": { "ok": true, "include": { "open_qty": 0 } } },
+    { "act": "invoice_fulfilled", "args": { "order": "SO-0001" },
+      "expect": { "ok": true, "include": { "subtotal": 100000, "tax_total": 8750, "total": 108750 } },
+      "notes": "INV-14: 8.75% snapshotted per line at issuance. If the rate changes tomorrow, this invoice never moves" },
+    { "act": "record_payment", "args": { "customer": "C-0001", "amount": 50000, "method": "ach", "reference": "ACH-9001" }, "expect": { "ok": true } },
+    { "act": "apply_payment", "args": { "payment": "P-0001", "invoice": "INV-0001" }, "expect": { "ok": true } },
+    { "act": "invoice", "args": { "invoice": "INV-0001" },
+      "expect": { "ok": true, "include": { "status": "open", "open": 58750 } },
+      "notes": "short-paid and honestly so: the invoice stays open for the difference — resolved by credit note if justified, dunning if not, never fudged" },
+    { "act": "ar_aging", "args": {},
+      "expect": { "ok": true, "include": { "total": "$587.50" } },
+      "notes": "the aging is net of nothing (INV-8): unapplied cash lives in its own view, so this number is what customers actually owe" },
+    { "act": "customer_statement", "args": { "customer": "C-0001", "from": "2000-01-01", "to": "2099-12-31" },
+      "expect": { "ok": true, "include": { "opening": 0, "closing": 58750 } },
+      "notes": "balance-forward: opening + invoices − credits − payments = closing. The monthly document, minus the envelope" }
+  ]
+}

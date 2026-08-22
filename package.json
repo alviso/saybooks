@@ -1,0 +1,23 @@
+{
+  "name": "otc",
+  "version": "0.2.0",
+  "description": "Modular ERP skeleton. One command registry per module; MCP tools, UI forms and the audit log all derived. A workspace (database) per contributor.",
+  "type": "commonjs",
+  "private": true,
+  "bin": {
+    "otc-mcp": "./mcp-server.js"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "mcp": "node mcp-server.js",
+    "demo": "node demo.js",
+    "test": "node test/contract.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.0",
+    "better-sqlite3": "^11.10.0"
+  }
+}

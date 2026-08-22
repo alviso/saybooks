@@ -1,0 +1,375 @@
+<!doctype html>
+<meta charset="utf-8"><title>otc — order to cash</title>
+<style>
+  :root { --bg:#fbfbfa; --panel:#fff; --line:#e4e2dd; --ink:#1c1b19; --dim:#78736b; --accent:#2f5d50; --warn:#a33; --agent:#6b4fa8; }
+  * { box-sizing:border-box }
+  body { margin:0; font:14px/1.5 ui-sans-serif,-apple-system,"Segoe UI",sans-serif; color:var(--ink); background:var(--bg); display:flex; height:100vh }
+  nav { width:190px; border-right:1px solid var(--line); padding:18px 0; background:var(--panel); flex:none }
+  nav h1 { font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); margin:0 0 14px 18px; font-weight:600 }
+  nav a { display:block; padding:7px 18px; cursor:pointer; color:var(--ink); text-decoration:none }
+  nav a:hover { background:var(--bg) } nav a.on { background:var(--bg); border-left:3px solid var(--accent); padding-left:15px; font-weight:600 }
+  main { flex:1; overflow:auto; padding:26px 30px }
+  h2 { margin:0 0 4px; font-size:20px } .sub { color:var(--dim); margin-bottom:18px; font-size:13px }
+  table { border-collapse:collapse; width:100%; background:var(--panel); border:1px solid var(--line); border-radius:7px; overflow:hidden }
+  th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--dim); padding:9px 12px; border-bottom:1px solid var(--line); font-weight:600 }
+  td { padding:9px 12px; border-bottom:1px solid #f2f0ec } tr:last-child td { border-bottom:none }
+  tbody tr { cursor:pointer } tbody tr:hover { background:#f7f6f3 }
+  .num { text-align:right; font-variant-numeric:tabular-nums }
+  .pill { font-size:11px; padding:2px 8px; border-radius:20px; background:#eee; color:#555 }
+  .pill.confirmed,.pill.sent { background:#e4eef6; color:#2c5d84 } .pill.shipped { background:#e8f0e2; color:#3e6b2b }
+  .pill.closed,.pill.paid,.pill.accepted { background:#e2ece8; color:var(--accent) } .pill.cancelled,.pill.void { background:#f2e3e3; color:var(--warn) }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:7px; padding:18px; margin-bottom:16px }
+  .kv { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px 22px }
+  .kv div span { display:block; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--dim) }
+  button { font:inherit; padding:6px 13px; border:1px solid var(--line); background:var(--panel); border-radius:6px; cursor:pointer }
+  button:hover:not(:disabled) { border-color:var(--accent); color:var(--accent) }
+  button:disabled { opacity:.42; cursor:not-allowed }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent) }
+  .acts { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px }
+  dialog { border:1px solid var(--line); border-radius:9px; padding:0; width:min(560px,92vw); box-shadow:0 18px 50px #0002 }
+  dialog header { padding:16px 20px 12px; border-bottom:1px solid var(--line) } dialog header b { font-size:16px }
+  .help { white-space:pre-wrap; font-size:12.5px; color:var(--dim); margin-top:8px; border-left:2px solid var(--line); padding-left:10px }
+  form { padding:18px 20px; max-height:58vh; overflow:auto } dialog footer { padding:12px 20px; border-top:1px solid var(--line); display:flex; gap:8px; justify-content:flex-end }
+  label { display:block; margin-bottom:13px } label b { font-weight:600; display:block; margin-bottom:3px } label i { font-style:normal; color:var(--dim); font-size:12px; display:block; margin-bottom:4px }
+  input,select,textarea { font:inherit; width:100%; padding:6px 9px; border:1px solid var(--line); border-radius:5px; background:var(--bg) }
+  .req b:after { content:" *"; color:var(--warn) }
+  .lines td { padding:4px } .lines input,.lines select { padding:4px 6px }
+  .err { color:var(--warn); padding:0 20px 10px; white-space:pre-wrap }
+  .who { font-size:11px; padding:1px 7px; border-radius:4px; font-weight:600 }
+  .who.human { background:#e4eef6; color:#2c5d84 } .who.agent { background:#efe8f8; color:var(--agent) }
+  .doc { font-size:12.5px; color:var(--dim); white-space:pre-wrap; line-height:1.6 }
+  .badge { font-size:11px; font-weight:600; padding:2px 9px; border-radius:20px }
+  .badge.pass { background:#e2ece8; color:var(--accent) } .badge.fail { background:#f2e3e3; color:var(--warn) }
+  .step { border-left:3px solid var(--line); padding:8px 12px; margin:8px 0; font-size:13px }
+  .step.pass { border-left-color:#7fae94 } .step.fail { border-left-color:var(--warn) }
+  .step .hd { display:flex; gap:8px; align-items:baseline; flex-wrap:wrap }
+  .step .act-name { font-weight:600 } .step .cmd { color:var(--dim); font-size:12px }
+  .step .teach { color:var(--dim); font-style:italic; margin-top:4px }
+  .step pre { margin:5px 0 0; background:var(--bg); border:1px solid var(--line); border-radius:5px; padding:6px 9px; font-size:11.5px; overflow-x:auto; white-space:pre-wrap; word-break:break-word }
+  details.scen { background:var(--panel); border:1px solid var(--line); border-radius:7px; margin-bottom:12px }
+  details.scen summary { padding:12px 16px; cursor:pointer; display:flex; gap:10px; align-items:center; list-style:none }
+  details.scen summary::-webkit-details-marker { display:none }
+  details.scen .body { padding:0 16px 14px }
+  .invrow td:first-child { font-family:ui-monospace,monospace; font-size:12px; color:var(--accent) }
+</style>
+<nav>
+  <h1>otc</h1>
+  <div style="padding:0 18px 12px"><select id="wsSel" title="Workspace — your own database on this deployment" style="width:100%;font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--bg)"></select></div>
+  <a data-v="orders" class="on">Orders</a><a data-v="customers">Customers</a><a data-v="items">Items</a>
+  <a data-v="ar">AR aging</a><a data-v="cash">Unapplied cash</a><a data-v="audit">Audit trail</a><a data-v="spec">Spec</a><a data-v="doctrine">Doctrine</a>
+</nav>
+<main id="main"></main>
+<dialog id="dlg"></dialog>
+<script>
+/* The entire UI. It contains no form for any specific command: every input below is built
+   from the field specs the server derives from the same declaration the MCP tools come from.
+   Adding a command to src/commands/ makes it appear here, correctly, with zero edits to this file. */
+/* <template> rather than a <div>: the HTML parser discards <tr>/<td> that are not inside a
+   table, and half this UI builds table fragments. */
+const $ = (h) => { const t = document.createElement('template'); t.innerHTML = h.trim(); return t.content.firstElementChild; };
+/* The workspace rides on every API call; the ?ws= in the address bar is the source of truth
+   and the server cookie is only a fallback for a bare URL. */
+const WSQ = new URLSearchParams(location.search).get('ws');
+const wsUrl = (u) => WSQ ? u + (u.includes('?') ? '&' : '?') + 'ws=' + encodeURIComponent(WSQ) : u;
+const cents = (c) => c == null ? '' : '$' + (c/100).toFixed(2);
+const api = async (cmd, args = {}) => {
+  const r = await fetch(wsUrl('/api/cmd/' + cmd), { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(args) });
+  const j = await r.json(); if (!r.ok) throw new Error(j.error); return j.result;
+};
+let REG = null, view = 'orders', selected = null;
+
+/* ---------- generated form ---------- */
+function openForm(spec, prefill = {}) {
+  const dlg = document.getElementById('dlg');
+  dlg.innerHTML = '';
+  dlg.append($(`<header><b>${spec.title}</b>${spec.help ? `<div class="help">${spec.help}</div>` : ''}</header>`));
+  const form = document.createElement('form');
+  const state = { ...prefill };
+
+  for (const f of spec.fields) {
+    const wrap = $(`<label class="${f.required?'req':''}"><b>${f.label}</b><i>${f.hint||''}</i></label>`);
+    let el;
+    if (f.widget === 'lines') {
+      el = linesEditor(f, state);
+    } else if (f.widget === 'lookup' || f.widget === 'select') {
+      el = document.createElement('select');
+      el.append(new Option(f.required ? '— choose —' : '— none —', ''));
+      for (const o of (f.widget === 'lookup' ? (REG.lookups[f.entity]||[]) : f.options.map(v=>({id:v,label:v}))))
+        el.append(new Option(o.label + (o.label !== o.id ? `  (${o.id})` : ''), o.id));
+      el.value = state[f.key] ?? '';
+      el.onchange = () => state[f.key] = el.value || undefined;
+    } else if (f.widget === 'checkbox') {
+      el = Object.assign(document.createElement('input'), { type:'checkbox', checked: state[f.key] !== false });
+      el.style.width = 'auto'; el.onchange = () => state[f.key] = el.checked;
+    } else {
+      el = document.createElement(f.widget === 'textarea' ? 'textarea' : 'input');
+      if (f.widget === 'date') el.type = 'date';
+      /* money is entered in dollars and sent in cents — the conversion lives here, once,
+         because the field declared itself as money. */
+      if (f.widget === 'money') { el.placeholder = '0.00'; el.inputMode = 'decimal'; }
+      if (f.widget === 'number') el.type = 'number';
+      el.value = state[f.key] ?? '';
+      el.oninput = () => {
+        const v = el.value.trim();
+        state[f.key] = v === '' ? undefined
+          : f.widget === 'money' ? Math.round(parseFloat(v) * 100)
+          : f.widget === 'number' ? parseInt(v, 10) : v;
+      };
+    }
+    wrap.append(el); form.append(wrap);
+  }
+  const why = $(`<label><b>Reason <i style="display:inline">(optional — goes into the audit trail)</i></b></label>`);
+  const whyIn = document.createElement('input'); whyIn.oninput = () => state._reason = whyIn.value || undefined;
+  why.append(whyIn); form.append(why);
+
+  const err = $('<div class="err" hidden></div>');
+  const foot = $('<footer></footer>');
+  const cancel = $('<button type="button">Cancel</button>'); cancel.onclick = () => dlg.close();
+  const go = $(`<button class="primary" type="button">${spec.title}</button>`);
+  go.onclick = async () => {
+    err.hidden = true; go.disabled = true;
+    try { await api(spec.name, state); dlg.close(); await boot(); render(); }
+    catch (e) { err.textContent = e.message; err.hidden = false; }   /* the refusal, verbatim */
+    finally { go.disabled = false; }
+  };
+  foot.append(cancel, go); dlg.append(form, err, foot); dlg.showModal();
+}
+
+function linesEditor(f, state) {
+  const box = document.createElement('div'); const rows = state[f.key] ? [...state[f.key]] : [];
+  const sync = () => state[f.key] = rows.filter(r => r.item_id || r.order_line_id);
+  const draw = () => {
+    box.innerHTML = '';
+    const t = $('<table class="lines"><thead><tr>' + f.of.map(c=>`<th>${c.label}</th>`).join('') + '<th></th></tr></thead><tbody></tbody></table>');
+    const tb = t.querySelector('tbody');
+    rows.forEach((row, i) => {
+      const tr = document.createElement('tr');
+      for (const c of f.of) {
+        const td = document.createElement('td'); let el;
+        if (c.widget === 'lookup') {
+          el = document.createElement('select'); el.append(new Option('—',''));
+          for (const o of REG.lookups[c.entity]||[]) el.append(new Option(o.label, o.id));
+        } else { el = document.createElement('input'); el.type = 'number'; }
+        el.value = row[c.key] ?? '';
+        el.onchange = el.oninput = () => { row[c.key] = el.value === '' ? undefined : (c.widget === 'lookup' ? el.value : parseInt(el.value,10)); sync(); };
+        td.append(el); tr.append(td);
+      }
+      const x = $('<td><button type="button">×</button></td>');
+      x.querySelector('button').onclick = () => { rows.splice(i,1); sync(); draw(); };
+      tr.append(x); tb.append(tr);
+    });
+    const add = $('<button type="button" style="margin-top:8px">+ line</button>');
+    add.onclick = () => { rows.push({}); sync(); draw(); };
+    box.append(t, add);
+  };
+  draw(); return box;
+}
+
+/* ---------- views ---------- */
+const cmd = (n) => REG.commands.find(c => c.name === n);
+const newButtons = (subject) => REG.commands.filter(c => c.subject === subject && c.intent === 'write' && c.scope === 'collection')
+  .map(c => { const b = $(`<button class="primary">${c.title}</button>`); b.onclick = () => openForm(c); return b; });
+
+async function detail(type, id) {
+  const wrap = $('<div></div>');
+  const [entity, na] = await Promise.all([
+    api({ order:'o2c_get_order', customer:'o2c_get_customer', invoice:'o2c_get_invoice' }[type],
+        { [type + '_id']: id }),
+    fetch(wsUrl(`/api/next-actions?type=${type}&id=${id}`)).then(r => r.json()),
+  ]);
+  const card = $('<div class="card"></div>');
+  card.append($(`<h2>${id} <span class="pill ${entity.status||''}">${entity.status||''}</span></h2>`));
+  const kv = $('<div class="kv"></div>');
+  const facts = type === 'order'
+    ? { Customer: entity.customer_name, PO: entity.po_ref||'—', Total: entity.total_display, 'Open qty': entity.open_qty, 'Uninvoiced qty': entity.uninvoiced_qty, Quote: entity.quote_id||'—' }
+    : type === 'customer'
+    ? { Terms: entity.terms, 'Credit limit': entity.credit_limit_display, 'Open AR': entity.open_balance_display, Committed: entity.committed_display, Available: entity.credit_available_display }
+    : { Customer: entity.customer_id, Order: entity.order_id, Total: entity.total_display, Applied: entity.applied_display, Open: entity.open_display, Due: entity.due_at };
+  for (const [k, v] of Object.entries(facts)) kv.append($(`<div><span>${k}</span>${v}</div>`));
+  card.append(kv);
+
+  /* Buttons and their disabled reasons come from the server's guard evaluation — the same
+     call otc_next_actions makes. The browser decides nothing about what is allowed. */
+  const acts = $('<div class="acts"></div>');
+  for (const a of na.actions) {
+    const b = $(`<button ${a.available ? '' : 'disabled'}>${a.title}</button>`);
+    if (!a.available) b.title = a.reason;
+    b.onclick = () => openForm(cmd(a.command), { [type + '_id']: id });
+    acts.append(b);
+  }
+  card.append(acts); wrap.append(card);
+
+  if (entity.lines) {
+    const t = $('<table><thead><tr><th>#</th><th>Item</th><th class="num">Qty</th><th class="num">Shipped</th><th class="num">Invoiced</th><th class="num">Price</th><th class="num">Amount</th></tr></thead><tbody></tbody></table>');
+    for (const l of entity.lines) t.querySelector('tbody').append($(
+      `<tr><td>${l.id}</td><td>${l.item_name}</td><td class="num">${l.qty}</td><td class="num">${l.qty_shipped ?? '—'}</td><td class="num">${l.qty_invoiced ?? '—'}</td><td class="num">${cents(l.unit_price)}</td><td class="num">${cents(l.qty*l.unit_price)}</td></tr>`));
+    wrap.append(t);
+  }
+  const trail = await fetch(wsUrl(`/api/cmd/core_audit`), { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ subject_id:id, limit:20 }) }).then(r=>r.json());
+  wrap.append($('<div class="sub" style="margin-top:20px">History</div>'), auditTable(trail.result));
+  return wrap;
+}
+
+const auditTable = (rows) => {
+  const t = $('<table><thead><tr><th>When</th><th>Who</th><th>Command</th><th>Subject</th><th>Reason / refusal</th></tr></thead><tbody></tbody></table>');
+  for (const r of rows) t.querySelector('tbody').append($(
+    `<tr><td>${r.at.slice(0,19).replace('T',' ')}</td><td><span class="who ${r.actor_kind}">${r.actor}</span></td>
+     <td>${r.ok ? '' : '<span style="color:var(--warn)">✗ </span>'}${r.command}</td><td>${r.subject_id||''}</td>
+     <td style="color:${r.ok?'var(--dim)':'var(--warn)'}">${r.error || r.reason || ''}</td></tr>`));
+  return t;
+};
+
+async function render() {
+  const main = document.getElementById('main'); main.innerHTML = '';
+  document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.dataset.v === view));
+  if (selected) {
+    const back = $('<button style="margin-bottom:16px">← back</button>'); back.onclick = () => { selected = null; render(); };
+    main.append(back, await detail(selected.type, selected.id)); return;
+  }
+  const head = (title, sub) => main.append($(`<h2>${title}</h2>`), $(`<div class="sub">${sub}</div>`));
+  const rowsInto = (t, rows, cells, type) => {
+    for (const r of rows) { const tr = $(`<tr>${cells(r)}</tr>`); tr.onclick = () => { selected = { type, id: r.id }; render(); }; t.querySelector('tbody').append(tr); }
+    main.append(t);
+  };
+
+  if (view === 'orders') {
+    head('Orders', 'Quote to cash. Click an order to see what can be done to it and why.');
+    const bar = $('<div class="acts" style="margin-bottom:14px"></div>');
+    newButtons('order').concat(newButtons('quote')).forEach(b => bar.append(b)); main.append(bar);
+    const t = $('<table><thead><tr><th>Order</th><th>Customer</th><th>PO</th><th>Status</th><th class="num">Total</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, REG.orders, r => `<td>${r.id}</td><td>${r.customer_name}</td><td>${r.po_ref||''}</td><td><span class="pill ${r.status}">${r.status}</span></td><td class="num">${cents(r.total)}</td>`, 'order');
+  }
+  if (view === 'customers') {
+    head('Customers', 'Credit position is live: limit less open AR less the uninvoiced value of confirmed orders.');
+    const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('customer').forEach(b => bar.append(b)); main.append(bar);
+    const t = $('<table><thead><tr><th>Id</th><th>Name</th><th>Terms</th><th class="num">Limit</th><th class="num">Open AR</th><th class="num">Available</th></tr></thead><tbody></tbody></table>');
+    const rows = await Promise.all((await api('core_search', { q:'C-' })).customers.map(c => api('o2c_get_customer', { customer_id:c.id })));
+    rowsInto(t, rows, r => `<td>${r.id}</td><td>${r.name}</td><td>${r.terms}</td><td class="num">${r.credit_limit_display}</td><td class="num">${r.open_balance_display}</td><td class="num">${r.credit_available_display}</td>`, 'customer');
+  }
+  if (view === 'items') {
+    head('Items', 'Stock cannot go negative; a short ship leaves the balance open on the order.');
+    const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('item').forEach(b => bar.append(b)); main.append(bar);
+    const t = $('<table><thead><tr><th>SKU</th><th>Name</th><th class="num">Price</th><th class="num">On hand</th></tr></thead><tbody></tbody></table>');
+    for (const i of (await api('core_search', { q:'' })).items)
+      t.querySelector('tbody').append($(`<tr><td>${i.id}</td><td>${i.name}</td><td class="num">${cents(i.unit_price)}</td><td class="num">${i.on_hand}</td></tr>`));
+    main.append(t);
+  }
+  if (view === 'ar') {
+    const ag = await api('o2c_ar_aging');
+    head('AR aging', `As of ${ag.as_of}. Total open ${ag.total}.`);
+    const k = $('<div class="card"><div class="kv"></div></div>');
+    for (const [b, v] of Object.entries(ag.buckets_display)) k.querySelector('.kv').append($(`<div><span>${b}</span>${v}</div>`));
+    main.append(k);
+    const t = $('<table><thead><tr><th>Invoice</th><th>Customer</th><th>Due</th><th>Bucket</th><th class="num">Days</th><th class="num">Open</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, ag.detail, r => `<td>${r.id}</td><td>${r.customer_name}</td><td>${r.due_at}</td><td><span class="pill">${r.bucket}</span></td><td class="num">${r.days_overdue}</td><td class="num">${r.open_display}</td>`, 'invoice');
+  }
+  if (view === 'cash') {
+    head('Unapplied cash', 'Money received that no invoice claims yet. A valid state — never guessed away.');
+    const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('payment').forEach(b => bar.append(b)); main.append(bar);
+    const rows = await api('o2c_unapplied_cash');
+    const t = $('<table><thead><tr><th>Payment</th><th>Customer</th><th>Received</th><th>Ref</th><th class="num">Unapplied</th><th></th></tr></thead><tbody></tbody></table>');
+    for (const r of rows) {
+      const tr = $(`<tr><td>${r.id}</td><td>${r.customer_name}</td><td>${r.received_at}</td><td>${r.reference||''}</td><td class="num">${r.unapplied_display}</td><td></td></tr>`);
+      const b = $('<button>Apply to invoice</button>'); b.onclick = () => openForm(cmd('o2c_apply_payment'), { payment_id: r.id });
+      tr.lastElementChild.append(b); t.querySelector('tbody').append(tr);
+    }
+    main.append(rows.length ? t : $('<div class="card doc">Nothing unapplied.</div>'));
+  }
+  if (view === 'audit') {
+    head('Audit trail', 'Every write from either surface, with its actor. Refused commands are kept.');
+    main.append(auditTable(await api('core_audit', { limit: 100 })));
+  }
+  if (view === 'spec') {
+    const { report, spec } = await fetch('/api/spec?area=o2c').then(r => r.json());
+    head('Spec — o2c @ ' + spec.spec, 'The spec as a live object: status is derived from the implements map and the last conformance run — never asserted.');
+    if (!report) { main.append($('<div class="card doc">No conformance run recorded yet. Run npm test, or replay a scenario below.</div>')); return; }
+
+    const k = $(`<div class="card"><div class="kv">
+      <div><span>Module</span>${report.module}</div>
+      <div><span>Acts implemented</span>${report.acts.filter(a=>a.implemented).length} / ${report.acts.length}</div>
+      <div><span>Scenarios</span>${report.scenarios.filter(s=>s.pass).length} / ${report.scenarios.length} passing</div>
+      <div><span>Last run</span>${report.ran_at.slice(0,19).replace('T',' ')}</div>
+      <div><span>Status</span><span class="badge ${report.pass?'pass':'fail'}">${report.pass?'conformant':'failing'}</span></div>
+    </div></div>`);
+    main.append(k);
+
+    /* Scenarios first — they are the teaching material. */
+    main.append($('<div class="sub" style="margin-top:8px">Scenarios — expand to read how the area works, step by step. Replay runs it live in a scratch workspace.</div>'));
+    const renderSteps = (box, sc) => {
+      box.innerHTML = '';
+      for (const st of sc.steps) {
+        const d = $(`<div class="step ${st.pass?'pass':'fail'}">
+          <div class="hd">${st.pass?'✓':'✗'} <span class="act-name">${st.act}</span>
+            <span class="cmd">→ ${st.command||'(unmapped)'}${st.phase==='env'?' · setup':''}</span>
+            <span class="cmd">${st.expect.refused ? 'expect refusal: “'+st.expect.refused+'”' : 'expect ok'+(st.expect.include?' + '+JSON.stringify(st.expect.include):'')}</span></div>
+          ${st.notes ? `<div class="teach">${st.notes}</div>` : ''}
+          <pre>args   ${JSON.stringify(st.args)}
+result ${st.actual}</pre>
+          ${st.refusal && !st.pass ? `<div style="color:var(--warn)">${st.refusal}</div>` : ''}
+        </div>`);
+        box.append(d);
+      }
+    };
+    for (const sc of report.scenarios) {
+      const det = $(`<details class="scen"><summary>
+        <span class="badge ${sc.pass?'pass':'fail'}">${sc.pass?'pass':'fail'}</span>
+        <b>${sc.name}</b>
+        <span style="color:var(--dim);font-size:12px">${sc.file}</span>
+        <span style="flex:1"></span>
+      </summary><div class="body">
+        ${sc.notes ? `<div class="doc" style="margin-bottom:6px">${sc.notes}</div>` : ''}
+        <div class="steps"></div>
+      </div></details>`);
+      const btn = $('<button style="font-size:12px;padding:4px 10px">Replay</button>');
+      btn.onclick = async (ev) => {
+        ev.preventDefault(); btn.disabled = true; btn.textContent = 'running…';
+        const fresh = await fetch('/api/spec/replay?area=o2c&file=' + encodeURIComponent(sc.file), { method:'POST' }).then(r => r.json());
+        renderSteps(det.querySelector('.steps'), fresh);
+        det.open = true;
+        det.querySelector('.badge').className = 'badge ' + (fresh.pass?'pass':'fail');
+        det.querySelector('.badge').textContent = fresh.pass?'pass':'fail';
+        btn.disabled = false; btn.textContent = 'Replay';
+      };
+      det.querySelector('summary').append(btn);
+      renderSteps(det.querySelector('.steps'), sc);
+      main.append(det);
+    }
+
+    main.append($('<div class="sub" style="margin-top:18px">Acts — spec surface vs implementation</div>'));
+    const at = $('<table><thead><tr><th>Act</th><th>Kind</th><th>Command</th><th>Implemented</th><th>Exercised by a scenario</th></tr></thead><tbody></tbody></table>');
+    for (const a of report.acts) at.querySelector('tbody').append($(
+      `<tr><td>${a.act}</td><td>${a.kind}</td><td style="font-family:ui-monospace,monospace;font-size:12px">${a.command||'—'}</td>
+       <td>${a.implemented?'✓':'<span style="color:var(--warn)">missing</span>'}</td><td>${a.exercised?'✓':'<span style="color:var(--dim)">not yet</span>'}</td></tr>`));
+    main.append(at);
+
+    main.append($('<div class="sub" style="margin-top:18px">Invariants — and what exercises each</div>'));
+    const it = $('<table><thead><tr><th>Id</th><th>Invariant</th><th>Evidence</th></tr></thead><tbody></tbody></table>');
+    for (const inv of report.invariants) it.querySelector('tbody').append($(
+      `<tr class="invrow"><td>${inv.id}</td><td>${inv.title}</td>
+       <td style="font-size:12.5px;color:${inv.evidence.length?'var(--dim)':'var(--warn)'}">${inv.evidence.length ? inv.evidence.join('<br>') : 'no evidence yet'}</td></tr>`));
+    main.append(it);
+  }
+  if (view === 'doctrine') {
+    head('Doctrine', 'The rules the agent reads at connect. The same text a person reads here.');
+    main.append($(`<div class="card doc">${REG.doctrine}</div>`));
+    for (const m of REG.modules.filter(m => m.doctrine)) main.append($(`<div class="card"><b>module: ${m.name}</b><div class="help">${m.doctrine}</div></div>`));
+    for (const c of REG.commands.filter(c => c.help)) main.append($(`<div class="card"><b>${c.title}</b> <span class="doc">— ${c.name}</span><div class="help">${c.help}</div></div>`));
+  }
+}
+
+const boot = async () => {
+  REG = await fetch(wsUrl('/api/registry')).then(r => r.json());
+  const sel = document.getElementById('wsSel');
+  sel.innerHTML = '';
+  for (const w of REG.workspaces) sel.append(new Option(`workspace: ${w}`, w));
+  sel.append(new Option('+ new workspace…', '__new'));
+  sel.value = REG.workspace;
+  sel.onchange = () => {
+    let w = sel.value;
+    if (w === '__new') { w = prompt('Workspace name (lowercase, digits, - _):'); if (!w) { sel.value = REG.workspace; return; } }
+    location.search = '?ws=' + encodeURIComponent(w.trim());
+  };
+};
+document.querySelectorAll('nav a').forEach(a => a.onclick = () => { view = a.dataset.v; selected = null; render(); });
+boot().then(render);
+</script>

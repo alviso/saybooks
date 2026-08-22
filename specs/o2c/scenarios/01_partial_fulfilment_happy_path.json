@@ -1,0 +1,41 @@
+{
+  "name": "partial fulfilment, bill what shipped, apply cash",
+  "spec": "o2c@0.1",
+  "notes": "The spine. Exercises INV-4 (bill from fulfilment), INV-7 (short fulfilment stays open), INV-8 (unapplied cash), INV-20 (derived states).",
+  "env": [
+    ["create_customer", { "name": "Northwind Traders", "terms": "net30", "credit_limit": 5000000 }],
+    ["create_item", { "sku": "WIDGET-A", "name": "Widget A", "unit_price": 12500, "on_hand": 40 }],
+    ["create_item", { "sku": "WIDGET-B", "name": "Widget B", "unit_price": 8000, "on_hand": 5 }],
+    ["create_item", { "sku": "INSTALL", "name": "Installation", "unit_price": 50000, "stocked": false }]
+  ],
+  "steps": [
+    { "act": "create_quote", "args": { "customer": "C-0001", "lines": [ { "item": "WIDGET-A", "qty": 20 }, { "item": "WIDGET-B", "qty": 10 }, { "item": "INSTALL", "qty": 1 } ] },
+      "expect": { "ok": true, "include": { "total": 380000 } } },
+    { "act": "send_quote", "args": { "quote": "Q-0001" }, "expect": { "ok": true } },
+    { "act": "accept_quote", "args": { "quote": "Q-0001", "po_ref": "NW-88231" },
+      "expect": { "ok": true, "include": { "status": "draft", "total": 380000 } } },
+    { "act": "confirm_order", "args": { "order": "SO-0001" }, "expect": { "ok": true, "include": { "status": "confirmed" } } },
+
+    { "act": "fulfil_order", "args": { "order": "SO-0001" },
+      "expect": { "refused": "5 on hand, 10 needed" },
+      "notes": "INV-6: refuse rather than go negative; refusal names the numbers (INV-17)" },
+    { "act": "fulfil_order", "args": { "order": "SO-0001", "lines": [ { "order_line": 1, "qty": 20 }, { "order_line": 2, "qty": 5 }, { "order_line": 3, "qty": 1 } ] },
+      "expect": { "ok": true, "include": { "open_qty": 5, "status": "confirmed" } },
+      "notes": "INV-7: short fulfilment leaves 5 open; order does NOT advance to fulfilled" },
+
+    { "act": "invoice_fulfilled", "args": { "order": "SO-0001" },
+      "expect": { "ok": true, "include": { "total": 340000, "status": "open" } },
+      "notes": "INV-4: 340000 = what was fulfilled, not the 380000 ordered" },
+    { "act": "invoice_fulfilled", "args": { "order": "SO-0001" },
+      "expect": { "refused": "Nothing has shipped" } },
+
+    { "act": "record_payment", "args": { "customer": "C-0001", "amount": 200000, "method": "ach", "reference": "ACH-55120" },
+      "expect": { "ok": true },
+      "notes": "no remittance advice yet — INV-8, sits unapplied" },
+    { "act": "apply_payment", "args": { "payment": "P-0001", "invoice": "INV-0001", "amount": 500000 },
+      "expect": { "refused": "only $2000.00 left" } },
+    { "act": "apply_payment", "args": { "payment": "P-0001", "invoice": "INV-0001" },
+      "expect": { "ok": true },
+      "notes": "invoice remains open for the 140000 difference — short-pay stays visible" }
+  ]
+}

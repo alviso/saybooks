@@ -1,0 +1,37 @@
+{
+  "name": "the two corrections: void for the untouched, credit note for everything else",
+  "spec": "o2c@0.1",
+  "notes": "INV-9 (numbers never reused), INV-10 (void only untouched), INV-11 (credit note is THE downward correction), INV-20. The difference between erasing a mistake and correcting one.",
+  "env": [
+    ["create_customer", { "name": "Litware GmbH", "terms": "net30", "credit_limit": 3000000 }],
+    ["create_item", { "sku": "GADGET", "name": "Gadget", "unit_price": 20000, "on_hand": 10 }]
+  ],
+  "steps": [
+    { "act": "create_order", "args": { "customer": "C-0001", "lines": [ { "item": "GADGET", "qty": 2 } ] }, "expect": { "ok": true } },
+    { "act": "confirm_order", "args": { "order": "SO-0001" }, "expect": { "ok": true } },
+    { "act": "fulfil_order", "args": { "order": "SO-0001" }, "expect": { "ok": true } },
+    { "act": "invoice_fulfilled", "args": { "order": "SO-0001" },
+      "expect": { "ok": true, "include": { "total": 40000 } } },
+    { "act": "void_invoice", "args": { "invoice": "INV-0001", "reason": "issued against the wrong PO reference" },
+      "expect": { "ok": true, "include": { "status": "void" } },
+      "notes": "INV-10: nothing was applied yet, so void is allowed — the quantities go back to billable and the mistake never billed anyone" },
+    { "act": "invoice_fulfilled", "args": { "order": "SO-0001" },
+      "expect": { "ok": true, "include": { "id": "INV-0002", "total": 40000 } },
+      "notes": "INV-9: the replacement is INV-0002. INV-0001 keeps its number, its lines and its void status forever — numbers are never reused, nothing is deleted" },
+    { "act": "record_payment", "args": { "customer": "C-0001", "amount": 40000, "method": "wire", "reference": "W-7810" }, "expect": { "ok": true } },
+    { "act": "apply_payment", "args": { "payment": "P-0001", "invoice": "INV-0002", "amount": 20000 }, "expect": { "ok": true } },
+    { "act": "void_invoice", "args": { "invoice": "INV-0002", "reason": "trying the lazy path" },
+      "expect": { "refused": "applied" },
+      "notes": "INV-10 again, from the other side: money moved against this invoice, so the record must keep saying so. The correction is now a credit note" },
+    { "act": "create_credit_note", "args": { "customer": "C-0001", "amount": 5000, "kind": "correction", "invoice": "INV-0002", "reason": "price error: quoted 195.00/unit, billed 200.00 — crediting the difference on 2 units + goodwill rounding" },
+      "expect": { "ok": true, "include": { "status": "open", "total": 5000 } },
+      "notes": "INV-11: the universal downward correction, with its own open balance and a mandatory reason that will be read back" },
+    { "act": "apply_credit", "args": { "credit_note": "CN-0001", "invoice": "INV-0002" },
+      "expect": { "ok": true, "include": { "applied": "$50.00" } } },
+    { "act": "apply_payment", "args": { "payment": "P-0001", "invoice": "INV-0002" },
+      "expect": { "ok": true } },
+    { "act": "invoice", "args": { "invoice": "INV-0002" },
+      "expect": { "ok": true, "include": { "status": "paid", "open": 0 } },
+      "notes": "INV-20: 40000 billed = 20000 + 15000 cash + 5000 credit; fully applied, so paid derived itself. The void, the credit and both applications are all in the trail" }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "name": "drafts bend, confirmed documents do not",
+  "spec": "o2c@0.1",
+  "notes": "INV-3 (no mutation past draft), INV-5 (committed exposure), INV-20 (derived states). Amendment, cancellation, and the exact moment an order stops being editable.",
+  "env": [
+    ["create_customer", { "name": "Tailspin Toys", "terms": "net30", "credit_limit": 1000000 }],
+    ["create_item", { "sku": "WIDGET-A", "name": "Widget A", "unit_price": 10000, "on_hand": 50 }]
+  ],
+  "steps": [
+    { "act": "create_order", "args": { "customer": "C-0001", "lines": [ { "item": "WIDGET-A", "qty": 3 } ] },
+      "expect": { "ok": true, "include": { "status": "draft", "total": 30000 } } },
+    { "act": "amend_order", "args": { "order": "SO-0001", "lines": [ { "item": "WIDGET-A", "qty": 5 } ] },
+      "expect": { "ok": true, "include": { "total": 50000 } },
+      "notes": "a draft is a conversation — replace the lines freely, the log keeps every version" },
+    { "act": "close_short", "args": { "order": "SO-0001", "reason": "trying to close a draft" },
+      "expect": { "refused": "no open remainder" },
+      "notes": "close_short is for confirmed orders with an unfulfilled tail — a draft has nothing committed to abandon" },
+    { "act": "confirm_order", "args": { "order": "SO-0001" }, "expect": { "ok": true, "include": { "status": "confirmed" } } },
+    { "act": "customer_position", "args": { "customer": "C-0001" },
+      "expect": { "ok": true, "include": { "committed": 50000, "open_balance": 0 } },
+      "notes": "INV-5: the moment of confirmation, the order's value counts against credit — before any invoice exists" },
+    { "act": "amend_order", "args": { "order": "SO-0001", "lines": [ { "item": "WIDGET-A", "qty": 50 } ] },
+      "expect": { "refused": "Only a draft order can be amended" },
+      "notes": "INV-3: what was confirmed is the fact the credit gate evaluated. Growth is a new order; shrink is close_short" },
+    { "act": "cancel_order", "args": { "order": "SO-0001", "reason": "customer withdrew the PO before we picked anything" },
+      "expect": { "ok": true, "include": { "status": "cancelled" } },
+      "notes": "cancellation is only possible while nothing has been fulfilled — after that, the honest path is bill and credit-note" },
+    { "act": "customer_position", "args": { "customer": "C-0001" },
+      "expect": { "ok": true, "include": { "committed": 0 } },
+      "notes": "cancelling releases the committed exposure; the credit line breathes again" },
+    { "act": "confirm_order", "args": { "order": "SO-0001" },
+      "expect": { "refused": "Only a draft order can be confirmed" } },
+    { "act": "order", "args": { "order": "SO-0001" },
+      "expect": { "ok": true, "include": { "status": "cancelled" } },
+      "notes": "INV-9 in spirit: the cancelled order stays on the books, visible, number and lines intact — nothing is ever deleted" }
+  ]
+}

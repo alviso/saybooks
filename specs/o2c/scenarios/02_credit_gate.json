@@ -1,0 +1,27 @@
+{
+  "name": "the credit gate refuses and explains",
+  "spec": "o2c@0.1",
+  "notes": "INV-5 (one gate, counts committed value), INV-17 (numbers in the refusal), INV-21 (the refusal is logged).",
+  "env": [
+    ["create_customer", { "name": "Contoso Ltd", "terms": "net15", "credit_limit": 100000 }],
+    ["create_item", { "sku": "WIDGET-A", "name": "Widget A", "unit_price": 12500, "on_hand": 40 }]
+  ],
+  "steps": [
+    { "act": "create_order", "args": { "customer": "C-0001", "lines": [ { "item": "WIDGET-A", "qty": 20 } ] },
+      "expect": { "ok": true, "include": { "status": "draft", "total": 250000 } },
+      "notes": "creating a draft consumes nothing — the gate is at confirmation only" },
+    { "act": "confirm_order", "args": { "order": "SO-0001" },
+      "expect": { "refused": "Short by $1500.00" } },
+
+    { "act": "create_order", "args": { "customer": "C-0001", "lines": [ { "item": "WIDGET-A", "qty": 4 } ] },
+      "expect": { "ok": true } },
+    { "act": "confirm_order", "args": { "order": "SO-0002" },
+      "expect": { "ok": true },
+      "notes": "50000 fits inside the 100000 limit" },
+    { "act": "create_order", "args": { "customer": "C-0001", "lines": [ { "item": "WIDGET-A", "qty": 5 } ] },
+      "expect": { "ok": true } },
+    { "act": "confirm_order", "args": { "order": "SO-0003" },
+      "expect": { "refused": "committed $500.00" },
+      "notes": "INV-5: the 50000 confirmed-but-uninvoiced on SO-0002 counts as exposure — a gate that only reads invoices would wave this through" }
+  ]
+}

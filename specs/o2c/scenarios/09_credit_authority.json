@@ -1,0 +1,44 @@
+{
+  "name": "the credit gate's human side: limits, holds, releases",
+  "spec": "o2c@0.1",
+  "notes": "INV-5's other half. The gate refuses; a person with authority answers — by raising the limit or by holding the account — and every one of those answers is a logged act with a reason, never a workaround. Environment acts obligated by spec §3.",
+  "env": [
+    ["create_customer", { "name": "Trey Research", "terms": "net30", "credit_limit": 100000 }],
+    ["create_item", { "sku": "WIDGET-A", "name": "Widget A", "unit_price": 12500, "on_hand": 40 }]
+  ],
+  "steps": [
+    { "act": "create_order", "args": { "customer": "C-0001", "lines": [ { "item": "WIDGET-A", "qty": 20 } ] },
+      "expect": { "ok": true, "include": { "total": 250000 } } },
+    { "act": "confirm_order", "args": { "order": "SO-0001" },
+      "expect": { "refused": "Short by $1500.00" },
+      "notes": "INV-5: the gate said no and named the numbers. What happens next is a human decision, not an agent maneuver" },
+    { "act": "set_credit_limit", "args": { "customer": "C-0001", "credit_limit": 300000, "reason": "controller approved after reviewing 12 months of on-time payment history" },
+      "expect": { "ok": true, "include": { "credit_limit": 300000, "previous_limit": 100000 } },
+      "notes": "the answer the refusal pointed to: the limit changes HERE, as its own logged act with a reason — never by splitting the order or invoicing early" },
+    { "act": "confirm_order", "args": { "order": "SO-0001" },
+      "expect": { "ok": true, "include": { "status": "confirmed" } },
+      "notes": "same order, same gate, new facts. The log now shows: refusal, approval with reason, confirmation — the whole story" },
+
+    { "act": "hold_customer", "args": { "customer": "C-0001", "reason": "check bounced on their affiliate account; AP contact unreachable" },
+      "expect": { "ok": true, "include": { "on_hold": 1 } },
+      "notes": "a hold is for judgment the formula cannot see. It outranks the limit entirely" },
+    { "act": "hold_customer", "args": { "customer": "C-0001", "reason": "double-holding" },
+      "expect": { "refused": "Already on credit hold" } },
+    { "act": "create_order", "args": { "customer": "C-0001", "lines": [ { "item": "WIDGET-A", "qty": 1 } ] },
+      "expect": { "ok": true },
+      "notes": "drafts are still fine — a hold blocks NEW exposure, which begins at confirmation" },
+    { "act": "confirm_order", "args": { "order": "SO-0002" },
+      "expect": { "refused": "is on credit hold" },
+      "notes": "plenty of room under the new limit, and it does not matter: the hold wins" },
+    { "act": "customer_position", "args": { "customer": "C-0001" },
+      "expect": { "ok": true, "include": { "on_hold": 1, "committed": 250000 } },
+      "notes": "the already-confirmed SO-0001 is untouched — we honor what we committed to; we just take on nothing new" },
+
+    { "act": "release_customer", "args": { "customer": "C-0001", "reason": "replacement wire cleared; spoke with their controller" },
+      "expect": { "ok": true, "include": { "on_hold": 0 } },
+      "notes": "the release carries its own reason — \"who released it and why\" is exactly the question that gets asked later" },
+    { "act": "confirm_order", "args": { "order": "SO-0002" },
+      "expect": { "ok": true, "include": { "status": "confirmed" } },
+      "notes": "the limit applies again and the small order clears it. Refusal, hold, release, confirmation: all in the trail, all with reasons" }
+  ]
+}

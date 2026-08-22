@@ -1,0 +1,301 @@
+{
+  "area": "o2c",
+  "spec": "0.1",
+  "doc": "spec.md",
+  "acts": {
+    "create_quote": {
+      "kind": "write",
+      "required": [
+        "customer",
+        "lines"
+      ]
+    },
+    "send_quote": {
+      "kind": "write",
+      "required": [
+        "quote"
+      ]
+    },
+    "accept_quote": {
+      "kind": "write",
+      "required": [
+        "quote"
+      ]
+    },
+    "create_order": {
+      "kind": "write",
+      "required": [
+        "customer",
+        "lines"
+      ]
+    },
+    "amend_order": {
+      "kind": "write",
+      "required": [
+        "order",
+        "lines"
+      ]
+    },
+    "confirm_order": {
+      "kind": "write",
+      "required": [
+        "order"
+      ]
+    },
+    "cancel_order": {
+      "kind": "write",
+      "required": [
+        "order",
+        "reason"
+      ]
+    },
+    "close_short": {
+      "kind": "write",
+      "required": [
+        "order",
+        "reason"
+      ]
+    },
+    "fulfil_order": {
+      "kind": "write",
+      "required": [
+        "order"
+      ]
+    },
+    "invoice_fulfilled": {
+      "kind": "write",
+      "required": [
+        "order"
+      ]
+    },
+    "void_invoice": {
+      "kind": "write",
+      "required": [
+        "invoice",
+        "reason"
+      ]
+    },
+    "record_return": {
+      "kind": "write",
+      "required": [
+        "order",
+        "lines",
+        "reason"
+      ]
+    },
+    "create_credit_note": {
+      "kind": "write",
+      "required": [
+        "customer",
+        "amount",
+        "kind",
+        "reason"
+      ]
+    },
+    "write_off": {
+      "kind": "write",
+      "required": [
+        "invoice",
+        "reason"
+      ]
+    },
+    "record_payment": {
+      "kind": "write",
+      "required": [
+        "customer",
+        "amount"
+      ]
+    },
+    "apply_payment": {
+      "kind": "write",
+      "required": [
+        "payment",
+        "invoice"
+      ]
+    },
+    "apply_credit": {
+      "kind": "write",
+      "required": [
+        "credit_note",
+        "invoice"
+      ]
+    },
+    "refund": {
+      "kind": "write",
+      "required": [
+        "source_type",
+        "source_id",
+        "amount"
+      ]
+    },
+    "order": {
+      "kind": "read",
+      "required": [
+        "order"
+      ]
+    },
+    "customer_position": {
+      "kind": "read",
+      "required": [
+        "customer"
+      ]
+    },
+    "invoice": {
+      "kind": "read",
+      "required": [
+        "invoice"
+      ]
+    },
+    "backorders": {
+      "kind": "read",
+      "required": []
+    },
+    "ar_aging": {
+      "kind": "read",
+      "required": []
+    },
+    "unapplied_cash": {
+      "kind": "read",
+      "required": []
+    },
+    "customer_statement": {
+      "kind": "read",
+      "required": [
+        "customer",
+        "from",
+        "to"
+      ]
+    }
+  },
+  "env_acts": {
+    "create_customer": {
+      "required": [
+        "name"
+      ]
+    },
+    "create_item": {
+      "required": [
+        "sku",
+        "name",
+        "unit_price"
+      ]
+    },
+    "receive_stock": {
+      "required": [
+        "item",
+        "qty"
+      ]
+    },
+    "set_price": {
+      "required": [
+        "item",
+        "unit_price"
+      ]
+    },
+    "set_credit_limit": {
+      "required": [
+        "customer",
+        "credit_limit",
+        "reason"
+      ]
+    },
+    "hold_customer": {
+      "required": [
+        "customer",
+        "reason"
+      ]
+    },
+    "release_customer": {
+      "required": [
+        "customer",
+        "reason"
+      ]
+    }
+  },
+  "invariants": [
+    {
+      "id": "INV-1",
+      "title": "Money is integer minor units, everywhere."
+    },
+    {
+      "id": "INV-2",
+      "title": "Both prices survive: list price and charged price on every line."
+    },
+    {
+      "id": "INV-3",
+      "title": "Documents don't mutate past draft except through defined acts."
+    },
+    {
+      "id": "INV-4",
+      "title": "Bill what was fulfilled, never what was ordered."
+    },
+    {
+      "id": "INV-5",
+      "title": "One credit gate, at confirmation; exposure counts open AR plus committed."
+    },
+    {
+      "id": "INV-6",
+      "title": "Stock never goes negative; only the stock owner's API changes it."
+    },
+    {
+      "id": "INV-7",
+      "title": "Short fulfilment leaves the remainder open; only close_short extinguishes it."
+    },
+    {
+      "id": "INV-8",
+      "title": "Recording cash is not applying cash; unapplied cash is a valid state."
+    },
+    {
+      "id": "INV-9",
+      "title": "Document numbers are sequential and never reused."
+    },
+    {
+      "id": "INV-10",
+      "title": "Void only when untouched; anything applied-against is corrected by credit note."
+    },
+    {
+      "id": "INV-11",
+      "title": "The credit note is the only downward correction past draft."
+    },
+    {
+      "id": "INV-12",
+      "title": "Restock only what physically returns sellable."
+    },
+    {
+      "id": "INV-13",
+      "title": "Cash is not transferable between customers."
+    },
+    {
+      "id": "INV-14",
+      "title": "Tax is frozen at issuance."
+    },
+    {
+      "id": "INV-15",
+      "title": "Due dates derive from terms at issuance."
+    },
+    {
+      "id": "INV-16",
+      "title": "Write-offs are reasoned, visible credit acts."
+    },
+    {
+      "id": "INV-17",
+      "title": "Refusals name the numbers."
+    },
+    {
+      "id": "INV-18",
+      "title": "One sentence per rule, on every surface."
+    },
+    {
+      "id": "INV-19",
+      "title": "Prices freeze when a document is raised from another."
+    },
+    {
+      "id": "INV-20",
+      "title": "Closure is derived, not declared."
+    },
+    {
+      "id": "INV-21",
+      "title": "Every write is a logged command with an actor; reads are never logged."
+    }
+  ]
+}

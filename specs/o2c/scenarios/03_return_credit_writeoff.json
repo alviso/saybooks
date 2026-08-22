@@ -1,0 +1,34 @@
+{
+  "name": "returns, credit notes, and the honest ends of an invoice",
+  "spec": "o2c@0.1",
+  "notes": "INV-10 (void only untouched), INV-11 (credit note is the correction), INV-12 (restock only sellable), INV-16 (write-off is a reasoned credit act).",
+  "env": [
+    ["create_customer", { "name": "Fabrikam", "terms": "net30", "credit_limit": 2000000 }],
+    ["create_item", { "sku": "WIDGET-A", "name": "Widget A", "unit_price": 10000, "on_hand": 30 }]
+  ],
+  "steps": [
+    { "act": "create_order", "args": { "customer": "C-0001", "lines": [ { "item": "WIDGET-A", "qty": 10 } ] }, "expect": { "ok": true } },
+    { "act": "confirm_order", "args": { "order": "SO-0001" }, "expect": { "ok": true } },
+    { "act": "fulfil_order", "args": { "order": "SO-0001" }, "expect": { "ok": true } },
+    { "act": "invoice_fulfilled", "args": { "order": "SO-0001" }, "expect": { "ok": true, "include": { "total": 100000 } } },
+
+    { "act": "record_payment", "args": { "customer": "C-0001", "amount": 100000, "method": "check", "reference": "CHK-1001" }, "expect": { "ok": true } },
+    { "act": "apply_payment", "args": { "payment": "P-0001", "invoice": "INV-0001", "amount": 60000 }, "expect": { "ok": true } },
+
+    { "act": "void_invoice", "args": { "invoice": "INV-0001", "reason": "trying to void a paid-against invoice" },
+      "expect": { "refused": "applied" },
+      "notes": "INV-10: money moved; the record must keep saying so" },
+
+    { "act": "record_return", "args": { "order": "SO-0001", "lines": [ { "order_line": 1, "qty": 2, "restock": true }, { "order_line": 1, "qty": 1, "restock": false } ], "reason": "3 units returned, 1 arrived damaged" },
+      "expect": { "ok": true, "include": { "restocked_qty": 2, "credit_total": 30000 } },
+      "notes": "INV-12: stock gains 2, not 3; the damaged unit is recorded but never sellable" },
+
+    { "act": "apply_credit", "args": { "credit_note": "CN-0001", "invoice": "INV-0001" },
+      "expect": { "ok": true },
+      "notes": "invoice open balance now 100000 - 60000 - 30000 = 10000" },
+
+    { "act": "write_off", "args": { "invoice": "INV-0001", "reason": "customer disputes final $100, not worth pursuing" },
+      "expect": { "ok": true, "include": { "invoice_status": "paid" } },
+      "notes": "INV-16: visible, reasoned, a credit act — never a deletion. INV-20: paid is derived once fully applied" }
+  ]
+}
