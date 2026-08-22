@@ -296,6 +296,16 @@ const server = http.createServer((req, res) => {
   return send(res, 404, { error: 'not found' });
 });
 
+// Conformance evidence self-heals at boot: the data volume can shadow anything baked into
+// the image, and a Spec tab with report:null is a broken shop window. ~1s per area, once.
+for (const m of R.MODULES.filter(m => m.implements)) {
+  const area = m.implements.area;
+  if (!C.lastReport(area)) {
+    try { C.runArea(area, { actor: 'startup' }); console.log(`conformance evidence generated for ${area}`); }
+    catch (e) { console.error(`conformance ${area} failed at startup:`, e.message); }
+  }
+}
+
 server.listen(PORT, HOST, () => {
   console.log(`${DEMO ? 'Saybooks demo' : 'Saybooks workbench'} → http://${HOST}:${PORT}   (workspaces in ${wsp.DATA_DIR})`);
 });
