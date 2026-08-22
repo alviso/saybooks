@@ -9,12 +9,14 @@
   nav h1 { font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); margin:0 0 14px 18px; font-weight:600 }
   nav a { display:block; padding:7px 18px; cursor:pointer; color:var(--ink); text-decoration:none }
   nav a:hover { background:var(--bg) } nav a.on { background:var(--bg); border-left:3px solid var(--accent); padding-left:15px; font-weight:600 }
-  nav .grp { font:600 11px system-ui; letter-spacing:.1em; text-transform:uppercase; color:var(--dim);
-    padding:10px 18px 4px; cursor:pointer; display:flex; justify-content:space-between; user-select:none }
+  nav .grp { font:600 10.5px system-ui; letter-spacing:.1em; text-transform:uppercase; color:var(--dim);
+    padding:12px 18px 3px; cursor:pointer; display:flex; justify-content:space-between; user-select:none; line-height:1.2 }
   nav .grp:hover { color:var(--accent) }
-  nav .grp .tog { font-size:13px; line-height:1 }
+  nav .grp .tog { font-size:12px; line-height:1 }
   nav .grp-items.closed { display:none }
-  nav a.sub { padding-left:26px } nav a.sub.on { padding-left:23px }
+  nav .grp-items a { padding:4px 18px 4px 26px; line-height:1.45; margin:0 }
+  nav .grp-items a.on { padding-left:23px }
+  /* nav links must never pick up the .sub subtitle styling — they are structural siblings, not captions */
   main { flex:1; overflow:auto; padding:26px 30px }
   h2 { margin:0 0 4px; font-size:20px } .sub { color:var(--dim); margin-bottom:18px; font-size:13px }
   table { border-collapse:collapse; width:100%; background:var(--panel); border:1px solid var(--line); border-radius:7px; overflow:hidden }
@@ -82,17 +84,17 @@
   <div style="padding:0 18px 12px"><select id="wsSel" title="Workspace — your own database on this deployment" style="width:100%;font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--bg)"></select></div>
   <div class="grp" data-g="books">Books · o2c <span class="tog">−</span></div>
   <div class="grp-items" data-gi="books">
-    <a class="sub on" data-v="orders">Orders</a><a class="sub" data-v="customers">Customers</a><a class="sub" data-v="items">Items</a>
-    <a class="sub" data-v="ar">AR aging</a><a class="sub" data-v="cash">Unapplied cash</a>
+    <a class="on" data-v="orders">Orders</a><a data-v="customers">Customers</a><a data-v="items">Items</a>
+    <a data-v="ar">AR aging</a><a data-v="cash">Unapplied cash</a>
   </div>
   <div class="grp" data-g="crm">CRM <span class="tog">−</span></div>
   <div class="grp-items" data-gi="crm">
-    <a class="sub" data-v="today">Today</a><a class="sub" data-v="accounts">Accounts</a><a class="sub" data-v="crmcontacts">Contacts</a>
-    <a class="sub" data-v="crmpipeline">Pipeline</a><a class="sub" data-v="network">Network</a><a class="sub" data-v="crmactivity">Activity</a>
+    <a data-v="today">Today</a><a data-v="accounts">Accounts</a><a data-v="crmcontacts">Contacts</a>
+    <a data-v="crmpipeline">Pipeline</a><a data-v="network">Network</a><a data-v="crmactivity">Activity</a>
   </div>
   <div class="grp" data-g="sys">System <span class="tog">−</span></div>
   <div class="grp-items" data-gi="sys">
-    <a class="sub" data-v="audit">Audit trail</a><a class="sub" data-v="spec">Spec</a><a class="sub" data-v="doctrine">Doctrine</a>
+    <a data-v="audit">Audit trail</a><a data-v="spec">Spec</a><a data-v="doctrine">Doctrine</a>
   </div>
 </nav>
 <main id="main"></main>
