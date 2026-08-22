@@ -58,7 +58,11 @@ const send = (res, code, body, type = 'application/json; charset=utf-8', headers
 
 const wsOf = (req, url) => {
   if (DEMO) {
-    // Cookie only, and only try-* names: visitors cannot address each other's sandboxes.
+    // A sandbox name is its key. The cookie pins a visitor to their own; a ?ws=try-* link
+    // lets a browser ADOPT a named sandbox — the share/agent-first path — which reveals
+    // nothing beyond what knowing the name already grants (MCP access to it).
+    const q = url.searchParams.get('ws');
+    if (q && /^try-[a-z0-9]{6,24}$/.test(q)) { if (!sandboxExists(q)) seedSandbox(q); return q; }
     const m = /(?:^|;\s*)otc_ws=(try-[a-z0-9]+)/.exec(req.headers.cookie || '');
     if (m && sandboxExists(m[1])) return m[1];
     return newVisitorWs();
