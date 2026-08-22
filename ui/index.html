@@ -230,11 +230,19 @@ async function detail(type, id) {
 }
 
 const auditTable = (rows) => {
+  /* A row's "why" can live in two places: the mandatory reason ARGUMENT on acts that require
+     one (set_credit_limit, cancel, void, write_off, holds…) — part of the business act itself —
+     or the optional _reason narrative. The formal one wins; refusals show the refusal. */
+  const why = (r) => {
+    if (!r.ok) return r.error;
+    try { const a = JSON.parse(r.args_json || '{}'); if (a.reason) return a.reason; if (a.note) return a.note; } catch {}
+    return r.reason || '';
+  };
   const t = $('<table><thead><tr><th>When</th><th>Who</th><th>Command</th><th>Subject</th><th>Reason / refusal</th></tr></thead><tbody></tbody></table>');
   for (const r of rows) t.querySelector('tbody').append($(
     `<tr><td>${r.at.slice(0,19).replace('T',' ')}</td><td><span class="who ${r.actor_kind}">${r.actor}</span></td>
      <td>${r.ok ? '' : '<span style="color:var(--warn)">✗ </span>'}${r.command}</td><td>${r.subject_id||''}</td>
-     <td style="color:${r.ok?'var(--dim)':'var(--warn)'}">${r.error || r.reason || ''}</td></tr>`));
+     <td style="color:${r.ok?'var(--dim)':'var(--warn)'}">${why(r)}</td></tr>`));
   return t;
 };
 
