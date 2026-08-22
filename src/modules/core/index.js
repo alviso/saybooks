@@ -21,6 +21,21 @@ a real position, not a missing value. Set stocked=false for services; they never
 never block a shipment. Never invent a customer to make another command work.`,
   api: {
     needCustomer: (id) => H.need('customer', id, 'customer'),
+    /**
+     * The one door to creating a customer from another module (crm's promote bridge uses
+     * it). Same rules as the command; a function because nested execute() would nest
+     * transactions on one connection, which SQLite forbids.
+     */
+    createCustomer(db, { name, email, terms, credit_limit }, at) {
+      if (!name) throw new R.Rejected('A customer needs a name.');
+      if (db.prepare('SELECT id FROM customer WHERE lower(name) = lower(?)').get(name)) {
+        throw new R.Rejected(`A customer named ${name} already exists. Use it, or give this one a distinguishing name.`);
+      }
+      const id = H.nextId('C', 'customer');
+      db.prepare('INSERT INTO customer (id,name,email,terms,credit_limit,created_at) VALUES (?,?,?,?,?,?)')
+        .run(id, name, email || null, terms || 'net30', credit_limit || 0, at || new Date().toISOString());
+      return H.get('customer', id);
+    },
     needItem: (id) => H.need('item', id, 'item'),
     /**
      * The only door to on_hand. delta<0 depletes (a shipment), delta>0 receives.

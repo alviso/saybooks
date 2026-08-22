@@ -31,7 +31,7 @@
     { "act": "account", "args": { "account": "A-0001" },
       "expect": { "ok": true, "include": { "status": "won" } } },
     { "act": "promote_to_customer", "args": { "account": "A-0001" },
-      "expect": { "refused": "already" },
+      "expect": { "refused": "Already promoted" },
       "notes": "CRM-8: at most once — the link exists; a second customer would be a reconciliation problem wearing a convenience" }
   ]
 }

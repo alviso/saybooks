@@ -83,9 +83,12 @@ function list() {
 function wipe(workspace) {
   const handle = dbFor(workspace);
   const tables = handle.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT IN ('schema_migration') AND name NOT LIKE 'sqlite_%'`).all();
-  handle.pragma('foreign_keys = OFF');
-  handle.transaction(() => { for (const t of tables) handle.prepare(`DELETE FROM "${t.name}"`).run(); })();
-  handle.pragma('foreign_keys = ON');
+  // defer_foreign_keys is transaction-scoped, which is exactly what we need: wipe() may run
+  // inside execute()'s transaction (core_reset_workspace), where `foreign_keys = OFF` would
+  // be a silent no-op and inter-table references would make delete order impossible.
+  handle.pragma('defer_foreign_keys = ON');
+  const run = () => { for (const t of tables) handle.prepare(`DELETE FROM "${t.name}"`).run(); };
+  if (handle.inTransaction) run(); else handle.transaction(run)();
 }
 
 /** Close an open handle and delete the workspace's files. Demo cleanup only. */

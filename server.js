@@ -197,7 +197,9 @@ const server = http.createServer((req, res) => {
           invoice:  H.db().prepare('SELECT id, id AS label FROM invoice ORDER BY id DESC').all(),
           payment:  H.db().prepare('SELECT id, id AS label FROM payment ORDER BY id DESC').all(),
           credit_note: H.db().prepare('SELECT id, id AS label FROM credit_note ORDER BY id DESC').all(),
+          account:  H.db().prepare('SELECT id, name AS label FROM account ORDER BY name').all(),
         },
+        areas: R.MODULES.filter(m => m.implements).map(m => m.implements.area),
       }, undefined, cookie));
     }
     // The spec, as a live object: status from the last full run, acts from the implements

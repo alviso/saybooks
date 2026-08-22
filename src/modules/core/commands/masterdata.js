@@ -19,13 +19,7 @@ authority to change it changes it, and that change is its own logged command.`,
     credit_limit: f.money('How much unpaid exposure we will carry for this customer.'),
   },
   handler(a, { db, at }) {
-    if (db.prepare('SELECT id FROM customer WHERE lower(name) = lower(?)').get(a.name)) {
-      throw new Rejected(`A customer named ${a.name} already exists. Use it, or give this one a distinguishing name.`);
-    }
-    const id = H.nextId('C', 'customer');
-    db.prepare('INSERT INTO customer (id,name,email,terms,credit_limit,created_at) VALUES (?,?,?,?,?,?)')
-      .run(id, a.name, a.email || null, a.terms || 'net30', a.credit_limit || 0, at);
-    return H.get('customer', id);
+    return api().createCustomer(db, a, at);
   },
 });
 

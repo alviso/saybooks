@@ -1,16 +1,248 @@
 [
-  ["core_create_customer", { "name": "Northwind Traders", "email": "ap@northwind.example", "terms": "net30", "credit_limit": 5000000 }, "onboarding our biggest account", "sam", "human"],
-  ["core_create_customer", { "name": "Contoso Ltd", "terms": "net15", "credit_limit": 100000 }, "small account, tight limit on purpose", "sam", "human"],
-  ["core_create_item", { "sku": "WIDGET-A", "name": "Widget, type A", "unit_price": 12500, "on_hand": 40 }, null, "sam", "human"],
-  ["core_create_item", { "sku": "WIDGET-B", "name": "Widget, type B", "unit_price": 8000, "on_hand": 5 }, null, "sam", "human"],
-  ["core_create_item", { "sku": "INSTALL", "name": "On-site installation", "unit_price": 50000, "stocked": false, "tax_rate_bp": 0 }, "service item — never blocks a shipment", "sam", "human"],
-  ["o2c_create_quote", { "customer_id": "C-0001", "lines": [ { "item_id": "WIDGET-A", "qty": 20 }, { "item_id": "WIDGET-B", "qty": 10 }, { "item_id": "INSTALL", "qty": 1 } ] }, "customer emailed asking for pricing on the spring order", "claude", "agent"],
-  ["o2c_send_quote", { "quote_id": "Q-0001" }, "sent as PDF from the sales inbox", "claude", "agent"],
-  ["o2c_accept_quote", { "quote_id": "Q-0001", "po_ref": "NW-88231" }, "PO arrived by email, attached to the thread", "sam", "human"],
-  ["o2c_confirm_order", { "order_id": "SO-0001" }, "credit is comfortable, PO in hand", "claude", "agent"],
-  ["o2c_ship_order", { "order_id": "SO-0001", "carrier": "UPS", "tracking": "1Z-88231-A", "lines": [ { "order_line_id": 1, "qty": 20 }, { "order_line_id": 2, "qty": 5 }, { "order_line_id": 3, "qty": 1 } ] }, "B is short 5 — shipping what we have, remainder stays open", "claude", "agent"],
-  ["o2c_invoice_shipped", { "order_id": "SO-0001" }, "billing what shipped, never what was ordered", "sam", "human"],
-  ["o2c_record_payment", { "customer_id": "C-0001", "amount": 200000, "method": "ach", "reference": "ACH-55120" }, "bank feed — no remittance advice yet", "sam", "human"],
-  ["o2c_apply_payment", { "payment_id": "P-0001", "invoice_id": "INV-0001" }, "remittance confirmed by their AP clerk on the phone", "claude", "agent"],
-  ["o2c_create_order", { "customer_id": "C-0002", "lines": [ { "item_id": "WIDGET-A", "qty": 20 } ] }, "left in draft on purpose: confirming it trips the credit gate — try it", "sam", "human"]
+ [
+  "core_create_customer",
+  {
+   "name": "Northwind Traders",
+   "email": "ap@northwind.example",
+   "terms": "net30",
+   "credit_limit": 5000000
+  },
+  "onboarding our biggest account",
+  "sam",
+  "human"
+ ],
+ [
+  "core_create_customer",
+  {
+   "name": "Contoso Ltd",
+   "terms": "net15",
+   "credit_limit": 100000
+  },
+  "small account, tight limit on purpose",
+  "sam",
+  "human"
+ ],
+ [
+  "core_create_item",
+  {
+   "sku": "WIDGET-A",
+   "name": "Widget, type A",
+   "unit_price": 12500,
+   "on_hand": 40
+  },
+  null,
+  "sam",
+  "human"
+ ],
+ [
+  "core_create_item",
+  {
+   "sku": "WIDGET-B",
+   "name": "Widget, type B",
+   "unit_price": 8000,
+   "on_hand": 5
+  },
+  null,
+  "sam",
+  "human"
+ ],
+ [
+  "core_create_item",
+  {
+   "sku": "INSTALL",
+   "name": "On-site installation",
+   "unit_price": 50000,
+   "stocked": false,
+   "tax_rate_bp": 0
+  },
+  "service item \u2014 never blocks a shipment",
+  "sam",
+  "human"
+ ],
+ [
+  "o2c_create_quote",
+  {
+   "customer_id": "C-0001",
+   "lines": [
+    {
+     "item_id": "WIDGET-A",
+     "qty": 20
+    },
+    {
+     "item_id": "WIDGET-B",
+     "qty": 10
+    },
+    {
+     "item_id": "INSTALL",
+     "qty": 1
+    }
+   ]
+  },
+  "customer emailed asking for pricing on the spring order",
+  "claude",
+  "agent"
+ ],
+ [
+  "o2c_send_quote",
+  {
+   "quote_id": "Q-0001"
+  },
+  "sent as PDF from the sales inbox",
+  "claude",
+  "agent"
+ ],
+ [
+  "o2c_accept_quote",
+  {
+   "quote_id": "Q-0001",
+   "po_ref": "NW-88231"
+  },
+  "PO arrived by email, attached to the thread",
+  "sam",
+  "human"
+ ],
+ [
+  "o2c_confirm_order",
+  {
+   "order_id": "SO-0001"
+  },
+  "credit is comfortable, PO in hand",
+  "claude",
+  "agent"
+ ],
+ [
+  "o2c_ship_order",
+  {
+   "order_id": "SO-0001",
+   "carrier": "UPS",
+   "tracking": "1Z-88231-A",
+   "lines": [
+    {
+     "order_line_id": 1,
+     "qty": 20
+    },
+    {
+     "order_line_id": 2,
+     "qty": 5
+    },
+    {
+     "order_line_id": 3,
+     "qty": 1
+    }
+   ]
+  },
+  "B is short 5 \u2014 shipping what we have, remainder stays open",
+  "claude",
+  "agent"
+ ],
+ [
+  "o2c_invoice_shipped",
+  {
+   "order_id": "SO-0001"
+  },
+  "billing what shipped, never what was ordered",
+  "sam",
+  "human"
+ ],
+ [
+  "o2c_record_payment",
+  {
+   "customer_id": "C-0001",
+   "amount": 200000,
+   "method": "ach",
+   "reference": "ACH-55120"
+  },
+  "bank feed \u2014 no remittance advice yet",
+  "sam",
+  "human"
+ ],
+ [
+  "o2c_apply_payment",
+  {
+   "payment_id": "P-0001",
+   "invoice_id": "INV-0001"
+  },
+  "remittance confirmed by their AP clerk on the phone",
+  "claude",
+  "agent"
+ ],
+ [
+  "o2c_create_order",
+  {
+   "customer_id": "C-0002",
+   "lines": [
+    {
+     "item_id": "WIDGET-A",
+     "qty": 20
+    }
+   ]
+  },
+  "left in draft on purpose: confirming it trips the credit gate \u2014 try it",
+  "sam",
+  "human"
+ ],
+ [
+  "crm_add_account",
+  {
+   "name": "Meridian Logistics",
+   "tier": 1,
+   "vertical": "logistics",
+   "why_them": "300-driver fleet; announced a workforce-visibility RFP for 2027 in their Q2 call",
+   "trigger_event": "new COO launched a cost program",
+   "hook": "You said in Q2 you can't see where driver hours go \u2014 that is literally what we sell.",
+   "source_url": "https://example.com/meridian-q2"
+  },
+  "researched from the Q2 earnings call",
+  "sam",
+  "human"
+ ],
+ [
+  "crm_set_account_status",
+  {
+   "account_id": "A-0001",
+   "status": "researching"
+  },
+  null,
+  "sam",
+  "human"
+ ],
+ [
+  "crm_add_contact",
+  {
+   "account_id": "A-0001",
+   "role_type": "OPERATIONS OWNER",
+   "name": "Dana Reeve",
+   "title": "VP Operations",
+   "source": "https://example.com/meridian-leadership",
+   "confidence_note": "high on the person, medium on the exact title"
+  },
+  "found on the leadership page",
+  "claude",
+  "agent"
+ ],
+ [
+  "crm_add_contact",
+  {
+   "account_id": "A-0001",
+   "role_type": "SECURITY GATE",
+   "gap_note": "no public CISO; likely under VP Eng \u2014 a finding, not a blank"
+  },
+  "recorded what we verifiably don't know",
+  "claude",
+  "agent"
+ ],
+ [
+  "crm_log_activity",
+  {
+   "account_id": "A-0001",
+   "summary": "intro email to Dana referencing the Q2 RFP; polite ack, asked for a one-pager",
+   "occurred_at": "2026-08-18",
+   "medium": "email",
+   "direction": "outbound",
+   "contact_id": "P-0001"
+  },
+  null,
+  "sam",
+  "human"
+ ]
 ]

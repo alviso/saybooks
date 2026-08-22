@@ -160,6 +160,8 @@ function runArea(area, opts = {}) {
     'INV-9': ['contract gate: sequential ids, void keeps its number (test/contract.test.js)'],
     'INV-18': ['contract gate: guard reason === thrown refusal, verbatim'],
     'INV-21': ['contract gate: reads never log, refused writes always log'],
+    'CRM-4': ['contract gate: human write accepted, agent write refused (even as owner), denial logged'],
+    'CRM-11': ['contract gate: reads never log, refused writes always log'],
   };
   const invariants = spec.invariants.map(inv => {
     const cites = [];

@@ -16,6 +16,8 @@
  *                    every scenario — the spec is enforced, not aspirational
  *  12. permissions   every command carries a permission tag; every tag is reachable by a
  *                    role; denials are the same one sentence on every surface
+ *  13. human-only    a field declared human_only accepts a person and refuses an agent —
+ *                    whatever the role — and the refusal is logged
  *
  * A PR that adds a hand-written form, a prefix-less command, or a cross-module UPDATE
  * fails here, not in review.
@@ -42,7 +44,7 @@ for (const c of COMMANDS) {
     Object.keys(t.inputSchema.properties).sort(), f.fields.map(x => x.key).sort(),
     `${c.name}: fields differ between MCP and UI`);
   assert.deepStrictEqual(
-    t.inputSchema.required.sort(), f.fields.filter(x => x.required).map(x => x.key).sort(),
+    [...t.inputSchema.required].sort(), f.fields.filter(x => x.required).map(x => x.key).sort(),
     `${c.name}: required differs between MCP and UI`);
   assert.ok(t.description.includes(c.summary), `${c.name}: tool description lost its summary`);
   if (c.doctrine) {
@@ -197,6 +199,24 @@ for (const tag of R.PERMISSIONS) {
   assert.ok(vDenied, 'viewer write must be denied naming the permission');
   execute('o2c_ar_aging', {}, { ...human, role: 'viewer' });
   ok('permissions: every command tagged, every tag reachable; denial is one sentence on both surfaces, logged; viewer reads but cannot write');
+}
+
+// ---------------------------------------------------------------- 13. human-only fields
+{
+  execute('crm_add_account', { name: 'Gate13 Co', why_them: 'test', source_url: 'https://example.com' }, human);
+  execute('crm_add_contact', { account_id: 'A-0001', role_type: 'OPERATIONS OWNER', name: 'Pat Test', source: 'https://example.com/team' }, human);
+  execute('crm_update_contact', { contact_id: 'P-0001', mutual_via: 'a real person typed this' }, human);
+  const asHuman = wsp.use(WS, () => H.db().prepare('SELECT mutual_via FROM contact WHERE id = ?').get('P-0001').mutual_via);
+  assert.strictEqual(asHuman, 'a real person typed this', 'a human write to a human_only field must land');
+  let denied = null;
+  try { execute('crm_update_contact', { contact_id: 'P-0001', mutual_via: 'agent tries' }, { ...human, actor_kind: 'agent', role: 'owner' }); }
+  catch (e) { denied = e.message; }
+  assert.ok(denied && denied.includes('human-only'), 'agent write to human_only must be refused naming human-only');
+  const row = wsp.use(WS, () => H.db().prepare('SELECT * FROM command_log ORDER BY id DESC LIMIT 1').get());
+  assert.strictEqual(row.ok, 0, 'the human-only denial must be logged');
+  const still = wsp.use(WS, () => H.db().prepare('SELECT mutual_via FROM contact WHERE id = ?').get('P-0001').mutual_via);
+  assert.strictEqual(still, 'a real person typed this', 'the refused agent write must not have touched the field');
+  ok('human-only: person accepted, agent refused (even as owner), denial logged, field untouched');
 }
 
 console.log(`\n${n} contract checks passed across ${MODULES.length} modules, ${COMMANDS.length} commands.`);

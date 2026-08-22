@@ -72,7 +72,8 @@ const f = {
 };
 
 const strip = (args) => Object.fromEntries(Object.entries(args).map(([k, v]) => {
-  const { ui, required, ...rest } = v;
+  const { ui, required, human_only, ...rest } = v;
+  if (human_only) rest.description = `${rest.description || ''} HUMAN-ONLY: entered by a person, never an agent — do not write this field.`.trim();
   return [k, rest];
 }));
 
@@ -166,7 +167,7 @@ const inMount = (c, modules) => !modules || modules.includes(c.module);
 const mcpTools = (opts = {}) => COMMANDS.filter(c => inMount(c, opts.modules)).map(c => ({
   name: c.name,
   description: description(c),
-  inputSchema: { type: 'object', properties: strip(c.args), required: c.required, additionalProperties: false },
+  inputSchema: { type: 'object', properties: strip(c.args), required: [...c.required], additionalProperties: false },
 }));
 
 /** Server instructions compose from the base doctrine plus each mounted module's. */
@@ -185,6 +186,7 @@ const formSpec = (opts = {}) => COMMANDS.filter(c => inMount(c, opts.modules)).m
     widget: a.ui.widget,
     entity: a.ui.entity,
     options: a.enum,
+    human_only: a.human_only || undefined,
     of: a.ui.of && Object.entries(a.ui.of).map(([k, v]) => ({
       key: k, label: v.ui.label || k.replace(/_/g, ' '), widget: v.ui.widget, entity: v.ui.entity, required: !!v.required,
     })),
@@ -263,6 +265,13 @@ function execute(name, args = {}, ctx = {}) {
 
     const write = db.transaction(() => {
       if (!hasGrant(role, cmd.permission)) throw new Rejected(denial(cmd, role));
+      if (who.actor_kind === 'agent') {
+        for (const [k, v] of Object.entries(args)) {
+          if (v !== undefined && v !== null && cmd.args[k] && cmd.args[k].human_only) {
+            throw new Rejected(`${k} is human-only: entered by a person, never an agent — ${cmd.args[k].human_only}`);
+          }
+        }
+      }
       validate(cmd, args);
       const result = cmd.handler(args, { db, at, ...who });
       db.prepare(`INSERT INTO command_log (at, command, actor_kind, actor, session, reason, subject_type, subject_id, args_json, ok, result_json)
