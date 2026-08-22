@@ -187,6 +187,44 @@ footer .mono{font-size:12px}
 </section>
 
 <section>
+  <p class="kicker">what's inside</p>
+  <h2>Modules — each governed by a written spec you can replay.</h2>
+  <p class="prose">A Saybooks module owns its tables, carries its rules as prose the agent actually
+  reads, and is held to a 14-gate contract. Each functional area is defined by a spec —
+  invariants, acts, lifecycles — with executable scenarios proving the implementation follows
+  it. Two areas ship today.</p>
+  <div class="claims">
+    <div class="claim">
+      <h3>o2c — Order to Cash</h3>
+      <p>Quotes, orders, and a credit gate that counts committed value; partial shipments and
+      backorders; invoicing from what shipped, never what was ordered; returns, credit notes and
+      write-offs; cash application where unapplied cash is a valid, visible state; statements
+      and an AR aging a controller would actually open. Calibrated for a 5–200 person company
+      selling on account.</p>
+      <span class="proof"><b>Spec:</b> 21 invariants · 25 acts · 9 replayable scenarios — <a href="/app#spec">walk them live</a></span>
+    </div>
+    <div class="claim">
+      <h3>crm — Relationship Pursuit</h3>
+      <p>The anti-funnel: a curated target list where every account can say why it belongs, with
+      a source. Contacts arrive with provenance or as <em>gaps</em> — an unfilled role is a
+      finding with its own worklist, never a guess. Some fields are human-only: the relationship
+      graph is refused to agents regardless of role. Won accounts promote into o2c as customers —
+      pursuit ends where trading begins.</p>
+      <span class="proof"><b>Spec:</b> 11 invariants · 14 acts · 3 replayable scenarios — extracted from a production CRM, <a href="https://github.com/alviso/saybooks/blob/master/specs/crm/spec.md">extraction record included</a></span>
+    </div>
+    <div class="claim">
+      <h3>Your area here</h3>
+      <p>Purchasing, projects, field service, a competing take on either area above — the module
+      contract is designed for it. Write the spec first (acts, invariants, scenarios), implement
+      against it, and the same conformance machinery that certifies ours certifies yours.
+      Scenario files speak in acts, not commands, so competing implementations run the same
+      files.</p>
+      <span class="proof"><b>Start here:</b> <a href="https://github.com/alviso/saybooks/blob/master/CONTRIBUTING.md">the module contract</a> · <a href="mailto:hello@saybooks.io">hello@saybooks.io</a></span>
+    </div>
+  </div>
+</section>
+
+<section>
   <div class="split">
     <div>
       <p class="kicker">one log, two kinds of hands</p>

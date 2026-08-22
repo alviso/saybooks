@@ -9,6 +9,12 @@
   nav h1 { font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); margin:0 0 14px 18px; font-weight:600 }
   nav a { display:block; padding:7px 18px; cursor:pointer; color:var(--ink); text-decoration:none }
   nav a:hover { background:var(--bg) } nav a.on { background:var(--bg); border-left:3px solid var(--accent); padding-left:15px; font-weight:600 }
+  nav .grp { font:600 11px system-ui; letter-spacing:.1em; text-transform:uppercase; color:var(--dim);
+    padding:10px 18px 4px; cursor:pointer; display:flex; justify-content:space-between; user-select:none }
+  nav .grp:hover { color:var(--accent) }
+  nav .grp .tog { font-size:13px; line-height:1 }
+  nav .grp-items.closed { display:none }
+  nav a.sub { padding-left:26px } nav a.sub.on { padding-left:23px }
   main { flex:1; overflow:auto; padding:26px 30px }
   h2 { margin:0 0 4px; font-size:20px } .sub { color:var(--dim); margin-bottom:18px; font-size:13px }
   table { border-collapse:collapse; width:100%; background:var(--panel); border:1px solid var(--line); border-radius:7px; overflow:hidden }
@@ -74,8 +80,20 @@
   <h1 style="letter-spacing:.08em">SAYBOOKS</h1>
   <div id="brandline" style="padding:0 18px 10px;font-size:11px;color:var(--dim);line-height:1.5">the books you can talk to —<br>that stay books</div>
   <div style="padding:0 18px 12px"><select id="wsSel" title="Workspace — your own database on this deployment" style="width:100%;font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--bg)"></select></div>
-  <a data-v="orders" class="on">Orders</a><a data-v="accounts">Accounts</a><a data-v="customers">Customers</a><a data-v="items">Items</a>
-  <a data-v="ar">AR aging</a><a data-v="cash">Unapplied cash</a><a data-v="audit">Audit trail</a><a data-v="spec">Spec</a><a data-v="doctrine">Doctrine</a>
+  <div class="grp" data-g="books">Books · o2c <span class="tog">−</span></div>
+  <div class="grp-items" data-gi="books">
+    <a class="sub on" data-v="orders">Orders</a><a class="sub" data-v="customers">Customers</a><a class="sub" data-v="items">Items</a>
+    <a class="sub" data-v="ar">AR aging</a><a class="sub" data-v="cash">Unapplied cash</a>
+  </div>
+  <div class="grp" data-g="crm">CRM <span class="tog">−</span></div>
+  <div class="grp-items" data-gi="crm">
+    <a class="sub" data-v="today">Today</a><a class="sub" data-v="accounts">Accounts</a><a class="sub" data-v="crmcontacts">Contacts</a>
+    <a class="sub" data-v="crmpipeline">Pipeline</a><a class="sub" data-v="network">Network</a><a class="sub" data-v="crmactivity">Activity</a>
+  </div>
+  <div class="grp" data-g="sys">System <span class="tog">−</span></div>
+  <div class="grp-items" data-gi="sys">
+    <a class="sub" data-v="audit">Audit trail</a><a class="sub" data-v="spec">Spec</a><a class="sub" data-v="doctrine">Doctrine</a>
+  </div>
 </nav>
 <main id="main"></main>
 <dialog id="dlg"></dialog>
@@ -281,7 +299,11 @@ async function render() {
   }
   const head = (title, sub) => main.append($(`<h2>${title}</h2>`), $(`<div class="sub">${sub}</div>`));
   const rowsInto = (t, rows, cells, type) => {
-    for (const r of rows) { const tr = $(`<tr>${cells(r)}</tr>`); tr.onclick = () => { selected = { type, id: r.id }; render(); }; t.querySelector('tbody').append(tr); }
+    for (const r of rows) {
+      const tr = $(`<tr>${cells(r)}</tr>`);
+      tr.onclick = () => { selected = type === 'accountFromGap' ? { type: 'account', id: r.account_id } : { type, id: r.id }; render(); };
+      t.querySelector('tbody').append(tr);
+    }
     main.append(t);
   };
 
@@ -304,6 +326,78 @@ async function render() {
     </div></div>`));
     const t = $('<table><thead><tr><th>Account</th><th>Name</th><th>Tier</th><th>Vertical</th><th>Status</th><th class="num">P</th><th>Customer</th></tr></thead><tbody></tbody></table>');
     rowsInto(t, rows, r => `<td>${r.id}</td><td>${r.name}</td><td>${r.tier ?? ''}</td><td>${r.vertical ?? ''}</td><td><span class="pill ${r.status}">${r.status}</span></td><td class="num">${Math.round(r.probability*100)}%</td><td>${r.customer_id ?? ''}</td>`, 'account');
+  }
+  if (view === 'today') {
+    head('Today', 'What deserves attention: gaps are research work, stale accounts are follow-up work, recent activity is context.');
+    const t = await api('crm_today');
+    main.append($(`<div class="sub">Open gaps — what we verifiably don't know (${t.open_gaps.length})</div>`));
+    if (t.open_gaps.length) {
+      const g = $('<table><thead><tr><th>Contact</th><th>Account</th><th>Role</th><th>What is missing</th><th class="num">Age (d)</th></tr></thead><tbody></tbody></table>');
+      rowsInto(g, t.open_gaps, r => `<td>${r.id}</td><td>${r.account_name}</td><td>${r.role_type}</td><td style="color:var(--dim)">${r.gap_note}</td><td class="num">${r.age_days}</td>`, 'accountFromGap');
+    } else main.append($('<div class="card doc" style="margin-bottom:14px">No open gaps.</div>'));
+    main.append($(`<div class="sub" style="margin-top:16px">Going stale — active pursuit, no touch in 14 days (${t.stale_accounts.length})</div>`));
+    if (t.stale_accounts.length) {
+      const st = $('<table><thead><tr><th>Account</th><th>Name</th><th>Status</th><th>Last activity</th></tr></thead><tbody></tbody></table>');
+      rowsInto(st, t.stale_accounts, r => `<td>${r.id}</td><td>${r.name}</td><td><span class="pill ${r.status}">${r.status}</span></td><td>${r.last_activity || 'never'}</td>`, 'account');
+    } else main.append($('<div class="card doc" style="margin-bottom:14px">Nothing going stale.</div>'));
+    main.append($('<div class="sub" style="margin-top:16px">Recent activity</div>'));
+    const at2 = $('<table><thead><tr><th>Occurred</th><th>Account</th><th>Who</th><th>Summary</th></tr></thead><tbody></tbody></table>');
+    for (const x of t.recent_activity.slice(0, 15)) at2.querySelector('tbody').append($(
+      `<tr><td>${x.occurred_at}</td><td>${x.account_name}</td><td>${x.contact_name || ''}</td><td>${x.summary}</td></tr>`));
+    main.append(at2);
+  }
+  if (view === 'crmcontacts') {
+    head('Contacts', 'Every person across the list — with provenance. Gaps are shown as what they are.');
+    const rows = await api('crm_list_contacts', {});
+    const t = $('<table><thead><tr><th>Contact</th><th>Account</th><th>Role</th><th>Name / gap</th><th>Source</th><th>Confidence</th></tr></thead><tbody></tbody></table>');
+    for (const c of rows) {
+      const tr = $(`<tr><td>${c.id}</td><td>${c.account_name}</td><td>${c.role_type}</td>
+        <td>${c.status === 'gap' ? `<span class="pill" style="background:#f2e3e3;color:var(--warn)">gap</span> <span style="color:var(--dim);font-size:12.5px">${c.gap_note}</span>` : `${c.name}${c.title ? ' · ' + c.title : ''}${c.status === 'departed' ? ' <span class="pill">departed</span>' : ''}`}</td>
+        <td style="font-size:12px">${c.source ? `<a href="${c.source}" target="_blank" rel="noopener">link</a>` : ''}</td>
+        <td style="font-size:12px;color:var(--dim)">${c.confidence_note || ''}</td></tr>`);
+      tr.onclick = () => { selected = { type: 'account', id: c.account_id }; render(); };
+      t.querySelector('tbody').append(tr);
+    }
+    main.append(t);
+  }
+  if (view === 'crmpipeline') {
+    head('Pipeline', 'Weighted where-are-we. Probabilities come from stage reference data, not vibes.');
+    const rows = await api('crm_pipeline');
+    const groups = {};
+    for (const r of rows) (groups[r.status] = groups[r.status] || []).push(r);
+    for (const st of ['active', 'approaching', 'researching', 'not_started', 'on_hold', 'won', 'closed', 'excluded']) {
+      if (!groups[st]) continue;
+      main.append($(`<div class="sub" style="margin-top:14px">${st} (${groups[st].length})</div>`));
+      const t = $('<table><thead><tr><th>Account</th><th>Name</th><th>Tier</th><th>Vertical</th><th class="num">P</th><th>Customer</th></tr></thead><tbody></tbody></table>');
+      rowsInto(t, groups[st], r => `<td>${r.id}</td><td>${r.name}</td><td>${r.tier ?? ''}</td><td>${r.vertical ?? ''}</td><td class="num">${Math.round(r.probability*100)}%</td><td>${r.customer_id ?? ''}</td>`, 'account');
+    }
+    if (!rows.length) main.append($('<div class="card doc">The list is empty — add the first account it can be said why.</div>'));
+  }
+  if (view === 'network') {
+    head('Network', 'The human-entered relationship graph: these fields are refused to agents by design — a person typed every cell.');
+    const rows = (await api('crm_list_contacts', {})).filter(c => c.mutual_via || c.mutual_url || c.linkedin_path);
+    if (!rows.length) main.append($('<div class="card doc">Nothing here yet. mutual_via, mutual_url and linkedin_path are filled in by hand — from your own network, deliberately.</div>'));
+    else {
+      const t = $('<table><thead><tr><th>Contact</th><th>Account</th><th>Mutual via</th><th>Path</th><th>Link</th></tr></thead><tbody></tbody></table>');
+      for (const c of rows) {
+        const tr = $(`<tr><td>${c.name || c.id}</td><td>${c.account_name}</td><td>${c.mutual_via || ''}</td><td>${c.linkedin_path || ''}</td>
+          <td style="font-size:12px">${c.mutual_url ? `<a href="${c.mutual_url}" target="_blank" rel="noopener">link</a>` : ''}</td></tr>`);
+        tr.onclick = () => { selected = { type: 'account', id: c.account_id }; render(); };
+        t.querySelector('tbody').append(tr);
+      }
+      main.append(t);
+    }
+  }
+  if (view === 'crmactivity') {
+    head('Activity', 'Everything that happened, newest first — dated when it happened, not when it was typed.');
+    const t = await api('crm_today');
+    const at2 = $('<table><thead><tr><th>Occurred</th><th>Account</th><th>Contact</th><th>Medium</th><th>Summary</th></tr></thead><tbody></tbody></table>');
+    for (const x of t.recent_activity) {
+      const tr = $(`<tr><td>${x.occurred_at}</td><td>${x.account_name}</td><td>${x.contact_name || ''}</td><td>${x.medium || ''}</td><td>${x.summary}</td></tr>`);
+      tr.onclick = () => { selected = { type: 'account', id: x.account_id }; render(); };
+      at2.querySelector('tbody').append(tr);
+    }
+    main.append(at2);
   }
   if (view === 'customers') {
     head('Customers', 'Credit position is live: limit less open AR less the uninvoiced value of confirmed orders.');
@@ -633,6 +727,16 @@ const boot = async () => {
   };
 };
 document.querySelectorAll('nav a').forEach(a => a.onclick = () => { view = a.dataset.v; selected = null; render(); });
+document.querySelectorAll('nav .grp').forEach(g => {
+  const items = document.querySelector(`[data-gi="${g.dataset.g}"]`);
+  const apply = (closed) => { items.classList.toggle('closed', closed); g.querySelector('.tog').textContent = closed ? '+' : '−'; };
+  apply(localStorage.getItem('nav.' + g.dataset.g) === 'closed');
+  g.onclick = () => {
+    const closed = !items.classList.contains('closed');
+    localStorage.setItem('nav.' + g.dataset.g, closed ? 'closed' : 'open');
+    apply(closed);
+  };
+});
 if (['spec','doctrine','audit'].includes(location.hash.slice(1))) view = location.hash.slice(1);
 boot().then(render);
 </script>
