@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * otc MCP server — stdio. Surface #1.
+ * Saybooks MCP server — stdio. Surface #1.
  *
  * One process, one workspace, an explicit module mount:
  *   OTC_WORKSPACE=peter OTC_MODULES=core,o2c node mcp-server.js
@@ -18,17 +18,17 @@ const R = require('./src/registry.js');
 const BASE = require('./src/base-doctrine.js');
 
 R.loadModules();
-const workspace = process.env.OTC_WORKSPACE || process.env.USER || 'main';
-const modules = process.env.OTC_MODULES ? process.env.OTC_MODULES.split(',').map(s => s.trim()) : null;
+const workspace = process.env.SAYBOOKS_WORKSPACE || process.env.OTC_WORKSPACE || process.env.USER || 'main';
+const modules = (process.env.SAYBOOKS_MODULES || process.env.OTC_MODULES) ? (process.env.SAYBOOKS_MODULES || process.env.OTC_MODULES).split(',').map(s => s.trim()) : null;
 if (modules) for (const m of modules) if (!R.MODULES.some(x => x.name === m)) {
-  process.stderr.write(`[otc] unknown module "${m}" — have: ${R.MODULES.map(x => x.name).join(', ')}\n`);
+  process.stderr.write(`[saybooks] unknown module "${m}" — have: ${R.MODULES.map(x => x.name).join(', ')}\n`);
   process.exit(1);
 }
 const mount = { modules };
 const session = `mcp-${workspace}-${process.pid}`;
 
 const server = new Server(
-  { name: 'otc', version: '0.2.0' },
+  { name: 'saybooks', version: '0.2.0' },
   { capabilities: { tools: {} }, instructions: R.instructions(BASE, mount) },
 );
 
@@ -53,6 +53,6 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
 async function main() {
   require('./src/workspace.js').dbFor(workspace);     // open + migrate up front
   await server.connect(new StdioServerTransport());
-  process.stderr.write(`[otc] ready — workspace ${workspace}, modules ${modules ? modules.join(',') : 'all'}\n`);
+  process.stderr.write(`[saybooks] ready — workspace ${workspace}, modules ${modules ? modules.join(',') : 'all'}\n`);
 }
-main().catch(e => { process.stderr.write(`[otc] fatal: ${e.stack}\n`); process.exit(1); });
+main().catch(e => { process.stderr.write(`[saybooks] fatal: ${e.stack}\n`); process.exit(1); });

@@ -115,10 +115,10 @@ defineCommand({
 });
 
 // Workspace plumbing — never mounted in production.
-if (process.env.OTC_ENV !== 'production') {
+if ((process.env.SAYBOOKS_ENV || process.env.OTC_ENV) !== 'production') {
   read({ name: 'core_workspaces', title: 'Workspaces', summary: 'List the workspaces on this deployment and which one this session is in.',
     doctrine: 'On a hosted demo this answers with your sandbox only: a sandbox name is the key to that sandbox, so other visitors\' names are never listed.',
-    args: {}, handler: () => process.env.OTC_DEMO === '1'
+    args: {}, handler: () => (process.env.SAYBOOKS_DEMO || process.env.OTC_DEMO) === '1'
       ? ({ current: wsp.currentName(), workspaces: [wsp.currentName()] })
       : ({ current: wsp.currentName(), workspaces: wsp.list() }) });
 

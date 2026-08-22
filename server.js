@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * otc workbench — surface #2, over the same registry.
+ * Saybooks workbench — surface #2, over the same registry.
  *
  * Workspace comes per request: ?ws=peter, remembered in a cookie. The same person's agent
  * session (OTC_WORKSPACE=peter) and browser tab therefore see the same rows — the whole
@@ -21,14 +21,14 @@ const members = require('./src/members.js');
 
 R.loadModules();
 
-const PORT = Number(process.env.OTC_PORT || 8140);
+const PORT = Number(process.env.SAYBOOKS_PORT || process.env.OTC_PORT || 8140);
 /**
  * Demo mode (OTC_DEMO=1): the hosted try-it deployment. Public bind; every visitor gets a
  * private sandbox workspace seeded with a story (fixtures/try.json), pinned by cookie, never
  * shown anyone else's data, and swept after 24h. The registry, guards and audit trail are the
  * real ones — the demo IS the product, scoped to a throwaway database per visitor.
  */
-const DEMO = process.env.OTC_DEMO === '1';
+const DEMO = (process.env.SAYBOOKS_DEMO || process.env.OTC_DEMO) === '1';
 const HOST = DEMO ? '0.0.0.0' : '127.0.0.1';
 const UI = path.join(__dirname, 'ui');
 const crypto = require('crypto');
@@ -295,5 +295,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`${DEMO ? 'Saybooks demo' : 'otc workbench'} → http://${HOST}:${PORT}   (workspaces in ${wsp.DATA_DIR})`);
+  console.log(`${DEMO ? 'Saybooks demo' : 'Saybooks workbench'} → http://${HOST}:${PORT}   (workspaces in ${wsp.DATA_DIR})`);
 });

@@ -214,7 +214,7 @@ async function detail(type, id) {
   card.append(kv);
 
   /* Buttons and their disabled reasons come from the server's guard evaluation — the same
-     call otc_next_actions makes. The browser decides nothing about what is allowed. */
+     call core_next_actions makes. The browser decides nothing about what is allowed. */
   const acts = $('<div class="acts"></div>');
   for (const a of na.actions) {
     const b = $(`<button ${a.available ? '' : 'disabled'}>${a.title}</button>`);

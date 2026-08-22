@@ -74,7 +74,7 @@ npm start         # workbench on http://127.0.0.1:8140
 npm run mcp       # stdio MCP server (OTC_WORKSPACE=you)
 ```
 
-Register for a Claude Code session: `claude mcp add otc -e OTC_WORKSPACE=$USER -- node <path>/mcp-server.js`
+Register for a Claude Code session: `claude mcp add saybooks-local -e SAYBOOKS_WORKSPACE=$USER -- node <path>/mcp-server.js`
 
 ## Honest limits
 

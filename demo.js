@@ -73,7 +73,7 @@ console.log(`      applied ${ap.applied}; ${inv.id} now owes ${ap.invoice.open_d
 console.log(B('\n═══ 7. one evaluation, two surfaces ══════════════════════════'));
 const na = wsp.use(WS, () => nextActions('order', so.id));
 console.log(DIM('      the UI greys a button and shows `reason` as its tooltip;'));
-console.log(DIM('      otc_next_actions returns this same array to the agent.'));
+console.log(DIM('      core_next_actions returns this same array to the agent.'));
 for (const a of na.actions) console.log(`      ${a.available ? GREEN('●') : DIM('○')} ${a.title.padEnd(16)} ${a.available ? '' : DIM(a.reason)}`);
 
 console.log(B('\n═══ 8. AR aging ══════════════════════════════════════════════'));

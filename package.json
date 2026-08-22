@@ -1,11 +1,11 @@
 {
-  "name": "otc",
+  "name": "saybooks",
   "version": "0.2.0",
   "description": "Saybooks \u2014 a conversational ERP where the agent and the UI are the same system: one command registry, one rulebook, one audit trail.",
   "type": "commonjs",
   "private": true,
   "bin": {
-    "otc-mcp": "./mcp-server.js"
+    "saybooks-mcp": "./mcp-server.js"
   },
   "scripts": {
     "start": "node server.js",

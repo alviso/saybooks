@@ -4,7 +4,7 @@
  * time — registry.instructions(base, {modules}) — so a session that mounts only some
  * modules reads only the rules that apply to it.
  */
-module.exports = `otc is a modular ERP and a system of record. Every command you call is logged
+module.exports = `Saybooks is a modular ERP and a system of record. Every command you call is logged
 with actor_kind=agent, alongside the same commands humans issue from the UI — one log, one set
 of rules, two surfaces.
 

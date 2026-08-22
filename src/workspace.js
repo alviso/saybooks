@@ -14,7 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
 
-const DATA_DIR = process.env.OTC_DATA || path.join(__dirname, '..', 'data');
+const DATA_DIR = process.env.SAYBOOKS_DATA || process.env.OTC_DATA || path.join(__dirname, '..', 'data');
 const NAME_RE = /^[a-z0-9][a-z0-9_-]{0,40}$/;
 
 const open = new Map();          // workspace name -> Database
