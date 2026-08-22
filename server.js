@@ -79,22 +79,58 @@ const entryOf = (req, url) => {
     if (m && sandboxExists(m.workspace)) return { ws: m.workspace, member: m, cookie: join };
   }
   const q = url.searchParams.get('ws');
-  if (q && /^try-[a-z0-9]{6,24}$/.test(q)) { if (!sandboxExists(q)) seedSandbox(q); return { ws: q, member: { name: 'owner', role: 'owner' }, cookie: q }; }
+  if (q && /^try-[a-z0-9]{6,24}$/.test(q)) {
+    if (!sandboxExists(q)) { if (!birthAllowed(ipOf(req))) throw Object.assign(new Error('sandbox limit reached for now — try again in an hour'), { status: 429 }); seedSandbox(q); }
+    return { ws: q, member: { name: 'owner', role: 'owner' }, cookie: q };
+  }
   const ck = /(?:^|;\s*)otc_ws=([a-z0-9-]+)/.exec(req.headers.cookie || '');
   if (ck) {
     const m = members.resolve(ck[1]);
     if (m && sandboxExists(m.workspace)) return { ws: m.workspace, member: m, cookie: ck[1] };
     if (/^try-[a-z0-9]+$/.test(ck[1]) && sandboxExists(ck[1])) return { ws: ck[1], member: { name: 'owner', role: 'owner' }, cookie: ck[1] };
   }
+  if (!birthAllowed(ipOf(req))) throw Object.assign(new Error('sandbox limit reached for now — try again in an hour'), { status: 429 });
   const fresh = newVisitorWs();
   return { ws: fresh, member: { name: 'owner', role: 'owner' }, cookie: fresh };
 };
 
 const walks = new Map();          // walkthrough ordering: workspace -> next expected step
 
+/**
+ * Demo abuse guard — deliberately light: a token bucket per IP for requests, and a separate
+ * hourly cap on sandbox creation (each sandbox is a database on disk). nginx supplies
+ * X-Forwarded-For. Honest scope: this keeps a stray script from being expensive; it is not
+ * DDoS protection, which lives at other layers.
+ */
+const ipOf = (req) => (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || '?';
+const buckets = new Map();        // ip -> { tokens, at }   (300 req / 5 min)
+const births = new Map();         // ip -> [timestamps]     (20 sandboxes / hour)
+function rateLimited(ip) {
+  const now = Date.now();
+  const b = buckets.get(ip) || { tokens: 300, at: now };
+  b.tokens = Math.min(300, b.tokens + (now - b.at) * (300 / 300000));
+  b.at = now;
+  if (b.tokens < 1) { buckets.set(ip, b); return true; }
+  b.tokens -= 1; buckets.set(ip, b);
+  return false;
+}
+function birthAllowed(ip) {
+  const now = Date.now();
+  const list = (births.get(ip) || []).filter(t => now - t < 3600000);
+  if (list.length >= 20) { births.set(ip, list); return false; }
+  list.push(now); births.set(ip, list);
+  return true;
+}
+if (DEMO) setInterval(() => {
+  const now = Date.now();
+  for (const [ip, b] of buckets) if (now - b.at > 600000) buckets.delete(ip);
+  for (const [ip, l] of births) if (!l.some(t => now - t < 3600000)) births.delete(ip);
+}, 600000).unref();
+
 const server = http.createServer((req, res) => {
   const host = (req.headers.host || '').split(':')[0];
   if (!DEMO && !['127.0.0.1', 'localhost', '[::1]', '::1'].includes(host)) return send(res, 403, { error: 'localhost only' });
+  if (DEMO && rateLimited(ipOf(req))) return send(res, 429, { error: 'slow down — this is a demo, and it is being fair to everyone else' });
   const url = new URL(req.url, `http://${req.headers.host}`);
   const p = url.pathname;
 
@@ -108,7 +144,12 @@ const server = http.createServer((req, res) => {
     if (DEMO) {
       const tok = mws && members.resolve(mws);
       if (tok && sandboxExists(tok.workspace)) { mws = tok.workspace; mMember = tok; }
-      else if (mws && /^try-[a-z0-9]{6,24}$/.test(mws)) { if (!sandboxExists(mws)) seedSandbox(mws); }
+      else if (mws && /^try-[a-z0-9]{6,24}$/.test(mws)) {
+        if (!sandboxExists(mws)) {
+          if (!birthAllowed(ipOf(req))) return send(res, 429, { error: 'sandbox limit reached for now — try again in an hour' });
+          seedSandbox(mws);
+        }
+      }
       else {
         return send(res, 404, { error: 'connect to /mcp/<your-sandbox> or /mcp/<member-token> — the browser demo at https://saybooks.io shows yours' });
       }
@@ -124,7 +165,9 @@ const server = http.createServer((req, res) => {
     return undefined;
   }
 
-  const entry = entryOf(req, url);
+  let entry;
+  try { entry = entryOf(req, url); }
+  catch (e) { return send(res, e.status || 500, { error: e.message }); }
   const ws = entry.ws, member = entry.member;
   const cookie = { 'set-cookie': `otc_ws=${entry.cookie || ws}; Path=/; SameSite=Lax` };
 
@@ -241,9 +284,10 @@ const server = http.createServer((req, res) => {
     const full = path.join(UI, file);
     if (full.startsWith(UI) && fs.existsSync(full) && fs.statSync(full).isFile()) {
       const MIME = { '.html': 'text/html; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml',
-                     '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.ico': 'image/x-icon' };
+                     '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.ico': 'image/x-icon',
+                     '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8', '.gif': 'image/gif', '.mp4': 'video/mp4' };
       // The social card may be cached hard; everything else stays no-store.
-      const headers = full.endsWith('.png') ? { 'cache-control': 'public, max-age=86400' } : {};
+      const headers = /\.(png|mp4)$/.test(full) ? { 'cache-control': 'public, max-age=86400' } : {};
       return send(res, 200, fs.readFileSync(full), MIME[path.extname(full)] || 'application/octet-stream', headers);
     }
   }

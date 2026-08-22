@@ -1,96 +1,89 @@
-# otc — a modular ERP skeleton where the UI and the MCP cannot drift
+# Saybooks
 
-A sketch built to test two claims. First: "keep the UI and the MCP in tandem" should be a
-structural property, not a discipline. Second: that property survives multiple contributors
-working on separate functional areas against one deployment.
+**The books you can talk to. The books that stay books.**
 
-## The shape
+Saybooks is an ERP where your agent and your interface are the same system — one command
+registry, one rulebook, one audit trail. Tell Claude to ship the order, or click the button:
+same command, same rules, same record of who did what and why.
+
+**Live demo: [saybooks.io](https://saybooks.io)** — no signup; you get a private sandbox with
+example books. Point your own Claude at it over MCP and watch your words become attributed,
+reasoned ledger entries next to the human ones.
+
+## Why this exists
+
+"Conversational ERP" usually means a chat layer bolted onto a system that doesn't know the
+agent exists. Saybooks inverts that: every business act is **declared once**, and everything
+else is *derived* from that declaration —
+
+| derived | so that |
+|---|---|
+| the MCP tool (name, doctrine, JSON Schema) | the agent sees exactly what the UI can do |
+| the UI form (fields, widgets, validation) | the human sees exactly what the agent can do |
+| the guard evaluation | a greyed-out button's tooltip, the thrown refusal, and the agent's answer are **the same sentence** — asserted by test |
+| the audit row | every write from either surface lands in one log with an actor; refusals included |
+
+Nothing outside the registry may call a handler. A click and a tool call go through the same
+command, the same guards, the same transaction. The two surfaces cannot drift, because neither
+is authored — and `test/contract.test.js` fails the build if anyone tries.
+
+## What's inside
 
 ```
-src/registry.js            the choke point: define, derive, execute, log
-src/workspace.js           a SQLite database per contributor; code shared, data not
-src/modules/<name>/        the unit of contribution
-  index.js                 manifest: name, prefix, owned tables, doctrine, api, subjects
-  commands/*.js            declarations — everything else is derived
-  migrations/NNN_*.sql     numbered, per module
-fixtures/*.json            command scripts: seeded state has a real audit trail
-specs/<area>/spec.md       the curated area spec (acts, invariants, read models)
-specs/<area>/acts.json     its machine layer: required acts + invariant list
-specs/<area>/scenarios/    executable conformance: act-named steps, ok/refused assertions
-src/conformance.js         replays scenarios through the real registry; keeps the evidence
-test/contract.test.js      the contributor contract, as assertions (incl. gate 11: conformance)
+src/registry.js            declare once; derive tools, forms, guards, audit — and enforce
+src/workspace.js           a SQLite database per workspace (per contributor, per sandbox)
+src/members.js             capability-token identity: named members with roles
+src/modules/core/          master data, stock/price/credit acts, registry-wide reads
+src/modules/o2c/           order-to-cash: 25 acts, spec-exact
+specs/o2c/spec.md          the curated area spec: 21 invariants, lifecycles, read models
+specs/o2c/scenarios/       9 executable conformance scenarios (refusals are contract)
+src/conformance.js         replays scenarios through the real registry; keeps evidence
+server.js                  workbench + hosted demo + MCP-over-HTTP (all one registry)
+mcp-server.js              stdio MCP for local development
+test/contract.test.js      the 12-gate contract (see below)
 ```
 
-Every command is declared once. Derived from that one declaration: the MCP tool, the UI form,
-the guard evaluation (greyed buttons ≡ `core_next_actions`, same sentence verbatim), and the
-audit row. Nothing outside the registry may call a handler; both servers call `execute()`,
-which differs between them only by `actor_kind`.
+**The o2c vertical**, calibrated for a 5–200 person company selling on account: quotes, orders,
+a credit gate that counts committed value, partial fulfilment and backorders, invoicing from
+what shipped, returns and credit notes, cash application, refunds, write-offs, customer
+statements, AR aging. Money is integer cents, everywhere.
 
-## Try it
+**Access control**: every command declares a permission tag; four roles (owner / controller /
+clerk / viewer); enforcement at the registry choke point; denials are one-sentence refusals,
+logged — attempted overreach is reviewable. An agent connecting through a member's token is
+that member's *delegate*: their name, their permissions.
 
+## The 12-gate contract
+
+Every module — present and future — is held to: MCP/UI parity · namespace prefixes ·
+doctrine on every write · guards declared · table ownership (no cross-module writes) ·
+a 25-tool budget · module mounts · one-sentence rule · audit behavior · fixture replay ·
+**spec conformance** (an implementation claiming an area must map every act and pass every
+scenario) · **permissions** (unpermissioned commands do not ship).
+
+The endgame is competing implementations of the same area, certified by replaying the same
+scenario files — the spec speaks in acts, not commands, so any conforming module runs them.
+
+## Run it
+
+```bash
+npm install
+npm test          # the 12 gates
+npm run demo      # a full quote-to-cash run, human and agent interleaved
+npm start         # workbench on http://127.0.0.1:8140
+npm run mcp       # stdio MCP server (OTC_WORKSPACE=you)
 ```
-npm run demo     # full quote→cash run, human and agent alternating, plus workspace isolation
-npm test         # the 10-point contract
-npm start        # workbench on http://127.0.0.1:8140 — ?ws=<name> picks your workspace
-npm run mcp      # stdio MCP; OTC_WORKSPACE=you OTC_MODULES=core,o2c
-```
 
-Register for a dev session: `claude mcp add otc -e OTC_WORKSPACE=$USER -- node <path>/mcp-server.js`.
-Reset your workspace to shared state: ask the agent to `core_reset_workspace` with fixture `acme`,
-or click it in the workbench. Fixtures replay through the real registry — a seeded workspace is
-indistinguishable from one built by hand, and a fixture that violates a business rule fails loudly.
+Register for a Claude Code session: `claude mcp add otc -e OTC_WORKSPACE=$USER -- node <path>/mcp-server.js`
 
-## The contributor contract (`npm test`)
+## Honest limits
 
-1. **parity** — MCP tool and UI form derive from one declaration; fields, required sets, enums
-   and doctrine are asserted identical on both surfaces
-2. **namespace** — every command carries its module's prefix; collisions are impossible
-3. **doctrine** — every write command teaches; empty doctrine does not ship
-4. **guards** — every instance write declares what blocks it, or says `guardless: true` out loud
-5. **ownership** — no module writes a table it does not own (reads and joins stay free); it uses
-   the owner's api — o2c depletes stock only through `core.adjustStock`
-6. **budget** — ≤25 tools per module; past that, the review question is which commands are
-   really the same business act
-7. **mounts** — `OTC_MODULES=core` yields exactly core's tools, and `core_schema` reports only
-   what is mounted; this is how the ERP grows past one agent's tool budget
-8. **one sentence** — a guard's tooltip and the thrown refusal are the same string, verbatim
-9. **audit** — reads never log; refused writes always do, with their actor
-10. **fixtures** — the shared fixture replays cleanly
+Not multi-currency, not multi-entity, no tax engine (rates are captured and frozen per line;
+determination is an integration's job), no outbound anything — Saybooks never emails a
+customer, charges a card, or books a shipment. It records what happened. The deferred list
+with reasons is in [specs/o2c/spec.md](specs/o2c/spec.md) §9.
 
-The ownership and namespace gates are verified to actually trip — with messages that name the
-fix ("writes item, owned by core — use core's api instead").
+## License
 
-Gate 11 is the spec made enforceable: a module declaring `implements: {area, spec, acts, argmap}`
-must map every spec act to a real command and pass every scenario. Scenarios speak in *acts*,
-not commands, so any competing implementation runs the same files.
-
-## Spec visibility
-
-The spec is a live object, not a document nobody opens:
-
-- **Workbench → Spec tab**: conformance status (derived from the implements map and the last
-  run — never asserted), the act table with per-act implemented/exercised flags, every
-  invariant with the evidence that exercises it, and each scenario expandable into its
-  step-by-step trace. **Replay** runs a scenario live in a scratch workspace through the real
-  registry — same guards, same audit log — which is what makes it a teaching surface: the
-  steps show act → command, the arguments, the doctrine note, and what actually came back.
-  The refusal steps teach more than the happy path.
-- **Agent side**: `core_spec_status` returns the same report; `core_replay_scenario`
-  (non-production only) replays and returns the trace, so a session can walk a newcomer
-  through how the area works using real executions.
-
-## Workspaces
-
-One deployment, one registry, one set of rules; `data/ws_<name>.db` per contributor. The MCP
-session (`OTC_WORKSPACE`) and the browser tab (`?ws=`) name the same workspace and therefore see
-the same rows — test conversationally, verify in the UI. Workspaces isolate data, not authority:
-there is no auth here, deliberately, and adding it starts with a `permissions` field on the
-command declaration, not with the workspace layer.
-
-## What this deliberately is not
-
-No tax, no multi-currency, no GL posting, no period close, no credit notes, no returns. Those are
-the parts that make ERP hard; the architecture does not make them easier — it makes them land as
-modules under the same contract. Still stubbed: authorization (a `permissions` field the registry
-enforces, greying the button and hiding the tool from one declaration) and reversal (each
-irreversible act needs a compensating command; `o2c_void_invoice` is the only one so far).
+[AGPL-3.0-only](LICENSE). Copyright (C) 2026 Peter Varga.
+If you run a modified Saybooks as a service, share your changes — that's the deal.

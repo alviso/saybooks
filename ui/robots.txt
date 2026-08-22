@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /mcp/
+Sitemap: https://saybooks.io/sitemap.xml

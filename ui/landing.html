@@ -221,6 +221,20 @@ footer .mono{font-size:12px}
 </section>
 
 <section>
+  <p class="kicker">watch a rule teach</p>
+  <h2 class="prose">Every scenario in the spec can be walked, form by form, live.</h2>
+  <p class="prose">This is the credit-gate scenario from the demo's Spec tab: each step shows the real
+  form, filled in as a person would fill it, then runs for real in a scratch workspace — and the
+  step that gets refused is framed as the lesson, because it is one.</p>
+  <video autoplay muted loop playsinline preload="metadata" width="1100"
+    style="width:100%;max-width:1100px;border:1.5px solid var(--rule);border-radius:12px;display:block;margin:20px 0 6px"
+    aria-label="Screen recording: the walkthrough stepping through the credit gate scenario, ending in the refusal">
+    <source src="/walkthrough.mp4" type="video/mp4">
+  </video>
+  <p class="caption">Recorded from the live demo, unedited. <a href="/app#spec">Walk it yourself →</a></p>
+</section>
+
+<section>
   <p class="kicker">why it can't drift</p>
   <h2>Every capability is declared once. Everything else is derived.</h2>
   <div class="claims">
@@ -305,5 +319,10 @@ footer .mono{font-size:12px}
 </footer>
 
 </div>
+<script>
+if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  document.querySelectorAll('video[autoplay]').forEach(v => { v.removeAttribute('autoplay'); v.pause(); v.setAttribute('controls', ''); });
+}
+</script>
 </body>
 </html>
