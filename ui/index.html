@@ -187,7 +187,13 @@ function linesEditor(f, state) {
 /* ---------- views ---------- */
 const cmd = (n) => REG.commands.find(c => c.name === n);
 const newButtons = (subject) => REG.commands.filter(c => c.subject === subject && c.intent === 'write' && c.scope === 'collection')
-  .map(c => { const b = $(`<button class="primary">${c.title}</button>`); b.onclick = () => openForm(c); return b; });
+  .map(c => {
+    const allowed = !REG.grants || REG.grants.includes(c.permission);
+    const b = $(`<button class="primary" ${allowed ? '' : 'disabled'}>${c.title}</button>`);
+    if (!allowed) b.title = `${c.title} needs ${c.permission} — your role (${REG.member ? REG.member.role : 'viewer'}) does not have it.`;
+    b.onclick = () => openForm(c);
+    return b;
+  });
 
 async function detail(type, id) {
   const wrap = $('<div></div>');
@@ -386,6 +392,63 @@ result ${st.actual}</pre>
   }
 }
 
+/* ---------- sharing: mint member keys, list them, revoke them ---------- */
+async function openInvite() {
+  const dlg = document.getElementById('dlg');
+  const draw = async () => {
+    const { members } = (await api('core_members', {}));
+    dlg.innerHTML = '';
+    dlg.append($(`<header><b>Share this sandbox</b><div class="help">A member is a named key with a role. The link IS the key — share each with exactly one person.
+owner: everything · controller: everything but admin · clerk: day-to-day, no credit authority · viewer: read only</div></header>`));
+    const body = $('<form style="padding:18px 20px"></form>');
+    body.onsubmit = (e) => e.preventDefault();
+    body.append($(`<div style="display:flex;gap:8px;margin-bottom:14px">
+      <input id="invName" placeholder="Name (e.g. Ana)" style="flex:2">
+      <select id="invRole" style="flex:1"><option>controller</option><option>clerk</option><option>viewer</option></select>
+      <button id="invGo" type="button" class="primary" style="white-space:nowrap">Mint key</button></div>
+      <div id="invOut"></div><div id="memList"></div>`));
+    dlg.append(body);
+    const foot = $('<footer><button type="button">Close</button></footer>');
+    foot.querySelector('button').onclick = () => dlg.close();
+    dlg.append(foot);
+
+    body.querySelector('#invGo').onclick = async () => {
+      const name = body.querySelector('#invName').value.trim();
+      const role = body.querySelector('#invRole').value;
+      if (!name) return;
+      try {
+        const m = await api('core_invite', { name, role, _reason: `shared with ${name} as ${role}` });
+        body.querySelector('#invOut').innerHTML = '';
+        body.querySelector('#invOut').append($(`<div class="card" style="margin-bottom:12px"><b>${m.name}</b> · <span class="pill">${m.role}</span>
+          <div style="margin-top:6px;font-size:12px">browser: <code style="user-select:all">${location.origin}${m.join_path}</code></div>
+          <div style="margin-top:4px;font-size:12px">their agent: <code style="user-select:all">claude mcp add -t http saybooks ${location.origin}${m.mcp_path}</code></div>
+          <button type="button" style="margin-top:8px;font-size:11px" onclick="navigator.clipboard.writeText('${location.origin}${m.join_path}');this.textContent='Copied ✓'">Copy browser link</button></div>`));
+        drawMembers();
+      } catch (e) { body.querySelector('#invOut').innerHTML = `<div class="err" style="padding:0">${e.message}</div>`; }
+    };
+    const drawMembers = async () => {
+      const { members: ms } = (await api('core_members', {}));
+      const box = body.querySelector('#memList'); box.innerHTML = '';
+      if (!ms.length) { box.append($('<div class="sub">No keys minted yet — it\'s just you (the owner key is your cookie/URL).</div>')); return; }
+      const t = $('<table><thead><tr><th>Name</th><th>Role</th><th>Key</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>');
+      for (const m of ms) {
+        const tr = $(`<tr><td>${m.name}</td><td><span class="pill">${m.role}</span></td><td style="font-family:ui-monospace,monospace;font-size:11px">${m.token_hint}</td>
+          <td>${m.revoked_at ? '<span style="color:var(--warn)">revoked</span>' : 'active'}</td><td></td></tr>`);
+        if (!m.revoked_at) {
+          const b = $('<button type="button" style="font-size:11px">Revoke</button>');
+          b.onclick = async () => { await api('core_revoke_member', { name: m.name, _reason: 'revoked from the workbench' }); drawMembers(); };
+          tr.lastElementChild.append(b);
+        }
+        t.querySelector('tbody').append(tr);
+      }
+      box.append(t);
+    };
+    drawMembers();
+  };
+  await draw();
+  dlg.showModal();
+}
+
 /* ---------- the walkthrough: the same generated forms, filled in, one step at a time ----------
    For each step: show the command's form exactly as a person would have filled it, say what
    should happen, then run it for real in a scratch workspace and show what did happen —
@@ -487,6 +550,7 @@ const boot = async () => {
   REG = await fetch(wsUrl('/api/registry')).then(r => r.json());
   const sel = document.getElementById('wsSel');
   if (REG.demo) {
+    const isAdmin = REG.grants.includes('workspace.admin');
     const mcpUrl = location.origin + '/mcp/' + REG.workspace;
     sel.parentElement.innerHTML = `<div style="font-size:11px;color:var(--dim);line-height:1.6;border:1px solid var(--line);border-radius:6px;padding:8px 10px">
       <b style="color:var(--accent)">your sandbox</b><br>${REG.workspace}<br>private to you · swept after 24h
@@ -494,15 +558,21 @@ const boot = async () => {
       point Claude at this sandbox:<br>
       <code style="font-size:10px;word-break:break-all;user-select:all">claude mcp add -t http saybooks ${mcpUrl}</code>
       <button id="mcpCopy" style="margin-top:5px;font-size:11px;padding:3px 8px;width:100%">Copy command</button></div>
-      <button id="demoReset" style="margin-top:6px;font-size:11px;padding:3px 8px;width:100%">Reset demo data</button></div>`;
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><b style="color:var(--accent)">you</b><br>
+      ${REG.member.name} · <span class="pill">${REG.member.role}</span></div>
+      ${isAdmin ? '<button id="inviteBtn" style="margin-top:6px;font-size:11px;padding:3px 8px;width:100%">Share this sandbox…</button>' : ''}
+      ${isAdmin ? '<button id="demoReset" style="margin-top:6px;font-size:11px;padding:3px 8px;width:100%">Reset demo data</button>' : ''}</div>`;
     document.getElementById('mcpCopy').onclick = (e) => {
       navigator.clipboard.writeText('claude mcp add -t http saybooks ' + mcpUrl);
       e.target.textContent = 'Copied ✓'; setTimeout(() => e.target.textContent = 'Copy command', 1500);
     };
-    document.getElementById('demoReset').onclick = async () => {
-      await api('core_reset_workspace', { fixture: 'try', _reason: 'visitor reset their sandbox' });
-      await boot(); render();
-    };
+    if (isAdmin) {
+      document.getElementById('demoReset').onclick = async () => {
+        await api('core_reset_workspace', { fixture: 'try', _reason: 'visitor reset their sandbox' });
+        await boot(); render();
+      };
+      document.getElementById('inviteBtn').onclick = () => openInvite();
+    }
     return;
   }
   sel.innerHTML = '';

@@ -5,6 +5,7 @@ const api = () => MODULES.find(m => m.name === 'core').api;
 
 defineCommand({
   name: 'core_create_customer',
+  permission: 'sales.write',
   title: 'New customer', group: 'Master data', subject: 'customer', scope: 'collection',
   summary: 'Create a customer we can sell to.',
   doctrine: `A credit limit of 0 means prepay only — that is a real position, not a missing value.
@@ -30,6 +31,7 @@ authority to change it changes it, and that change is its own logged command.`,
 
 defineCommand({
   name: 'core_create_item',
+  permission: 'sales.write',
   title: 'New item', group: 'Master data', subject: 'item', scope: 'collection',
   summary: 'Create a sellable item.',
   doctrine: 'Set stocked=false for services and anything that cannot run out; those lines never check inventory and never deplete it.',
@@ -53,6 +55,7 @@ defineCommand({
 
 defineCommand({
   name: 'core_receive_stock',
+  permission: 'fulfil.write',
   title: 'Receive stock', group: 'Master data', subject: 'item',
   summary: 'Increase quantity on hand for a stocked item.',
   doctrine: 'Receipts are additive and never retroactive. To correct a count, receive the difference — a negative qty is allowed for that and is visible as a correction in the log.',
@@ -73,6 +76,7 @@ defineCommand({
 
 defineCommand({
   name: 'core_set_price',
+  permission: 'sales.write',
   title: 'Set list price', group: 'Master data', subject: 'item',
   summary: 'Change an item\'s list price.',
   doctrine: `Takes effect for documents raised from now on. Everything already raised keeps the
@@ -95,6 +99,7 @@ not a field edit: the moment the price changed is part of the record.`,
 
 defineCommand({
   name: 'core_set_credit_limit',
+  permission: 'credit.authority',
   title: 'Set credit limit', group: 'Master data', subject: 'customer',
   summary: 'Change how much unpaid exposure we will carry for a customer.',
   doctrine: `This is the human decision the credit gate's refusal points to. When o2c refuses to
@@ -119,6 +124,7 @@ tightens the gate for the next one.`,
 
 defineCommand({
   name: 'core_hold_customer',
+  permission: 'credit.authority',
   title: 'Credit hold', group: 'Master data', subject: 'customer',
   summary: 'Put a customer on credit hold: no new orders confirm until released.',
   doctrine: `A hold outranks the limit: however much room the numbers show, nothing confirms
@@ -141,6 +147,7 @@ check, a dispute turning sour, news about the customer.`,
 
 defineCommand({
   name: 'core_release_customer',
+  permission: 'credit.authority',
   title: 'Release hold', group: 'Master data', subject: 'customer',
   summary: 'Release a customer from credit hold.',
   doctrine: 'The release is its own logged act with its own reason — "who released it and why" is exactly the question that gets asked later. The limit applies again from the next confirmation.',

@@ -16,6 +16,7 @@ function raiseCreditNote(db, at, { customer_id, kind, invoice_id = null, return_
 
 defineCommand({
   name: 'o2c_record_return',
+  permission: 'fulfil.write',
   title: 'Record return', group: 'Credits', subject: 'order',
   summary: 'Record goods coming back against an order; restock the sellable part; raise the credit note.',
   doctrine: `Restock only what physically returns sellable (INV-12): lines flagged restock go back
@@ -75,6 +76,7 @@ price plus the tax as invoiced — the customer gets back what they were billed,
 
 defineCommand({
   name: 'o2c_create_credit_note',
+  permission: 'credit.authority',
   title: 'Credit note', group: 'Credits', subject: 'credit_note', scope: 'collection',
   summary: 'Raise a credit note: the universal downward correction.',
   doctrine: `Pricing errors, short-pay resolution, goodwill — anything past draft is corrected
@@ -102,6 +104,7 @@ but the reason is mandatory and it will be read back.`,
 
 defineCommand({
   name: 'o2c_write_off',
+  permission: 'credit.authority',
   title: 'Write off', group: 'Credits', subject: 'invoice',
   summary: 'Close an uncollectible open invoice balance as a visible, reasoned credit act.',
   doctrine: `A write-off is a credit note of kind write_off, raised for the open balance and

@@ -17,6 +17,7 @@ const C = require('./src/conformance.js');
 const wsp = require('./src/workspace.js');
 const BASE = require('./src/base-doctrine.js');
 const H = require('./src/db.js');
+const members = require('./src/members.js');
 
 R.loadModules();
 
@@ -43,8 +44,8 @@ if (DEMO) {
       const tries = wsp.list().filter(w => w.startsWith('try-'))
         .map(w => ({ w, at: wsp.ageOf(w) })).sort((a, b) => b.at - a.at);
       const cutoff = Date.now() - 24 * 3600 * 1000;
-      for (const t of tries.slice(400)) wsp.destroy(t.w);
-      for (const t of tries.slice(0, 400)) if (t.at < cutoff) wsp.destroy(t.w);
+      for (const t of tries.slice(400)) { wsp.destroy(t.w); members.purge(t.w); }
+      for (const t of tries.slice(0, 400)) if (t.at < cutoff) { wsp.destroy(t.w); members.purge(t.w); }
     } catch (e) { console.error('sweep failed:', e.message); }
   };
   setInterval(sweep, 30 * 60 * 1000).unref();
@@ -56,21 +57,37 @@ const send = (res, code, body, type = 'application/json; charset=utf-8', headers
   res.end(typeof body === 'string' || Buffer.isBuffer(body) ? body : JSON.stringify(body));
 };
 
-const wsOf = (req, url) => {
-  if (DEMO) {
-    // A sandbox name is its key. The cookie pins a visitor to their own; a ?ws=try-* link
-    // lets a browser ADOPT a named sandbox — the share/agent-first path — which reveals
-    // nothing beyond what knowing the name already grants (MCP access to it).
+/**
+ * Who is here, and where: resolves the request to { ws, member: {name, role} }.
+ * Three demo entries, in priority order:
+ *   ?join=<member-token>  — accept an invite; cookie re-pins to the token
+ *   ?ws=try-* / legacy    — bare sandbox name = owner access (the original capability;
+ *                            still the frictionless anonymous entry)
+ *   cookie                — a member token or a legacy sandbox name
+ * Locally everything is the owner; identity games are a demo/multi-user concern.
+ */
+const entryOf = (req, url) => {
+  if (!DEMO) {
     const q = url.searchParams.get('ws');
-    if (q && /^try-[a-z0-9]{6,24}$/.test(q)) { if (!sandboxExists(q)) seedSandbox(q); return q; }
-    const m = /(?:^|;\s*)otc_ws=(try-[a-z0-9]+)/.exec(req.headers.cookie || '');
-    if (m && sandboxExists(m[1])) return m[1];
-    return newVisitorWs();
+    if (q) return { ws: q, member: { name: process.env.USER || 'operator', role: 'owner' } };
+    const m = /(?:^|;\s*)otc_ws=([a-z0-9_-]+)/.exec(req.headers.cookie || '');
+    return { ws: m ? m[1] : 'main', member: { name: process.env.USER || 'operator', role: 'owner' } };
+  }
+  const join = url.searchParams.get('join');
+  if (join) {
+    const m = members.resolve(join);
+    if (m && sandboxExists(m.workspace)) return { ws: m.workspace, member: m, cookie: join };
   }
   const q = url.searchParams.get('ws');
-  if (q) return q;
-  const m = /(?:^|;\s*)otc_ws=([a-z0-9_-]+)/.exec(req.headers.cookie || '');
-  return m ? m[1] : 'main';
+  if (q && /^try-[a-z0-9]{6,24}$/.test(q)) { if (!sandboxExists(q)) seedSandbox(q); return { ws: q, member: { name: 'owner', role: 'owner' }, cookie: q }; }
+  const ck = /(?:^|;\s*)otc_ws=([a-z0-9-]+)/.exec(req.headers.cookie || '');
+  if (ck) {
+    const m = members.resolve(ck[1]);
+    if (m && sandboxExists(m.workspace)) return { ws: m.workspace, member: m, cookie: ck[1] };
+    if (/^try-[a-z0-9]+$/.test(ck[1]) && sandboxExists(ck[1])) return { ws: ck[1], member: { name: 'owner', role: 'owner' }, cookie: ck[1] };
+  }
+  const fresh = newVisitorWs();
+  return { ws: fresh, member: { name: 'owner', role: 'owner' }, cookie: fresh };
 };
 
 const walks = new Map();          // walkthrough ordering: workspace -> next expected step
@@ -87,25 +104,29 @@ const server = http.createServer((req, res) => {
   const mcpMatch = /^\/mcp(?:\/([a-z0-9][a-z0-9_-]{0,40}))?$/.exec(p);
   if (mcpMatch) {
     let mws = mcpMatch[1] || (DEMO ? null : 'main');
+    let mMember = { name: 'owner', role: 'owner' };
     if (DEMO) {
-      if (!mws || !/^try-[a-z0-9]{6,24}$/.test(mws)) {
-        return send(res, 404, { error: 'connect to /mcp/<your-sandbox> — the browser demo at https://saybooks.io shows your sandbox name, or invent one matching try-<6..24 lowercase alphanumerics>' });
+      const tok = mws && members.resolve(mws);
+      if (tok && sandboxExists(tok.workspace)) { mws = tok.workspace; mMember = tok; }
+      else if (mws && /^try-[a-z0-9]{6,24}$/.test(mws)) { if (!sandboxExists(mws)) seedSandbox(mws); }
+      else {
+        return send(res, 404, { error: 'connect to /mcp/<your-sandbox> or /mcp/<member-token> — the browser demo at https://saybooks.io shows yours' });
       }
-      if (!sandboxExists(mws)) seedSandbox(mws);
     }
     let raw = '';
     req.on('data', c => { raw += c; if (raw.length > 4e6) req.destroy(); });
     req.on('end', () => {
       let body;
       try { body = raw ? JSON.parse(raw) : undefined; } catch { return send(res, 400, { error: 'invalid JSON body' }); }
-      require('./src/mcp-http.js').handleMcp(req, res, body, mws, DEMO)
+      require('./src/mcp-http.js').handleMcp(req, res, body, mws, DEMO, mMember)
         .catch(e => { if (!res.headersSent) send(res, 500, { error: e.message }); });
     });
     return undefined;
   }
 
-  const ws = wsOf(req, url);
-  const cookie = { 'set-cookie': `otc_ws=${ws}; Path=/; SameSite=Lax` };
+  const entry = entryOf(req, url);
+  const ws = entry.ws, member = entry.member;
+  const cookie = { 'set-cookie': `otc_ws=${entry.cookie || ws}; Path=/; SameSite=Lax` };
 
   try {
     // The whole UI contract: the command specs, plus enough master data for the lookups.
@@ -113,6 +134,8 @@ const server = http.createServer((req, res) => {
       return wsp.use(ws, () => send(res, 200, {
         workspace: ws,
         demo: DEMO,
+        member: { name: member.name, role: member.role },
+        grants: [...(R.ROLE_GRANTS[member.role] || R.ROLE_GRANTS.viewer)],
         workspaces: DEMO ? [ws] : [...new Set([ws, ...wsp.list()])].filter(w => w === ws || !/^(spec-|test-|try-)/.test(w)).sort(),
         doctrine: R.instructions(BASE),
         modules: R.MODULES.map(m => ({ name: m.name, doctrine: m.doctrine.trim() })),
@@ -177,7 +200,7 @@ const server = http.createServer((req, res) => {
     }
     if (req.method === 'GET' && p === '/api/next-actions') {
       return wsp.use(ws, () => {
-        try { return send(res, 200, R.nextActions(url.searchParams.get('type'), url.searchParams.get('id'))); }
+        try { return send(res, 200, R.nextActions(url.searchParams.get('type'), url.searchParams.get('id'), member.role)); }
         catch (e) { return send(res, 400, { error: e.message }); }
       });
     }
@@ -195,7 +218,7 @@ const server = http.createServer((req, res) => {
         const { _reason, ...args } = body;
         try {
           const result = R.execute(name, args, {
-            workspace: ws, actor: process.env.USER || 'operator', actor_kind: 'human',
+            workspace: ws, actor: member.name, actor_kind: 'human', role: member.role,
             session: `workbench-${ws}`, reason: _reason,
           });
           return send(res, 200, { ok: true, result });

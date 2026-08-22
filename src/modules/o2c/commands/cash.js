@@ -5,6 +5,7 @@ const V = require('../views.js');
 
 defineCommand({
   name: 'o2c_record_payment',
+  permission: 'cash.write',
   title: 'Record payment', group: 'Cash', subject: 'payment', scope: 'collection',
   summary: 'Record cash received from a customer.',
   doctrine: `Recording the receipt and deciding what it settles are two acts, and this is only the
@@ -31,6 +32,7 @@ make the aging look tidy.`,
 
 defineCommand({
   name: 'o2c_apply_payment',
+  permission: 'cash.write',
   title: 'Apply to invoice', group: 'Cash', subject: 'payment',
   summary: 'Apply some or all of a payment to an invoice.',
   doctrine: `Bounded on both sides: never more than the payment has left, never more than the
@@ -69,6 +71,7 @@ invoices the customer did not name.`,
 
 defineCommand({
   name: 'o2c_apply_credit',
+  permission: 'cash.write',
   title: 'Apply credit to invoice', group: 'Cash', subject: 'credit_note',
   summary: 'Apply some or all of a credit note to an invoice.',
   doctrine: `Same bounds as cash: never more than the credit note has left, never more than the
@@ -106,6 +109,7 @@ is a refund, not an application.`,
 
 defineCommand({
   name: 'o2c_refund',
+  permission: 'credit.authority',
   title: 'Refund', group: 'Cash', subject: 'payment', scope: 'collection',
   summary: 'Record money returned to the customer against an unapplied payment or credit note balance.',
   doctrine: `Records the fact that money went back; actually moving it is out of scope, like every

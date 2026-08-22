@@ -6,6 +6,7 @@ const V = require('../views.js');
 
 defineCommand({
   name: 'o2c_create_order',
+  permission: 'sales.write',
   title: 'New order', group: 'Order', subject: 'order', scope: 'collection',
   summary: 'Raise a sales order directly, without a quote.',
   doctrine: 'Use this for repeat business and phone orders. Anything the customer negotiated should go through a quote instead, so the agreed price has a document behind it.',
@@ -33,6 +34,7 @@ defineCommand({
 
 defineCommand({
   name: 'o2c_confirm_order',
+  permission: 'sales.write',
   title: 'Confirm order', group: 'Order', subject: 'order',
   summary: 'Accept the order into the books. Runs the credit check.',
   doctrine: `This is the credit gate, and it is the only one. Exposure counts open AR *plus* the
@@ -68,6 +70,7 @@ the log is worth more than an order.`,
 
 defineCommand({
   name: 'o2c_cancel_order',
+  permission: 'sales.write',
   title: 'Cancel order', group: 'Order', subject: 'order',
   summary: 'Cancel an order that has not shipped.',
   doctrine: 'Once anything has shipped the order cannot be cancelled — bill it and issue a credit instead. Cancellation is not a way to make a mistake disappear; the order stays visible as cancelled.',
@@ -91,6 +94,7 @@ defineCommand({
 
 defineCommand({
   name: 'o2c_amend_order',
+  permission: 'sales.write',
   title: 'Amend order', group: 'Order', subject: 'order',
   summary: 'Replace the lines of a DRAFT order.',
   doctrine: `Amendment exists only while the order is draft. After confirmation "what was
@@ -119,6 +123,7 @@ o2c_close_short, and growth is a new order. The passed lines replace all existin
 
 defineCommand({
   name: 'o2c_close_short',
+  permission: 'fulfil.write',
   title: 'Close short', group: 'Order', subject: 'order',
   summary: 'Cancel the open remainder of a partially fulfilled order.',
   doctrine: `This is how backorders die honestly: the customer is no longer owed the difference,

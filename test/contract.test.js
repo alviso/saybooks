@@ -14,6 +14,8 @@
  *  10. fixtures      the shared fixture replays cleanly through the real registry
  *  11. conformance   every module claiming a spec area implements all its acts and passes
  *                    every scenario — the spec is enforced, not aspirational
+ *  12. permissions   every command carries a permission tag; every tag is reachable by a
+ *                    role; denials are the same one sentence on every surface
  *
  * A PR that adds a hand-written form, a prefix-less command, or a cross-module UPDATE
  * fails here, not in review.
@@ -166,6 +168,35 @@ for (const m of MODULES.filter(m => m.implements)) {
     assert.ok(s2.pass, `${m.implements.area} scenario ${s2.file} failed:\n` + failed.map(st => `  ${st.act}: ${st.refusal}`).join('\n'));
   }
   ok(`conformance: ${m.name} implements ${m.implements.area}@${m.implements.spec} — ${report.acts.length} acts mapped, ${report.scenarios.length} scenarios pass; evidence persisted`);
+}
+
+// ---------------------------------------------------------------- 12. permissions
+for (const c of COMMANDS) {
+  assert.ok(c.permission, `${c.name}: no permission tag — unpermissioned commands do not ship`);
+  assert.ok(R.PERMISSIONS.includes(c.permission), `${c.name}: unknown permission ${c.permission}`);
+}
+for (const tag of R.PERMISSIONS) {
+  assert.ok(Object.values(R.ROLE_GRANTS).some(g => g.has(tag)), `permission ${tag} is reachable by no role`);
+}
+// a clerk hitting credit authority: same sentence from availableFor and from execute
+{
+  const clerkActions = wsp.use(WS, () => R.nextActions('customer', 'C-0001', 'clerk'));
+  const blocked = clerkActions.actions.find(a => a.command === 'core_set_credit_limit');
+  assert.ok(blocked && !blocked.available, 'clerk should not see set_credit_limit as available');
+  let thrown = null;
+  try { execute('core_set_credit_limit', { customer_id: 'C-0001', credit_limit: 1, reason: 'x' }, { ...human, role: 'clerk' }); }
+  catch (e) { thrown = e.message; }
+  assert.strictEqual(blocked.reason, thrown, 'permission denial: tooltip and thrown refusal differ');
+  const lastRow = wsp.use(WS, () => H.db().prepare('SELECT * FROM command_log ORDER BY id DESC LIMIT 1').get());
+  assert.strictEqual(lastRow.ok, 0, 'the denial must be logged');
+  assert.ok(lastRow.error.includes('credit.authority'), 'logged denial names the permission');
+  // and a viewer cannot write at all, but can read
+  let vDenied = false;
+  try { execute('o2c_create_order', { customer_id: 'C-0001', lines: [{ item_id: 'WIDGET-A', qty: 1 }] }, { ...human, role: 'viewer' }); }
+  catch (e) { vDenied = e.message.includes('sales.write'); }
+  assert.ok(vDenied, 'viewer write must be denied naming the permission');
+  execute('o2c_ar_aging', {}, { ...human, role: 'viewer' });
+  ok('permissions: every command tagged, every tag reachable; denial is one sentence on both surfaces, logged; viewer reads but cannot write');
 }
 
 console.log(`\n${n} contract checks passed across ${MODULES.length} modules, ${COMMANDS.length} commands.`);

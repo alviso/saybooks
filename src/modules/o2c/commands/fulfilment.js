@@ -9,6 +9,7 @@ const core = () => R.MODULES.find(m => m.name === 'core').api;
 
 defineCommand({
   name: 'o2c_ship_order',
+  permission: 'fulfil.write',
   title: 'Ship', group: 'Fulfilment', subject: 'order',
   summary: 'Record a shipment against a confirmed order. Partial shipments are normal.',
   doctrine: `Omit lines to ship everything still open. Pass lines to ship part of it — a short ship

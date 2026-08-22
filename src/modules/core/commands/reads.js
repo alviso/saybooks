@@ -68,6 +68,52 @@ refusals included; refusals are half the curriculum.`,
   },
 });
 
+// ---------------------------------------------------------------- membership
+// Sharing a sandbox = minting a member: a named capability token with a role. The token is
+// the key — demo-grade identity over the durable permission model.
+const members = require('../../../members.js');
+
+defineCommand({
+  name: 'core_invite',
+  title: 'Invite member', group: 'Workspace', subject: 'workspace', scope: 'collection',
+  permission: 'workspace.admin',
+  summary: 'Mint a member token for this workspace: a name, a role, and the links that carry them.',
+  doctrine: `The link is the key: whoever opens it works here under that name and role, and every
+act they (or their agent) take is attributed to that name. Roles: owner (everything), controller
+(everything but workspace admin), clerk (day-to-day, no credit authority), viewer (read only).
+Denials are one-sentence refusals, logged — attempted overreach is reviewable, like everything else.`,
+  effects: ['member token minted'],
+  args: {
+    name: { ...f.text('Who this is for — becomes the actor on every act they take.'), required: true },
+    role: { ...f.pick(members.ROLES.filter(r => r !== 'owner'), 'What they may do here.'), required: true },
+  },
+  handler(a) {
+    const ws = wsp.currentName();
+    const m = members.mint(ws, a.name, a.role);
+    return { name: m.name, role: m.role, token: m.token,
+      join_path: `/app?join=${m.token}`, mcp_path: `/mcp/${m.token}`,
+      note: 'The link is the key. Share it with exactly one person.' };
+  },
+});
+
+read({ name: 'core_members', title: 'Members', summary: 'Who holds a key to this workspace, with role and status. Tokens are shown as hints only.',
+  args: {}, handler: () => ({ workspace: wsp.currentName(), members: members.list(wsp.currentName()) }) });
+
+defineCommand({
+  name: 'core_revoke_member',
+  title: 'Revoke member', group: 'Workspace', subject: 'workspace', scope: 'collection',
+  permission: 'workspace.admin',
+  summary: 'Revoke a member\'s token. Their link stops working immediately.',
+  doctrine: 'Revocation is a logged act like any other; the member\'s past entries in the trail keep their name. Nothing is deleted.',
+  effects: ['member token revoked'],
+  args: { name: { ...f.text('The member to revoke.'), required: true } },
+  handler(a) {
+    const n = members.revoke(wsp.currentName(), a.name);
+    if (!n) throw new (require('../../../registry.js').Rejected)(`No active member named ${a.name} here.`);
+    return { revoked: a.name };
+  },
+});
+
 // Workspace plumbing — never mounted in production.
 if (process.env.OTC_ENV !== 'production') {
   read({ name: 'core_workspaces', title: 'Workspaces', summary: 'List the workspaces on this deployment and which one this session is in.',
@@ -78,6 +124,7 @@ if (process.env.OTC_ENV !== 'production') {
 
   defineCommand({
     name: 'core_replay_scenario',
+  permission: 'read',
     title: 'Replay scenario', group: 'Workspace', subject: 'workspace', scope: 'collection',
     summary: 'Replay one spec scenario live in its scratch workspace and return the step-by-step evidence.',
     doctrine: `A replay is not a simulation: the scenario runs through the real registry — same
@@ -100,6 +147,7 @@ area; the refusal steps teach more than the happy path. Refreshes the persisted 
 
   defineCommand({
     name: 'core_reset_workspace',
+  permission: 'workspace.admin',
     title: 'Reset workspace', group: 'Workspace', subject: 'workspace', scope: 'collection',
     summary: 'Wipe THIS workspace and optionally reseed it from a named fixture.',
     doctrine: `Destroys every row in the current workspace — yours, nobody else's. Available only

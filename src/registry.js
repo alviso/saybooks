@@ -21,6 +21,27 @@ const wsp = require('./workspace.js');
 
 const COMMANDS = [];
 const byName = Object.create(null);
+
+// ---------------------------------------------------------------- permissions
+/**
+ * Every write command declares a permission tag; reads default to 'read'. Roles are fixed
+ * grant sets. Enforcement happens in execute() — the same choke point as everything else —
+ * and a denial is a one-sentence refusal (INV-18 extended to authorization): the greyed
+ * button's tooltip, the thrown error, and the agent's answer are the same string. Denials
+ * are logged like any other refusal: attempted overreach is reviewable.
+ *
+ * Tools stay visible to every role (show-and-refuse): an agent that can see the command can
+ * tell its human exactly who to ask.
+ */
+const PERMISSIONS = ['read', 'sales.write', 'fulfil.write', 'billing.write', 'cash.write', 'credit.authority', 'workspace.admin'];
+const ROLE_GRANTS = {
+  owner:      new Set(PERMISSIONS),
+  controller: new Set(['read', 'sales.write', 'fulfil.write', 'billing.write', 'cash.write', 'credit.authority']),
+  clerk:      new Set(['read', 'sales.write', 'fulfil.write', 'billing.write', 'cash.write']),
+  viewer:     new Set(['read']),
+};
+const hasGrant = (role, permission) => (ROLE_GRANTS[role] || ROLE_GRANTS.viewer).has(permission);
+const denial = (cmd, role) => `${cmd.title || cmd.name} needs ${cmd.permission} — your role (${role}) does not have it.`;
 const MODULES = [];
 const SUBJECTS = Object.create(null);   // subject type -> { load, ctx, module }
 let definingModule = null;              // set while a module's files are being required
@@ -120,6 +141,8 @@ function defineCommand(def) {
     module: definingModule ? definingModule.name : null,
     required: Object.entries(def.args || {}).filter(([, v]) => v.required).map(([k]) => k),
   };
+  if (!cmd.permission && cmd.intent === 'read') cmd.permission = 'read';
+  if (cmd.permission && !PERMISSIONS.includes(cmd.permission)) throw new Error(`${cmd.name}: unknown permission ${cmd.permission}`);
   COMMANDS.push(cmd);
   byName[def.name] = cmd;
   if (definingModule) definingModule.commands.push(cmd.name);
@@ -153,7 +176,7 @@ const instructions = (base, opts = {}) => [base.trim(),
 
 // ---------------------------------------------------------------- projection 2: UI
 const formSpec = (opts = {}) => COMMANDS.filter(c => inMount(c, opts.modules)).map(c => ({
-  name: c.name, title: c.title, group: c.group, subject: c.subject, intent: c.intent, scope: c.scope, module: c.module,
+  name: c.name, title: c.title, group: c.group, subject: c.subject, intent: c.intent, scope: c.scope, module: c.module, permission: c.permission,
   help: c.doctrine ? c.doctrine.trim() : '',
   effects: c.effects,
   fields: Object.entries(c.args).map(([key, a]) => ({
@@ -177,10 +200,11 @@ const formSpec = (opts = {}) => COMMANDS.filter(c => inMount(c, opts.modules)).m
  * next_actions tool returns the same array; a rejected command quotes the same string back.
  * There is exactly one sentence per rule in this system.
  */
-function availableFor(subjectType, subject, ctx) {
+function availableFor(subjectType, subject, ctx, role = 'owner') {
   return COMMANDS
     .filter(c => c.subject === subjectType && c.intent === 'write' && c.scope === 'instance')
     .map(c => {
+      if (!hasGrant(role, c.permission)) return { command: c.name, title: c.title, available: false, reason: denial(c, role) };
       const failed = c.guards.map(g => g(subject, ctx)).find(r => r !== true && r != null);
       return { command: c.name, title: c.title, available: !failed, reason: failed || null };
     });
@@ -188,11 +212,11 @@ function availableFor(subjectType, subject, ctx) {
 
 /** Evaluate a subject by type + id inside the current workspace. Modules declared the
  *  loaders; this is the one implementation behind both the greyed button and next_actions. */
-function nextActions(subjectType, id) {
+function nextActions(subjectType, id, role = 'owner') {
   const s = SUBJECTS[subjectType];
   if (!s) throw new Error(`unknown subject ${subjectType}`);
   const subject = s.load(id);
-  return { subject_type: subjectType, id, status: subject.status, actions: availableFor(subjectType, subject, s.ctx(subject)) };
+  return { subject_type: subjectType, id, status: subject.status, actions: availableFor(subjectType, subject, s.ctx(subject), role) };
 }
 
 // ---------------------------------------------------------------- execute
@@ -223,6 +247,7 @@ function execute(name, args = {}, ctx = {}) {
   if (!cmd) throw new Rejected(`unknown command ${name}`);
   if (!ctx.workspace) throw new Error(`execute(${name}): ctx.workspace is required`);
   const who = { actor: ctx.actor || 'unknown', actor_kind: ctx.actor_kind || 'human', session: ctx.session || null, reason: ctx.reason || null, modules: ctx.modules || null };
+  const role = ctx.role || 'owner';
   const at = new Date().toISOString();
 
   return wsp.use(ctx.workspace, () => {
@@ -231,9 +256,13 @@ function execute(name, args = {}, ctx = {}) {
     // Reads go through the same door — same validation, same arg names, same refusals — but
     // they are not logged. The audit trail answers "what changed and who changed it"; burying
     // that under every list refresh would make it useless for the one job it has.
-    if (cmd.intent === 'read') { validate(cmd, args); return cmd.handler(args, { db, at, ...who }); }
+    if (cmd.intent === 'read') {
+      if (!hasGrant(role, cmd.permission)) throw new Rejected(denial(cmd, role));
+      validate(cmd, args); return cmd.handler(args, { db, at, ...who });
+    }
 
     const write = db.transaction(() => {
+      if (!hasGrant(role, cmd.permission)) throw new Rejected(denial(cmd, role));
       validate(cmd, args);
       const result = cmd.handler(args, { db, at, ...who });
       db.prepare(`INSERT INTO command_log (at, command, actor_kind, actor, session, reason, subject_type, subject_id, args_json, ok, result_json)
@@ -257,4 +286,5 @@ function execute(name, args = {}, ctx = {}) {
 }
 
 module.exports = { COMMANDS, byName, MODULES, SUBJECTS, defineModule, defineSubject, defineCommand, inModule,
-  loadModules, f, mcpTools, formSpec, instructions, availableFor, nextActions, execute, Rejected };
+  loadModules, f, mcpTools, formSpec, instructions, availableFor, nextActions, execute, Rejected,
+  PERMISSIONS, ROLE_GRANTS, hasGrant, denial };

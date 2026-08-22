@@ -11,6 +11,7 @@ const LINE = {
 
 defineCommand({
   name: 'o2c_create_quote',
+  permission: 'sales.write',
   title: 'New quote', group: 'Quote', subject: 'quote', scope: 'collection',
   summary: 'Draft a quote for a customer.',
   doctrine: `A quote commits nothing: no stock is reserved, no credit is consumed. Omit unit_price
@@ -40,6 +41,7 @@ shows up as a discount in the log, which is the point.`,
 
 defineCommand({
   name: 'o2c_send_quote',
+  permission: 'sales.write',
   title: 'Send quote', group: 'Quote', subject: 'quote',
   summary: 'Mark a quote as sent to the customer.',
   doctrine: 'This records that it went out. It does not send anything — this system has no outbound channel, by design.',
@@ -56,6 +58,7 @@ defineCommand({
 
 defineCommand({
   name: 'o2c_accept_quote',
+  permission: 'sales.write',
   title: 'Customer accepted', group: 'Quote', subject: 'quote',
   summary: 'Record customer acceptance and raise the sales order from the quoted lines.',
   doctrine: `Prices copy across at acceptance and are then frozen on the order. If the list price

@@ -18,10 +18,13 @@ const { ListToolsRequestSchema, CallToolRequestSchema } = require('@modelcontext
 const R = require('./registry.js');
 const BASE = require('./base-doctrine.js');
 
-function buildServer(workspace, demo) {
+function buildServer(workspace, demo, member = { name: 'owner', role: 'owner' }) {
   const demoNote = demo ? `
 
-You are connected to sandbox workspace "${workspace}" on the Saybooks hosted demo. It is private
+You are connected to sandbox workspace "${workspace}" on the Saybooks hosted demo, through
+${member.name}'s key, with the role "${member.role}" — you are ${member.name}'s delegate and can
+do exactly what they can. A command their role does not permit is refused with a sentence naming
+who to ask; relay it rather than routing around it. It is private
 to whoever holds this URL, seeded with example data, and swept after 24 hours. The same sandbox
 is visible in the browser at https://saybooks.io/app?ws=${workspace} — share that link with the
 person you are working with and they will see your writes appear live, attributed to
@@ -39,7 +42,7 @@ actor_kind=agent, in the same audit trail as their clicks. Play freely; nothing 
     if (!R.byName[name]) return { isError: true, content: [{ type: 'text', text: `unknown tool ${name}` }] };
     const { _reason, ...rest } = args;
     try {
-      const out = R.execute(name, rest, { workspace, actor: 'claude', actor_kind: 'agent', session: `mcp-http:${workspace}`, reason: _reason });
+      const out = R.execute(name, rest, { workspace, actor: member.name, actor_kind: 'agent', role: member.role, session: `mcp-http:${workspace}`, reason: _reason });
       return { content: [{ type: 'text', text: typeof out === 'string' ? out : JSON.stringify(out, null, 1) }] };
     } catch (e) {
       // Business refusals come back as text the model should relay, not swallow.
@@ -50,8 +53,8 @@ actor_kind=agent, in the same audit trail as their clicks. Play freely; nothing 
   return server;
 }
 
-async function handleMcp(req, res, body, workspace, demo) {
-  const server = buildServer(workspace, demo);
+async function handleMcp(req, res, body, workspace, demo, member) {
+  const server = buildServer(workspace, demo, member);
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   res.on('close', () => { transport.close().catch(() => {}); server.close().catch(() => {}); });
   await server.connect(transport);

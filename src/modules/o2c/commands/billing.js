@@ -5,6 +5,7 @@ const V = require('../views.js');
 
 defineCommand({
   name: 'o2c_invoice_shipped',
+  permission: 'billing.write',
   title: 'Invoice shipped', group: 'Billing', subject: 'order',
   summary: 'Issue an invoice for everything shipped on this order and not yet billed.',
   doctrine: `We bill what shipped, never what was ordered. That single rule is what keeps AR
@@ -54,6 +55,7 @@ fix the terms.`,
 
 defineCommand({
   name: 'o2c_void_invoice',
+  permission: 'billing.write',
   title: 'Void invoice', group: 'Billing', subject: 'invoice',
   summary: 'Void an invoice that should never have been issued.',
   doctrine: `Only an invoice with no cash applied to it can be voided, and voiding puts the
