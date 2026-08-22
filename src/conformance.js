@@ -64,47 +64,75 @@ const excerpt = (v, n = 400) => {
   return s && s.length > n ? s.slice(0, n) + '…' : s;
 };
 
+/** The normalized step list: env (world-building) steps then scenario steps, with args
+ *  already translated to command arguments. This is the walkthrough's script — what the UI
+ *  shows BEFORE executing each step. */
+function walkPlan(area, file) {
+  const scenario = loadScenario(area, file);
+  const { table } = actTable(area);
+  const mk = (phase) => ([actOrStep, args, note]) => {
+    const st = phase === 'env' ? { act: actOrStep, args, expect: { ok: true }, notes: note } : actOrStep;
+    const entry = table[st.act];
+    return { phase, act: st.act, command: entry ? entry.command : null,
+      args: entry ? mapArgs(st.args || {}, entry.argmap) : (st.args || {}),
+      expect: st.expect || { ok: true }, notes: st.notes || null };
+  };
+  const steps = [
+    ...(scenario.env || []).map(e => mk('env')(e)),
+    ...(scenario.steps || []).map(st => mk('step')([st])),
+  ];
+  return { name: scenario.name, file, spec: scenario.spec, notes: scenario.notes || null, steps };
+}
+
+/** Execute one already-mapped step and judge it against its expectation. */
+function judge(step, ctx) {
+  const row = { ...step, pass: false, actual: null, refusal: null };
+  if (!row.command) { row.refusal = `no mapping for act "${row.act}" — the implements map is incomplete`; return row; }
+  try {
+    const result = R.execute(row.command, row.args, ctx);
+    row.actual = excerpt(result);
+    if (row.expect.refused) row.refusal = `expected a refusal containing "${row.expect.refused}" but the command succeeded`;
+    else {
+      const misses = row.expect.include ? includes(result, row.expect.include) : [];
+      if (misses.length) row.refusal = misses.join('; ');
+      else row.pass = true;
+    }
+  } catch (e) {
+    row.actual = e.message;
+    if (row.expect.refused) {
+      if (e.message.includes(row.expect.refused)) row.pass = true;
+      else row.refusal = `refused, but the message lacks "${row.expect.refused}": ${excerpt(e.message)}`;
+    } else row.refusal = `unexpected refusal: ${excerpt(e.message)}`;
+  }
+  return row;
+}
+
+/** Execute exactly one step of a scenario in the given workspace — the walkthrough's engine.
+ *  Step 0 wipes the workspace; the caller enforces ordering. */
+function walkStep(area, file, index, ws, { actor = 'walkthrough' } = {}) {
+  const plan = walkPlan(area, file);
+  if (index < 0 || index >= plan.steps.length) throw new Error(`step ${index} out of range 0..${plan.steps.length - 1}`);
+  if (index === 0) wsp.wipe(ws);
+  const row = judge(plan.steps[index],
+    { workspace: ws, actor, actor_kind: 'agent', session: `walk:${file}` });
+  return { file, name: plan.name, index, total: plan.steps.length, done: index === plan.steps.length - 1, ...row };
+}
+
 /** Run one scenario file in its scratch workspace; return the step-by-step evidence. */
 function runScenario(area, file, { actor = 'conformance', wsSuffix = '' } = {}) {
   const scenario = loadScenario(area, file);
-  const { table } = actTable(area);
   const ws = `spec-${area}-${file.replace(/\.json$/, '').replace(/[^a-z0-9_-]/gi, '')}${wsSuffix}`.toLowerCase();
   wsp.wipe(ws);
   const ctx = { workspace: ws, actor, actor_kind: 'agent', session: `conformance:${file}` };
 
+  const plan = walkPlan(area, file);
   const evidence = [];
   let pass = true;
-
-  const runStep = (act, args, expect, notes, phase) => {
-    const entry = table[act];
-    const row = { phase, act, notes: notes || null, command: entry ? entry.command : null,
-      args: args || {}, expect: expect || { ok: true }, pass: false, actual: null, refusal: null };
-    if (!entry) { row.refusal = `no mapping for act "${act}" — the implements map is incomplete`; evidence.push(row); pass = false; return; }
-    try {
-      const result = R.execute(entry.command, mapArgs(args, entry.argmap), ctx);
-      row.actual = excerpt(result);
-      if (expect && expect.refused) {
-        row.refusal = `expected a refusal containing "${expect.refused}" but the command succeeded`;
-      } else {
-        const misses = expect && expect.include ? includes(result, expect.include) : [];
-        if (misses.length) row.refusal = misses.join('; ');
-        else row.pass = true;
-      }
-    } catch (e) {
-      row.actual = e.message;
-      if (expect && expect.refused) {
-        if (e.message.includes(expect.refused)) row.pass = true;
-        else row.refusal = `refused, but the message lacks "${expect.refused}": ${excerpt(e.message)}`;
-      } else {
-        row.refusal = `unexpected refusal: ${excerpt(e.message)}`;
-      }
-    }
+  for (const step of plan.steps) {
+    const row = judge(step, ctx);
     if (!row.pass) pass = false;
     evidence.push(row);
-  };
-
-  for (const [act, args, note] of scenario.env || []) runStep(act, args, { ok: true }, note, 'env');
-  for (const step of scenario.steps || []) runStep(step.act, step.args, step.expect, step.notes, 'step');
+  }
 
   return { file, name: scenario.name, spec: scenario.spec, notes: scenario.notes || null,
     workspace: ws, ran_at: new Date().toISOString(), pass, steps: evidence };
@@ -157,4 +185,4 @@ const lastReport = (area) => {
   return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null;
 };
 
-module.exports = { specOf, scenarioFiles, runScenario, runArea, lastReport, actTable };
+module.exports = { specOf, scenarioFiles, runScenario, runArea, lastReport, actTable, walkPlan, walkStep };

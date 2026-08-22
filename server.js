@@ -71,6 +71,8 @@ const wsOf = (req, url) => {
   return m ? m[1] : 'main';
 };
 
+const walks = new Map();          // walkthrough ordering: workspace -> next expected step
+
 const server = http.createServer((req, res) => {
   const host = (req.headers.host || '').split(':')[0];
   if (!DEMO && !['127.0.0.1', 'localhost', '[::1]', '::1'].includes(host)) return send(res, 403, { error: 'localhost only' });
@@ -110,6 +112,28 @@ const server = http.createServer((req, res) => {
     if (req.method === 'GET' && p === '/api/spec') {
       const area = url.searchParams.get('area') || 'o2c';
       return send(res, 200, { report: C.lastReport(area), spec: C.specOf(area) });
+    }
+    // The walkthrough: the step list (with args already translated to command arguments)
+    // for the UI to render as filled forms, and one-step execution with ordering enforced.
+    if (req.method === 'GET' && p === '/api/spec/plan') {
+      try { return send(res, 200, C.walkPlan(url.searchParams.get('area') || 'o2c', url.searchParams.get('file'))); }
+      catch (e) { return send(res, 400, { error: e.message }); }
+    }
+    if (req.method === 'POST' && p === '/api/spec/walk') {
+      const area = url.searchParams.get('area') || 'o2c';
+      const file = url.searchParams.get('file');
+      const step = Number(url.searchParams.get('step') || 0);
+      const walkWs = `${ws}-walk`.slice(0, 41);
+      const expected = walks.get(walkWs) ?? 0;
+      if (step !== 0 && step !== expected) {
+        return send(res, 409, { error: `walkthrough is at step ${expected}; restart from 0 or continue in order` });
+      }
+      try {
+        const result = C.walkStep(area, file, step, walkWs, { actor: DEMO ? 'visitor' : (process.env.USER || 'operator') });
+        walks.set(walkWs, step + 1);
+        if (result.done) walks.delete(walkWs);
+        return send(res, 200, result);
+      } catch (e) { return send(res, 400, { error: e.message }); }
     }
     // Replay one scenario live, right now, in its scratch workspace. This is the teaching
     // surface: the response is every step — act, command, args, doctrine, what came back.
