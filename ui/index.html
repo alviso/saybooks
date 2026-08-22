@@ -516,5 +516,6 @@ const boot = async () => {
   };
 };
 document.querySelectorAll('nav a').forEach(a => a.onclick = () => { view = a.dataset.v; selected = null; render(); });
+if (['spec','doctrine','audit'].includes(location.hash.slice(1))) view = location.hash.slice(1);
 boot().then(render);
 </script>

@@ -30,7 +30,8 @@
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--ink);font:400 17.5px/1.65 "Source Serif 4",Georgia,serif}
-.wrap{max-width:76ch;margin:0 auto;padding:0 24px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 28px}
+.prose{max-width:70ch}
 h1,h2,h3{font-family:"Libre Franklin",system-ui,sans-serif;text-wrap:balance}
 code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
 a{color:var(--green)}
@@ -39,24 +40,44 @@ a{color:var(--green)}
 .btn.solid{background:var(--green);color:#fff}
 .btn.ghost{color:var(--green);background:transparent}
 .btn:hover{filter:brightness(1.08)}
+.btn.small{padding:8px 16px;font-size:13.5px}
 
-header.hero{padding:72px 0 46px;border-bottom:1px solid var(--rule)}
+header.hero{padding:76px 0 50px;border-bottom:1px solid var(--rule)}
 .wordmark{font:700 15px "Libre Franklin",sans-serif;letter-spacing:.22em;color:var(--green);margin:0 0 30px}
-h1{font-size:clamp(34px,6vw,52px);font-weight:800;line-height:1.08;margin:0 0 18px;letter-spacing:-.015em}
+h1{font-size:clamp(36px,5.6vw,62px);font-weight:800;line-height:1.06;margin:0 0 20px;letter-spacing:-.015em}
 h1 .quiet{color:var(--dim);font-weight:700}
-.lede{font-size:20px;max-width:58ch;margin:0 0 30px;color:#3d3a34}
+.lede{font-size:20px;max-width:62ch;margin:0 0 30px;color:#3d3a34}
 .ctas{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 .ctas .fine{font-size:13.5px;color:var(--dim)}
 
-section{padding:52px 0;border-bottom:1px solid var(--rule)}
-h2{font-size:26px;font-weight:700;margin:0 0 8px}
+section{padding:56px 0;border-bottom:1px solid var(--rule)}
+h2{font-size:28px;font-weight:700;margin:0 0 10px}
 .kicker{font:600 12px "Libre Franklin",sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--green);margin:0 0 10px}
 p{margin:0 0 15px}
 .sub{color:var(--dim)}
 
-/* the trail — real rows from a real session */
-.trail{background:var(--panel);border:1px solid var(--rule);border-radius:10px;overflow-x:auto;margin:22px 0 10px}
-.trail table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:560px}
+/* the two doors */
+.doors{display:grid;gap:22px;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));margin-top:28px}
+.door{background:var(--panel);border:1.5px solid var(--rule);border-radius:14px;padding:30px 32px;display:flex;flex-direction:column}
+.door.op{border-top:4px solid var(--green)}
+.door.dev{border-top:4px solid var(--agent)}
+.door .aud{font:600 12px "Libre Franklin",sans-serif;letter-spacing:.14em;text-transform:uppercase}
+.door.op .aud{color:var(--green)} .door.dev .aud{color:var(--agent)}
+.door h3{font-size:22px;margin:8px 0 12px;line-height:1.25}
+.door p{font-size:15.5px;color:#42403a}
+.door ul{margin:4px 0 20px;padding-left:1.15em;font-size:15px;color:#42403a}
+.door li{margin-bottom:9px}
+.door li b{font-weight:600;color:var(--ink)}
+.door .do{margin-top:auto;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.door .fine{font-size:13px;color:var(--dim);width:100%}
+.btn.dev{border-color:var(--agent);color:var(--agent)}
+.btn.dev.solid{background:var(--agent);color:#fff}
+
+/* the trail */
+.split{display:grid;gap:40px;grid-template-columns:minmax(0,5fr) minmax(0,7fr);align-items:start}
+@media (max-width:840px){.split{grid-template-columns:1fr}}
+.trail{background:var(--panel);border:1px solid var(--rule);border-radius:10px;overflow-x:auto}
+.trail table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:520px}
 .trail td{padding:9px 14px;border-bottom:1px solid #f2f0ec;vertical-align:top}
 .trail tr:last-child td{border-bottom:none}
 .who{font:600 11px "Libre Franklin",sans-serif;padding:2px 9px;border-radius:4px;white-space:nowrap}
@@ -64,19 +85,19 @@ p{margin:0 0 15px}
 .trail .cmd{font-family:"IBM Plex Mono",monospace;font-size:12.5px;white-space:nowrap}
 .trail .why{color:var(--dim);font-size:13px}
 .trail .refused{color:var(--warn)}
-.caption{font-size:14px;color:var(--dim)}
+.caption{font-size:14px;color:var(--dim);margin-top:10px}
 
 .refusal{background:var(--warn-soft);border-left:4px solid var(--warn);border-radius:0 8px 8px 0;
-  padding:18px 22px;margin:22px 0;font-family:"IBM Plex Mono",monospace;font-size:14px;line-height:1.6;color:#5c2418}
+  padding:18px 22px;margin:22px 0;font-family:"IBM Plex Mono",monospace;font-size:14px;line-height:1.6;color:#5c2418;max-width:74ch}
 
-.claims{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));margin-top:26px}
-.claim{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:20px 22px}
-.claim h3{font-size:16.5px;margin:0 0 8px}
+.claims{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-top:28px}
+.claim{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:22px 24px}
+.claim h3{font-size:17px;margin:0 0 8px}
 .claim p{font-size:14.5px;margin:0;color:#4a463f}
 .claim .proof{display:block;margin-top:12px;font-size:13px;color:var(--dim)}
 .claim .proof b{color:var(--green);font-weight:600}
 
-.story{counter-reset:beat;margin:24px 0 0;padding:0;list-style:none}
+.story{counter-reset:beat;margin:24px 0 0;padding:0;list-style:none;max-width:78ch}
 .story li{display:grid;grid-template-columns:34px 1fr;gap:14px;padding:13px 0;border-bottom:1px solid var(--rule)}
 .story li:last-child{border-bottom:none}
 .story li::before{counter-increment:beat;content:counter(beat);font:700 14px "Libre Franklin",sans-serif;
@@ -85,20 +106,20 @@ p{margin:0 0 15px}
 .story b{font-weight:600}
 .story .aside{color:var(--dim);font-size:14.5px}
 
-.steps{display:grid;gap:14px;margin-top:24px}
-.step{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:16px 20px;display:grid;grid-template-columns:30px 1fr;gap:14px}
+.steps{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-top:26px}
+.step{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:18px 22px;display:grid;grid-template-columns:30px 1fr;gap:14px}
 .step .n{font:700 15px "Libre Franklin",sans-serif;color:var(--green)}
-.step p{margin:0;font-size:15.5px}
-.step code{background:var(--mono-bg);padding:2px 7px;border-radius:4px;font-size:12.5px;word-break:break-all}
+.step p{margin:0;font-size:15px}
+.step code{background:var(--mono-bg);padding:2px 7px;border-radius:4px;font-size:12px;word-break:break-all}
 
-.honest{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-top:24px}
-.honest > div{border:1px solid var(--rule);border-radius:10px;padding:18px 22px;background:var(--panel)}
+.honest{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin-top:26px}
+.honest > div{border:1px solid var(--rule);border-radius:10px;padding:20px 24px;background:var(--panel)}
 .honest h3{font-size:15px;margin:0 0 10px}
 .honest ul{margin:0;padding-left:1.2em;font-size:14.5px}
 .honest li{margin-bottom:7px}
 .honest .not h3{color:var(--warn)}
 
-footer{padding:36px 0 56px;font-size:13.5px;color:var(--dim)}
+footer{padding:38px 0 58px;font-size:13.5px;color:var(--dim)}
 footer .mono{font-size:12px}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 </style>
@@ -120,29 +141,79 @@ footer .mono{font-size:12px}
 </header>
 
 <section>
-  <p class="kicker">one log, two kinds of hands</p>
-  <h2>This is a real audit trail from a real session.</h2>
-  <p>The purple rows are Claude, connected over MCP. The blue rows are a person, clicking. They
-  are not two systems reconciled — they are one system, and the log can tell you, for any number
-  in the books, who put it there and the reason they gave.</p>
-  <div class="trail"><table>
-    <tr><td><span class="who agent">claude</span></td><td class="cmd">confirm_order</td><td class="why refused">✗ refused — Credit check failed for Contoso Ltd… Short by $1500.00</td></tr>
-    <tr><td><span class="who agent">claude</span></td><td class="cmd">invoice_shipped</td><td class="why">INV-0002, $400.00 — billed what shipped, never what was ordered</td></tr>
-    <tr><td><span class="who agent">claude</span></td><td class="cmd">ship_order</td><td class="why">the open 5 × Widget B — carrier left blank rather than invented</td></tr>
-    <tr><td><span class="who agent">claude</span></td><td class="cmd">receive_stock</td><td class="why">“Supplier delivery received; no PO reference supplied”</td></tr>
-    <tr><td><span class="who human">sam</span></td><td class="cmd">record_payment</td><td class="why">“bank feed — no remittance advice yet”</td></tr>
-    <tr><td><span class="who agent">claude</span></td><td class="cmd">apply_payment</td><td class="why">“remittance confirmed by their AP clerk on the phone”</td></tr>
-    <tr><td><span class="who human">sam</span></td><td class="cmd">invoice_shipped</td><td class="why">“billing what shipped, never what was ordered”</td></tr>
-  </table></div>
-  <p class="caption">Refusals are logged too — a blocked agent action is exactly the thing you want to be able to review later.</p>
+  <p class="kicker">two ways in</p>
+  <h2>Saybooks is for people who run books, and people who build systems.</h2>
+  <div class="doors">
+    <div class="door op">
+      <span class="aud">For operators — run your business on it</span>
+      <h3>An order-to-cash system a 5–200 person company can actually live in.</h3>
+      <p>Quotes, orders, a credit gate that counts committed value, partial shipments and
+      backorders, invoicing from what shipped, returns and credit notes, cash application,
+      write-offs, statements, and an aging your controller would open. Plus the part nobody
+      else has: you can hand routine work to Claude and <em>every act it takes is logged,
+      governed by the same rules, and refused in plain sentences when it shouldn't happen.</em></p>
+      <ul>
+        <li><b>Try the demo</b> — your own private books, seeded with a realistic morning, including one order that deliberately trips the credit gate.</li>
+        <li><b>Connect your Claude</b> — one command from the demo sidebar, then just talk: “receive 20 Widget B and finish Northwind's order.”</li>
+        <li><b>Watch the trail</b> — your words become attributed, reasoned ledger entries next to the human ones.</li>
+      </ul>
+      <div class="do">
+        <a class="btn solid small" href="/app">Open the demo</a>
+        <a class="btn ghost small" href="#quickstart">2-minute quickstart</a>
+        <span class="fine">Not for your real books yet — the demo resets daily, and we'd rather say so here.</span>
+      </div>
+    </div>
+    <div class="door dev">
+      <span class="aud">For builders — write a module for it</span>
+      <h3>A spec that bites back, and a registry that generates both surfaces.</h3>
+      <p>Every business act is declared once; the MCP tool, the UI form, the guard evaluation
+      and the audit row are all derived — a contract test fails the build if they drift. The
+      order-to-cash area is governed by a written spec: 21 invariants, 25 acts, 9 executable
+      conformance scenarios. Modules own their tables, carry their doctrine, and are held to
+      an 11-gate contributor contract. The endgame is <em>competing implementations of the
+      same area</em>, certified by replaying the same scenarios.</p>
+      <ul>
+        <li><b>Read the spec live</b> — the demo's Spec tab shows acts, invariants, and the evidence for each, derived from the last conformance run, never asserted.</li>
+        <li><b>Walk the scenarios</b> — every rule taught as filled-in forms, one step at a time, refusals included, executing for real as you click.</li>
+        <li><b>Talk to us about a module</b> — the code is private while the spec stabilizes; the spec and its scenarios are public in the demo.</li>
+      </ul>
+      <div class="do">
+        <a class="btn dev solid small" href="/app#spec">Read the spec</a>
+        <a class="btn dev small" href="mailto:hello@saybooks.io">hello@saybooks.io</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="split">
+    <div>
+      <p class="kicker">one log, two kinds of hands</p>
+      <h2>This is a real audit trail from a real session.</h2>
+      <p>The purple rows are Claude, connected over MCP. The blue rows are a person, clicking.
+      They are not two systems reconciled — they are one system, and the log can tell you, for
+      any number in the books, who put it there and the reason they gave.</p>
+      <p class="caption">Refusals are logged too — a blocked agent action is exactly the thing
+      you want to be able to review later.</p>
+    </div>
+    <div class="trail"><table>
+      <tr><td><span class="who agent">claude</span></td><td class="cmd">confirm_order</td><td class="why refused">✗ refused — Credit check failed for Contoso Ltd… Short by $1500.00</td></tr>
+      <tr><td><span class="who agent">claude</span></td><td class="cmd">invoice_shipped</td><td class="why">INV-0002, $400.00 — billed what shipped, never what was ordered</td></tr>
+      <tr><td><span class="who agent">claude</span></td><td class="cmd">ship_order</td><td class="why">the open 5 × Widget B — carrier left blank rather than invented</td></tr>
+      <tr><td><span class="who agent">claude</span></td><td class="cmd">receive_stock</td><td class="why">“Supplier delivery received; no PO reference supplied”</td></tr>
+      <tr><td><span class="who human">sam</span></td><td class="cmd">record_payment</td><td class="why">“bank feed — no remittance advice yet”</td></tr>
+      <tr><td><span class="who agent">claude</span></td><td class="cmd">apply_payment</td><td class="why">“remittance confirmed by their AP clerk on the phone”</td></tr>
+      <tr><td><span class="who human">sam</span></td><td class="cmd">invoice_shipped</td><td class="why">“billing what shipped, never what was ordered”</td></tr>
+    </table></div>
+  </div>
 </section>
 
 <section id="refusal">
   <p class="kicker">rules that refuse, in sentences</p>
-  <h2>When the agent asked to confirm an order past its credit limit, this happened:</h2>
+  <h2 class="prose">When the agent asked to confirm an order past its credit limit, this happened:</h2>
   <div class="refusal">Credit check failed for Contoso Ltd. Order $2500.00; available $1000.00
   (limit $1000.00 less open AR $0.00 and committed $0.00). Short by $1500.00.</div>
-  <p>That sentence is written once, in the rule itself. The greyed-out button shows it as a
+  <p class="prose">That sentence is written once, in the rule itself. The greyed-out button shows it as a
   tooltip. The agent receives it verbatim and relays it. The test suite fails if they ever
   differ. And the rule's own documentation tells the agent what <em>not</em> to do next:
   don't split the order, don't invoice early, don't quietly raise the limit — report the
@@ -178,7 +249,7 @@ footer .mono{font-size:12px}
 
 <section>
   <p class="kicker">a governed agent, end to end</p>
-  <h2>The Contoso order, as it actually played out</h2>
+  <h2 class="prose">The Contoso order, as it actually played out</h2>
   <ol class="story">
     <li><span><b>The gate refused the agent.</b> <span class="aside">Order $2,500 against a $1,000 limit — refusal logged, with the arithmetic.</span></span></li>
     <li><span><b>The agent stopped and laid out options.</b> <span class="aside">Raise the limit, split, prepay, or decline — noting it had raised nothing and split nothing, and that Contoso had no payment history to justify more credit.</span></span></li>
@@ -188,7 +259,7 @@ footer .mono{font-size:12px}
   </ol>
 </section>
 
-<section>
+<section id="quickstart">
   <p class="kicker">try it in two minutes</p>
   <h2>Your sandbox is already waiting.</h2>
   <div class="steps">
@@ -229,7 +300,7 @@ footer .mono{font-size:12px}
 </section>
 
 <footer>
-  <p><b style="color:var(--ink)">Saybooks</b> — the books you can talk to, that stay books.</p>
+  <p><b style="color:var(--ink)">Saybooks</b> — the books you can talk to, that stay books. · <a href="mailto:hello@saybooks.io">hello@saybooks.io</a></p>
   <p class="mono">demo sandboxes are private, seeded, and swept daily · every quote on this page is verbatim from the system or a session transcript</p>
 </footer>
 
