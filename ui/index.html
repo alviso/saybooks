@@ -402,11 +402,14 @@ async function openInvite() {
 owner: everything · controller: everything but admin · clerk: day-to-day, no credit authority · viewer: read only</div></header>`));
     const body = $('<form style="padding:18px 20px"></form>');
     body.onsubmit = (e) => e.preventDefault();
-    body.append($(`<div style="display:flex;gap:8px;margin-bottom:14px">
-      <input id="invName" placeholder="Name (e.g. Ana)" style="flex:2">
-      <select id="invRole" style="flex:1"><option>controller</option><option>clerk</option><option>viewer</option></select>
-      <button id="invGo" type="button" class="primary" style="white-space:nowrap">Mint key</button></div>
-      <div id="invOut"></div><div id="memList"></div>`));
+    body.append($(`<div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <input id="invName" placeholder="Name (e.g. Ana)" style="flex:2">
+        <select id="invRole" style="flex:1"><option>controller</option><option>clerk</option><option>viewer</option></select>
+        <button id="invGo" type="button" class="primary" style="white-space:nowrap">Mint&nbsp;key</button>
+      </div>
+      <div id="invOut"></div><div id="memList"></div>
+    </div>`));
     dlg.append(body);
     const foot = $('<footer><button type="button">Close</button></footer>');
     foot.querySelector('button').onclick = () => dlg.close();
