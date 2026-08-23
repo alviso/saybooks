@@ -18,6 +18,8 @@ const wsp = require('./src/workspace.js');
 const BASE = require('./src/base-doctrine.js');
 const H = require('./src/db.js');
 const members = require('./src/members.js');
+const users = require('./src/users.js');
+const auth = require('./src/auth.js');
 
 R.loadModules();
 
@@ -41,7 +43,7 @@ if (DEMO) {
   // Sweep: sandboxes older than 24h go; if a crowd shows up, cap at the 400 newest.
   const sweep = () => {
     try {
-      const tries = wsp.list().filter(w => w.startsWith('try-'))
+      const tries = wsp.list().filter(w => w.startsWith('try-') && !users.isOwnedSpace(w))
         .map(w => ({ w, at: wsp.ageOf(w) })).sort((a, b) => b.at - a.at);
       const cutoff = Date.now() - 24 * 3600 * 1000;
       for (const t of tries.slice(400)) { wsp.destroy(t.w); members.purge(t.w); }
@@ -77,6 +79,22 @@ const entryOf = (req, url) => {
   if (join) {
     const m = members.resolve(join);
     if (m && sandboxExists(m.workspace)) return { ws: m.workspace, member: m, cookie: join };
+  }
+  // Signed-in users: named spaces, persistent, owned. ?ws= may select any space they can
+  // reach (or a try-* capability, which stays a capability); the choice sticks via sb_space.
+  const user = auth.enabled() && auth.sessionUser(req);
+  if (user) {
+    const spaces = users.spacesFor(user.id);
+    const pick = url.searchParams.get('ws') || (/(?:^|;\s*)sb_space=([a-z0-9-]+)/.exec(req.headers.cookie || '') || [])[1];
+    let ws = null, role = null;
+    if (pick && /^try-[a-z0-9]{6,24}$/.test(pick)) { if (!sandboxExists(pick)) seedSandbox(pick); ws = pick; role = 'owner'; }
+    else if (pick) { role = users.roleFor(user.id, pick); if (role && sandboxExists(pick)) ws = pick; }
+    if (!ws) {
+      const first = spaces[0];
+      if (first) { ws = first.ws; role = first.role; if (!sandboxExists(ws)) wsp.dbFor(ws); }
+      else { const sp = users.createSpace(user.id, 'My books'); seedSandbox(sp.ws); ws = sp.ws; role = 'owner'; }
+    }
+    return { ws, member: { name: user.name || user.email.split('@')[0], role, email: user.email }, user, spaces, spaceCookie: ws };
   }
   const q = url.searchParams.get('ws');
   if (q && /^try-[a-z0-9]{6,24}$/.test(q)) {
@@ -134,6 +152,13 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const p = url.pathname;
 
+  // Google sign-in (hosted demo only; a local workbench has no auth and needs none).
+  if (DEMO && auth.enabled()) {
+    if (p === '/auth/google') return auth.loginRedirect(res);
+    if (p === '/auth/google/callback') { auth.callback(req, res, url).catch(e => { console.error('[auth]', e); if (!res.headersSent) send(res, 500, { error: 'login failed' }); }); return undefined; }
+    if (p === '/auth/logout') return auth.logout(req, res);
+  }
+
   // Hosted MCP: /mcp/<workspace>. The workspace is the URL — no cookie, no session store.
   // In demo mode only try-* names are addressable, and an unknown one is seeded on first
   // contact so an agent can arrive before a browser ever has.
@@ -169,7 +194,9 @@ const server = http.createServer((req, res) => {
   try { entry = entryOf(req, url); }
   catch (e) { return send(res, e.status || 500, { error: e.message }); }
   const ws = entry.ws, member = entry.member;
-  const cookie = { 'set-cookie': `otc_ws=${entry.cookie || ws}; Path=/; SameSite=Lax` };
+  const cookie = { 'set-cookie': entry.user
+    ? `sb_space=${entry.spaceCookie}; Path=/; SameSite=Lax; Max-Age=${180 * 86400}`
+    : `otc_ws=${entry.cookie || ws}; Path=/; SameSite=Lax` };
 
   try {
     // The whole UI contract: the command specs, plus enough master data for the lookups.
@@ -177,6 +204,10 @@ const server = http.createServer((req, res) => {
       return wsp.use(ws, () => send(res, 200, {
         workspace: ws,
         demo: DEMO,
+        auth_enabled: DEMO && auth.enabled(),
+        user: entry.user ? { name: entry.user.name, email: entry.user.email, picture: entry.user.picture } : null,
+        space: entry.user ? (users.spaceOf(ws) ? users.spaceOf(ws).display_name : ws) : null,
+        spaces: entry.user ? entry.spaces.map(sp => ({ ws: sp.ws, name: sp.display_name, role: sp.role })) : undefined,
         member: { name: member.name, role: member.role },
         grants: [...(R.ROLE_GRANTS[member.role] || R.ROLE_GRANTS.viewer)],
         workspaces: DEMO ? [ws] : [...new Set([ws, ...wsp.list()])].filter(w => w === ws || !/^(spec-|test-|try-)/.test(w)).sort(),
@@ -203,6 +234,20 @@ const server = http.createServer((req, res) => {
         areas: R.MODULES.filter(m => m.implements).map(m => m.implements.area),
       }, undefined, cookie));
     }
+    if (req.method === 'POST' && p === '/api/space/create' && entry.user) {
+      let raw = '';
+      req.on('data', c => { raw += c; });
+      req.on('end', () => {
+        let body; try { body = JSON.parse(raw || '{}'); } catch { return send(res, 400, { error: 'bad json' }); }
+        const name = String(body.name || '').trim().slice(0, 60);
+        if (!name) return send(res, 400, { error: 'a space needs a name' });
+        const sp = users.createSpace(entry.user.id, name);
+        wsp.dbFor(sp.ws);                       // empty books; Reset loads demo data if wanted
+        return send(res, 200, { ws: sp.ws, name: sp.display_name });
+      });
+      return undefined;
+    }
+
     // The spec, as a live object: status from the last full run, acts from the implements
     // map, scenarios with their step-by-step evidence.
     if (req.method === 'GET' && p === '/api/spec') {

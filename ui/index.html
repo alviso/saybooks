@@ -702,8 +702,13 @@ owner: everything · controller: everything but admin · clerk: day-to-day, no c
     const body = $('<form style="padding:18px 20px"></form>');
     body.onsubmit = (e) => e.preventDefault();
     body.append($(`<div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input id="invEmail" placeholder="Invite by email (they sign in with Google)" style="flex:2">
+        <select id="invEmailRole" style="flex:1"><option>controller</option><option>clerk</option><option>viewer</option></select>
+        <button id="invEmailGo" type="button" class="primary" style="white-space:nowrap">Invite</button>
+      </div>
       <div style="display:flex;gap:8px;margin-bottom:14px">
-        <input id="invName" placeholder="Name (e.g. Ana)" style="flex:2">
+        <input id="invName" placeholder="Or mint a key: name (e.g. Ana, or an agent)" style="flex:2">
         <select id="invRole" style="flex:1"><option>controller</option><option>clerk</option><option>viewer</option></select>
         <button id="invGo" type="button" class="primary" style="white-space:nowrap">Mint&nbsp;key</button>
       </div>
@@ -714,6 +719,15 @@ owner: everything · controller: everything but admin · clerk: day-to-day, no c
     foot.querySelector('button').onclick = () => dlg.close();
     dlg.append(foot);
 
+    body.querySelector('#invEmailGo').onclick = async () => {
+      const email = body.querySelector('#invEmail').value.trim();
+      if (!email) return;
+      try {
+        const r = await api('core_invite', { name: email, email, role: body.querySelector('#invEmailRole').value, _reason: `invited ${email} by email` });
+        body.querySelector('#invOut').innerHTML = `<div class="card" style="margin-bottom:12px"><b>${r.email}</b> · <span class="pill">${r.role}</span><div class="doc" style="margin-top:4px">${r.note}</div></div>`;
+        drawMembers();
+      } catch (e) { body.querySelector('#invOut').innerHTML = `<div class="err" style="padding:0">${e.message}</div>`; }
+    };
     body.querySelector('#invGo').onclick = async () => {
       const name = body.querySelector('#invName').value.trim();
       const role = body.querySelector('#invRole').value;
@@ -729,9 +743,20 @@ owner: everything · controller: everything but admin · clerk: day-to-day, no c
       } catch (e) { body.querySelector('#invOut').innerHTML = `<div class="err" style="padding:0">${e.message}</div>`; }
     };
     const drawMembers = async () => {
-      const { members: ms } = (await api('core_members', {}));
+      const res2 = await api('core_members', {});
+      const ms = res2.members, ems = res2.email_members || [];
       const box = body.querySelector('#memList'); box.innerHTML = '';
-      if (!ms.length) { box.append($('<div class="sub">No keys minted yet — it\'s just you (the owner key is your cookie/URL).</div>')); return; }
+      if (ems.length) {
+        const et = $('<table style="margin-bottom:10px"><thead><tr><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>');
+        for (const m of ems) {
+          const tr = $(`<tr><td>${m.email}</td><td><span class="pill">${m.role}</span></td><td>${m.revoked_at ? '<span style="color:var(--warn)">revoked</span>' : m.joined ? 'active' : 'invited — joins on first sign-in'}</td><td></td></tr>`);
+          if (!m.revoked_at) { const b = $('<button type="button" style="font-size:11px">Revoke</button>'); b.onclick = async () => { await api('core_revoke_member', { name: m.email, _reason: 'revoked email member' }); drawMembers(); }; tr.lastElementChild.append(b); }
+          et.querySelector('tbody').append(tr);
+        }
+        box.append(et);
+      }
+      if (!ms.length && !ems.length) { box.append($('<div class="sub">No members yet — it\'s just you.</div>')); return; }
+      if (!ms.length) return;
       const t = $('<table><thead><tr><th>Name</th><th>Role</th><th>Key</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>');
       for (const m of ms) {
         const tr = $(`<tr><td>${m.name}</td><td><span class="pill">${m.role}</span></td><td style="font-family:ui-monospace,monospace;font-size:11px">${m.token_hint}</td>
@@ -853,6 +878,28 @@ const boot = async () => {
   // Rebuild the whole workspace block from a stable container — boot() runs on every render
   // now (fresh lookups while agents write), so it must be idempotent.
   const box = document.getElementById('wsBox');
+  if (REG.user) {
+    const opts = REG.spaces.map(sp => `<option value="${sp.ws}" ${sp.ws === REG.workspace ? 'selected' : ''}>${sp.name} (${sp.role})</option>`).join('');
+    box.innerHTML = `<div style="font-size:11px;color:var(--dim);line-height:1.6;border:1px solid var(--line);border-radius:6px;padding:8px 10px">
+      <div style="display:flex;gap:7px;align-items:center">${REG.user.picture ? `<img src="${REG.user.picture}" referrerpolicy="no-referrer" style="width:22px;height:22px;border-radius:50%">` : ''}
+        <b style="color:var(--ink)">${REG.user.name || REG.user.email}</b></div>
+      <div style="margin-top:6px"><select id="spaceSel" style="width:100%;font-size:11px;padding:3px 6px">${opts}<option value="__new">+ new space…</option></select></div>
+      <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--line)"><b style="color:var(--accent)">you here</b><br>${REG.member.name} · <span class="pill">${REG.member.role}</span></div>
+      ${REG.grants.includes('workspace.admin') ? '<button id="inviteBtn" style="margin-top:6px;font-size:11px;padding:3px 8px;width:100%">Share this space…</button>' : ''}
+      <a href="/auth/logout" style="display:block;margin-top:6px;font-size:11px;color:var(--dim)">Sign out</a></div>`;
+    document.getElementById('spaceSel').onchange = async (e) => {
+      if (e.target.value === '__new') {
+        const name = prompt('Name the new space (its books start empty):');
+        if (!name) { e.target.value = REG.workspace; return; }
+        const r = await fetch(wsUrl('/api/space/create'), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name }) }).then(x => x.json());
+        location.search = '?ws=' + r.ws;
+        return;
+      }
+      location.search = '?ws=' + e.target.value;
+    };
+    const ib = document.getElementById('inviteBtn'); if (ib) ib.onclick = () => openInvite();
+    return;
+  }
   if (REG.demo) {
     const isAdmin = REG.grants.includes('workspace.admin');
     const mcpUrl = location.origin + '/mcp/' + REG.workspace;
@@ -865,7 +912,8 @@ const boot = async () => {
       <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><b style="color:var(--accent)">you</b><br>
       ${REG.member.name} · <span class="pill">${REG.member.role}</span></div>
       ${isAdmin ? '<button id="inviteBtn" style="margin-top:6px;font-size:11px;padding:3px 8px;width:100%">Share this sandbox…</button>' : ''}
-      ${isAdmin ? '<button id="demoReset" style="margin-top:6px;font-size:11px;padding:3px 8px;width:100%">Reset demo data</button>' : ''}</div>`;
+      ${isAdmin ? '<button id="demoReset" style="margin-top:6px;font-size:11px;padding:3px 8px;width:100%">Reset demo data</button>' : ''}
+      ${REG.auth_enabled ? '<a href="/auth/google" style="display:block;margin-top:8px;text-align:center;font-size:11.5px;font-weight:600;padding:6px 8px;border:1.5px solid var(--accent);border-radius:6px;color:var(--accent);text-decoration:none">Sign in with Google — keep this space</a>' : ''}</div>`;
     document.getElementById('mcpCopy').onclick = (e) => {
       navigator.clipboard.writeText('claude mcp add -t http saybooks ' + mcpUrl);
       e.target.textContent = 'Copied ✓'; setTimeout(() => e.target.textContent = 'Copy command', 1500);

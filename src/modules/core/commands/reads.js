@@ -77,18 +77,29 @@ defineCommand({
   name: 'core_invite',
   title: 'Invite member', group: 'Workspace', subject: 'workspace', scope: 'collection',
   permission: 'workspace.admin',
-  summary: 'Mint a member token for this workspace: a name, a role, and the links that carry them.',
+  summary: 'Share this workspace: by email (they sign in with Google) or as a member token (a link that is the key).',
   doctrine: `The link is the key: whoever opens it works here under that name and role, and every
 act they (or their agent) take is attributed to that name. Roles: owner (everything), controller
 (everything but workspace admin), clerk (day-to-day, no credit authority), viewer (read only).
 Denials are one-sentence refusals, logged — attempted overreach is reviewable, like everything else.`,
   effects: ['member token minted'],
   args: {
-    name: { ...f.text('Who this is for — becomes the actor on every act they take.'), required: true },
+    name: { ...f.text('Who this is for — becomes the actor on every act they take. For an email invite, the email works as the name.'), required: true },
     role: { ...f.pick(members.ROLES.filter(r => r !== 'owner'), 'What they may do here.'), required: true },
+    email: f.text('Invite by email instead of minting a link: they sign in with Google and land here with this role.'),
   },
-  handler(a) {
+  handler(a, ctx) {
     const ws = wsp.currentName();
+    if (a.email) {
+      const usr = require('../../../users.js');
+      let inv;
+      try { inv = usr.inviteEmail(ws, a.email, a.role, ctx.actor); }
+      catch (e) { throw new (require('../../../registry.js').Rejected)(e.message); }
+      return { email: inv.email, role: inv.role,
+        note: inv.active
+          ? `${inv.email} already has a Saybooks account — this space appears in their switcher now.`
+          : `${inv.email} gets access the first time they sign in with Google at saybooks.io. No invitation email goes out — this system sends nothing, by design; tell them yourself.` };
+    }
     const m = members.mint(ws, a.name, a.role);
     return { name: m.name, role: m.role, token: m.token,
       join_path: `/app?join=${m.token}`, mcp_path: `/mcp/${m.token}`,
@@ -96,8 +107,9 @@ Denials are one-sentence refusals, logged — attempted overreach is reviewable,
   },
 });
 
-read({ name: 'core_members', title: 'Members', summary: 'Who holds a key to this workspace, with role and status. Tokens are shown as hints only.',
-  args: {}, handler: () => ({ workspace: wsp.currentName(), members: members.list(wsp.currentName()) }) });
+read({ name: 'core_members', title: 'Members', summary: 'Who has access: email members (Google sign-in) and token keys (agents, link shares).',
+  args: {}, handler: () => ({ workspace: wsp.currentName(), members: members.list(wsp.currentName()),
+    email_members: require('../../../users.js').emailMembers(wsp.currentName()) }) });
 
 defineCommand({
   name: 'core_revoke_member',
@@ -108,8 +120,9 @@ defineCommand({
   effects: ['member token revoked'],
   args: { name: { ...f.text('The member to revoke.'), required: true } },
   handler(a) {
-    const n = members.revoke(wsp.currentName(), a.name);
-    if (!n) throw new (require('../../../registry.js').Rejected)(`No active member named ${a.name} here.`);
+    const ws = wsp.currentName();
+    const n = members.revoke(ws, a.name) + require('../../../users.js').revokeEmail(ws, a.name);
+    if (!n) throw new (require('../../../registry.js').Rejected)(`No active member named ${a.name} here (names and emails both count).`);
     return { revoked: a.name };
   },
 });
