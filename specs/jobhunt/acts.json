@@ -1,0 +1,42 @@
+{
+  "area": "jobhunt",
+  "spec": "0.1",
+  "doc": "spec.md",
+  "acts": {
+    "add_posting":          { "kind": "write", "required": ["title", "company"] },
+    "update_posting":       { "kind": "write", "required": ["posting"] },
+    "evaluate_posting":     { "kind": "write", "required": ["posting"] },
+    "apply":                { "kind": "write", "required": ["posting"] },
+    "set_application_status": { "kind": "write", "required": ["application", "status"] },
+    "add_interview":        { "kind": "write", "required": ["application"] },
+    "interview_outcome":    { "kind": "write", "required": ["interview", "outcome"] },
+    "log_interaction":      { "kind": "write", "required": ["direction", "summary"] },
+    "complete_next_action": { "kind": "write", "required": [] },
+    "add_contact":          { "kind": "write", "required": ["name", "source"] },
+    "update_contact":       { "kind": "write", "required": ["contact"] },
+    "add_resume_version":   { "kind": "write", "required": ["label"] },
+    "due":                  { "kind": "read",  "required": [] },
+    "pipeline":             { "kind": "read",  "required": [] },
+    "posting":              { "kind": "read",  "required": ["posting"] },
+    "contacts":             { "kind": "read",  "required": [] },
+    "resume_versions":      { "kind": "read",  "required": [] },
+    "check_duplicates":     { "kind": "read",  "required": ["title"] }
+  },
+  "env_acts": {},
+  "invariants": [
+    { "id": "JH-1",  "title": "Record of reality: facts only from the JD or correspondence; unknown beats guessed." },
+    { "id": "JH-2",  "title": "Every contact has a source." },
+    { "id": "JH-3",  "title": "Duplicate warnings are surfaced, never auto-resolved — a person decides." },
+    { "id": "JH-4",  "title": "One application per posting." },
+    { "id": "JH-5",  "title": "The end client is first-class; a missing one is visible work." },
+    { "id": "JH-6",  "title": "One open next action per posting; supersede history kept." },
+    { "id": "JH-7",  "title": "Suggestions, never actions: the area never sends, submits or clicks." },
+    { "id": "JH-8",  "title": "Skips are reasoned pattern memory." },
+    { "id": "JH-9",  "title": "Ghosted is a status, not a deletion." },
+    { "id": "JH-10", "title": "Applications record the resume version actually sent." },
+    { "id": "JH-11", "title": "Comp is annualized with caveats in prose." },
+    { "id": "JH-12", "title": "Interview rounds close with outcomes; outcomes are touches." },
+    { "id": "JH-13", "title": "Thresholds are reference data, not code." },
+    { "id": "JH-14", "title": "Every write is a logged command with an actor; refusals kept; reads unlogged." }
+  ]
+}

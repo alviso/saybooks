@@ -192,7 +192,7 @@ footer .mono{font-size:12px}
   <p class="prose">A Saybooks module owns its tables, carries its rules as prose the agent actually
   reads, and is held to a 14-gate contract. Each functional area is defined by a spec —
   invariants, acts, lifecycles — with executable scenarios proving the implementation follows
-  it. Two areas ship today.</p>
+  it. Three areas ship today — including a deliberately personal one.</p>
   <div class="claims">
     <div class="claim">
       <h3>o2c — Order to Cash</h3>
@@ -211,6 +211,15 @@ footer .mono{font-size:12px}
       graph is refused to agents regardless of role. Won accounts promote into o2c as customers —
       pursuit ends where trading begins.</p>
       <span class="proof"><b>Spec:</b> 11 invariants · 14 acts · 3 replayable scenarios — extracted from a production CRM, <a href="https://github.com/alviso/saybooks/blob/master/specs/crm/spec.md">extraction record included</a></span>
+    </div>
+    <div class="claim">
+      <h3>jobhunt — One Person's Search</h3>
+      <p>A deliberately personal area: postings, applications, interviews, recruiters — with a
+      duplicate guard keyed on the <em>end client</em> behind agency postings (the same req via
+      four agencies is normal; a double submission can disqualify you), one application per
+      posting, one open next action at a time, and "ghosted" as an honest status. It records
+      and suggests; it never sends anything.</p>
+      <span class="proof"><b>Spec:</b> 14 invariants · 18 acts · 3 replayable scenarios — extracted from a working hunt</span>
     </div>
     <div class="claim">
       <h3>Your area here</h3>

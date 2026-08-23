@@ -1,0 +1,31 @@
+{
+  "name": "rounds, outcomes, ghosts, and what was actually sent",
+  "spec": "jobhunt@0.1",
+  "notes": "JH-10 (the version that went out), JH-12 (rounds close with outcomes), JH-9 (ghosted is a status), JH-2 (contacts have sources).",
+  "env": [],
+  "steps": [
+    { "act": "add_resume_version", "args": { "label": "AI & Integration", "headline": "Integration architect, AI-forward", "platform": "file" },
+      "expect": { "ok": true } },
+    { "act": "add_contact", "args": { "name": "Rita Alvarez", "company": "TalentBridge", "company_kind": "staffing_agency", "role": "Senior Recruiter" },
+      "expect": { "refused": "source" },
+      "notes": "JH-2: how do we know this person? No source, no contact" },
+    { "act": "add_contact", "args": { "name": "Rita Alvarez", "company": "TalentBridge", "company_kind": "staffing_agency", "role": "Senior Recruiter",
+        "source": "reached out on LinkedIn 8/21 re: the Meridian req" },
+      "expect": { "ok": true } },
+    { "act": "add_posting", "args": { "title": "Platform Integration Architect", "company": "TalentBridge", "company_kind": "staffing_agency", "end_client": "Northwind Logistics" },
+      "expect": { "ok": true } },
+    { "act": "apply", "args": { "posting": "JP-0001", "resume_version": "AI & Integration", "channel": "agency_submission", "via_contact": "HC-0001", "applied_at": "2026-08-22" },
+      "expect": { "ok": true },
+      "notes": "JH-10: the application records the exact version that went out — when a recruiter says 'the resume you sent', there is one answer" },
+    { "act": "add_interview", "args": { "application": "APP-0001", "kind": "recruiter_screen", "scheduled_at": "2026-08-25T15:00" },
+      "expect": { "ok": true, "include": { "application_status": "interviewing" } } },
+    { "act": "interview_outcome", "args": { "interview": "IV-0001", "outcome": "passed", "notes": "went well; panel next" },
+      "expect": { "ok": true },
+      "notes": "JH-12: the outcome closes the round and is itself a touch in the history" },
+    { "act": "set_application_status", "args": { "application": "APP-0001", "status": "ghosted", "note": "no reply since the screen despite two follow-ups; recording the silence" },
+      "expect": { "ok": true, "include": { "status": "ghosted" } },
+      "notes": "JH-9: silence is an outcome. The row stays; the pattern (which agencies ghost) accumulates" },
+    { "act": "resume_versions", "args": {},
+      "expect": { "ok": true, "include": { "length": 1 } } }
+  ]
+}

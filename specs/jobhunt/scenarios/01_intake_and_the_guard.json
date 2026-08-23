@@ -1,0 +1,32 @@
+{
+  "name": "the same req through two agencies: warned, never merged",
+  "spec": "jobhunt@0.1",
+  "notes": "JH-3 (warnings surfaced, never auto-resolved), JH-5 (end client first-class), JH-4 (one application per posting), JH-1 (unknown beats guessed). The area's sharpest rule: a double submission can disqualify the candidate.",
+  "env": [],
+  "steps": [
+    { "act": "add_posting", "args": { "title": "Senior SAP Integration Architect", "company": "TechStaff Partners", "company_kind": "staffing_agency",
+        "end_client": "Meridian Foods", "req_id": "151469BR", "comp_min": 17000000, "comp_max": 19000000,
+        "comp_notes": "band per recruiter email 8/20", "work_mode": "remote" },
+      "expect": { "ok": true, "include": { "status": "lead" } },
+      "notes": "an agency posting records who the work is actually for (JH-5) — the guard keys on it" },
+    { "act": "check_duplicates", "args": { "title": "Sr. SAP Integration Architect", "end_client": "Meridian Foods", "req_id": "151469BR" },
+      "expect": { "ok": true, "include": { "warning_count": 1 } },
+      "notes": "checking BEFORE adding records nothing — the guard as a pure read" },
+    { "act": "add_posting", "args": { "title": "Sr. SAP Integration Architect", "company": "Global Recruiting Inc", "company_kind": "staffing_agency",
+        "end_client": "Meridian Foods", "req_id": "151469BR" },
+      "expect": { "ok": true, "include": { "warning_count": 1 } },
+      "notes": "JH-3: the same req via a second agency is NORMAL and recording it is right — but the warning rides the result, for a person to act on. Never silently merged, never quietly dropped" },
+
+    { "act": "evaluate_posting", "args": { "posting": "JP-0001", "fit_score": 4.5, "fit_notes": "strong CPI/BTP overlap; travel unclear" },
+      "expect": { "ok": true, "include": { "status": "evaluated" } } },
+    { "act": "apply", "args": { "posting": "JP-0001", "channel": "agency_submission", "applied_at": "unknown" },
+      "expect": { "ok": true },
+      "notes": "JH-1: the submission is real, the date was never recorded — 'unknown' is the honest value, a guessed date is corruption" },
+    { "act": "apply", "args": { "posting": "JP-0001", "channel": "portal" },
+      "expect": { "refused": "Already applied" },
+      "notes": "JH-4: one application per posting" },
+    { "act": "due", "args": {},
+      "expect": { "ok": true, "include": { "missing_end_client_count": 0 } },
+      "notes": "both agency postings carry their end client, so nothing surfaces here — leave one off and it becomes visible work (JH-5)" }
+  ]
+}

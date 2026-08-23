@@ -90,7 +90,9 @@ for (const m of MODULES) for (const t of m.tables) {
   assert.ok(!owner[t], `table ${t} claimed by both ${owner[t]} and ${m.name}`);
   owner[t] = m.name;
 }
-const WRITE_RE = /(?:INSERT INTO|UPDATE|DELETE FROM)\s+(?:\\?["'`])?([a-z_]+)/gi;
+// Case-sensitive on purpose: SQL keywords in this codebase are uppercase; prose like a
+// command title "Update contact" must not read as an UPDATE statement.
+const WRITE_RE = /(?:INSERT INTO|UPDATE|DELETE FROM)\s+(?:\\?["'`])?([a-z_]+)/g;
 for (const m of MODULES) {
   const files = [];
   (function walk(d) {

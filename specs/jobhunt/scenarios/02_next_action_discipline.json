@@ -1,0 +1,28 @@
+{
+  "name": "one open next action, superseded honestly",
+  "spec": "jobhunt@0.1",
+  "notes": "JH-6 (one open next action per posting; history kept), JH-8 (skips are reasoned), JH-7 (the due list suggests; nothing is sent).",
+  "env": [],
+  "steps": [
+    { "act": "add_posting", "args": { "title": "Integration Lead", "company": "Fabrikam Direct", "company_kind": "end_client" },
+      "expect": { "ok": true } },
+    { "act": "log_interaction", "args": { "posting": "JP-0001", "direction": "out", "medium": "email",
+        "summary": "sent tailored resume to hiring manager", "next_action": "follow up if silent", "next_action_due": "2026-08-30" },
+      "expect": { "ok": true, "include": { "open_next_action": "follow up if silent" } } },
+    { "act": "log_interaction", "args": { "posting": "JP-0001", "direction": "in", "medium": "email",
+        "summary": "HM replied: panel forming, expect scheduling link", "next_action": "chase scheduling link if none by Friday", "next_action_due": "2026-08-28" },
+      "expect": { "ok": true, "include": { "open_next_action": "chase scheduling link if none by Friday", "superseded_count": 1 } },
+      "notes": "JH-6: the new intention replaces the old one — and the old one is kept as history, because what you MEANT to do is part of the record" },
+    { "act": "complete_next_action", "args": { "posting": "JP-0001", "note": "scheduling link arrived; booked", "direction": "in", "medium": "portal" },
+      "expect": { "ok": true } },
+    { "act": "due", "args": {}, "expect": { "ok": true, "include": { "open_actions_count": 0 } } },
+
+    { "act": "add_posting", "args": { "title": "ERP Admin (onsite, Fargo)", "company": "Contoso Recruiting", "company_kind": "staffing_agency" },
+      "expect": { "ok": true } },
+    { "act": "evaluate_posting", "args": { "posting": "JP-0002" },
+      "expect": { "ok": true, "include": { "status": "evaluated" } } },
+    { "act": "evaluate_posting", "args": { "posting": "JP-0002", "skip_reason": "onsite-only in Fargo; no relocation — keeping as pattern: this agency posts a lot of onsite-only" },
+      "expect": { "ok": true, "include": { "status": "skipped" } },
+      "notes": "JH-8: the reason is the value — skipped postings are pattern memory, not trash" }
+  ]
+}
