@@ -299,14 +299,21 @@ async function detail(type, id) {
   wrap.append(card);
 
   if (type === 'posting') {
-    const escJd = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    /* Prose blocks: real line breaks and paragraphs are respected; a text stored as one
+       solid block falls back to a line per sentence (the text itself is untouched —
+       display wrapping only). The guard list keeps "incl. BTP" and friends whole. */
+    const fmtDoc = (s) => {
+      const e = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\r/g, '');
+      if (/\n/.test(e)) return e.split(/\n{2,}/).map(p => `<p style="margin:0 0 8px">${p.replace(/\n/g, '<br>')}</p>`).join('');
+      return e.replace(/(?<!\b(?:incl|approx|etc|e\.g|i\.e|vs|min|max|resp))\.\s+(?=[A-Z0-9"(])/g, '.<br>');
+    };
     if (entity.fit_notes || entity.jd_text || entity.red_flags) wrap.append($(`<div class="card">
-      ${entity.fit_notes ? `<b>Fit</b><div class="doc" style="margin-top:4px">${entity.fit_notes}</div>` : ''}
-      ${entity.red_flags ? `<div style="margin-top:8px"><b style="color:var(--warn)">Red flags</b><div class="doc">${entity.red_flags}</div></div>` : ''}
+      ${entity.fit_notes ? `<b>Fit</b><div class="doc" style="margin-top:4px;line-height:1.55">${fmtDoc(entity.fit_notes)}</div>` : ''}
+      ${entity.red_flags ? `<div style="margin-top:8px"><b style="color:var(--warn)">Red flags</b><div class="doc" style="line-height:1.55">${fmtDoc(entity.red_flags)}</div></div>` : ''}
       ${entity.skip_reason ? `<div style="margin-top:8px"><b>Skipped because</b><div class="doc">${entity.skip_reason}</div></div>` : ''}
       ${entity.open_next_action ? `<div style="margin-top:8px"><b style="color:var(--accent)">Open next action</b><div class="doc">${entity.open_next_action}</div></div>` : ''}
       ${entity.jd_text ? `<details style="margin-top:10px"><summary style="cursor:pointer;font-weight:600;font-size:13.5px">Job description — verbatim, as posted</summary>
-        <div class="doc" style="margin-top:6px;white-space:pre-wrap;max-height:420px;overflow-y:auto">${escJd(entity.jd_text)}</div></details>` : ''}</div>`));
+        <div class="doc" style="margin-top:6px;line-height:1.6;max-width:76ch;max-height:420px;overflow-y:auto">${fmtDoc(entity.jd_text)}</div></details>` : ''}</div>`));
     if (entity.application && entity.application.interviews.length) {
       const it2 = $('<table><thead><tr><th>Round</th><th>Kind</th><th>When</th><th>Interviewer</th><th>Outcome</th></tr></thead><tbody></tbody></table>');
       for (const iv of entity.application.interviews) it2.querySelector('tbody').append($(`<tr><td>${iv.round||''}</td><td>${iv.kind||''}</td><td>${iv.scheduled_at||''}</td><td>${iv.interviewer||''}</td><td><span class="pill">${iv.outcome}</span></td></tr>`));
