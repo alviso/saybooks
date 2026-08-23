@@ -99,8 +99,10 @@ human to fill them in; that is correct behavior, not a limitation to route aroun
     const c = H.need('contact', a.contact_id, 'contact');
     if (a.source === '') throw new Rejected('source can be corrected, never removed (CRM-9).');
     if (a.status && c.status === 'gap') throw new Rejected('A gap becomes named only through resolve_gap (CRM-2).');
+    if (a.name === '') throw new Rejected('A named contact keeps a name — mark them departed instead of blanking them (CRM-6).');
     const fields = ['name', 'title', 'source', 'confidence_note', 'status', 'linkedin_url', 'notes', 'mutual_via', 'mutual_url', 'linkedin_path'];
-    for (const k of fields) if (a[k] !== undefined) db.prepare(`UPDATE contact SET ${k} = ?, updated_at = ? WHERE id = ?`).run(a[k], at, a.contact_id);
+    // An explicit empty string means CLEAR (stored as NULL); absent means untouched.
+    for (const k of fields) if (a[k] !== undefined) db.prepare(`UPDATE contact SET ${k} = ?, updated_at = ? WHERE id = ?`).run(a[k] === '' ? null : a[k], at, a.contact_id);
     return V.contactView(a.contact_id);
   },
 });

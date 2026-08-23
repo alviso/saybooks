@@ -124,6 +124,7 @@ function openForm(spec, prefill = {}) {
   dlg.append($(`<header><b>${spec.title}</b>${spec.help ? `<div class="help">${spec.help}</div>` : ''}</header>`));
   const form = document.createElement('form');
   const state = { ...prefill };
+  const hadValue = { ...prefill };   // a prefilled field cleared by the user means CLEAR, not "no change"
 
   for (const f of spec.fields) {
     const wrap = $(`<label class="${f.required?'req':''}"><b>${f.label}</b><i>${f.hint||''}</i></label>`);
@@ -150,7 +151,8 @@ function openForm(spec, prefill = {}) {
       el.value = state[f.key] == null ? '' : (f.widget === 'money' ? (state[f.key] / 100).toFixed(2) : state[f.key]);
       el.oninput = () => {
         const v = el.value.trim();
-        state[f.key] = v === '' ? undefined
+        state[f.key] = v === ''
+          ? ((hadValue[f.key] !== undefined && f.widget !== 'money' && f.widget !== 'number') ? '' : undefined)
           : f.widget === 'money' ? Math.round(parseFloat(v) * 100)
           : f.widget === 'number' ? parseInt(v, 10) : v;
       };

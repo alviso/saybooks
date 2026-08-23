@@ -57,8 +57,11 @@ defineCommand({
     for (const k of ['why_them', 'source_url']) {
       if (a[k] === '') throw new Rejected(`${k} can be corrected, never removed (CRM-9).`);
     }
+    if (a.name === '') throw new Rejected('An account keeps its name.');
     const fields = ['name', 'why_them', 'source_url', 'tier', 'vertical', 'trigger_event', 'hook', 'owner_note'];
-    for (const k of fields) if (a[k] !== undefined) db.prepare(`UPDATE account SET ${k} = ?, updated_at = ? WHERE id = ?`).run(a[k], at, a.account_id);
+    // An explicit empty string means CLEAR (stored as NULL); absent means untouched.
+    // why_them and source_url already refused above when blanked (CRM-9).
+    for (const k of fields) if (a[k] !== undefined) db.prepare(`UPDATE account SET ${k} = ?, updated_at = ? WHERE id = ?`).run(a[k] === '' ? null : a[k], at, a.account_id);
     return V.accountView(a.account_id);
   },
 });
