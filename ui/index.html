@@ -387,7 +387,11 @@ async function render() {
     for (const r of rows) {
       const tr = $(`<tr>${cells(r)}</tr>`);
       tr.dataset.search = Object.values(r).filter(v => v != null && typeof v !== 'object').join(' ');
-      tr.onclick = () => { selected = type === 'accountFromGap' ? { type: 'account', id: r.account_id } : { type, id: r.id }; render(); };
+      if (type && type !== 'nolink') {
+        tr.onclick = () => { selected = type === 'accountFromGap' ? { type: 'account', id: r.account_id } : { type, id: r.id }; render(); };
+      } else {
+        tr.style.cursor = 'default';
+      }
       t.querySelector('tbody').append(tr);
     }
     main.append(t);
