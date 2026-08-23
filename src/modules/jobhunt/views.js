@@ -109,6 +109,42 @@ const resumeVersions = () => db().prepare(`
   SELECT rv.*, (SELECT COUNT(*) FROM hunt_application a WHERE a.resume_version_id = rv.id) AS applications
   FROM hunt_resume_version rv ORDER BY rv.created_at`).all();
 
+function contactView(id) {
+  const r = need('hunt_contact', id, 'contact');
+  const interactions = db().prepare(`
+    SELECT i.*, p.title, c.name AS company_name FROM hunt_interaction i
+    LEFT JOIN hunt_posting p ON p.id = i.posting_id LEFT JOIN hunt_company c ON c.id = p.company_id
+    WHERE i.contact_id = ? ORDER BY i.at DESC LIMIT 50`).all(id);
+  const postings = db().prepare(`
+    SELECT DISTINCT p.id, p.title, p.status AS posting_status, c.name AS company_name, a.status AS app_status
+    FROM hunt_posting p JOIN hunt_company c ON c.id = p.company_id
+    LEFT JOIN hunt_application a ON a.posting_id = p.id
+    WHERE p.id IN (SELECT posting_id FROM hunt_interaction WHERE contact_id = ? AND posting_id IS NOT NULL)
+       OR a.via_contact_id = ?
+    ORDER BY p.updated_at DESC`).all(id, id);
+  return {
+    ...r, status: r.relationship,
+    company_name: r.company_id ? (get('hunt_company', r.company_id) || {}).name : null,
+    postings, interactions,
+    last_touch: interactions.length ? interactions[0].at : null,
+  };
+}
+
+function resumeView(id) {
+  const rv = need('hunt_resume_version', id, 'resume version');
+  const applications = db().prepare(`
+    SELECT a.id, a.status, a.applied_at, a.channel, p.id AS posting_id, p.title, c.name AS company_name
+    FROM hunt_application a JOIN hunt_posting p ON p.id = a.posting_id JOIN hunt_company c ON c.id = p.company_id
+    WHERE a.resume_version_id = ? ORDER BY a.created_at DESC`).all(id);
+  const planned = db().prepare(`
+    SELECT p.id, p.title, p.status AS posting_status, c.name AS company_name
+    FROM hunt_posting p JOIN hunt_company c ON c.id = p.company_id
+    WHERE p.resume_version_id = ?
+      AND p.id NOT IN (SELECT posting_id FROM hunt_application WHERE resume_version_id = ?)
+    ORDER BY p.updated_at DESC`).all(id, id);
+  return { ...rv, name: rv.label, applications, planned };
+}
+
 /** Companies are created implicitly by name — one door, like core.adjustStock. */
 function ensureCompany(dbh, name, kind, at) {
   const hit = dbh.prepare('SELECT * FROM hunt_company WHERE lower(name) = lower(?)').get(name);
@@ -118,4 +154,4 @@ function ensureCompany(dbh, name, kind, at) {
   return get('hunt_company', id);
 }
 
-module.exports = { duplicateWarnings, openAction, postingView, pipeline, due, contacts, resumeVersions, ensureCompany, cfg };
+module.exports = { duplicateWarnings, openAction, postingView, contactView, resumeView, pipeline, due, contacts, resumeVersions, ensureCompany, cfg };

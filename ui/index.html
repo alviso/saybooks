@@ -212,19 +212,20 @@ function linesEditor(f, state) {
 
 /* ---------- views ---------- */
 const cmd = (n) => REG.commands.find(c => c.name === n);
+const buttonFor = (c) => {
+  const allowed = !REG.grants || REG.grants.includes(c.permission);
+  const b = $(`<button class="primary" ${allowed ? '' : 'disabled'}>${c.title}</button>`);
+  if (!allowed) b.title = `${c.title} needs ${c.permission} — your role (${REG.member ? REG.member.role : 'viewer'}) does not have it.`;
+  b.onclick = () => openForm(c);
+  return b;
+};
 const newButtons = (subject) => REG.commands.filter(c => c.subject === subject && c.intent === 'write' && c.scope === 'collection')
-  .map(c => {
-    const allowed = !REG.grants || REG.grants.includes(c.permission);
-    const b = $(`<button class="primary" ${allowed ? '' : 'disabled'}>${c.title}</button>`);
-    if (!allowed) b.title = `${c.title} needs ${c.permission} — your role (${REG.member ? REG.member.role : 'viewer'}) does not have it.`;
-    b.onclick = () => openForm(c);
-    return b;
-  });
+  .map(buttonFor);
 
 async function detail(type, id) {
   const wrap = $('<div></div>');
   const [entity, na] = await Promise.all([
-    api({ order:'o2c_get_order', customer:'o2c_get_customer', invoice:'o2c_get_invoice', account:'crm_get_account', campaign:'crm_get_campaign', posting:'hunt_get_posting' }[type],
+    api({ order:'o2c_get_order', customer:'o2c_get_customer', invoice:'o2c_get_invoice', account:'crm_get_account', campaign:'crm_get_campaign', posting:'hunt_get_posting', contact:'hunt_get_contact', resume:'hunt_get_resume' }[type],
         { [type + '_id']: id }),
     fetch(wsUrl(`/api/next-actions?type=${type}&id=${id}`)).then(r => r.json()),
   ]);
@@ -239,6 +240,10 @@ async function detail(type, id) {
     ? { Campaign: entity.campaign_name ?? '—', Tier: entity.tier ?? '—', Vertical: entity.vertical ?? '—', Trigger: entity.trigger_event ?? '—', Customer: entity.customer_id ?? '— (not promoted)', 'Open gaps': entity.gap_count, Reason: entity.status_reason ?? '—' }
     : type === 'posting'
     ? { Via: entity.company_name, 'End client': entity.end_client_name ?? '—', Req: entity.req_id ?? '—', Fit: entity.fit_score ?? '—', Resume: entity.resume_version_label ?? '—', 'Applied': entity.application ? (entity.application.applied_at || 'yes') : 'no', 'App status': entity.application ? entity.application.status : '—' }
+    : type === 'contact'
+    ? { Company: entity.company_name ?? '—', Role: entity.role ?? '—', Email: entity.email ?? '—', Phone: entity.phone ?? '—', LinkedIn: entity.linkedin_url ? `<a href="${entity.linkedin_url}" target="_blank" rel="noopener">profile</a>` : '—', Source: entity.source, 'Last touch': entity.last_touch ? entity.last_touch.slice(0,10) : '—' }
+    : type === 'resume'
+    ? { Headline: entity.headline ?? '—', Platform: entity.platform ?? '—', Focus: entity.focus ?? '—', File: entity.file_path ?? '—', Applications: entity.applications.length, Registered: (entity.created_at||'').slice(0,10) }
     : type === 'campaign'
     ? { 'Open gaps': entity.open_gaps, 'Going stale': entity.stale_14d, Reason: entity.status_reason ?? '—', ...Object.fromEntries(Object.entries(entity.accounts_by_status).map(([k, v]) => [k, v])) }
     : { Customer: entity.customer_id, Order: entity.order_id, Total: entity.total_display, Applied: entity.applied_display, Open: entity.open_display, Due: entity.due_at };
@@ -288,6 +293,49 @@ async function detail(type, id) {
       for (const x of entity.interactions) xt.querySelector('tbody').append($(`<tr><td>${(x.at||'').slice(0,16).replace('T',' ')}</td><td>${x.direction}</td><td>${x.summary}</td>
         <td style="font-size:12px;color:${x.next_action_state==='open'?'var(--accent)':'var(--dim)'}">${x.next_action ? x.next_action + ' [' + x.next_action_state + ']' : ''}</td></tr>`));
       wrap.append($('<div class="sub" style="margin-top:16px">Touches — superseded intentions kept</div>'), xt);
+    }
+  }
+  if (type === 'contact') {
+    if (entity.notes) wrap.append($(`<div class="card"><b>Notes</b><div class="doc" style="margin-top:4px">${entity.notes}</div></div>`));
+    if (entity.postings.length) {
+      const pt = $('<table><thead><tr><th>Posting</th><th>Title</th><th>Via</th><th>Posting</th><th>Application</th></tr></thead><tbody></tbody></table>');
+      for (const r of entity.postings) {
+        const tr = $(`<tr><td>${r.id}</td><td>${r.title}</td><td>${r.company_name}</td><td><span class="pill ${r.posting_status}">${r.posting_status}</span></td><td>${r.app_status ? `<span class="pill ${r.app_status}">${r.app_status}</span>` : '—'}</td></tr>`);
+        tr.onclick = () => { selected = { type: 'posting', id: r.id }; render(); };
+        pt.querySelector('tbody').append(tr);
+      }
+      wrap.append($('<div class="sub" style="margin-top:16px">Postings this person touches</div>'), pt);
+    }
+    if (entity.interactions.length) {
+      const xt = $('<table><thead><tr><th>At</th><th>Dir</th><th>Posting</th><th>Summary</th><th>Next action</th></tr></thead><tbody></tbody></table>');
+      for (const x of entity.interactions) {
+        const tr = $(`<tr><td>${(x.at||'').slice(0,16).replace('T',' ')}</td><td>${x.direction}</td><td style="font-size:12px">${x.posting_id ? `${x.posting_id} · ${x.title ?? ''}` : ''}</td><td>${x.summary}</td>
+          <td style="font-size:12px;color:${x.next_action_state==='open'?'var(--accent)':'var(--dim)'}">${x.next_action ? x.next_action + ' [' + x.next_action_state + ']' : ''}</td></tr>`);
+        if (x.posting_id) tr.onclick = () => { selected = { type: 'posting', id: x.posting_id }; render(); }; else tr.style.cursor = 'default';
+        xt.querySelector('tbody').append(tr);
+      }
+      wrap.append($('<div class="sub" style="margin-top:16px">Touches</div>'), xt);
+    }
+  }
+  if (type === 'resume') {
+    if (entity.notes) wrap.append($(`<div class="card"><b>Notes</b><div class="doc" style="margin-top:4px">${entity.notes}</div></div>`));
+    if (entity.applications.length) {
+      const at3 = $('<table><thead><tr><th>Application</th><th>Posting</th><th>Title</th><th>Via</th><th>Applied</th><th>Status</th></tr></thead><tbody></tbody></table>');
+      for (const r of entity.applications) {
+        const tr = $(`<tr><td>${r.id}</td><td>${r.posting_id}</td><td>${r.title}</td><td>${r.company_name}</td><td style="font-size:12px">${r.applied_at ?? ''}</td><td><span class="pill ${r.status}">${r.status}</span></td></tr>`);
+        tr.onclick = () => { selected = { type: 'posting', id: r.posting_id }; render(); };
+        at3.querySelector('tbody').append(tr);
+      }
+      wrap.append($('<div class="sub" style="margin-top:16px">Went out on — one answer to "the resume you sent" (JH-10)</div>'), at3);
+    }
+    if (entity.planned.length) {
+      const et = $('<table><thead><tr><th>Posting</th><th>Title</th><th>Via</th><th>Status</th></tr></thead><tbody></tbody></table>');
+      for (const r of entity.planned) {
+        const tr = $(`<tr><td>${r.id}</td><td>${r.title}</td><td>${r.company_name}</td><td><span class="pill ${r.posting_status}">${r.posting_status}</span></td></tr>`);
+        tr.onclick = () => { selected = { type: 'posting', id: r.id }; render(); };
+        et.querySelector('tbody').append(tr);
+      }
+      wrap.append($('<div class="sub" style="margin-top:16px">Earmarked — chosen for the posting, not yet applied</div>'), et);
     }
   }
   if (type === 'campaign') {
@@ -554,15 +602,17 @@ async function render() {
   }
   if (view === 'huntcontacts') {
     head('Contacts', 'People with sources — never invented.');
+    const cbar = $('<div class="acts" style="margin-bottom:14px"></div>'); cbar.append(buttonFor(cmd('hunt_add_contact'))); main.append(cbar);
     const rows = await api('hunt_contacts', {});
     const t = $('<table><thead><tr><th>Contact</th><th>Name</th><th>Company</th><th>Role</th><th>Relationship</th><th>Source</th><th>Last touch</th></tr></thead><tbody></tbody></table>');
-    rowsInto(t, rows, r => `<td>${r.id}</td><td>${r.name}</td><td>${r.company_name ?? ''}</td><td>${r.role ?? ''}</td><td><span class="pill">${r.relationship}</span></td><td style="font-size:12px;color:var(--dim)">${r.source}</td><td style="font-size:12px">${(r.last_touch||'').slice(0,10)}</td>`, 'nolink');
+    rowsInto(t, rows, r => `<td>${r.id}</td><td>${r.name}</td><td>${r.company_name ?? ''}</td><td>${r.role ?? ''}</td><td><span class="pill">${r.relationship}</span></td><td style="font-size:12px;color:var(--dim)">${r.source}</td><td style="font-size:12px">${(r.last_touch||'').slice(0,10)}</td>`, 'contact');
   }
   if (view === 'huntresumes') {
     head('Resume versions', 'The registry: when a recruiter says "the resume you sent", there is one answer.');
+    const rbar = $('<div class="acts" style="margin-bottom:14px"></div>'); rbar.append(buttonFor(cmd('hunt_add_resume_version'))); main.append(rbar);
     const rows = await api('hunt_resume_versions', {});
     const t = $('<table><thead><tr><th>Version</th><th>Label</th><th>Headline</th><th>Platform</th><th class="num">Applications</th></tr></thead><tbody></tbody></table>');
-    rowsInto(t, rows, r => `<td>${r.id}</td><td>${r.label}</td><td>${r.headline ?? ''}</td><td>${r.platform ?? ''}</td><td class="num">${r.applications}</td>`, 'nolink');
+    rowsInto(t, rows, r => `<td>${r.id}</td><td>${r.label}</td><td>${r.headline ?? ''}</td><td>${r.platform ?? ''}</td><td class="num">${r.applications}</td>`, 'resume');
   }
   if (view === 'customers') {
     head('Customers', 'Credit position is live: limit less open AR less the uninvoiced value of confirmed orders.');

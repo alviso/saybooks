@@ -16,6 +16,14 @@ read({ name: 'hunt_get_posting', title: 'Posting', summary: 'One posting whole: 
   args: { posting_id: { ...f.text('e.g. JP-0001.'), required: true } },
   handler: (a) => V.postingView(a.posting_id) });
 
+read({ name: 'hunt_get_contact', title: 'Contact', summary: 'One person whole: identity, provenance, relationship, the postings they touch, full touch history.',
+  args: { contact_id: { ...f.text('e.g. HC-0001.'), required: true } },
+  handler: (a) => V.contactView(a.contact_id) });
+
+read({ name: 'hunt_get_resume', title: 'Resume version', summary: 'One resume version: what it says, every application it went out on, and the postings it is earmarked for.',
+  args: { resume_id: { ...f.text('e.g. RV-0001.'), required: true } },
+  handler: (a) => V.resumeView(a.resume_id) });
+
 read({ name: 'hunt_contacts', title: 'Contacts', summary: 'People with relationship, source, and last touch.',
   args: { relationship: f.pick(['cold', 'contacted', 'responsive', 'warm_scout', 'dead'], '') },
   handler: (a) => V.contacts(a.relationship) });

@@ -96,7 +96,7 @@ defineCommand({
 
 defineCommand({
   name: 'hunt_update_contact',
-  title: 'Update contact', group: 'Jobhunt', subject: 'posting', scope: 'collection',
+  title: 'Update contact', group: 'Jobhunt', subject: 'contact', scope: 'instance', guardless: true,
   permission: 'sales.write',
   summary: 'Patch a contact. The source is never cleared.',
   doctrine: 'Relationships move (cold → contacted → responsive → warm_scout, or dead); provenance does not (JH-2).',

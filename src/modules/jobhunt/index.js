@@ -52,6 +52,8 @@ system never sends an email, never submits an application, never clicks anything
 });
 
 R.defineSubject('posting', { load: V.postingView });
+R.defineSubject('contact', { load: V.contactView });
+R.defineSubject('resume', { load: V.resumeView });
 R.defineSubject('application', { load: (id) => H.need('hunt_application', id, 'application') });
 
 R.inModule(mod, () => {
