@@ -275,7 +275,28 @@ async function detail(type, id) {
     b.onclick = () => openForm(cmd(a.command), prefillFor(cmd(a.command)));
     acts.append(b);
   }
-  card.append(acts); wrap.append(card);
+  card.append(acts);
+  /* A posting's application is a subject of its own (move along, add interview, correct the
+     record) — its buttons come from the same server-side guard evaluation, on its own row. */
+  if (type === 'posting' && entity.application) {
+    const naApp = await fetch(wsUrl(`/api/next-actions?type=application&id=${entity.application.id}`)).then(r => r.json());
+    if (naApp.actions && naApp.actions.length) {
+      const acts2 = $(`<div class="acts" style="margin-top:6px"><span style="font-size:12px;color:var(--dim);align-self:center">${entity.application.id}:</span></div>`);
+      for (const a of naApp.actions) {
+        const b = $(`<button ${a.available ? '' : 'disabled'}>${a.title}</button>`);
+        if (!a.available) b.title = a.reason;
+        b.onclick = () => {
+          const spec2 = cmd(a.command);
+          const p = { application_id: entity.application.id };
+          for (const f2 of spec2.fields) { const v = entity.application[f2.key]; if (!(f2.key in p) && v !== undefined && v !== null) p[f2.key] = v; }
+          openForm(spec2, p);
+        };
+        acts2.append(b);
+      }
+      card.append(acts2);
+    }
+  }
+  wrap.append(card);
 
   if (type === 'posting') {
     if (entity.fit_notes || entity.jd_text || entity.red_flags) wrap.append($(`<div class="card">

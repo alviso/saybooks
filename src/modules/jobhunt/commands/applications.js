@@ -52,6 +52,33 @@ through two agencies gets a decision, not two submissions. applied_at accepts th
 });
 
 defineCommand({
+  name: 'hunt_correct_application',
+  title: 'Correct record', group: 'Jobhunt', subject: 'application', guardless: true,
+  permission: 'sales.write',
+  summary: 'Correct applied_at when the true date surfaces. The reason is part of the record.',
+  doctrine: `A correction replaces "unknown" or a wrong date with a sourced fact — never a guess
+(JH-1). Say where the date came from; the submission touch is re-dated to match.`,
+  effects: ['applied_at corrected', 'submission touch re-dated'],
+  args: {
+    application_id: { ...f.text('The application, e.g. APP-0008.'), required: true },
+    applied_at: { ...f.text('ISO date, or the literal "unknown" — never a guess (JH-1).'), required: true },
+    reason: { ...f.text('Where the date came from — part of the record.'), required: true },
+  },
+  handler(a, { db, at }) {
+    const app = H.need('hunt_application', a.application_id, 'application');
+    if (a.applied_at !== 'unknown' && !/^\d{4}-\d{2}-\d{2}/.test(a.applied_at)) {
+      throw new Rejected('applied_at must be an ISO date or the literal "unknown" — never a guess (JH-1).');
+    }
+    db.prepare('UPDATE hunt_application SET applied_at = ?, updated_at = ? WHERE id = ?').run(a.applied_at, at, a.application_id);
+    // The submission touch is derived from this fact — hunt_apply wrote it — so it moves too.
+    if (a.applied_at !== 'unknown') {
+      db.prepare("UPDATE hunt_interaction SET at = ? WHERE posting_id = ? AND direction = 'out' AND summary LIKE 'Application submitted%'").run(a.applied_at, app.posting_id);
+    }
+    return { ...H.get('hunt_application', a.application_id), posting: V.postingView(app.posting_id).title };
+  },
+});
+
+defineCommand({
   name: 'hunt_set_application_status',
   title: 'Move application', group: 'Jobhunt', subject: 'application',
   permission: 'sales.write',
