@@ -3,9 +3,9 @@ const { defineCommand, f, Rejected } = require('../../../registry.js');
 const H = require('../../../db.js');
 const V = require('../views.js');
 
-const logTouch = (db, at, { posting_id, contact_id, direction, medium, summary }) =>
+const logTouch = (db, at, { posting_id, contact_id, direction, medium, summary }, created = at) =>
   db.prepare(`INSERT INTO hunt_interaction (posting_id,contact_id,at,direction,medium,summary,created_at) VALUES (?,?,?,?,?,?,?)`)
-    .run(posting_id || null, contact_id || null, at, direction, medium || null, summary, at);
+    .run(posting_id || null, contact_id || null, at, direction, medium || null, summary, created);
 
 defineCommand({
   name: 'hunt_apply',
@@ -35,12 +35,18 @@ through two agencies gets a decision, not two submissions. applied_at accepts th
       rvId = rv.id;
     }
     if (a.via_contact) H.need('hunt_contact', a.via_contact, 'contact');
+    if (a.applied_at && a.applied_at !== 'unknown' && !/^\d{4}-\d{2}-\d{2}/.test(a.applied_at)) {
+      throw new Rejected('applied_at must be an ISO date or the literal "unknown" — never a guess (JH-1).');
+    }
     const id = H.nextId('APP', 'hunt_application');
     db.prepare(`INSERT INTO hunt_application (id,posting_id,resume_version_id,channel,via_contact_id,applied_at,status,status_changed_at,created_at,updated_at)
                 VALUES (?,?,?,?,?,?,'submitted',?,?,?)`)
       .run(id, a.posting_id, rvId, a.channel || null, a.via_contact || null, a.applied_at || null, at, at, at);
     db.prepare("UPDATE hunt_posting SET status = 'applied', updated_at = ? WHERE id = ?").run(at, a.posting_id);
-    logTouch(db, at, { posting_id: a.posting_id, contact_id: a.via_contact, direction: 'out', medium: a.channel === 'email' ? 'email' : 'portal', summary: `Application submitted${a.channel ? ' via ' + a.channel : ''}.` });
+    // The touch is dated when the submission happened, not when it was typed (JH-1);
+    // created_at keeps the recording time.
+    const touchAt = (a.applied_at && a.applied_at !== 'unknown') ? a.applied_at : at;
+    logTouch(db, touchAt, { posting_id: a.posting_id, contact_id: a.via_contact, direction: 'out', medium: a.channel === 'email' ? 'email' : 'portal', summary: `Application submitted${a.channel ? ' via ' + a.channel : ''}.` }, at);
     return V.postingView(a.posting_id);
   },
 });
