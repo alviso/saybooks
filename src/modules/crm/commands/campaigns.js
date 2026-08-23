@@ -10,7 +10,11 @@ defineCommand({
   summary: 'Open a campaign: a named goal that accounts will be pursued under.',
   doctrine: `The goal is required (CRM-13) and it is not a label — it is the brief. A research
 session reads it before adding a single account, and every account's why_them must argue
-against it. A campaign without a stated thesis is a folder, not a pursuit.`,
+against it. A campaign without a stated thesis is a folder, not a pursuit.
+
+Check crm_campaigns before creating: if an existing goal covers the ask, work under it. When
+you (an agent) open a NEW campaign, derive the goal from what your human asked for and confirm
+it with them before filling the list — the goal decides what belongs.`,
   effects: ['campaign created as active'],
   args: {
     name: { ...f.text('Short name, e.g. "Craft brewery expansion Q3".'), required: true },

@@ -348,8 +348,8 @@ async function render() {
     main.append(back, await detail(selected.type, selected.id)); return;
   }
   const head = (title, sub) => {
-    const h = $(`<div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><h2 style="margin:0">${title}</h2>
-      <input class="pagefilter" placeholder="filter…" style="margin-left:auto;width:220px;font-size:13px;padding:5px 10px"></div>`);
+    const h = $(`<div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap"><h2 style="margin:0">${title}</h2>
+      <input class="pagefilter" placeholder="filter…" style="width:220px;font-size:13px;padding:5px 10px"></div>`);
     h.querySelector('.pagefilter').oninput = (e) => {
       const terms = e.target.value.toLowerCase().split(/\s+/).filter(Boolean);
       main.querySelectorAll('tbody tr').forEach(tr => {

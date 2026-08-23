@@ -23,7 +23,13 @@ const mod = R.defineModule({
     'Relationship-graph fields are human-only, whatever the role.',
     'Won accounts promote to a core customer, once — pursuit ends where trading begins.',
   ],
-  doctrine: `This is a curated list, not a funnel: its value is that every row earned its place.
+  doctrine: `Campaigns first: before adding any account, read crm_campaigns and match the ask
+to an existing goal — if one fits, work under it and argue its goal in every why_them. If none
+fits, a new campaign needs a stated goal; derive it from what your human asked for, and confirm
+the goal with them before filling the list — every account you add will be judged against it.
+Never park accounts in a mismatched campaign because it was there.
+
+This is a curated list, not a funnel: its value is that every row earned its place.
 NEVER INVENT A NAME — a named contact needs a source and a confidence note; a role with no
 publicly named holder is a gap row with a gap_note, and that is a finding, not a failure. You
 may interpret and summarize freely in narrative fields; facts trace to sources. mutual_via,
