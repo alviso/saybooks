@@ -1,35 +1,174 @@
 {
   "area": "crm",
-  "spec": "0.1",
+  "spec": "0.2",
   "doc": "spec.md",
   "acts": {
-    "add_account":         { "kind": "write", "required": ["name", "why_them", "source_url"] },
-    "update_account":      { "kind": "write", "required": ["account"] },
-    "set_account_status":  { "kind": "write", "required": ["account", "status"] },
-    "set_path_in":         { "kind": "write", "required": ["account", "bullets"] },
-    "add_contact":         { "kind": "write", "required": ["account", "role_type"] },
-    "resolve_gap":         { "kind": "write", "required": ["contact", "name", "source"] },
-    "update_contact":      { "kind": "write", "required": ["contact"] },
-    "log_activity":        { "kind": "write", "required": ["account", "summary", "occurred_at"] },
-    "promote_to_customer": { "kind": "write", "required": ["account"] },
-    "account":             { "kind": "read",  "required": ["account"] },
-    "contact":             { "kind": "read",  "required": ["contact"] },
-    "pipeline":            { "kind": "read",  "required": [] },
-    "gaps":                { "kind": "read",  "required": [] },
-    "coverage":            { "kind": "read",  "required": [] }
+    "add_account": {
+      "kind": "write",
+      "required": [
+        "campaign",
+        "name",
+        "why_them",
+        "source_url"
+      ]
+    },
+    "update_account": {
+      "kind": "write",
+      "required": [
+        "account"
+      ]
+    },
+    "set_account_status": {
+      "kind": "write",
+      "required": [
+        "account",
+        "status"
+      ]
+    },
+    "set_path_in": {
+      "kind": "write",
+      "required": [
+        "account",
+        "bullets"
+      ]
+    },
+    "add_contact": {
+      "kind": "write",
+      "required": [
+        "account",
+        "role_type"
+      ]
+    },
+    "resolve_gap": {
+      "kind": "write",
+      "required": [
+        "contact",
+        "name",
+        "source"
+      ]
+    },
+    "update_contact": {
+      "kind": "write",
+      "required": [
+        "contact"
+      ]
+    },
+    "log_activity": {
+      "kind": "write",
+      "required": [
+        "account",
+        "summary",
+        "occurred_at"
+      ]
+    },
+    "promote_to_customer": {
+      "kind": "write",
+      "required": [
+        "account"
+      ]
+    },
+    "account": {
+      "kind": "read",
+      "required": [
+        "account"
+      ]
+    },
+    "contact": {
+      "kind": "read",
+      "required": [
+        "contact"
+      ]
+    },
+    "pipeline": {
+      "kind": "read",
+      "required": []
+    },
+    "gaps": {
+      "kind": "read",
+      "required": []
+    },
+    "coverage": {
+      "kind": "read",
+      "required": []
+    },
+    "create_campaign": {
+      "kind": "write",
+      "required": [
+        "name",
+        "goal"
+      ]
+    },
+    "update_campaign": {
+      "kind": "write",
+      "required": [
+        "campaign"
+      ]
+    },
+    "set_campaign_status": {
+      "kind": "write",
+      "required": [
+        "campaign",
+        "status"
+      ]
+    },
+    "campaigns": {
+      "kind": "read",
+      "required": []
+    }
   },
   "env_acts": {},
   "invariants": [
-    { "id": "CRM-1",  "title": "Never invent a person: named contacts require a source; facts come only from sources." },
-    { "id": "CRM-2",  "title": "A gap is a finding: recorded with a note, listed in the worklist, resolved only with provenance." },
-    { "id": "CRM-3",  "title": "Every account earned its place: why_them and source_url are mandatory." },
-    { "id": "CRM-4",  "title": "Relationship-graph fields are human-only: refused to agents regardless of role." },
-    { "id": "CRM-5",  "title": "Activities record when it happened, not when it was typed." },
-    { "id": "CRM-6",  "title": "Nothing is deleted: exclusion and closure are reasoned statuses." },
-    { "id": "CRM-7",  "title": "Parking or killing an account requires a reason." },
-    { "id": "CRM-8",  "title": "Promotion is a bridge act: won → core customer via the owner's API, at most once." },
-    { "id": "CRM-9",  "title": "Provenance survives updates: correctable, never removable." },
-    { "id": "CRM-10", "title": "Interpretation is free; facts are sourced." },
-    { "id": "CRM-11", "title": "Every write is a logged command with an actor; refusals are logged; reads are not." }
+    {
+      "id": "CRM-1",
+      "title": "Never invent a person: named contacts require a source; facts come only from sources."
+    },
+    {
+      "id": "CRM-2",
+      "title": "A gap is a finding: recorded with a note, listed in the worklist, resolved only with provenance."
+    },
+    {
+      "id": "CRM-3",
+      "title": "Every account earned its place: why_them and source_url are mandatory."
+    },
+    {
+      "id": "CRM-4",
+      "title": "Relationship-graph fields are human-only: refused to agents regardless of role."
+    },
+    {
+      "id": "CRM-5",
+      "title": "Activities record when it happened, not when it was typed."
+    },
+    {
+      "id": "CRM-6",
+      "title": "Nothing is deleted: exclusion and closure are reasoned statuses."
+    },
+    {
+      "id": "CRM-7",
+      "title": "Parking or killing an account requires a reason."
+    },
+    {
+      "id": "CRM-8",
+      "title": "Promotion is a bridge act: won \u2192 core customer via the owner's API, at most once."
+    },
+    {
+      "id": "CRM-9",
+      "title": "Provenance survives updates: correctable, never removable."
+    },
+    {
+      "id": "CRM-10",
+      "title": "Interpretation is free; facts are sourced."
+    },
+    {
+      "id": "CRM-11",
+      "title": "Every write is a logged command with an actor; refusals are logged; reads are not."
+    },
+    {
+      "id": "CRM-12",
+      "title": "Every account pursues a campaign; pursuit state is campaign-relative."
+    },
+    {
+      "id": "CRM-13",
+      "title": "No campaign without a goal \u2014 the goal is the brief agents read before filling the list."
+    }
   ]
 }

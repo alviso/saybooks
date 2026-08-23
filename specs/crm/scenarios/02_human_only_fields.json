@@ -1,22 +1,74 @@
 {
-  "name": "the fields no agent may touch",
-  "spec": "crm@0.1",
-  "notes": "CRM-4: relationship-graph fields (mutual_via, mutual_url, linkedin_path) are written by people only, whatever the role. The conformance runner executes as an agent, so this scenario proves the refusal side; human acceptance is a gate test. CRM-11: the denial is logged.",
-  "env": [],
-  "steps": [
-    { "act": "add_account", "args": { "name": "Fabrikam Freight", "why_them": "regional carrier, 80 trucks, hiring ops analysts",
-        "source_url": "https://example.com/fabrikam-jobs" }, "expect": { "ok": true } },
-    { "act": "add_contact", "args": { "account": "A-0001", "role_type": "ECONOMIC SPONSOR", "name": "Lee Chen",
-        "source": "https://example.com/fabrikam-about" }, "expect": { "ok": true } },
-
-    { "act": "update_contact", "args": { "contact": "P-0001", "notes": "responded warmly at the Chicago meetup; prefers email" },
-      "expect": { "ok": true },
-      "notes": "ordinary fields are fine — interpretation is the agent's job (CRM-10)" },
-
-    { "act": "update_contact", "args": { "contact": "P-0001", "mutual_via": "Alex from the logistics roundtable" },
-      "expect": { "refused": "human" },
-      "notes": "CRM-4: whoever's delegate the agent is, the relationship graph is entered by a person — the refusal explains why, in one sentence" },
-    { "act": "update_contact", "args": { "contact": "P-0001", "linkedin_path": "2nd via Alex M." },
-      "expect": { "refused": "human" } }
-  ]
+ "name": "the fields no agent may touch",
+ "spec": "crm@0.2",
+ "notes": "CRM-4: relationship-graph fields (mutual_via, mutual_url, linkedin_path) are written by people only, whatever the role. The conformance runner executes as an agent, so this scenario proves the refusal side; human acceptance is a gate test. CRM-11: the denial is logged.",
+ "env": [],
+ "steps": [
+  {
+   "act": "create_campaign",
+   "args": {
+    "name": "Test pursuit",
+    "goal": "Exercise the crm area's rules end to end \u2014 the scenarios' own campaign."
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "add_account",
+   "args": {
+    "name": "Fabrikam Freight",
+    "why_them": "regional carrier, 80 trucks, hiring ops analysts",
+    "source_url": "https://example.com/fabrikam-jobs",
+    "campaign": "CAM-0001"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "add_contact",
+   "args": {
+    "account": "A-0001",
+    "role_type": "ECONOMIC SPONSOR",
+    "name": "Lee Chen",
+    "source": "https://example.com/fabrikam-about"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "update_contact",
+   "args": {
+    "contact": "P-0001",
+    "notes": "responded warmly at the Chicago meetup; prefers email"
+   },
+   "expect": {
+    "ok": true
+   },
+   "notes": "ordinary fields are fine \u2014 interpretation is the agent's job (CRM-10)"
+  },
+  {
+   "act": "update_contact",
+   "args": {
+    "contact": "P-0001",
+    "mutual_via": "Alex from the logistics roundtable"
+   },
+   "expect": {
+    "refused": "human"
+   },
+   "notes": "CRM-4: whoever's delegate the agent is, the relationship graph is entered by a person \u2014 the refusal explains why, in one sentence"
+  },
+  {
+   "act": "update_contact",
+   "args": {
+    "contact": "P-0001",
+    "linkedin_path": "2nd via Alex M."
+   },
+   "expect": {
+    "refused": "human"
+   }
+  }
+ ]
 }

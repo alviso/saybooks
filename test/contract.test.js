@@ -203,18 +203,21 @@ for (const tag of R.PERMISSIONS) {
 
 // ---------------------------------------------------------------- 13. human-only fields
 {
-  execute('crm_add_account', { name: 'Gate13 Co', why_them: 'test', source_url: 'https://example.com' }, human);
-  execute('crm_add_contact', { account_id: 'A-0001', role_type: 'OPERATIONS OWNER', name: 'Pat Test', source: 'https://example.com/team' }, human);
-  execute('crm_update_contact', { contact_id: 'P-0001', mutual_via: 'a real person typed this' }, human);
-  const asHuman = wsp.use(WS, () => H.db().prepare('SELECT mutual_via FROM contact WHERE id = ?').get('P-0001').mutual_via);
+  execute('crm_create_campaign', { name: 'Gate13 campaign', goal: 'exercise the human-only gate' }, human);
+  const g13camp = wsp.use(WS, () => H.db().prepare("SELECT id FROM campaign WHERE name = 'Gate13 campaign'").get().id);
+  execute('crm_add_account', { campaign_id: g13camp, name: 'Gate13 Co', why_them: 'test', source_url: 'https://example.com' }, human);
+  const g13acc = wsp.use(WS, () => H.db().prepare("SELECT id FROM account WHERE name = 'Gate13 Co'").get().id);
+  const g13c = execute('crm_add_contact', { account_id: g13acc, role_type: 'OPERATIONS OWNER', name: 'Pat Test', source: 'https://example.com/team' }, human);
+  execute('crm_update_contact', { contact_id: g13c.id, mutual_via: 'a real person typed this' }, human);
+  const asHuman = wsp.use(WS, () => H.db().prepare('SELECT mutual_via FROM contact WHERE id = ?').get(g13c.id).mutual_via);
   assert.strictEqual(asHuman, 'a real person typed this', 'a human write to a human_only field must land');
   let denied = null;
-  try { execute('crm_update_contact', { contact_id: 'P-0001', mutual_via: 'agent tries' }, { ...human, actor_kind: 'agent', role: 'owner' }); }
+  try { execute('crm_update_contact', { contact_id: g13c.id, mutual_via: 'agent tries' }, { ...human, actor_kind: 'agent', role: 'owner' }); }
   catch (e) { denied = e.message; }
   assert.ok(denied && denied.includes('human-only'), 'agent write to human_only must be refused naming human-only');
   const row = wsp.use(WS, () => H.db().prepare('SELECT * FROM command_log ORDER BY id DESC LIMIT 1').get());
   assert.strictEqual(row.ok, 0, 'the human-only denial must be logged');
-  const still = wsp.use(WS, () => H.db().prepare('SELECT mutual_via FROM contact WHERE id = ?').get('P-0001').mutual_via);
+  const still = wsp.use(WS, () => H.db().prepare('SELECT mutual_via FROM contact WHERE id = ?').get(g13c.id).mutual_via);
   assert.strictEqual(still, 'a real person typed this', 'the refused agent write must not have touched the field');
   ok('human-only: person accepted, agent refused (even as owner), denial logged, field untouched');
 }

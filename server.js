@@ -198,6 +198,7 @@ const server = http.createServer((req, res) => {
           payment:  H.db().prepare('SELECT id, id AS label FROM payment ORDER BY id DESC').all(),
           credit_note: H.db().prepare('SELECT id, id AS label FROM credit_note ORDER BY id DESC').all(),
           account:  H.db().prepare('SELECT id, name AS label FROM account ORDER BY name').all(),
+          campaign: H.db().prepare('SELECT id, name AS label FROM campaign ORDER BY status = \'active\' DESC, name').all(),
         },
         areas: R.MODULES.filter(m => m.implements).map(m => m.implements.area),
       }, undefined, cookie));
@@ -300,7 +301,8 @@ const server = http.createServer((req, res) => {
 // the image, and a Spec tab with report:null is a broken shop window. ~1s per area, once.
 for (const m of R.MODULES.filter(m => m.implements)) {
   const area = m.implements.area;
-  if (!C.lastReport(area)) {
+  const prior = C.lastReport(area);
+  if (!prior || prior.spec !== m.implements.spec) {
     try { C.runArea(area, { actor: 'startup' }); console.log(`conformance evidence generated for ${area}`); }
     catch (e) { console.error(`conformance ${area} failed at startup:`, e.message); }
   }

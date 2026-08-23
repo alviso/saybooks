@@ -44,7 +44,7 @@ read({ name: 'core_search', title: 'Search', summary: 'Find entities by id, name
   handler: (a) => {
     const like = `%${a.q}%`;
     const out = {
-      customers: H.db().prepare('SELECT id,name,terms FROM customer WHERE id LIKE ? OR name LIKE ? LIMIT 10').all(like, like),
+      customers: H.db().prepare('SELECT id,name,terms FROM customer WHERE id LIKE ? OR name LIKE ? OR email LIKE ? LIMIT 10').all(like, like, like),
       items:     H.db().prepare('SELECT id,name,unit_price,on_hand FROM item WHERE id LIKE ? OR name LIKE ? LIMIT 10').all(like, like),
     };
     for (const m of MODULES) if (m.search) Object.assign(out, m.search(like));

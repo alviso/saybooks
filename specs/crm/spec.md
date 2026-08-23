@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 0.1-draft |
+| **Version** | 0.2-draft |
 | **Status** | curated draft — implementation not started |
 | **Curator** | Peter Varga (single editor; spec PRs separate from implementation PRs) |
 | **Calibration** | a curated target list worked by a small team, not a mass-market funnel |
@@ -50,7 +50,8 @@ scoring, dedup/merge, multi-pipeline.
 
 | Entity | Lifecycle |
 |---|---|
-| account | `not_started → researching → approaching → active → won` — or parked `on_hold` (re-enterable), or terminal `closed` (pursued and lost/passed) / `excluded` (deliberately never pursued) |
+| campaign | `active → paused` (re-enterable) `→ concluded` (terminal, reasoned). A campaign is a **goal**: the thesis every account's why_them argues against, and the standing brief an agent reads before filling the list |
+| account | a pursuit **within one campaign**: `not_started → researching → approaching → active → won` — or parked `on_hold` (re-enterable), or terminal `closed` (pursued and lost/passed) / `excluded` (deliberately never pursued). Account names are unique per campaign |
 | contact | `gap → named` (via resolve_gap only) — a named contact may become `departed`; never deleted |
 | activity | immutable once recorded (a fact, not a workflow object) |
 | stage reference | data, not code: each pipeline stage carries a label and a probability (freedom to define the set) |
@@ -64,12 +65,26 @@ Acts are named abstractly; an implementation exposes each as a command under its
 and publishes an act → command map. Required arguments are contract. Refusals name what is
 missing, in one sentence, on every surface.
 
+### 4.0 Campaigns
+
+**`create_campaign`** (name, goal, target_profile?)
+The goal is **required** (CRM-13): a campaign without a stated thesis is a folder, not a
+pursuit. The goal is the brief — a research session reads it before adding accounts, and every
+why_them argues against it. *Freedom:* extra planning fields.
+
+**`update_campaign`** (campaign, patch) — the goal can be sharpened, never blanked.
+
+**`set_campaign_status`** (campaign, status, reason?)
+`paused` and `concluded` require a reason. Concluded is terminal: its accounts remain fully
+readable (CRM-6), but it takes no new targets.
+
 ### 4.1 Accounts
 
-**`add_account`** (name, why_them, source_url, tier?, vertical?, trigger_event?, hook?)
-The gate to the list. `why_them` and `source_url` are **required** — an account that cannot
-say why it belongs, with a source, is not a target yet (CRM-3). *Freedom:* tier semantics,
-vertical taxonomy, additional research fields.
+**`add_account`** (campaign, name, why_them, source_url, tier?, vertical?, trigger_event?, hook?)
+The gate to the list. `campaign` is required (CRM-12) and `why_them` must argue **that
+campaign's** goal; `source_url` grounds it — an account that cannot say why it belongs to this
+pursuit, with a source, is not a target yet (CRM-3). Refused into concluded campaigns.
+*Freedom:* tier semantics, vertical taxonomy, additional research fields.
 
 **`update_account`** (account, patch) — corrects or deepens the narrative. Provenance fields
 may be corrected, never blanked (CRM-9).
@@ -142,6 +157,11 @@ Namespaced `CRM-n` (areas own their invariant namespaces; o2c's unprefixed `INV-
    removed.
 10. **CRM-10 Interpretation is free, facts are sourced.** Narrative fields may summarize and
     judge; factual claims inside them trace to sources or are marked as unknown.
+12. **CRM-12 Every account pursues a campaign.** Pursuit state — why_them, tier, status,
+    path-in — is campaign-relative; the same company may be a target of two campaigns as two
+    accounts. (The org/pursuit normalization this implies is deferred: §9.)
+13. **CRM-13 No campaign without a goal.** The goal is data, not a chat prompt: it is the
+    brief an agent reads before filling the list, and the thesis every why_them argues.
 11. **CRM-11 Platform inheritance.** Every write is a logged command with an actor; refusals
     (including CRM-4 denials) are logged; reads are never logged.
 
@@ -154,6 +174,10 @@ Namespaced `CRM-n` (areas own their invariant namespaces; o2c's unprefixed `INV-
 | `pipeline` | accounts by status and tier with stage probabilities — the weighted "where are we" view |
 | `gaps` | every unresolved gap: role, account, gap note, age — the "what we verifiably don't know" worklist, first-class |
 | `coverage` | list health: accounts by status/tier, gap counts, accounts with no activity in N days — staleness is visible, not discovered |
+| `campaigns` | every campaign with its goal, status, and health (accounts by status, open gaps, staleness) — the per-goal Today |
+
+`pipeline`, `gaps`, `coverage` and the account list must answer **per-campaign and across
+campaigns** (an optional campaign filter is contract; its shape is freedom).
 
 ## 7. Contract vs freedom — summary
 
@@ -185,11 +209,14 @@ agreement. These stayed behind:
 | **Introductions with mandatory evidence** | The source system's `introduction` table made commission conditional on documented evidence — NOT NULL constraints that were literally sentences of §V of an agency agreement. Generalizable someday as "milestone with mandatory evidence," but shipping contract law as a default CRM concept helps nobody. |
 | **Blocker / delay log** | Encoded §3 of the same agreement (principal-attributable delays extending the term). A generic "blocked, on whom, since when" may return; the contractual accrual math stays bespoke. |
 | **Agreement fields** (`agreed_with_principal_at`, tier-1-only hooks) | Deployment policy, not area semantics — in Saybooks terms, workspace content. |
+| **Org / pursuit normalization** | The fully normalized model splits *company* (org facts, people, the human-entered network) from *pursuit* (campaign membership), so one company in two campaigns shares its contacts. Deferred until a company actually appears in two campaigns: today the cost of overlap is a duplicated account row with duplicated contacts — annoying, visible, fixable then. This line exists so the fault line is on record as seen, not missed. |
 | **Email/calendar ingestion** | Integration territory; the area records, it does not watch. |
 | **Lead scoring, dedup/merge, multi-pipeline** | Funnel-CRM machinery; against this area's calibration until real demand says otherwise. |
 
 ---
 
-*Change log: 0.1-draft (2026-08-22) — initial curation, extracted from the JC360 US CRM
-(schema, MCP doctrine, and working practice). New platform mechanism motivated by this area:
-field-level human-only enforcement (CRM-4).*
+*Change log: 0.2-draft (2026-08-23) — campaigns become first-class (CRM-12, CRM-13): the 0.1
+extraction had erased the campaign by promoting it to "the whole deployment"; a second
+research fill made it visible again. Acts +3, read models +1, org/pursuit split explicitly
+deferred. · 0.1-draft (2026-08-22) — initial curation, extracted from the JC360 US CRM.
+New platform mechanism motivated by this area: field-level human-only enforcement (CRM-4).*

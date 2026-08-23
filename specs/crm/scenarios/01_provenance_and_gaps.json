@@ -1,40 +1,139 @@
 {
-  "name": "no invented people: provenance or gap, nothing in between",
-  "spec": "crm@0.1",
-  "notes": "CRM-1 (never invent a person), CRM-2 (a gap is a finding), CRM-3 (every account earned its place). The area's character in one flow: what you know arrives with sources; what you don't know is recorded as exactly that.",
-  "env": [],
-  "steps": [
-    { "act": "add_account", "args": { "name": "Meridian Logistics" },
-      "expect": { "refused": "why_them" },
-      "notes": "CRM-3: an account that cannot say why it belongs, with a source, is not a target yet" },
-    { "act": "add_account", "args": { "name": "Meridian Logistics", "tier": 1, "vertical": "logistics",
-        "why_them": "300-driver fleet, publicly announced workforce-visibility RFP for 2027",
-        "trigger_event": "new COO announced cost program in Q2 earnings call",
-        "source_url": "https://example.com/meridian-q2-call" },
-      "expect": { "ok": true, "include": { "status": "not_started" } } },
-
-    { "act": "add_contact", "args": { "account": "A-0001", "role_type": "OPERATIONS OWNER", "name": "Dana Reeve" },
-      "expect": { "refused": "source" },
-      "notes": "CRM-1: a name without a source is not usable in a first approach — refused, not warned" },
-    { "act": "add_contact", "args": { "account": "A-0001", "role_type": "OPERATIONS OWNER", "name": "Dana Reeve",
-        "title": "VP Operations", "source": "https://example.com/meridian-leadership",
-        "confidence_note": "high on the person, medium on the exact title — page updated 2026-05" },
-      "expect": { "ok": true, "include": { "status": "named" } } },
-
-    { "act": "add_contact", "args": { "account": "A-0001", "role_type": "SECURITY GATE",
-        "gap_note": "no public CISO or infosec lead; likely under the VP Eng — needs a human conversation to find" },
-      "expect": { "ok": true, "include": { "status": "gap" } },
-      "notes": "CRM-2: the absence of a name is a finding worth recording, not a blank to fill later" },
-    { "act": "gaps", "args": {},
-      "expect": { "ok": true, "include": { "length": 1 } },
-      "notes": "the gap worklist is first-class: 'what we verifiably don't know' is a view, not a feeling" },
-
-    { "act": "resolve_gap", "args": { "contact": "P-0002", "name": "Sam Ortiz" },
-      "expect": { "refused": "source" },
-      "notes": "CRM-2: resolving a gap demands the same provenance as a fresh contact — the gap does not lower the bar" },
-    { "act": "resolve_gap", "args": { "contact": "P-0002", "name": "Sam Ortiz", "title": "Director of Security",
-        "source": "https://example.com/meridian-conf-speaker-bio", "confidence_note": "conference bio, March 2026" },
-      "expect": { "ok": true, "include": { "status": "named" } } },
-    { "act": "gaps", "args": {}, "expect": { "ok": true, "include": { "length": 0 } } }
-  ]
+ "name": "no invented people: provenance or gap, nothing in between",
+ "spec": "crm@0.2",
+ "notes": "CRM-1 (never invent a person), CRM-2 (a gap is a finding), CRM-3 (every account earned its place). The area's character in one flow: what you know arrives with sources; what you don't know is recorded as exactly that.",
+ "env": [],
+ "steps": [
+  {
+   "act": "create_campaign",
+   "args": {
+    "name": "Test pursuit",
+    "goal": "Exercise the crm area's rules end to end \u2014 the scenarios' own campaign."
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "add_account",
+   "args": {
+    "name": "Meridian Logistics",
+    "campaign": "CAM-0001"
+   },
+   "expect": {
+    "refused": "why_them"
+   },
+   "notes": "CRM-3: an account that cannot say why it belongs, with a source, is not a target yet"
+  },
+  {
+   "act": "add_account",
+   "args": {
+    "name": "Meridian Logistics",
+    "tier": 1,
+    "vertical": "logistics",
+    "why_them": "300-driver fleet, publicly announced workforce-visibility RFP for 2027",
+    "trigger_event": "new COO announced cost program in Q2 earnings call",
+    "source_url": "https://example.com/meridian-q2-call",
+    "campaign": "CAM-0001"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "status": "not_started"
+    }
+   }
+  },
+  {
+   "act": "add_contact",
+   "args": {
+    "account": "A-0001",
+    "role_type": "OPERATIONS OWNER",
+    "name": "Dana Reeve"
+   },
+   "expect": {
+    "refused": "source"
+   },
+   "notes": "CRM-1: a name without a source is not usable in a first approach \u2014 refused, not warned"
+  },
+  {
+   "act": "add_contact",
+   "args": {
+    "account": "A-0001",
+    "role_type": "OPERATIONS OWNER",
+    "name": "Dana Reeve",
+    "title": "VP Operations",
+    "source": "https://example.com/meridian-leadership",
+    "confidence_note": "high on the person, medium on the exact title \u2014 page updated 2026-05"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "status": "named"
+    }
+   }
+  },
+  {
+   "act": "add_contact",
+   "args": {
+    "account": "A-0001",
+    "role_type": "SECURITY GATE",
+    "gap_note": "no public CISO or infosec lead; likely under the VP Eng \u2014 needs a human conversation to find"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "status": "gap"
+    }
+   },
+   "notes": "CRM-2: the absence of a name is a finding worth recording, not a blank to fill later"
+  },
+  {
+   "act": "gaps",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "length": 1
+    }
+   },
+   "notes": "the gap worklist is first-class: 'what we verifiably don't know' is a view, not a feeling"
+  },
+  {
+   "act": "resolve_gap",
+   "args": {
+    "contact": "P-0002",
+    "name": "Sam Ortiz"
+   },
+   "expect": {
+    "refused": "source"
+   },
+   "notes": "CRM-2: resolving a gap demands the same provenance as a fresh contact \u2014 the gap does not lower the bar"
+  },
+  {
+   "act": "resolve_gap",
+   "args": {
+    "contact": "P-0002",
+    "name": "Sam Ortiz",
+    "title": "Director of Security",
+    "source": "https://example.com/meridian-conf-speaker-bio",
+    "confidence_note": "conference bio, March 2026"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "status": "named"
+    }
+   }
+  },
+  {
+   "act": "gaps",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "length": 0
+    }
+   }
+  }
+ ]
 }

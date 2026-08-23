@@ -51,8 +51,11 @@ report the shortfall and stop — raising a limit, splitting an order, or invoic
 credit are decisions for a person. We bill what shipped, never what was ordered. If you do not
 know which invoice a payment settles, leave it unapplied; that is a correct, visible state.`,
   search: (like) => ({
+    quotes:   H.db().prepare('SELECT id,customer_id,status FROM quote WHERE id LIKE ? LIMIT 10').all(like),
     orders:   H.db().prepare('SELECT id,customer_id,status,po_ref FROM "order" WHERE id LIKE ? OR po_ref LIKE ? LIMIT 10').all(like, like),
     invoices: H.db().prepare('SELECT id,customer_id,status,total FROM invoice WHERE id LIKE ? LIMIT 10').all(like),
+    payments: H.db().prepare('SELECT id,customer_id,amount,reference FROM payment WHERE id LIKE ? OR reference LIKE ? LIMIT 10').all(like, like),
+    credit_notes: H.db().prepare('SELECT id,customer_id,kind,total,reason FROM credit_note WHERE id LIKE ? OR reason LIKE ? LIMIT 10').all(like, like),
   }),
   api: { views: V },
 });

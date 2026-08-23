@@ -11,7 +11,7 @@ const H = require('../../db.js');
 const mod = R.defineModule({
   name: 'crm', prefix: 'crm',
   tables: ['account', 'account_path_in', 'contact', 'activity'],
-  ids: { account: 'A-0001', contact: 'P-0001' },
+  ids: { account: 'A-0001', contact: 'P-0001', campaign: 'CAM-0001' },
   lifecycles: {
     account: 'not_started -> researching -> approaching -> active -> won (terminal, promotable) | on_hold (re-enterable) | closed / excluded (terminal, reasoned)',
     contact: 'gap -> named (via resolve_gap only) -> departed; never deleted',
@@ -30,9 +30,11 @@ may interpret and summarize freely in narrative fields; facts trace to sources. 
 mutual_url and linkedin_path are entered by a person, never by you — asking your human to fill
 them in is correct behavior.`,
   implements: {
-    area: 'crm', spec: '0.1',
-    argmap: { account: 'account_id', contact: 'contact_id' },
+    area: 'crm', spec: '0.2',
+    argmap: { account: 'account_id', contact: 'contact_id', campaign: 'campaign_id' },
     acts: {
+      create_campaign: 'crm_create_campaign', update_campaign: 'crm_update_campaign',
+      set_campaign_status: 'crm_set_campaign_status', campaigns: 'crm_campaigns',
       add_account: 'crm_add_account', update_account: 'crm_update_account',
       set_account_status: 'crm_set_account_status', set_path_in: 'crm_set_path_in',
       add_contact: 'crm_add_contact', resolve_gap: 'crm_resolve_gap', update_contact: 'crm_update_contact',
@@ -42,16 +44,20 @@ them in is correct behavior.`,
     },
   },
   search: (like) => ({
-    accounts: H.db().prepare('SELECT id, name, status, tier FROM account WHERE id LIKE ? OR name LIKE ? OR why_them LIKE ? LIMIT 10').all(like, like, like),
-    crm_contacts: H.db().prepare('SELECT id, account_id, name, role_type, status FROM contact WHERE id LIKE ? OR name LIKE ? OR role_type LIKE ? LIMIT 10').all(like, like, like),
+    campaigns: H.db().prepare('SELECT id, name, status FROM campaign WHERE id LIKE ? OR name LIKE ? OR goal LIKE ? LIMIT 10').all(like, like, like),
+    accounts: H.db().prepare(`SELECT id, name, status, tier FROM account WHERE id LIKE ? OR name LIKE ? OR why_them LIKE ? OR trigger_event LIKE ? OR hook LIKE ? OR owner_note LIKE ? LIMIT 10`).all(like, like, like, like, like, like),
+    crm_contacts: H.db().prepare(`SELECT id, account_id, name, role_type, status FROM contact WHERE id LIKE ? OR name LIKE ? OR role_type LIKE ? OR title LIKE ? OR notes LIKE ? OR gap_note LIKE ? LIMIT 10`).all(like, like, like, like, like, like),
+    activities: H.db().prepare('SELECT id, account_id, occurred_at, summary FROM activity WHERE summary LIKE ? LIMIT 10').all(like),
   }),
   api: { views: V },
 });
 
 R.defineSubject('account', { load: V.accountView });
+R.defineSubject('campaign', { load: V.campaignView });
 R.defineSubject('crm_contact', { load: V.contactView });
 
 R.inModule(mod, () => {
+  require('./commands/campaigns.js');
   require('./commands/accounts.js');
   require('./commands/contacts.js');
   require('./commands/pursuit.js');

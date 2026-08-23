@@ -33,6 +33,12 @@ if (existing > 0 && !FORCE) {
 if (FORCE) wsp.wipe(WS);
 
 const clean = (s) => (s && String(s).trim()) || null;
+
+// crm 0.2: every account pursues a campaign. The source system WAS one campaign.
+const CAMPAIGN = R.execute('crm_create_campaign', {
+  name: 'JC360 US market entry',
+  goal: 'Open the US market for JobCTRL: land the researched operations-owner accounts; the buyer is a VP Ops / Rev Cycle owner, never HR. Extracted campaign of the original jc360-crm.',
+}, ctx('the source system was this campaign, implicitly')).id;
 const idMap = { account: new Map(), contact: new Map() };
 const report = { accounts: 0, path_in: 0, named: 0, gaps: 0, do_not_contact: 0, missing_source: [], skipped: [] };
 
@@ -42,6 +48,7 @@ for (const a of src.prepare('SELECT * FROM account WHERE deleted_at IS NULL ORDE
     clean(a.delivery_footprint) && `delivery: ${a.delivery_footprint}`,
     clean(a.priority_note) && `priority: ${a.priority_note}`].filter(Boolean);
   const acc = R.execute('crm_add_account', {
+    campaign_id: CAMPAIGN,
     name: a.name, tier: a.tier, vertical: clean(a.vertical),
     why_them: a.why_them, source_url: a.source_url,
     trigger_event: clean(a.trigger_event), hook: clean(a.hook),

@@ -12,15 +12,23 @@ read({ name: 'crm_get_contact', title: 'Contact', summary: 'One person: identity
   args: { contact_id: { ...f.text('The contact, e.g. P-0001.'), required: true } },
   handler: (a) => V.contactView(a.contact_id) });
 
-read({ name: 'crm_pipeline', title: 'Pipeline', summary: 'Accounts by status and tier with stage probabilities — the weighted where-are-we view.',
-  args: {}, handler: () => V.pipeline() });
+read({ name: 'crm_pipeline', title: 'Pipeline', summary: 'Accounts by status and tier with stage probabilities — the weighted where-are-we view. Filter by campaign or see everything.',
+  args: { campaign_id: f.ref('campaign', 'Only this campaign.') }, handler: (a) => V.pipeline(a.campaign_id) });
+
+read({ name: 'crm_get_campaign', title: 'Campaign', summary: 'One campaign: goal, status, and health.',
+  args: { campaign_id: { ...f.ref('campaign', 'The campaign.'), required: true } },
+  handler: (a) => V.campaignView(a.campaign_id) });
+
+read({ name: 'crm_campaigns', title: 'Campaigns', summary: 'Every campaign with its goal, status, and health: accounts by status, open gaps, staleness — the per-goal Today.',
+  doctrine: 'Read the goal before adding accounts to a campaign — every why_them argues against it (CRM-13).',
+  args: {}, handler: () => V.campaignsView() });
 
 read({ name: 'crm_gaps', title: 'Gaps', summary: 'Every unresolved gap with its note and age — what we verifiably do not know, as a worklist.',
   doctrine: 'This view existing is the point of CRM-2: the unknowns are work items, not blank cells nobody looks at.',
-  args: {}, handler: () => V.gaps() });
+  args: { campaign_id: f.ref('campaign', 'Only this campaign.') }, handler: (a) => V.gaps(a.campaign_id) });
 
 read({ name: 'crm_coverage', title: 'Coverage', summary: 'List health: accounts by status and tier, open gaps, and accounts going stale (no activity in 14 days).',
-  args: {}, handler: () => V.coverage() });
+  args: { campaign_id: f.ref('campaign', 'Only this campaign.') }, handler: (a) => V.coverage(a.campaign_id) });
 
 // Extension reads (beyond the spec's act surface — allowed, own prefix, still read-only).
 read({ name: 'crm_today', title: 'Today', summary: 'The CRM work queue: open gaps, accounts going stale, and what happened lately.',

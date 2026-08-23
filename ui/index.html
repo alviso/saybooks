@@ -89,7 +89,7 @@
   </div>
   <div class="grp" data-g="crm">CRM <span class="tog">−</span></div>
   <div class="grp-items" data-gi="crm">
-    <a data-v="today">Today</a><a data-v="accounts">Accounts</a><a data-v="crmcontacts">Contacts</a>
+    <a data-v="today">Today</a><a data-v="campaigns">Campaigns</a><a data-v="accounts">Accounts</a><a data-v="crmcontacts">Contacts</a>
     <a data-v="crmpipeline">Pipeline</a><a data-v="network">Network</a><a data-v="crmactivity">Activity</a>
   </div>
   <div class="grp" data-g="sys">System <span class="tog">−</span></div>
@@ -220,7 +220,7 @@ const newButtons = (subject) => REG.commands.filter(c => c.subject === subject &
 async function detail(type, id) {
   const wrap = $('<div></div>');
   const [entity, na] = await Promise.all([
-    api({ order:'o2c_get_order', customer:'o2c_get_customer', invoice:'o2c_get_invoice', account:'crm_get_account' }[type],
+    api({ order:'o2c_get_order', customer:'o2c_get_customer', invoice:'o2c_get_invoice', account:'crm_get_account', campaign:'crm_get_campaign' }[type],
         { [type + '_id']: id }),
     fetch(wsUrl(`/api/next-actions?type=${type}&id=${id}`)).then(r => r.json()),
   ]);
@@ -232,7 +232,9 @@ async function detail(type, id) {
     : type === 'customer'
     ? { Terms: entity.terms, 'Credit limit': entity.credit_limit_display, 'Open AR': entity.open_balance_display, Committed: entity.committed_display, Available: entity.credit_available_display }
     : type === 'account'
-    ? { Tier: entity.tier ?? '—', Vertical: entity.vertical ?? '—', Trigger: entity.trigger_event ?? '—', Customer: entity.customer_id ?? '— (not promoted)', 'Open gaps': entity.gap_count, Reason: entity.status_reason ?? '—' }
+    ? { Campaign: entity.campaign_name ?? '—', Tier: entity.tier ?? '—', Vertical: entity.vertical ?? '—', Trigger: entity.trigger_event ?? '—', Customer: entity.customer_id ?? '— (not promoted)', 'Open gaps': entity.gap_count, Reason: entity.status_reason ?? '—' }
+    : type === 'campaign'
+    ? { 'Open gaps': entity.open_gaps, 'Going stale': entity.stale_14d, Reason: entity.status_reason ?? '—', ...Object.fromEntries(Object.entries(entity.accounts_by_status).map(([k, v]) => [k, v])) }
     : { Customer: entity.customer_id, Order: entity.order_id, Total: entity.total_display, Applied: entity.applied_display, Open: entity.open_display, Due: entity.due_at };
   for (const [k, v] of Object.entries(facts)) kv.append($(`<div><span>${k}</span>${v}</div>`));
   card.append(kv);
@@ -264,6 +266,21 @@ async function detail(type, id) {
   }
   card.append(acts); wrap.append(card);
 
+  if (type === 'campaign') {
+    wrap.append($(`<div class="card"><b>Goal — the brief agents read</b><div class="doc" style="margin-top:4px">${entity.goal}</div>
+      ${entity.target_profile ? `<div style="margin-top:8px"><b>Target profile</b><div class="doc">${entity.target_profile}</div></div>` : ''}</div>`));
+    const rows = (await api('crm_pipeline', { campaign_id: id }));
+    if (rows.length) {
+      const t = $('<table><thead><tr><th>Account</th><th>Name</th><th>Tier</th><th>Status</th><th class="num">P</th></tr></thead><tbody></tbody></table>');
+      for (const r of rows) {
+        const tr = $(`<tr><td>${r.id}</td><td>${r.name}</td><td>${r.tier ?? ''}</td><td><span class="pill ${r.status}">${r.status}</span></td><td class="num">${Math.round(r.probability * 100)}%</td></tr>`);
+        tr.dataset.search = Object.values(r).filter(v => v != null && typeof v !== 'object').join(' ');
+        tr.onclick = () => { selected = { type: 'account', id: r.id }; render(); };
+        t.querySelector('tbody').append(tr);
+      }
+      wrap.append($('<div class="sub" style="margin-top:16px">Accounts in this campaign</div>'), t);
+    }
+  }
   if (type === 'account') {
     wrap.append($(`<div class="card"><b>Why them</b><div class="doc" style="margin-top:4px">${entity.why_them}</div>
       ${entity.hook ? `<div style="margin-top:8px"><b>Hook</b><div class="doc">${entity.hook}</div></div>` : ''}
@@ -330,10 +347,22 @@ async function render() {
     const back = $('<button style="margin-bottom:16px">← back</button>'); back.onclick = () => { selected = null; render(); };
     main.append(back, await detail(selected.type, selected.id)); return;
   }
-  const head = (title, sub) => main.append($(`<h2>${title}</h2>`), $(`<div class="sub">${sub}</div>`));
+  const head = (title, sub) => {
+    const h = $(`<div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><h2 style="margin:0">${title}</h2>
+      <input class="pagefilter" placeholder="filter…" style="margin-left:auto;width:220px;font-size:13px;padding:5px 10px"></div>`);
+    h.querySelector('.pagefilter').oninput = (e) => {
+      const terms = e.target.value.toLowerCase().split(/\s+/).filter(Boolean);
+      main.querySelectorAll('tbody tr').forEach(tr => {
+        const hay = (tr.dataset.search || tr.textContent).toLowerCase();
+        tr.style.display = terms.every(t => hay.includes(t)) ? '' : 'none';
+      });
+    };
+    main.append(h, $(`<div class="sub">${sub}</div>`));
+  };
   const rowsInto = (t, rows, cells, type) => {
     for (const r of rows) {
       const tr = $(`<tr>${cells(r)}</tr>`);
+      tr.dataset.search = Object.values(r).filter(v => v != null && typeof v !== 'object').join(' ');
       tr.onclick = () => { selected = type === 'accountFromGap' ? { type: 'account', id: r.account_id } : { type, id: r.id }; render(); };
       t.querySelector('tbody').append(tr);
     }
@@ -347,18 +376,46 @@ async function render() {
     const t = $('<table><thead><tr><th>Order</th><th>Customer</th><th>PO</th><th>Status</th><th class="num">Total</th></tr></thead><tbody></tbody></table>');
     rowsInto(t, REG.orders, r => `<td>${r.id}</td><td>${r.customer_name}</td><td>${r.po_ref||''}</td><td><span class="pill ${r.status}">${r.status}</span></td><td class="num">${cents(r.total)}</td>`, 'order');
   }
+  if (view === 'campaigns') {
+    head('Campaigns', 'A campaign is a goal, not a folder: agents read the goal before adding accounts, and every why_them argues against it.');
+    const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('campaign').forEach(b => bar.append(b)); main.append(bar);
+    const rows = await api('crm_campaigns');
+    if (!rows.length) main.append($('<div class="card doc">No campaigns yet. Open one — the goal you write becomes the brief a research session reads.</div>'));
+    for (const c of rows) {
+      const card = $(`<div class="card" style="cursor:pointer">
+        <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><b style="font-size:15px">${c.name}</b>
+          <span class="pill ${c.status === 'active' ? 'confirmed' : c.status === 'concluded' ? 'closed' : ''}">${c.status}</span>
+          <span style="color:var(--dim);font-size:12px">${c.id}</span></div>
+        <div class="doc" style="margin-top:6px">${c.goal}</div>
+        ${c.status_reason ? `<div style="font-size:12.5px;color:var(--dim);margin-top:4px">— ${c.status_reason}</div>` : ''}
+        <div class="kv" style="margin-top:10px">
+          ${Object.entries(c.accounts_by_status).map(([k, v]) => `<div><span>${k}</span>${v}</div>`).join('') || '<div><span>accounts</span>0</div>'}
+          <div><span>open gaps</span>${c.open_gaps}</div><div><span>going stale</span>${c.stale_14d}</div>
+        </div></div>`);
+      card.onclick = () => { selected = { type: 'campaign', id: c.id }; render(); };
+      main.append(card);
+    }
+  }
   if (view === 'accounts') {
     head('Accounts', 'A curated list, not a funnel — every row can say why it belongs. Click one for the narrative, contacts and gaps.');
     const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('account').forEach(b => bar.append(b)); main.append(bar);
-    const rows = await api('crm_pipeline');
-    const cov = await api('crm_coverage');
+    window.crmCampaign = window.crmCampaign || '';
+    const csel = $('<select style="width:auto;font-size:13px;padding:5px 8px"></select>');
+    csel.append(new Option('all campaigns', ''));
+    for (const c of REG.lookups.campaign || []) csel.append(new Option(c.label, c.id));
+    csel.value = window.crmCampaign;
+    csel.onchange = () => { window.crmCampaign = csel.value; render(); };
+    bar.append(csel);
+    const cf = window.crmCampaign ? { campaign_id: window.crmCampaign } : {};
+    const rows = await api('crm_pipeline', cf);
+    const cov = await api('crm_coverage', cf);
     main.append($(`<div class="card"><div class="kv">
       <div><span>Open gaps</span>${cov.open_gaps}</div>
       <div><span>Going stale (14d)</span>${cov.stale_14d}</div>
       ${Object.entries(cov.accounts_by_status).map(([k,v]) => `<div><span>${k}</span>${v}</div>`).join('')}
     </div></div>`));
-    const t = $('<table><thead><tr><th>Account</th><th>Name</th><th>Tier</th><th>Vertical</th><th>Status</th><th class="num">P</th><th>Customer</th></tr></thead><tbody></tbody></table>');
-    rowsInto(t, rows, r => `<td>${r.id}</td><td>${r.name}</td><td>${r.tier ?? ''}</td><td>${r.vertical ?? ''}</td><td><span class="pill ${r.status}">${r.status}</span></td><td class="num">${Math.round(r.probability*100)}%</td><td>${r.customer_id ?? ''}</td>`, 'account');
+    const t = $('<table><thead><tr><th>Account</th><th>Name</th><th>Campaign</th><th>Tier</th><th>Vertical</th><th>Status</th><th class="num">P</th><th>Customer</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, rows, r => `<td>${r.id}</td><td>${r.name}</td><td style="font-size:12.5px;color:var(--dim)">${r.campaign_name ?? ''}</td><td>${r.tier ?? ''}</td><td>${r.vertical ?? ''}</td><td><span class="pill ${r.status}">${r.status}</span></td><td class="num">${Math.round(r.probability*100)}%</td><td>${r.customer_id ?? ''}</td>`, 'account');
   }
   if (view === 'today') {
     head('Today', 'What deserves attention: gaps are research work, stale accounts are follow-up work, recent activity is context.');

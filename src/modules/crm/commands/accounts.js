@@ -21,19 +21,22 @@ a curated list, not a funnel — its value is that every row can say why it belo
 that knowledge came from. If you cannot say why them and what changed, it is not a target yet.`,
   effects: ['account created in not_started'],
   args: {
+    campaign_id: { ...f.ref('campaign', 'The campaign this pursuit belongs to. why_them argues THIS goal (CRM-12).'), required: true },
     name:       { ...f.text('The company, as it calls itself.'), required: true },
-    why_them:   { ...f.note('Why this account belongs on a short list. The researched answer, not a vibe.'), required: true },
+    why_them:   { ...f.note("Why this account belongs on this campaign's short list. The researched answer, not a vibe."), required: true },
     source_url: { ...f.text('Where why_them can be verified.'), required: true },
     ...NARRATIVE,
   },
   handler(a, { db, at }) {
-    if (db.prepare('SELECT id FROM account WHERE lower(name) = lower(?)').get(a.name)) {
-      throw new Rejected(`${a.name} is already on the list. Update it rather than adding a twin.`);
+    const camp = H.need('campaign', a.campaign_id, 'campaign');
+    if (camp.status === 'concluded') throw new Rejected(`${camp.name} is concluded — it takes no new targets. A new pursuit is a new campaign.`);
+    if (db.prepare('SELECT id FROM account WHERE campaign_id = ? AND lower(name) = lower(?)').get(a.campaign_id, a.name)) {
+      throw new Rejected(`${a.name} is already on ${camp.name}'s list. Update it rather than adding a twin.`);
     }
     const id = H.nextId('A', 'account');
-    db.prepare(`INSERT INTO account (id,name,tier,vertical,why_them,trigger_event,hook,source_url,status,owner_note,created_at,updated_at)
-                VALUES (?,?,?,?,?,?,?,?,'not_started',?,?,?)`)
-      .run(id, a.name, a.tier || null, a.vertical || null, a.why_them, a.trigger_event || null, a.hook || null, a.source_url, a.owner_note || null, at, at);
+    db.prepare(`INSERT INTO account (id,campaign_id,name,tier,vertical,why_them,trigger_event,hook,source_url,status,owner_note,created_at,updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,'not_started',?,?,?)`)
+      .run(id, a.campaign_id, a.name, a.tier || null, a.vertical || null, a.why_them, a.trigger_event || null, a.hook || null, a.source_url, a.owner_note || null, at, at);
     return V.accountView(id);
   },
 });

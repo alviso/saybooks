@@ -182,6 +182,16 @@
   "human"
  ],
  [
+  "crm_create_campaign",
+  {
+   "name": "Logistics visibility pilots",
+   "goal": "Mid-size US fleets whose leadership publicly committed to workforce-visibility spend \u2014 win = 3 paid pilots. Every why_them argues THIS."
+  },
+  "the goal is the brief the research agent reads",
+  "sam",
+  "human"
+ ],
+ [
   "crm_add_account",
   {
    "name": "Meridian Logistics",
@@ -190,7 +200,8 @@
    "why_them": "300-driver fleet; announced a workforce-visibility RFP for 2027 in their Q2 call",
    "trigger_event": "new COO launched a cost program",
    "hook": "You said in Q2 you can't see where driver hours go \u2014 that is literally what we sell.",
-   "source_url": "https://example.com/meridian-q2"
+   "source_url": "https://example.com/meridian-q2",
+   "campaign_id": "CAM-0001"
   },
   "researched from the Q2 earnings call",
   "sam",

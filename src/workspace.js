@@ -32,11 +32,15 @@ function registerMigrations(module, dir) {
 
 function migrate(handle) {
   handle.pragma('journal_mode = WAL');
-  handle.pragma('foreign_keys = ON');
+  // The canonical SQLite schema-change recipe: foreign_keys OFF around migrations (it is a
+  // no-op inside a transaction, and table rebuilds trip the deferred-violation counter even
+  // when the end state is consistent), then a full foreign_key_check before re-enabling.
+  handle.pragma('foreign_keys = OFF');
   handle.exec(`CREATE TABLE IF NOT EXISTS schema_migration (
     module TEXT NOT NULL, seq INTEGER NOT NULL, name TEXT NOT NULL, applied_at TEXT NOT NULL,
     PRIMARY KEY (module, seq))`);
   const done = new Set(handle.prepare("SELECT module || ':' || seq AS k FROM schema_migration").all().map(r => r.k));
+  let applied = false;
   for (const m of migrations) {
     if (done.has(`${m.module}:${m.seq}`)) continue;
     handle.transaction(() => {
@@ -44,7 +48,13 @@ function migrate(handle) {
       handle.prepare('INSERT INTO schema_migration (module,seq,name,applied_at) VALUES (?,?,?,?)')
         .run(m.module, m.seq, m.name, new Date().toISOString());
     })();
+    applied = true;
   }
+  if (applied) {
+    const viol = handle.pragma('foreign_key_check');
+    if (viol.length) throw new Error(`migrations left foreign-key violations: ${JSON.stringify(viol.slice(0, 3))}`);
+  }
+  handle.pragma('foreign_keys = ON');
 }
 
 function dbFor(workspace) {

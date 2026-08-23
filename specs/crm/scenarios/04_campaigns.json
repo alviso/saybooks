@@ -1,0 +1,44 @@
+{
+  "name": "a campaign is a goal, not a folder",
+  "spec": "crm@0.2",
+  "notes": "CRM-12 (every account pursues a campaign; pursuit state is campaign-relative), CRM-13 (no campaign without a goal), CRM-7 extended (pausing/concluding reasoned), CRM-6 (concluded keeps everything).",
+  "env": [],
+  "steps": [
+    { "act": "create_campaign", "args": { "name": "Craft brewery expansion" },
+      "expect": { "refused": "goal" },
+      "notes": "CRM-13: a campaign without a stated thesis is a folder. The goal is the brief an agent reads before adding anything" },
+    { "act": "create_campaign", "args": { "name": "Craft brewery expansion",
+        "goal": "US regional breweries announcing multi-state distribution in 2026 — order-to-cash outgrowing spreadsheets; win = 8 demos booked" },
+      "expect": { "ok": true, "include": { "status": "active" } } },
+    { "act": "create_campaign", "args": { "name": "Packaging suppliers", "goal": "Suppliers to the same breweries — a second angle on the same market." },
+      "expect": { "ok": true } },
+
+    { "act": "add_account", "args": { "campaign": "CAM-0001", "name": "Cahaba Brewing Co.",
+        "why_them": "first out-of-state launch announced for the Florida Panhandle", "source_url": "https://example.com/cahaba" },
+      "expect": { "ok": true, "include": { "campaign_id": "CAM-0001" } } },
+    { "act": "add_account", "args": { "campaign": "CAM-0002", "name": "Cahaba Brewing Co.",
+        "why_them": "as a brewery scaling packaging volume they will need new can suppliers — different goal, different why", "source_url": "https://example.com/cahaba" },
+      "expect": { "ok": true },
+      "notes": "CRM-12: the same company under two campaigns is two pursuits with two whys — pursuit state is campaign-relative" },
+    { "act": "add_account", "args": { "campaign": "CAM-0001", "name": "Cahaba Brewing Co.",
+        "why_them": "again", "source_url": "https://example.com/x" },
+      "expect": { "refused": "already on" },
+      "notes": "within one campaign, one row per company — a twin is a data bug, not a second chance" },
+
+    { "act": "pipeline", "args": { "campaign": "CAM-0001" }, "expect": { "ok": true, "include": { "length": 1 } } },
+    { "act": "pipeline", "args": {}, "expect": { "ok": true, "include": { "length": 2 } },
+      "notes": "read models answer per-campaign AND across — both are contract" },
+
+    { "act": "set_campaign_status", "args": { "campaign": "CAM-0002", "status": "concluded" },
+      "expect": { "refused": "reason" },
+      "notes": "CRM-7 extended: a goal someone stops pursuing is a decision that gets asked about later" },
+    { "act": "set_campaign_status", "args": { "campaign": "CAM-0002", "status": "concluded", "reason": "the packaging angle belongs to a partner, not to us" },
+      "expect": { "ok": true, "include": { "status": "concluded" } } },
+    { "act": "add_account", "args": { "campaign": "CAM-0002", "name": "Crown Holdings",
+        "why_them": "biggest can maker", "source_url": "https://example.com/crown" },
+      "expect": { "refused": "concluded" },
+      "notes": "concluded takes no new targets — but everything it holds stays readable (CRM-6)" },
+    { "act": "account", "args": { "account": "A-0002" },
+      "expect": { "ok": true, "include": { "campaign_id": "CAM-0002" } } }
+  ]
+}
