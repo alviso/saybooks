@@ -81,8 +81,12 @@ function due(horizonDays = 7) {
     open_actions_count: open.length,
     nudges: active.filter(a => { const dl = days(a.last_out ?? a.last_in); return dl !== null && dl >= followUp && (days(a.last_in) === null || days(a.last_in) >= followUp); })
       .map(a => ({ ...a, days_quiet: days(a.last_in ?? a.last_out) })),
-    suggest_ghosted: active.filter(a => ['submitted', 'screening'].includes(a.status) && (days(a.last_in) === null || days(a.last_in) >= ghost))
-      .map(a => ({ ...a, days_silent: days(a.last_in) })),
+    suggest_ghosted: active.filter(a => {
+      if (!['submitted', 'screening'].includes(a.status)) return false;
+      const latest = [a.last_in, a.last_out].filter(Boolean).sort().pop();
+      const dl = days(latest);
+      return dl !== null && dl >= ghost;
+    }).map(a => ({ ...a, days_silent: days([a.last_in, a.last_out].filter(Boolean).sort().pop()) })),
     stale_leads: db().prepare(`SELECT p.id, p.title, c.name AS company_name, p.updated_at FROM hunt_posting p JOIN hunt_company c ON c.id = p.company_id
       WHERE p.status IN ('lead','evaluated') AND julianday('now') - julianday(p.updated_at) > ?`).all(stale),
     missing_end_client: db().prepare(`SELECT p.id, p.title, c.name AS company_name FROM hunt_posting p JOIN hunt_company c ON c.id = p.company_id
