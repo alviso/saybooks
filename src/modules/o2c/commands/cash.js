@@ -47,7 +47,7 @@ invoices the customer did not name.`,
     invoice_id: { ...f.ref('invoice', 'The invoice it settles.'), required: true },
     amount:     f.money('How much to apply. Omit to apply the smaller of what is left on each side.'),
   },
-  handler(a, { db }) {
+  handler(a, { db, at }) {
     const p = H.need('payment', a.payment_id, 'payment');
     const inv = H.need('invoice', a.invoice_id, 'invoice');
     if (inv.status === 'void') throw new Rejected(`Invoice ${inv.id} is void.`);
@@ -63,7 +63,7 @@ invoices the customer did not name.`,
     if (amount > payLeft) throw new Rejected(`Payment ${p.id} has only ${H.money(payLeft)} left to apply; you asked for ${H.money(amount)}.`);
     if (amount > invLeft) throw new Rejected(`Invoice ${inv.id} owes only ${H.money(invLeft)}; you asked to apply ${H.money(amount)}. The remainder stays as unapplied cash.`);
 
-    db.prepare('INSERT INTO payment_application (payment_id,invoice_id,amount) VALUES (?,?,?)').run(p.id, inv.id, amount);
+    db.prepare('INSERT INTO payment_application (payment_id,invoice_id,amount,applied_at) VALUES (?,?,?,?)').run(p.id, inv.id, amount, at);
     if (V.invoiceApplied(inv.id) >= inv.total) db.prepare("UPDATE invoice SET status = 'paid' WHERE id = ?").run(inv.id);
     return { applied: H.money(amount), payment_unapplied: H.money(V.paymentUnapplied(H.get('payment', p.id))), invoice: V.invoiceView(inv.id) };
   },
@@ -84,7 +84,7 @@ is a refund, not an application.`,
     invoice_id:     { ...f.ref('invoice', 'The invoice it settles.'), required: true },
     amount:         f.money('How much to apply. Omit to apply the smaller of what is left on each side.'),
   },
-  handler(a, { db }) {
+  handler(a, { db, at }) {
     const cn = H.need('credit_note', a.credit_note_id, 'credit note');
     const inv = H.need('invoice', a.invoice_id, 'invoice');
     if (inv.status === 'void') throw new Rejected(`Invoice ${inv.id} is void.`);
@@ -100,7 +100,7 @@ is a refund, not an application.`,
     if (amount > cnLeft) throw new Rejected(`Credit note ${cn.id} has only ${H.money(cnLeft)} left; you asked for ${H.money(amount)}.`);
     if (amount > invLeft) throw new Rejected(`Invoice ${inv.id} owes only ${H.money(invLeft)}; you asked to apply ${H.money(amount)}.`);
 
-    db.prepare('INSERT INTO credit_application (credit_note_id,invoice_id,amount) VALUES (?,?,?)').run(cn.id, inv.id, amount);
+    db.prepare('INSERT INTO credit_application (credit_note_id,invoice_id,amount,applied_at) VALUES (?,?,?,?)').run(cn.id, inv.id, amount, at);
     if (V.invoiceApplied(inv.id) >= inv.total) db.prepare("UPDATE invoice SET status = 'paid' WHERE id = ?").run(inv.id);
     if (V.creditUnapplied(H.get('credit_note', cn.id)) <= 0) db.prepare("UPDATE credit_note SET status = 'settled' WHERE id = ?").run(cn.id);
     return { applied: H.money(amount), credit_note: V.creditNoteView(cn.id), invoice: V.invoiceView(inv.id) };

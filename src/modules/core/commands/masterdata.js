@@ -158,3 +158,36 @@ defineCommand({
     return H.get('customer', a.customer_id);
   },
 });
+
+defineCommand({
+  name: 'core_set_company_profile',
+  permission: 'workspace.admin',
+  title: 'Company profile', group: 'Master data', subject: 'customer', scope: 'collection',
+  summary: "The business's own identity: seller block, tax id, payment instructions. One per workspace.",
+  doctrine: `The invoice document's seller comes from here — a document without it is incomplete,
+not wrong (INV-22). Patch semantics: only the fields you pass change; the name is required
+only the first time.`,
+  effects: ['company profile written'],
+  args: {
+    name: f.text('Legal or trading name, as it should appear on documents.'),
+    address: f.note('Postal address, as it should print.'),
+    tax_id: f.text('EIN / VAT id — printed on documents where present.'),
+    payment_instructions: f.note('How customers pay: bank details, reference format. Printed on every invoice.'),
+    footer_note: f.note('One line at the document foot (returns policy, thanks, registration no).'),
+  },
+  handler(a, { db, at }) {
+    const cur = db.prepare('SELECT * FROM company_profile WHERE id = 1').get();
+    if (!cur && !a.name) throw new Rejected('The first write must carry the company name.');
+    if (a.name === '') throw new Rejected('The company keeps a name.');
+    const next = { ...cur };
+    for (const k of ['name', 'address', 'tax_id', 'payment_instructions', 'footer_note']) {
+      if (a[k] !== undefined) next[k] = a[k] === '' ? null : a[k];
+    }
+    db.prepare(`INSERT INTO company_profile (id,name,address,tax_id,payment_instructions,footer_note,updated_at)
+                VALUES (1,?,?,?,?,?,?)
+                ON CONFLICT(id) DO UPDATE SET name=excluded.name, address=excluded.address, tax_id=excluded.tax_id,
+                  payment_instructions=excluded.payment_instructions, footer_note=excluded.footer_note, updated_at=excluded.updated_at`)
+      .run(next.name, next.address ?? null, next.tax_id ?? null, next.payment_instructions ?? null, next.footer_note ?? null, at);
+    return db.prepare('SELECT * FROM company_profile WHERE id = 1').get();
+  },
+});

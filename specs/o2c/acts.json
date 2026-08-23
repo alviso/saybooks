@@ -1,6 +1,6 @@
 {
   "area": "o2c",
-  "spec": "0.1",
+  "spec": "0.2",
   "doc": "spec.md",
   "acts": {
     "create_quote": {
@@ -165,6 +165,10 @@
         "from",
         "to"
       ]
+    },
+    "journal": {
+      "kind": "read",
+      "required": []
     }
   },
   "env_acts": {
@@ -209,6 +213,11 @@
       "required": [
         "customer",
         "reason"
+      ]
+    },
+    "set_company_profile": {
+      "required": [
+        "name"
       ]
     }
   },
@@ -296,6 +305,14 @@
     {
       "id": "INV-21",
       "title": "Every write is a logged command with an actor; reads are never logged."
+    },
+    {
+      "id": "INV-22",
+      "title": "The books produce documents; they never send them."
+    },
+    {
+      "id": "INV-23",
+      "title": "Every journal entry balances \u2014 debits equal credits, derived from the books, never entered."
     }
   ]
 }

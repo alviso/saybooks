@@ -12,9 +12,10 @@ const H = require('../../db.js');
 
 const mod = R.defineModule({
   name: 'core', prefix: 'core',
-  tables: ['customer', 'item'],
+  tables: ['customer', 'item', 'company_profile'],
   env_acts: { create_customer: 'core_create_customer', create_item: 'core_create_item', receive_stock: 'core_receive_stock', set_price: 'core_set_price',
-              set_credit_limit: 'core_set_credit_limit', hold_customer: 'core_hold_customer', release_customer: 'core_release_customer' },
+              set_credit_limit: 'core_set_credit_limit', hold_customer: 'core_hold_customer', release_customer: 'core_release_customer',
+              set_company_profile: 'core_set_company_profile' },
   env_argmap: { item: 'item_id', customer: 'customer_id' },
   doctrine: `Master data is slow-moving and load-bearing. A credit limit of 0 means prepay only —
 a real position, not a missing value. Set stocked=false for services; they never deplete and

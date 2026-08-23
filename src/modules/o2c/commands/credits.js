@@ -125,7 +125,7 @@ for who may write off how much is yours to police; the record that it happened i
     const open = inv.total - V.invoiceApplied(inv.id);
     if (open <= 0) throw new Rejected('Nothing is open on this invoice.');
     const cnId = raiseCreditNote(db, at, { customer_id: inv.customer_id, kind: 'write_off', invoice_id: inv.id, total: open, reason: a.reason });
-    db.prepare('INSERT INTO credit_application (credit_note_id,invoice_id,amount) VALUES (?,?,?)').run(cnId, inv.id, open);
+    db.prepare('INSERT INTO credit_application (credit_note_id,invoice_id,amount,applied_at) VALUES (?,?,?,?)').run(cnId, inv.id, open, at);
     db.prepare("UPDATE credit_note SET status = 'settled' WHERE id = ?").run(cnId);
     db.prepare("UPDATE invoice SET status = 'paid' WHERE id = ?").run(inv.id);
     return { credit_note_id: cnId, written_off: H.money(open), invoice_status: 'paid', invoice: V.invoiceView(inv.id) };

@@ -1,5 +1,17 @@
 [
  [
+  "core_set_company_profile",
+  {
+   "name": "Sam's Supply Co.",
+   "address": "410 Harbor Way, Oakland, CA",
+   "payment_instructions": "ACH to Pacific Trust 121000358 / 4471002. Reference the invoice number.",
+   "footer_note": "Thank you \u2014 Sam's Supply Co. \u00b7 books kept on Saybooks"
+  },
+  "so our invoices print with a seller block",
+  "sam",
+  "human"
+ ],
+ [
   "core_create_customer",
   {
    "name": "Northwind Traders",

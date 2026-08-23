@@ -85,7 +85,7 @@
   <div class="grp" data-g="books">Books · o2c <span class="tog">−</span></div>
   <div class="grp-items" data-gi="books">
     <a class="on" data-v="orders">Orders</a><a data-v="customers">Customers</a><a data-v="items">Items</a>
-    <a data-v="ar">AR aging</a><a data-v="cash">Unapplied cash</a>
+    <a data-v="ar">AR aging</a><a data-v="cash">Unapplied cash</a><a data-v="journal">Journal</a>
   </div>
   <div class="grp" data-g="crm">CRM <span class="tog">−</span></div>
   <div class="grp-items" data-gi="crm">
@@ -119,7 +119,7 @@ const api = async (cmd, args = {}) => {
   const r = await fetch(wsUrl('/api/cmd/' + cmd), { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(args) });
   const j = await r.json(); if (!r.ok) throw new Error(j.error); return j.result;
 };
-let REG = null, view = 'orders', selected = null, huntStage = null;
+let REG = null, view = 'orders', selected = null, huntStage = null, journalRange = {};
 
 /* ---------- generated form ---------- */
 function openForm(spec, prefill = {}) {
@@ -414,6 +414,13 @@ async function detail(type, id) {
       wrap.append($('<div class="sub" style="margin-top:16px">Activity — dated when it happened, not when it was typed</div>'), at2);
     }
   }
+  if (type === 'invoice') {
+    const bar = $('<div class="acts" style="margin:2px 0 14px"></div>');
+    const b = $('<button class="primary">Document — print / save PDF</button>');
+    b.onclick = () => invoiceDoc(entity);
+    bar.append(b); wrap.append(bar);
+    if (!entity.seller) wrap.append($('<div class="card doc" style="color:var(--warn)">No company profile yet — the document prints without a seller block. Set it under Customers → Company profile.</div>'));
+  }
   if (entity.lines) {
     const t = $('<table><thead><tr><th>#</th><th>Item</th><th class="num">Qty</th><th class="num">Shipped</th><th class="num">Invoiced</th><th class="num">Price</th><th class="num">Amount</th></tr></thead><tbody></tbody></table>');
     for (const l of entity.lines) t.querySelector('tbody').append($(
@@ -423,6 +430,168 @@ async function detail(type, id) {
   const trail = await fetch(wsUrl(`/api/cmd/core_audit`), { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ subject_id:id, limit:20 }) }).then(r=>r.json());
   wrap.append($('<div class="sub" style="margin-top:20px">History</div>'), auditTable(trail.result));
   return wrap;
+}
+
+/* Bank CSV import: parsing and matching happen here for preview, but every recorded row goes
+   through o2c_record_payment individually — same choke point, same log, refusals surfaced. */
+function bankImportDialog() {
+  const dlg = document.getElementById('dlg');
+  dlg.innerHTML = '';
+  const box = $(`<div style="min-width:720px;max-width:900px"><h2>Import bank CSV</h2>
+    <div class="doc" style="margin-bottom:10px">Paste rows from your bank export. Each row becomes its own <b>Record payment</b> — individually logged, refusals shown. Outflows and unmatched payers are skipped, never guessed (matching a payment to an invoice stays a separate act).</div>
+    <textarea rows="7" style="width:100%;font:12px ui-monospace,monospace" placeholder="Date,Amount,Payer,Reference&#10;2026-08-20,1250.00,Northwind Traders,WIRE-4471"></textarea>
+    <div class="acts" style="margin-top:10px"><button class="primary">Preview</button><button value="cancel">Close</button></div>
+    <div class="stage"></div></div>`);
+  const ta = box.querySelector('textarea'), stage = box.querySelector('.stage');
+  const [prevBtn, closeBtn] = box.querySelectorAll('.acts button');
+  closeBtn.onclick = () => dlg.close();
+
+  const parse = (text) => {
+    const first = text.split(/\r?\n/).find(l => l.trim());
+    const delim = [',', ';', '\t'].map(d => [d, (first.match(new RegExp('\\' + d, 'g')) || []).length]).sort((a, b) => b[1] - a[1])[0][0];
+    const rows = []; let row = [], cur = '', q = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (q) { if (ch === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
+      else if (ch === '"') q = true;
+      else if (ch === delim) { row.push(cur.trim()); cur = ''; }
+      else if (ch === '\n' || ch === '\r') { if (cur.trim() !== '' || row.length) { row.push(cur.trim()); rows.push(row); } row = []; cur = ''; }
+      else cur += ch;
+    }
+    if (cur.trim() !== '' || row.length) { row.push(cur.trim()); rows.push(row); }
+    return rows.filter(r => r.some(c => c !== ''));
+  };
+  const centsOf = (s) => {
+    let v = String(s || '').replace(/[$\s]/g, '');
+    if (/,\d{2}$/.test(v) && !v.includes('.')) v = v.replace(',', '.');
+    v = v.replace(/,/g, '');
+    const f = parseFloat(v);
+    return Number.isFinite(f) ? Math.round(f * 100) : null;
+  };
+  const isoOf = (s) => {
+    const v = String(s || '').trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10);
+    const m = v.match(/^(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})/);
+    return m ? `${m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}` : null;
+  };
+
+  prevBtn.onclick = () => {
+    const all = parse(ta.value);
+    if (!all.length) { stage.innerHTML = '<div class="doc" style="color:var(--warn)">Nothing to parse.</div>'; return; }
+    const looksHeader = all[0].every(c => centsOf(c) === null || /[a-z]{3,}/i.test(c)) && all.length > 1;
+    const header = looksHeader ? all[0] : all[0].map((_, i) => 'column ' + (i + 1));
+    const data = looksHeader ? all.slice(1) : all;
+    const guess = (re) => { const i = header.findIndex(h => re.test(h)); return i >= 0 ? i : null; };
+    const map = {
+      date: guess(/date|posted|booking/i) ?? 0,
+      amount: guess(/amount|value|credit|sum/i) ?? 1,
+      payer: guess(/payer|name|description|counterparty|from|detail/i) ?? 2,
+      reference: guess(/ref|memo|note|id/i) ?? 3,
+    };
+    stage.innerHTML = '';
+    const mapRow = $('<div class="acts" style="margin:10px 0;align-items:center;flex-wrap:wrap"></div>');
+    const sel = {};
+    for (const k of ['date', 'amount', 'payer', 'reference']) {
+      const s2 = $(`<select>${header.map((h, i) => `<option value="${i}" ${i === map[k] ? 'selected' : ''}>${h}</option>`).join('')}</select>`);
+      sel[k] = s2; mapRow.append($(`<span class="sub" style="margin:0">${k}</span>`), s2);
+    }
+    const methodSel = $('<select><option>ach</option><option>wire</option><option>check</option><option>card</option></select>');
+    mapRow.append($('<span class="sub" style="margin:0">method</span>'), methodSel);
+    const rebuild = $('<button>Re-match</button>'); mapRow.append(rebuild);
+    stage.append(mapRow);
+
+    const custs = (REG.lookups && REG.lookups.customer) || [];
+    const matchOf = (payer) => {
+      const p = payer.toLowerCase();
+      return custs.find(c => p.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(p)) || null;
+    };
+    const tblBox = $('<div style="max-height:320px;overflow-y:auto;margin-top:6px"></div>');
+    stage.append(tblBox);
+    const runRow = $('<div class="acts" style="margin-top:10px"></div>');
+    const runBtn = $('<button class="primary">Record payments</button>'); runRow.append(runBtn);
+    const out = $('<div class="doc" style="margin-top:8px"></div>'); stage.append(runRow, out);
+
+    let items = [];
+    const buildTable = () => {
+      items = data.map(r => {
+        const amount = centsOf(r[+sel.amount.value]);
+        const date = isoOf(r[+sel.date.value]);
+        const payer = r[+sel.payer.value] || '';
+        return { amount, date, payer, reference: r[+sel.reference.value] || '', customer: matchOf(payer), skip: amount === null || amount <= 0 };
+      });
+      const t = $('<table><thead><tr><th>Date</th><th>Payer (as printed)</th><th>Customer</th><th>Ref</th><th class="num">Amount</th><th>Status</th></tr></thead><tbody></tbody></table>');
+      items.forEach((it) => {
+        const cs = $(`<select><option value="">— skip —</option>${custs.map(c => `<option value="${c.id}" ${it.customer && it.customer.id === c.id ? 'selected' : ''}>${c.name}</option>`).join('')}</select>`);
+        cs.onchange = () => { it.customer = custs.find(c => c.id === cs.value) || null; };
+        const tr = $(`<tr><td>${it.date || '<span style="color:var(--warn)">?</span>'}</td><td style="font-size:12px">${it.payer}</td><td></td>
+          <td style="font-size:12px">${it.reference}</td><td class="num">${it.amount != null ? cents(it.amount) : '?'}</td>
+          <td class="st" style="font-size:12px;color:var(--dim)">${it.skip ? (it.amount != null && it.amount <= 0 ? 'outflow — skipped' : 'bad amount — skipped') : (it.customer ? 'ready' : 'no match — pick or skip')}</td></tr>`);
+        tr.children[2].append(cs); it._tr = tr;
+        t.querySelector('tbody').append(tr);
+      });
+      tblBox.innerHTML = ''; tblBox.append(t);
+    };
+    rebuild.onclick = buildTable;
+    buildTable();
+
+    runBtn.onclick = async () => {
+      runBtn.disabled = true;
+      let ok = 0, skipped = 0, refused = 0;
+      for (const it of items) {
+        const st = it._tr.querySelector('.st');
+        if (it.skip || !it.customer) { skipped++; continue; }
+        try {
+          const r = await api('o2c_record_payment', { customer_id: it.customer.id, amount: it.amount,
+            method: methodSel.value, reference: it.reference || undefined, received_at: it.date || undefined });
+          ok++; st.textContent = `recorded ${r.id}`; st.style.color = 'var(--accent)';
+        } catch (e) { refused++; st.textContent = e.message; st.style.color = 'var(--warn)'; }
+      }
+      out.textContent = `${ok} recorded as unapplied cash, ${skipped} skipped, ${refused} refused. Every recorded row is in the audit trail; apply them to invoices from this page.`;
+      runBtn.textContent = 'Done — close to refresh'; closeBtn.onclick = () => { dlg.close(); render(); };
+    };
+  };
+  dlg.append(box); dlg.showModal();
+}
+
+/* The document is a READ rendered for paper (INV-22): the system produces it; sending it to
+   the customer is the operator's act, outside the system, on purpose. */
+function invoiceDoc(inv) {
+  const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const nl = (s) => esc(s).replace(/\n/g, '<br>');
+  const s = inv.seller;
+  const rows = inv.lines.map(l => `<tr><td>${esc(l.item_name)}</td><td class="n">${l.qty}</td><td class="n">${cents(l.unit_price)}</td>
+    <td class="n">${l.tax_rate_bp ? (l.tax_rate_bp / 100).toFixed(2) + '%' : '—'}</td><td class="n">${cents(l.qty * l.unit_price)}</td></tr>`).join('');
+  const w = window.open('', '_blank');
+  w.document.write(`<!doctype html><html><head><title>${esc(inv.id)}</title><style>
+    body{font:14px/1.5 Georgia,serif;color:#1a1a1a;max-width:52em;margin:3em auto;padding:0 2em}
+    .top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2.5em}
+    h1{font-size:26px;letter-spacing:.04em;margin:0} .muted{color:#666;font-size:12.5px}
+    table{width:100%;border-collapse:collapse;margin:1.5em 0} th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#666;border-bottom:1.5px solid #1a1a1a;padding:6px 8px}
+    td{padding:7px 8px;border-bottom:1px solid #ddd} .n{text-align:right}
+    .totals{margin-left:auto;width:20em} .totals td{border:none;padding:3px 8px} .totals .due td{border-top:1.5px solid #1a1a1a;font-weight:700}
+    .pay{border:1px solid #ccc;padding:.9em 1.1em;margin-top:2em;font-size:13px}
+    .foot{margin-top:2.5em;font-size:12px;color:#666}
+    .bar{margin-bottom:2em} @media print{.bar{display:none}}
+  </style></head><body>
+    <div class="bar"><button onclick="window.print()">Print / Save as PDF</button></div>
+    <div class="top">
+      <div>${s ? `<div style="font-size:19px;font-weight:700">${esc(s.name)}</div><div class="muted">${nl(s.address || '')}${s.tax_id ? '<br>Tax ID ' + esc(s.tax_id) : ''}</div>` : ''}</div>
+      <div style="text-align:right"><h1>INVOICE</h1><div class="muted">${esc(inv.id)}<br>Issued ${esc(inv.issued_at)}<br>Due ${esc(inv.due_at)} · ${esc(inv.terms || '')}${inv.po_ref ? '<br>Your PO: ' + esc(inv.po_ref) : ''}</div></div>
+    </div>
+    <div class="muted" style="font-size:11px;letter-spacing:.08em;text-transform:uppercase">Bill to</div>
+    <div style="font-weight:700">${esc(inv.customer_name)}</div>${inv.customer_email ? `<div class="muted">${esc(inv.customer_email)}</div>` : ''}
+    <table><thead><tr><th>Item</th><th class="n">Qty</th><th class="n">Unit price</th><th class="n">Tax</th><th class="n">Amount</th></tr></thead><tbody>${rows}</tbody></table>
+    <table class="totals">
+      <tr><td>Subtotal</td><td class="n">${cents(inv.total - inv.tax_total)}</td></tr>
+      <tr><td>Tax</td><td class="n">${cents(inv.tax_total)}</td></tr>
+      <tr><td>Total</td><td class="n">${cents(inv.total)}</td></tr>
+      ${inv.applied ? `<tr><td>Paid / credited</td><td class="n">−${cents(inv.applied)}</td></tr>` : ''}
+      <tr class="due"><td>Balance due</td><td class="n">${cents(inv.open)}</td></tr>
+    </table>
+    ${inv.payment_instructions ? `<div class="pay"><b>How to pay</b><br>${nl(inv.payment_instructions)}</div>` : ''}
+    ${s && s.footer_note ? `<div class="foot">${nl(s.footer_note)}</div>` : ''}
+  </body></html>`);
+  w.document.close();
 }
 
 const auditTable = (rows) => {
@@ -682,7 +851,8 @@ async function render() {
   }
   if (view === 'cash') {
     head('Unapplied cash', 'Money received that no invoice claims yet. A valid state — never guessed away.');
-    const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('payment').forEach(b => bar.append(b)); main.append(bar);
+    const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('payment').forEach(b => bar.append(b));
+    const imp = $('<button>Import bank CSV</button>'); imp.onclick = bankImportDialog; bar.append(imp); main.append(bar);
     const rows = await api('o2c_unapplied_cash');
     const t = $('<table><thead><tr><th>Payment</th><th>Customer</th><th>Received</th><th>Ref</th><th class="num">Unapplied</th><th></th></tr></thead><tbody></tbody></table>');
     for (const r of rows) {
@@ -691,6 +861,37 @@ async function render() {
       tr.lastElementChild.append(b); t.querySelector('tbody').append(tr);
     }
     main.append(rows.length ? t : $('<div class="card doc">Nothing unapplied.</div>'));
+  }
+  if (view === 'journal') {
+    head('Journal', 'Double-entry lines derived from the books — nothing posted, nothing stored (INV-23). Export for the ledger of record.');
+    const j = await api('core_journal', journalRange);
+    const bar = $('<div class="acts" style="margin-bottom:14px;align-items:center"></div>');
+    const from = $(`<input type="date" value="${journalRange.from || ''}">`), to = $(`<input type="date" value="${journalRange.to || ''}">`);
+    const go = $('<button>Filter</button>'); go.onclick = () => { journalRange = { ...(from.value && { from: from.value }), ...(to.value && { to: to.value }) }; render(); };
+    const exp = $('<button class="primary">Export CSV</button>');
+    exp.onclick = () => {
+      const q = (s) => '"' + String(s ?? '').replace(/"/g, '""') + '"';
+      const lines = [['Date', 'Memo', 'Account', 'Debit', 'Credit', 'Name'].join(',')];
+      for (const e of j.entries) for (const l of e.lines)
+        lines.push([e.date, q(e.memo), q(l.account), l.debit ? (l.debit / 100).toFixed(2) : '', l.credit ? (l.credit / 100).toFixed(2) : '', q(e.customer || '')].join(','));
+      const a2 = document.createElement('a');
+      a2.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
+      a2.download = `journal${j.from ? '_' + j.from : ''}${j.to ? '_' + j.to : ''}.csv`; a2.click();
+    };
+    bar.append($('<span class="sub" style="margin:0">From</span>'), from, $('<span class="sub" style="margin:0">To</span>'), to, go, exp,
+      $(`<span class="pill" style="${j.balanced ? '' : 'background:#f2e3e3;color:var(--warn)'}">${j.balanced ? 'balanced' : 'UNBALANCED'} · ${j.entry_count} entries · DR ${j.debits_display} = CR ${j.credits_display}</span>`));
+    main.append(bar);
+    const t = $('<table><thead><tr><th>Date</th><th>Memo</th><th>Account</th><th class="num">Debit</th><th class="num">Credit</th><th>Customer</th></tr></thead><tbody></tbody></table>');
+    for (const e of j.entries) {
+      e.lines.forEach((l, i) => {
+        const tr = $(`<tr><td style="font-size:12px">${i === 0 ? e.date : ''}</td><td style="font-size:12.5px">${i === 0 ? e.memo : ''}</td>
+          <td style="${l.debit ? '' : 'padding-left:2.2em'}">${l.account}</td><td class="num">${l.debit_display}</td><td class="num">${l.credit_display}</td>
+          <td style="font-size:12px;color:var(--dim)">${i === 0 ? (e.customer || '') : ''}</td></tr>`);
+        tr.dataset.search = `${e.date} ${e.memo} ${l.account} ${e.customer || ''}`;
+        t.querySelector('tbody').append(tr);
+      });
+    }
+    main.append(j.entries.length ? t : $('<div class="card doc">Nothing in range.</div>'));
   }
   if (view === 'audit') {
     head('Audit trail', 'Every write from either surface, with its actor. Refused commands are kept.');

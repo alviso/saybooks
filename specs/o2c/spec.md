@@ -299,6 +299,53 @@ Scenario file shape (executable; see `scenarios/*.json`):
 
 ---
 
+## 10. 0.2 additions — documents and the journal
+
+Three gaps between "the books are correct" and "a business can run its month on them".
+
+**Company profile (environment obligation, §3 family).** An invoice document needs a seller.
+`set_company_profile` records the business's own identity — name, address, tax id, payment
+instructions, a footer note — as a logged environment act with patch semantics. One profile
+per workspace; it is master data, not configuration.
+
+**The invoice is the document (read model, extends §6 `invoice`).** The `invoice` read model
+now carries everything a printable document needs: the seller block from the company profile,
+the bill-to identity, lines with both prices and tax, application state, and the seller's
+payment instructions. There is no separate "render" act — reading the invoice IS obtaining
+the document, on every surface.
+
+- **INV-22 — The books produce documents; they never send them.** Rendering an invoice, a
+  statement, or an export is a read. Transmitting it to a customer is the operator's act, done
+  outside the system, on purpose. No implementation may email, post, or push a document at a
+  third party.
+
+**The journal (read model).** `journal` derives double-entry lines from the books over a date
+range — nothing is posted, nothing is stored; it is a projection for handing to the ledger
+system of record (QuickBooks/Xero import, or an accountant's CSV). Fixed account names:
+Accounts Receivable, Sales Revenue, Sales Tax Payable, Cash, Customer Deposits, Customer
+Credits, Sales Returns & Allowances, Bad Debt Expense.
+
+| Event | Entry |
+|---|---|
+| invoice issued | DR Accounts Receivable · CR Sales Revenue (net) · CR Sales Tax Payable (tax) |
+| payment received | DR Cash · CR Customer Deposits |
+| payment applied | DR Customer Deposits · CR Accounts Receivable |
+| credit note issued (return/correction/goodwill) | DR Sales Returns & Allowances · CR Customer Credits |
+| credit note issued (write_off) | DR Bad Debt Expense · CR Accounts Receivable |
+| credit applied | DR Customer Credits · CR Accounts Receivable |
+| refund recorded | DR Customer Deposits or Customer Credits (by source) · CR Cash |
+
+- **INV-23 — Every journal entry balances.** Debits equal credits on every entry and in total,
+  by construction from the event tables — never entered, never adjustable. A voided invoice
+  contributes nothing (the journal is a derivation of the current books, not a posting log);
+  an implementation that exports incrementally must state that re-derivation is the truth.
+
+Known limit, stated plainly: this is a projection, not a general ledger. No chart of accounts,
+no manual journals, no close. The ledger of record stays wherever it is; Saybooks is the
+operating layer in front of it.
+
+---
+
 *Change log: 0.1-draft (2026-08-22) — initial curation, extracted from the reference
 implementation and calibrated against SMB practice (QuickBooks-class gaps, Odoo invoicing
-policies, standard AR/dunning/write-off practice).*
+policies, standard AR/dunning/write-off practice). 0.2 (2026-08-23) — company profile environment act, invoice-as-document read model, derived journal read model; INV-22, INV-23.*

@@ -89,11 +89,19 @@ function quoteView(id) {
 function invoiceView(id) {
   const inv = need('invoice', id, 'invoice');
   const applied = invoiceApplied(id);
+  // The invoice read IS the document (INV-22): seller block, bill-to, payment instructions.
+  const seller = db().prepare('SELECT * FROM company_profile WHERE id = 1').get() || null;
+  const cust = get('customer', inv.customer_id);
+  const order = db().prepare('SELECT po_ref FROM "order" WHERE id = ?').get(inv.order_id);
   return {
     ...inv,
     lines: db().prepare('SELECT il.*, i.name AS item_name FROM invoice_line il JOIN item i ON i.id = il.item_id WHERE invoice_id = ?').all(id),
     total_display: money(inv.total), applied, applied_display: money(applied),
     open: inv.total - applied, open_display: money(inv.total - applied),
+    customer_name: cust.name, customer_email: cust.email, terms: cust.terms,
+    po_ref: order ? order.po_ref : null,
+    seller, seller_name: seller ? seller.name : null,
+    payment_instructions: seller ? seller.payment_instructions : null,
   };
 }
 

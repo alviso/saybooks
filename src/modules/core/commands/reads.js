@@ -177,3 +177,95 @@ has a real audit trail: every seed row shows as a logged command by actor "fixtu
     },
   });
 }
+
+/* The journal: double-entry lines DERIVED from the books over a date range — a projection
+ * for the ledger of record (QuickBooks/Xero import, an accountant's CSV), never a posting.
+ * Every entry balances by construction (INV-23); a voided invoice contributes nothing. */
+read({
+  name: 'core_journal',
+  title: 'Journal', summary: 'Double-entry journal lines derived from the books, for export to the ledger of record.',
+  doctrine: `Nothing here is posted or stored — re-derivation is the truth. Fixed accounts; a
+voided invoice contributes nothing (INV-23). The ledger of record stays wherever it is.`,
+  args: {
+    from: f.date('Include events on/after this date. Omit for all.'),
+    to: f.date('Include events on/before this date. Omit for all.'),
+  },
+  handler(a) {
+    const db = H.db();
+    const money = (c) => '$' + (c / 100).toFixed(2);
+    const day = (d) => String(d || '').slice(0, 10);
+    const inRange = (d) => (!a.from || day(d) >= a.from) && (!a.to || day(d) <= a.to);
+    const entries = [];
+    const push = (date, memo, customer, lines) => {
+      const dr = lines.reduce((s, l) => s + (l.debit || 0), 0);
+      const cr = lines.reduce((s, l) => s + (l.credit || 0), 0);
+      if (dr !== cr) throw new Error(`journal derivation bug: unbalanced entry "${memo}" (${dr} vs ${cr})`);
+      if (dr === 0) return;
+      entries.push({ date: day(date), memo, customer, lines: lines.filter(l => (l.debit || 0) + (l.credit || 0) > 0)
+        .map(l => ({ ...l, debit_display: l.debit ? money(l.debit) : '', credit_display: l.credit ? money(l.credit) : '' })) });
+    };
+    const cname = {}; for (const c of db.prepare('SELECT id, name FROM customer').all()) cname[c.id] = c.name;
+
+    for (const i of db.prepare("SELECT * FROM invoice WHERE status <> 'void' ORDER BY id").all()) {
+      if (!inRange(i.issued_at)) continue;
+      push(i.issued_at, `Invoice ${i.id}`, cname[i.customer_id], [
+        { account: 'Accounts Receivable', debit: i.total },
+        { account: 'Sales Revenue', credit: i.total - i.tax_total },
+        { account: 'Sales Tax Payable', credit: i.tax_total },
+      ]);
+    }
+    for (const p of db.prepare('SELECT * FROM payment ORDER BY id').all()) {
+      if (!inRange(p.received_at)) continue;
+      push(p.received_at, `Payment ${p.id}${p.reference ? ' · ' + p.reference : ''}`, cname[p.customer_id], [
+        { account: 'Cash', debit: p.amount },
+        { account: 'Customer Deposits', credit: p.amount },
+      ]);
+    }
+    for (const ap of db.prepare(`SELECT pa.*, p.received_at, p.customer_id FROM payment_application pa
+                                 JOIN payment p ON p.id = pa.payment_id ORDER BY pa.id`).all()) {
+      const at2 = ap.applied_at || ap.received_at;
+      if (!inRange(at2)) continue;
+      push(at2, `Apply ${ap.payment_id} → ${ap.invoice_id}`, cname[ap.customer_id], [
+        { account: 'Customer Deposits', debit: ap.amount },
+        { account: 'Accounts Receivable', credit: ap.amount },
+      ]);
+    }
+    for (const cn of db.prepare('SELECT * FROM credit_note ORDER BY id').all()) {
+      if (!inRange(cn.created_at)) continue;
+      if (cn.kind === 'write_off') {
+        push(cn.created_at, `Write-off ${cn.id}${cn.invoice_id ? ' · ' + cn.invoice_id : ''}`, cname[cn.customer_id], [
+          { account: 'Bad Debt Expense', debit: cn.total },
+          { account: 'Accounts Receivable', credit: cn.total },
+        ]);
+      } else {
+        push(cn.created_at, `Credit note ${cn.id} (${cn.kind})`, cname[cn.customer_id], [
+          { account: 'Sales Returns & Allowances', debit: cn.total },
+          { account: 'Customer Credits', credit: cn.total },
+        ]);
+      }
+    }
+    for (const ca of db.prepare(`SELECT ca.*, cn.created_at, cn.customer_id, cn.kind FROM credit_application ca
+                                 JOIN credit_note cn ON cn.id = ca.credit_note_id WHERE cn.kind <> 'write_off' ORDER BY ca.id`).all()) {
+      const at2 = ca.applied_at || ca.created_at;
+      if (!inRange(at2)) continue;
+      push(at2, `Apply ${ca.credit_note_id} → ${ca.invoice_id}`, cname[ca.customer_id], [
+        { account: 'Customer Credits', debit: ca.amount },
+        { account: 'Accounts Receivable', credit: ca.amount },
+      ]);
+    }
+    for (const rf of db.prepare('SELECT * FROM refund ORDER BY id').all()) {
+      if (!inRange(rf.recorded_at)) continue;
+      push(rf.recorded_at, `Refund ${rf.id} (${rf.source_type} ${rf.source_id})`, null, [
+        { account: rf.source_type === 'payment' ? 'Customer Deposits' : 'Customer Credits', debit: rf.amount },
+        { account: 'Cash', credit: rf.amount },
+      ]);
+    }
+
+    entries.sort((x, y) => x.date < y.date ? -1 : x.date > y.date ? 1 : 0);
+    const debits = entries.reduce((s, e) => s + e.lines.reduce((s2, l) => s2 + (l.debit || 0), 0), 0);
+    const credits = entries.reduce((s, e) => s + e.lines.reduce((s2, l) => s2 + (l.credit || 0), 0), 0);
+    return { from: a.from || null, to: a.to || null, entry_count: entries.length,
+      debits, credits, debits_display: money(debits), credits_display: money(credits),
+      balanced: debits === credits, entries };
+  },
+});

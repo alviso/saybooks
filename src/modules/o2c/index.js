@@ -18,7 +18,7 @@ const mod = R.defineModule({
   // Scenario files speak in acts; the runner translates through this map, which is also
   // what the Spec tab and core_spec_status derive implementation status from.
   implements: {
-    area: 'o2c', spec: '0.1',
+    area: 'o2c', spec: '0.2',
     argmap: { customer: 'customer_id', order: 'order_id', quote: 'quote_id', invoice: 'invoice_id',
               payment: 'payment_id', credit_note: 'credit_note_id', item: 'item_id', order_line: 'order_line_id' },
     acts: {
@@ -32,6 +32,7 @@ const mod = R.defineModule({
       order: 'o2c_get_order', customer_position: 'o2c_get_customer', invoice: 'o2c_get_invoice',
       backorders: 'o2c_backorders', ar_aging: 'o2c_ar_aging', unapplied_cash: 'o2c_unapplied_cash',
       customer_statement: 'o2c_customer_statement',
+      journal: 'core_journal',
     },
   },
   lifecycles: {

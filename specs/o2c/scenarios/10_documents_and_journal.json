@@ -1,0 +1,31 @@
+{
+  "name": "the document and the journal: produced, never sent; balanced, never entered",
+  "spec": "o2c@0.2",
+  "notes": "INV-22 and INV-23. The invoice read IS the document — seller block, payment instructions and all — and the journal is a balanced derivation the ledger system imports. Nothing here transmits anything.",
+  "env": [
+    ["set_company_profile", { "name": "Fabrikam Supply Co.", "address": "12 Dock Road, Portland, OR", "tax_id": "93-1234567", "payment_instructions": "ACH to First Federal 026009593 / 5550123. Reference the invoice number." }],
+    ["create_customer", { "name": "Tailspin Toys", "terms": "net30", "credit_limit": 2000000 }],
+    ["create_item", { "sku": "CRATE-S", "name": "Small crate", "unit_price": 40000, "on_hand": 50, "tax_rate_bp": 750 }]
+  ],
+  "steps": [
+    { "act": "create_order", "args": { "customer": "C-0001", "lines": [ { "item": "CRATE-S", "qty": 10 } ] },
+      "expect": { "ok": true, "include": { "total": 400000 } },
+      "notes": "order totals are net — tax belongs to the moment of issuance" },
+    { "act": "confirm_order", "args": { "order": "SO-0001" },
+      "expect": { "ok": true, "include": { "status": "confirmed" } } },
+    { "act": "fulfil_order", "args": { "order": "SO-0001", "lines": [ { "order_line": 1, "qty": 10 } ] },
+      "expect": { "ok": true } },
+    { "act": "invoice_fulfilled", "args": { "order": "SO-0001" },
+      "expect": { "ok": true, "include": { "total": 430000, "tax_total": 30000 } } },
+    { "act": "invoice", "args": { "invoice": "INV-0001" },
+      "expect": { "ok": true, "include": { "seller_name": "Fabrikam Supply Co.", "payment_instructions": "ACH to First Federal 026009593 / 5550123. Reference the invoice number." } },
+      "notes": "INV-22: the invoice read carries the whole document — seller identity and how to pay. Producing it is a read; SENDING it is the operator's act, outside the system, on purpose" },
+    { "act": "record_payment", "args": { "customer": "C-0001", "amount": 430000, "method": "ach", "reference": "TAILSPIN-8871" },
+      "expect": { "ok": true } },
+    { "act": "apply_payment", "args": { "payment": "P-0001", "invoice": "INV-0001", "amount": 430000 },
+      "expect": { "ok": true } },
+    { "act": "journal", "args": {},
+      "expect": { "ok": true, "include": { "balanced": true, "entry_count": 3 } },
+      "notes": "INV-23: issue, receipt, application — three entries, each balanced, derived from the books. Revenue 4000.00 net + 300.00 tax payable; cash in through deposits, deposits onto the receivable. Nothing was posted; the ledger of record imports this" }
+  ]
+}
