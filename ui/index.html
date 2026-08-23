@@ -313,7 +313,7 @@ async function detail(type, id) {
       ${entity.skip_reason ? `<div style="margin-top:8px"><b>Skipped because</b><div class="doc">${entity.skip_reason}</div></div>` : ''}
       ${entity.open_next_action ? `<div style="margin-top:8px"><b style="color:var(--accent)">Open next action</b><div class="doc">${entity.open_next_action}</div></div>` : ''}
       ${entity.jd_text ? `<details style="margin-top:10px"><summary style="cursor:pointer;font-weight:600;font-size:13.5px">Job description — verbatim, as posted</summary>
-        <div class="doc" style="margin-top:6px;line-height:1.6;max-width:76ch;max-height:420px;overflow-y:auto">${fmtDoc(entity.jd_text)}</div></details>` : ''}</div>`));
+        <div class="doc" style="margin-top:6px;line-height:1.6">${fmtDoc(entity.jd_text)}</div></details>` : ''}</div>`));
     if (entity.application && entity.application.interviews.length) {
       const it2 = $('<table><thead><tr><th>Round</th><th>Kind</th><th>When</th><th>Interviewer</th><th>Outcome</th></tr></thead><tbody></tbody></table>');
       for (const iv of entity.application.interviews) it2.querySelector('tbody').append($(`<tr><td>${iv.round||''}</td><td>${iv.kind||''}</td><td>${iv.scheduled_at||''}</td><td>${iv.interviewer||''}</td><td><span class="pill">${iv.outcome}</span></td></tr>`));
