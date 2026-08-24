@@ -101,6 +101,12 @@ function roleFor(userId, ws) {
 }
 const spaceOf = (ws) => db().prepare('SELECT * FROM space WHERE ws = ?').get(ws);
 const isOwnedSpace = (ws) => !!spaceOf(ws);
+function spaceIdentity(ws) {
+  const sp = spaceOf(ws);
+  if (!sp) return null;
+  const u = db().prepare('SELECT name, email FROM user WHERE id = ?').get(sp.owner_user_id);
+  return { space: sp.display_name, owner: (u && (u.name || u.email)) || 'its owner' };
+}
 
 function inviteEmail(ws, email, role, invitedBy) {
   const existing = db().prepare('SELECT * FROM space_member WHERE ws = ? AND lower(email) = lower(?)').get(ws, email);
@@ -116,4 +122,4 @@ const emailMembers = (ws) => db().prepare('SELECT email, role, user_id IS NOT NU
 const revokeEmail = (ws, email) => db().prepare('UPDATE space_member SET revoked_at = ? WHERE ws = ? AND lower(email) = lower(?) AND revoked_at IS NULL').run(now(), ws, email).changes;
 
 module.exports = { db, upsertUser, createSession, userForSession, dropSession, createSpace, claimSpace,
-  spacesFor, roleFor, spaceOf, isOwnedSpace, inviteEmail, emailMembers, revokeEmail };
+  spacesFor, roleFor, spaceOf, isOwnedSpace, spaceIdentity, inviteEmail, emailMembers, revokeEmail };

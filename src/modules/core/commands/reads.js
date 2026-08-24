@@ -12,6 +12,14 @@ read({
   doctrine: 'Call this first in a new session. It is cheaper than guessing and it is generated from the same registry the tools come from, so it cannot go stale.',
   args: {},
   handler: (a, ctx) => ({
+    you_are: (() => {
+      const ws2 = wsp.currentName();
+      let idn = null;
+      try { idn = require('../../../users.js').spaceIdentity(ws2); } catch { /* no users store locally */ }
+      return idn
+        ? `You are ${ctx.actor} (${ctx.actor_kind}) in the space "${idn.space}" (workspace ${ws2}), owned by ${idn.owner}. Every write through this connection lands in this book and no other.`
+        : `You are ${ctx.actor} (${ctx.actor_kind}) in workspace "${ws2}".`;
+    })(),
     money: 'All amounts are integer cents. 1250 means $12.50. Never send a float.',
     workspace: wsp.currentName(),
     mounted: ctx.modules || MODULES.map(m => m.name),

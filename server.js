@@ -190,6 +190,34 @@ const server = http.createServer((req, res) => {
     return undefined;
   }
 
+  // Sign-in-first door: an anonymous FIRST visit to /app gets a choice, never a silent
+  // sandbox. Returning visitors (cookie), joins, ?ws links, and ?demo skip straight through.
+  if (DEMO && (p === '/app' || p === '/app/') && req.method === 'GET'
+      && auth.enabled() && !auth.sessionUser(req)
+      && !url.searchParams.get('join') && !url.searchParams.get('ws') && !url.searchParams.has('demo')
+      && !/(?:^|;\s*)otc_ws=/.test(req.headers.cookie || '')) {
+    return send(res, 200, `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Saybooks — whose books?</title><style>
+  body{font:16px/1.55 -apple-system,'Segoe UI',sans-serif;color:#1c2420;background:#f6f5f1;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
+  .wrap{max-width:680px;padding:2em}
+  .mark{font-weight:800;letter-spacing:.1em;font-size:14px} .tag{color:#6b7570;font-size:13px;margin-bottom:2.4em}
+  h1{font-size:26px;margin:.2em 0 1.2em}
+  .doors{display:flex;gap:16px;flex-wrap:wrap}
+  a.door{flex:1;min-width:240px;text-decoration:none;color:inherit;border:1.5px solid #d8d5cc;border-radius:12px;padding:1.2em 1.3em;background:#fff}
+  a.door:hover{border-color:#1e3a2f} a.door b{display:block;margin-bottom:.35em;font-size:17px}
+  a.door span{font-size:13.5px;color:#5b665f}
+  .in b{color:#1e3a2f} .back{margin-top:2.2em;font-size:13px}
+  .back a{color:#5b665f}</style></head><body><div class="wrap">
+  <div class="mark">SAYBOOKS</div><div class="tag">the books you can talk to — that stay books</div>
+  <h1>Whose books are these?</h1>
+  <div class="doors">
+    <a class="door in" href="/auth/google"><b>Sign in with Google →</b><span>Your own space: named, persistent, private. Invite people by email, mint keys for agents — every act on the record.</span></a>
+    <a class="door" href="/app?demo=1"><b>Try the demo</b><span>A private sandbox seeded with example data, swept after 24 hours. No account — and if you sign in later, you keep it.</span></a>
+  </div>
+  <div class="back"><a href="/">← saybooks.io</a></div>
+</div></body></html>`, 'text/html; charset=utf-8');
+  }
+
   let entry;
   try { entry = entryOf(req, url); }
   catch (e) { return send(res, e.status || 500, { error: e.message }); }

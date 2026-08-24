@@ -19,7 +19,24 @@ const R = require('./registry.js');
 const BASE = require('./base-doctrine.js');
 
 function buildServer(workspace, demo, member = { name: 'owner', role: 'owner' }) {
-  const demoNote = demo ? `
+  /* Every key introduces itself FIRST: which book this is, whose, and what the key may do.
+   * A session that connects to the wrong space notices at the greeting, not at the audit. */
+  let identity = null;
+  try { identity = require('./users.js').spaceIdentity(workspace); } catch { /* no users store locally */ }
+
+  const ownedNote = identity ? `THIS KEY OPENS ONE BOOK: the space "${identity.space}" (workspace ${workspace}),
+owned by ${identity.owner}. This is a real, persistent space — not a demo. You hold ${member.name}'s
+key with the role "${member.role}": you are their delegate and can do exactly what they can. A
+command the role does not permit is refused with a sentence naming who to ask; relay it rather
+than routing around it. Every write through this connection lands in THIS book and no other —
+identically named tools on a different Saybooks connector are a different book. If this is not
+the book you mean to write in, stop and ask for that space's key. The same space is in the
+browser at https://saybooks.io/app — writes appear there live, attributed to actor_kind=agent,
+in the same audit trail as clicks.
+
+` : '';
+
+  const demoNote = (!identity && demo) ? `
 
 You are connected to sandbox workspace "${workspace}" on the Saybooks hosted demo, through
 ${member.name}'s key, with the role "${member.role}" — you are ${member.name}'s delegate and can
@@ -32,7 +49,7 @@ actor_kind=agent, in the same audit trail as their clicks. Play freely; nothing 
 
   const server = new Server(
     { name: 'saybooks', version: '0.3.0' },
-    { capabilities: { tools: {} }, instructions: R.instructions(BASE) + demoNote },
+    { capabilities: { tools: {} }, instructions: ownedNote + R.instructions(BASE) + demoNote },
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: R.mcpTools() }));
