@@ -92,7 +92,7 @@ function invoiceView(id) {
   // The invoice read IS the document (INV-22). The seller block is the SNAPSHOT taken at
   // issuance; only invoices issued before a profile existed fall back to the live one.
   const snap = seller_json ? JSON.parse(seller_json) : null;
-  const seller = snap || db().prepare('SELECT name,address,tax_id,payment_instructions,footer_note FROM company_profile WHERE id = 1').get() || null;
+  const seller = snap || db().prepare('SELECT name,address,tax_id,payment_instructions,footer_note,updated_at FROM company_profile WHERE id = 1').get() || null;
   const cust = get('customer', inv.customer_id);
   const order = db().prepare('SELECT po_ref FROM "order" WHERE id = ?').get(inv.order_id);
   return {
