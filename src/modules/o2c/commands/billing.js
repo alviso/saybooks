@@ -38,8 +38,11 @@ fix the terms.`,
       subtotal += net; taxTotal += tax;
       return { l, qty, rate, tax };
     });
-    db.prepare('INSERT INTO invoice (id,customer_id,order_id,status,total,subtotal,tax_total,issued_at,due_at) VALUES (?,?,?,?,?,?,?,?,?)')
-      .run(id, o.customer_id, o.id, 'open', subtotal + taxTotal, subtotal, taxTotal, issued, H.addDays(issued, H.TERMS[c.terms] ?? 30));
+    // The seller block freezes here (INV-19's spirit): the document must forever show the
+    // identity and bank details in force at issuance, whatever the profile says later.
+    const seller = db.prepare('SELECT name,address,tax_id,payment_instructions,footer_note FROM company_profile WHERE id = 1').get() || null;
+    db.prepare('INSERT INTO invoice (id,customer_id,order_id,status,total,subtotal,tax_total,issued_at,due_at,seller_json) VALUES (?,?,?,?,?,?,?,?,?,?)')
+      .run(id, o.customer_id, o.id, 'open', subtotal + taxTotal, subtotal, taxTotal, issued, H.addDays(issued, H.TERMS[c.terms] ?? 30), seller ? JSON.stringify(seller) : null);
 
     for (const { l, qty, rate, tax } of computed) {
       db.prepare('INSERT INTO invoice_line (invoice_id,order_line_id,item_id,qty,unit_price,list_price,tax_rate_bp,tax_amount) VALUES (?,?,?,?,?,?,?,?)')

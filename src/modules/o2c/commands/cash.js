@@ -3,6 +3,10 @@ const { defineCommand, f, Rejected } = require('../../../registry.js');
 const H = require('../../../db.js');
 const V = require('../views.js');
 
+/* Refusals name the actual numbers (the credit gate is the model) — even the terminal ones. */
+const fullyApplied = (p) => `Payment ${p.id} is fully applied — ${H.money(p.amount)} received, ${H.money(p.amount)} applied, $0.00 left. Record a new payment, or reverse by credit note.`;
+const fullyUsed = (cn) => `Credit note ${cn.id} is fully used — ${H.money(cn.total)} issued, ${H.money(cn.total)} applied, $0.00 left.`;
+
 defineCommand({
   name: 'o2c_record_payment',
   permission: 'cash.write',
@@ -41,7 +45,7 @@ invoice still owes. Both refusals name the actual numbers, so the right next ste
 Overpayment is real and stays as unapplied cash against the customer. Do not spread it across
 invoices the customer did not name.`,
   effects: ['application recorded', 'invoice.status -> paid when fully settled'],
-  guards: [ (p) => V.paymentUnapplied(p) > 0 || 'This payment is fully applied.' ],
+  guards: [ (p) => V.paymentUnapplied(p) > 0 || fullyApplied(p) ],
   args: {
     payment_id: { ...f.ref('payment', 'The payment.'), required: true },
     invoice_id: { ...f.ref('invoice', 'The invoice it settles.'), required: true },
@@ -56,7 +60,7 @@ invoices the customer did not name.`,
     }
     const payLeft = V.paymentUnapplied(p);
     const invLeft = inv.total - V.invoiceApplied(inv.id);
-    if (payLeft <= 0) throw new Rejected(`Payment ${p.id} is fully applied.`);
+    if (payLeft <= 0) throw new Rejected(fullyApplied(p));
     if (invLeft <= 0) throw new Rejected(`Invoice ${inv.id} is already settled.`);
     const amount = a.amount ?? Math.min(payLeft, invLeft);
     if (amount <= 0) throw new Rejected('Applied amount must be positive.');
@@ -78,7 +82,7 @@ defineCommand({
 invoice still owes, never across customers. A credit note the customer wants paid out instead
 is a refund, not an application.`,
   effects: ['application recorded', 'invoice.status -> paid when fully settled', 'credit_note.status -> settled when exhausted'],
-  guards: [ (cn) => V.creditUnapplied(cn) > 0 || 'This credit note is fully used.' ],
+  guards: [ (cn) => V.creditUnapplied(cn) > 0 || fullyUsed(cn) ],
   args: {
     credit_note_id: { ...f.ref('credit_note', 'The credit note.'), required: true },
     invoice_id:     { ...f.ref('invoice', 'The invoice it settles.'), required: true },
@@ -93,7 +97,7 @@ is a refund, not an application.`,
     }
     const cnLeft = V.creditUnapplied(cn);
     const invLeft = inv.total - V.invoiceApplied(inv.id);
-    if (cnLeft <= 0) throw new Rejected(`Credit note ${cn.id} is fully used.`);
+    if (cnLeft <= 0) throw new Rejected(fullyUsed(cn));
     if (invLeft <= 0) throw new Rejected(`Invoice ${inv.id} is already settled.`);
     const amount = a.amount ?? Math.min(cnLeft, invLeft);
     if (amount <= 0) throw new Rejected('Applied amount must be positive.');

@@ -296,6 +296,8 @@ Scenario file shape (executable; see `scenarios/*.json`):
 | **Recurring billing** | Different vertical (subscription), different lifecycle. |
 | **Consignment, drop-ship** | Stock-ownership semantics beyond one-warehouse calibration. |
 | **Promise-to-pay / collections notes** | Valuable, but it is CRM-on-AR; the dunning worklist (§6) is the hook it will hang from. |
+| **Per-line delivery trace on the document** | Invoice lines carry `order_line_id`; the delivery linkage that PROVES "we bill what shipped" exists in the data flow but is not yet printed on the document. Needs invoice_line → delivery_line, a schema change with backfill questions. |
+| **Item cost / COGS entries** | The journal is revenue-side by design until items carry cost. Costing method choice (FIFO vs average) is a real design decision, not a column. |
 
 ---
 
@@ -309,10 +311,13 @@ instructions, a footer note — as a logged environment act with patch semantics
 per workspace; it is master data, not configuration.
 
 **The invoice is the document (read model, extends §6 `invoice`).** The `invoice` read model
-now carries everything a printable document needs: the seller block from the company profile,
-the bill-to identity, lines with both prices and tax, application state, and the seller's
-payment instructions. There is no separate "render" act — reading the invoice IS obtaining
-the document, on every surface.
+now carries everything a printable document needs: the seller block, the bill-to identity,
+lines with both prices and tax, application state, and the seller's payment instructions.
+There is no separate "render" act — reading the invoice IS obtaining the document, on every
+surface. The seller block is FROZEN onto the invoice at issuance (INV-19's spirit): changing
+the company profile never reprints history — the document forever shows the identity and bank
+details in force when it was issued (`seller_as_issued: true`). Only invoices issued before a
+profile existed fall back to the live profile, and say so.
 
 - **INV-22 — The books produce documents; they never send them.** Rendering an invoice, a
   statement, or an export is a read. Transmitting it to a customer is the operator's act, done
@@ -322,12 +327,12 @@ the document, on every surface.
 **The journal (read model).** `journal` derives double-entry lines from the books over a date
 range — nothing is posted, nothing is stored; it is a projection for handing to the ledger
 system of record (QuickBooks/Xero import, or an accountant's CSV). Fixed account names:
-Accounts Receivable, Sales Revenue, Sales Tax Payable, Cash, Customer Deposits, Customer
-Credits, Sales Returns & Allowances, Bad Debt Expense.
+Accounts Receivable, Sales Revenue, Service Revenue, Sales Tax Payable, Cash, Customer
+Deposits, Customer Credits, Sales Returns & Allowances, Bad Debt Expense.
 
 | Event | Entry |
 |---|---|
-| invoice issued | DR Accounts Receivable · CR Sales Revenue (net) · CR Sales Tax Payable (tax) |
+| invoice issued | DR Accounts Receivable · CR Sales Revenue (goods net) · CR Service Revenue (services net, by the item's stocked flag) · CR Sales Tax Payable (tax) |
 | payment received | DR Cash · CR Customer Deposits |
 | payment applied | DR Customer Deposits · CR Accounts Receivable |
 | credit note issued (return/correction/goodwill) | DR Sales Returns & Allowances · CR Customer Credits |
@@ -340,9 +345,11 @@ Credits, Sales Returns & Allowances, Bad Debt Expense.
   contributes nothing (the journal is a derivation of the current books, not a posting log);
   an implementation that exports incrementally must state that re-derivation is the truth.
 
-Known limit, stated plainly: this is a projection, not a general ledger. No chart of accounts,
-no manual journals, no close. The ledger of record stays wherever it is; Saybooks is the
-operating layer in front of it.
+Known limit, stated plainly: this is a projection, not a general ledger, and it is the
+REVENUE SIDE of the books only. Items carry no cost, so there are no COGS or inventory
+entries — margin and the inventory account belong to the ledger of record. No chart of
+accounts, no manual journals, no close. The ledger of record stays wherever it is; Saybooks
+is the operating layer in front of it.
 
 ---
 

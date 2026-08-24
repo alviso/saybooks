@@ -193,7 +193,9 @@ read({
   name: 'core_journal',
   title: 'Journal', summary: 'Double-entry journal lines derived from the books, for export to the ledger of record.',
   doctrine: `Nothing here is posted or stored — re-derivation is the truth. Fixed accounts; a
-voided invoice contributes nothing (INV-23). The ledger of record stays wherever it is.`,
+voided invoice contributes nothing (INV-23). Revenue side only: items carry no cost, so there
+are no COGS or inventory entries — the ledger of record owns inventory and margin. The ledger
+of record stays wherever it is.`,
   args: {
     from: f.date('Include events on/after this date. Omit for all.'),
     to: f.date('Include events on/before this date. Omit for all.'),
@@ -216,9 +218,19 @@ voided invoice contributes nothing (INV-23). The ledger of record stays wherever
 
     for (const i of db.prepare("SELECT * FROM invoice WHERE status <> 'void' ORDER BY id").all()) {
       if (!inRange(i.issued_at)) continue;
+      // Goods and services credit separate revenue accounts (stocked flag decides); if the
+      // line math ever disagrees with the invoice net, everything goes to Sales Revenue —
+      // balanced beats beautifully classified.
+      const net = i.total - i.tax_total;
+      const sp = db.prepare(`SELECT COALESCE(SUM(CASE WHEN it.stocked = 1 THEN il.qty * il.unit_price ELSE 0 END), 0) goods,
+                                    COALESCE(SUM(CASE WHEN it.stocked = 0 THEN il.qty * il.unit_price ELSE 0 END), 0) service
+                             FROM invoice_line il JOIN item it ON it.id = il.item_id WHERE il.invoice_id = ?`).get(i.id);
+      const goods = (sp.goods + sp.service === net) ? sp.goods : net;
+      const service = (sp.goods + sp.service === net) ? sp.service : 0;
       push(i.issued_at, `Invoice ${i.id}`, cname[i.customer_id], [
         { account: 'Accounts Receivable', debit: i.total },
-        { account: 'Sales Revenue', credit: i.total - i.tax_total },
+        { account: 'Sales Revenue', credit: goods },
+        { account: 'Service Revenue', credit: service },
         { account: 'Sales Tax Payable', credit: i.tax_total },
       ]);
     }
