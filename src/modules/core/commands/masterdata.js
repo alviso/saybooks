@@ -162,7 +162,7 @@ defineCommand({
 defineCommand({
   name: 'core_set_company_profile',
   permission: 'workspace.admin',
-  title: 'Company profile', group: 'Master data', subject: 'customer', scope: 'collection',
+  title: 'Company profile', group: 'Master data', subject: 'company_profile', scope: 'collection',
   summary: "The business's own identity: seller block, tax id, payment instructions. One per workspace.",
   doctrine: `The invoice document's seller comes from here — a document without it is incomplete,
 not wrong (INV-22). Patch semantics: only the fields you pass change; the name is required

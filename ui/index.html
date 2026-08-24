@@ -98,7 +98,7 @@
   </div>
   <div class="grp" data-g="sys">System <span class="tog">−</span></div>
   <div class="grp-items" data-gi="sys">
-    <a data-v="audit">Audit trail</a><a data-v="spec">Spec</a><a data-v="doctrine">Doctrine</a>
+    <a data-v="company">Company</a><a data-v="audit">Audit trail</a><a data-v="spec">Spec</a><a data-v="doctrine">Doctrine</a>
   </div>
 </nav>
 <main id="main"></main>
@@ -115,6 +115,13 @@ const $ = (h) => { const t = document.createElement('template'); t.innerHTML = h
 const WSQ = new URLSearchParams(location.search).get('ws');
 const wsUrl = (u) => WSQ ? u + (u.includes('?') ? '&' : '?') + 'ws=' + encodeURIComponent(WSQ) : u;
 const cents = (c) => c == null ? '' : '$' + (c/100).toFixed(2);
+function toast(msg) {
+  const t = $(`<div style="position:fixed;bottom:22px;right:22px;background:#1e3a2f;color:#fff;padding:10px 16px;border-radius:8px;font-size:13.5px;box-shadow:0 4px 18px rgba(0,0,0,.25);z-index:99;opacity:0;transition:opacity .25s">${msg}</div>`);
+  document.body.append(t);
+  requestAnimationFrame(() => t.style.opacity = '1');
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2600);
+}
+
 const api = async (cmd, args = {}) => {
   const r = await fetch(wsUrl('/api/cmd/' + cmd), { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(args) });
   const j = await r.json(); if (!r.ok) throw new Error(j.error); return j.result;
@@ -173,7 +180,7 @@ function openForm(spec, prefill = {}) {
   const go = $(`<button class="primary" type="button">${spec.title}</button>`);
   go.onclick = async () => {
     err.hidden = true; go.disabled = true;
-    try { await api(spec.name, state); dlg.close(); render(); }
+    try { await api(spec.name, state); dlg.close(); toast(`✓ ${spec.title} — done, logged`); render(); }
     catch (e) { err.textContent = e.message; err.hidden = false; }   /* the refusal, verbatim */
     finally { go.disabled = false; }
   };
@@ -892,6 +899,35 @@ async function render() {
       });
     }
     main.append(j.entries.length ? t : $('<div class="card doc">Nothing in range.</div>'));
+  }
+  if (view === 'company') {
+    head('Company', "Your business's own facts — the seller on every document. More business-level records will live here.");
+    const p = await api('core_company_profile', {});
+    const has = p && p.name;
+    const bar = $('<div class="acts" style="margin-bottom:14px"></div>');
+    const eb = $(`<button class="primary">${has ? 'Edit profile' : 'Set company profile'}</button>`);
+    eb.onclick = () => {
+      const spec2 = cmd('core_set_company_profile');
+      const pre = {};
+      if (has) for (const f2 of spec2.fields) if (p[f2.key] !== undefined && p[f2.key] !== null) pre[f2.key] = p[f2.key];
+      openForm(spec2, pre);
+    };
+    bar.append(eb); main.append(bar);
+    if (!has) {
+      main.append($('<div class="card doc">Nothing set yet. The invoice document prints without a seller block until this exists — incomplete, not wrong (INV-22).</div>'));
+    } else {
+      const nl2 = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>');
+      main.append($(`<div class="card" style="max-width:640px">
+        <h2 style="margin-bottom:4px">${nl2(p.name)}</h2>
+        <div class="kv">
+          ${p.address ? `<div><span>Address</span>${nl2(p.address)}</div>` : ''}
+          ${p.tax_id ? `<div><span>Tax id</span>${nl2(p.tax_id)}</div>` : ''}
+        </div>
+        ${p.payment_instructions ? `<div style="margin-top:12px"><b>Payment instructions — printed on every invoice</b><div class="doc" style="margin-top:4px">${nl2(p.payment_instructions)}</div></div>` : ''}
+        ${p.footer_note ? `<div style="margin-top:12px"><b>Document footer</b><div class="doc" style="margin-top:4px">${nl2(p.footer_note)}</div></div>` : ''}
+        <div style="margin-top:12px;font-size:12px;color:var(--dim)">Last changed ${(p.updated_at || '').slice(0, 16).replace('T', ' ')} — every change is in the audit trail.</div>
+      </div>`));
+    }
   }
   if (view === 'audit') {
     head('Audit trail', 'Every write from either surface, with its actor. Refused commands are kept.');

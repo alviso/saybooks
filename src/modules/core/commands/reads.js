@@ -269,3 +269,10 @@ voided invoice contributes nothing (INV-23). The ledger of record stays wherever
       balanced: debits === credits, entries };
   },
 });
+
+read({
+  name: 'core_company_profile',
+  title: 'Company profile', summary: "The business's own identity as it prints on documents: seller block, tax id, payment instructions.",
+  args: {},
+  handler: () => H.db().prepare('SELECT * FROM company_profile WHERE id = 1').get() || { name: null, address: null, tax_id: null, payment_instructions: null, footer_note: null, set: false },
+});
