@@ -18,9 +18,16 @@ function load(name, workspace) {
   const steps = JSON.parse(fs.readFileSync(file, 'utf8'));
   const { execute } = require('./registry.js');
   let n = 0;
-  for (const [command, args, reason, actor, actor_kind] of steps) {
-    execute(command, args || {}, { workspace, actor: actor || 'fixture', actor_kind: actor_kind || 'human',
-      session: `fixture:${name}`, reason: reason || `fixture ${name}` });
+  for (const [command, args, reason, actor, actor_kind, expect] of steps) {
+    try {
+      execute(command, args || {}, { workspace, actor: actor || 'fixture', actor_kind: actor_kind || 'human',
+        session: `fixture:${name}`, reason: reason || `fixture ${name}` });
+      if (expect === 'refused') throw new Error(`fixture ${name}: ${command} was expected to be refused but succeeded`);
+    } catch (e) {
+      // A step marked expect:'refused' is PART of the story — the refusal lands in the
+      // audit trail like any other, and seeding continues. Anything else still fails loudly.
+      if (expect !== 'refused' || /expected to be refused/.test(e.message)) throw e;
+    }
     n++;
   }
   return n;
