@@ -1208,6 +1208,13 @@ ${r.actual}</div>`));
 
 const boot = async () => {
   REG = await fetch(wsUrl('/api/registry')).then(r => r.json());
+  /* Nav groups follow the mounted modules — an unmounted module has no pages here. */
+  for (const [g, prefix] of [['hunt', 'hunt_'], ['crm', 'crm_'], ['books', 'o2c_']]) {
+    if (!REG.commands.some(c => c.name.startsWith(prefix))) {
+      const h = document.querySelector(`[data-g="${g}"]`);
+      if (h) { if (h.nextElementSibling && h.nextElementSibling.classList.contains('grp-items')) h.nextElementSibling.remove(); h.remove(); }
+    }
+  }
   // Rebuild the whole workspace block from a stable container — boot() runs on every render
   // now (fresh lookups while agents write), so it must be idempotent.
   const box = document.getElementById('wsBox');

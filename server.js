@@ -37,6 +37,11 @@ const crypto = require('crypto');
 
 const sandboxExists = (name) => fs.existsSync(path.join(wsp.DATA_DIR, `ws_${name}.db`));
 const seedSandbox = (name) => { require('./src/fixtures.js').load('try', name); return name; };
+
+// Anonymous demo sandboxes mount the business modules only — jobhunt is a personal area
+// and belongs to owned spaces (where it mounts in full, data or no data).
+const DEMO_MOUNTS = ['core', 'o2c', 'crm'];
+const mountsFor = (w) => { try { return (DEMO && !users.isOwnedSpace(w)) ? DEMO_MOUNTS : null; } catch { return null; } };
 const newVisitorWs = () => seedSandbox(`try-${crypto.randomBytes(5).toString('hex')}`);
 
 if (DEMO) {
@@ -184,7 +189,7 @@ const server = http.createServer((req, res) => {
     req.on('end', () => {
       let body;
       try { body = raw ? JSON.parse(raw) : undefined; } catch { return send(res, 400, { error: 'invalid JSON body' }); }
-      require('./src/mcp-http.js').handleMcp(req, res, body, mws, DEMO, mMember)
+      require('./src/mcp-http.js').handleMcp(req, res, body, mws, DEMO, mMember, mountsFor(mws))
         .catch(e => { if (!res.headersSent) send(res, 500, { error: e.message }); });
     });
     return undefined;
@@ -229,6 +234,7 @@ const server = http.createServer((req, res) => {
   try {
     // The whole UI contract: the command specs, plus enough master data for the lookups.
     if (req.method === 'GET' && p === '/api/registry') {
+      const mounts = mountsFor(ws);
       return wsp.use(ws, () => send(res, 200, {
         workspace: ws,
         demo: DEMO,
@@ -239,9 +245,9 @@ const server = http.createServer((req, res) => {
         member: { name: member.name, role: member.role },
         grants: [...(R.ROLE_GRANTS[member.role] || R.ROLE_GRANTS.viewer)],
         workspaces: DEMO ? [ws] : [...new Set([ws, ...wsp.list()])].filter(w => w === ws || !/^(spec-|test-|try-)/.test(w)).sort(),
-        doctrine: R.instructions(BASE),
-        modules: R.MODULES.map(m => ({ name: m.name, doctrine: m.doctrine.trim() })),
-        commands: R.formSpec(),
+        doctrine: R.instructions(BASE, { modules: mounts }),
+        modules: R.MODULES.filter(m => !mounts || mounts.includes(m.name)).map(m => ({ name: m.name, doctrine: m.doctrine.trim() })),
+        commands: R.formSpec({ modules: mounts }),
         // Presentation bootstrap, not a command: the Orders table's rows. Agents get the
         // same facts through o2c_backorders / core_search / o2c_get_order.
         orders: H.db().prepare(`SELECT o.*, c.name AS customer_name,
@@ -259,7 +265,7 @@ const server = http.createServer((req, res) => {
           account:  H.db().prepare('SELECT id, name AS label FROM account ORDER BY name').all(),
           campaign: H.db().prepare('SELECT id, name AS label FROM campaign ORDER BY status = \'active\' DESC, name').all(),
         },
-        areas: R.MODULES.filter(m => m.implements).map(m => m.implements.area),
+        areas: R.MODULES.filter(m => m.implements && (!mounts || mounts.includes(m.name))).map(m => m.implements.area),
       }, undefined, cookie));
     }
     if (req.method === 'POST' && p === '/api/space/create' && entry.user) {
@@ -329,6 +335,8 @@ const server = http.createServer((req, res) => {
     if (req.method === 'POST' && p.startsWith('/api/cmd/')) {
       const name = p.slice('/api/cmd/'.length);
       if (!R.byName[name]) return send(res, 404, { error: `unknown command ${name}` });
+      const cmdMounts = mountsFor(ws);
+      if (cmdMounts && !cmdMounts.includes(R.byName[name].module)) return send(res, 404, { error: `unknown command ${name}` });
       let raw = '';
       req.on('data', c => { raw += c; if (raw.length > 4e6) req.destroy(); });
       req.on('end', () => {

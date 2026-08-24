@@ -18,7 +18,7 @@ const { ListToolsRequestSchema, CallToolRequestSchema } = require('@modelcontext
 const R = require('./registry.js');
 const BASE = require('./base-doctrine.js');
 
-function buildServer(workspace, demo, member = { name: 'owner', role: 'owner' }) {
+function buildServer(workspace, demo, member = { name: 'owner', role: 'owner' }, mounts = null) {
   /* Every key introduces itself FIRST: which book this is, whose, and what the key may do.
    * A session that connects to the wrong space notices at the greeting, not at the audit. */
   let identity = null;
@@ -49,14 +49,14 @@ actor_kind=agent, in the same audit trail as their clicks. Play freely; nothing 
 
   const server = new Server(
     { name: 'saybooks', version: '0.3.0' },
-    { capabilities: { tools: {} }, instructions: ownedNote + R.instructions(BASE) + demoNote },
+    { capabilities: { tools: {} }, instructions: ownedNote + R.instructions(BASE, { modules: mounts }) + demoNote },
   );
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: R.mcpTools() }));
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: R.mcpTools({ modules: mounts }) }));
 
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const { name, arguments: args = {} } = req.params;
-    if (!R.byName[name]) return { isError: true, content: [{ type: 'text', text: `unknown tool ${name}` }] };
+    if (!R.byName[name] || (mounts && !mounts.includes(R.byName[name].module))) return { isError: true, content: [{ type: 'text', text: `unknown tool ${name}` }] };
     const { _reason, ...rest } = args;
     try {
       const out = R.execute(name, rest, { workspace, actor: member.name, actor_kind: 'agent', role: member.role, session: `mcp-http:${workspace}`, reason: _reason });
@@ -70,8 +70,8 @@ actor_kind=agent, in the same audit trail as their clicks. Play freely; nothing 
   return server;
 }
 
-async function handleMcp(req, res, body, workspace, demo, member) {
-  const server = buildServer(workspace, demo, member);
+async function handleMcp(req, res, body, workspace, demo, member, mounts = null) {
+  const server = buildServer(workspace, demo, member, mounts);
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   res.on('close', () => { transport.close().catch(() => {}); server.close().catch(() => {}); });
   await server.connect(transport);
