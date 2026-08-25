@@ -215,7 +215,11 @@ agreement. These stayed behind:
 
 ---
 
-*Change log: 0.2-draft (2026-08-23) — campaigns become first-class (CRM-12, CRM-13): the 0.1
+*Change log: 0.2-draft amended (2026-08-24) — contacts gain optional `email` and `phone` on
+add_contact / resolve_gap / update_contact: in many industries reach details are plainly
+listed, and recording them is a sourced fact like a LinkedIn URL (CRM-1 covers the where-from;
+nothing changes about CRM-4 — the relationship-graph fields stay human-only). ·
+0.2-draft (2026-08-23) — campaigns become first-class (CRM-12, CRM-13): the 0.1
 extraction had erased the campaign by promoting it to "the whole deployment"; a second
 research fill made it visible again. Acts +3, read models +1, org/pursuit split explicitly
 deferred. · 0.1-draft (2026-08-22) — initial curation, extracted from the JC360 US CRM.

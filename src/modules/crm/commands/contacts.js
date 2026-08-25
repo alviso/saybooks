@@ -24,6 +24,8 @@ that absence is a finding worth recording. Guessing is the only real failure her
     source: f.text('Where the name comes from. Mandatory for a named contact.'),
     confidence_note: f.text('How sure, and of what: "high on the person, medium on the exact title".'),
     linkedin_url: f.text("The person's public LinkedIn profile URL — a sourced fact, fine for an agent to record. The connection-path fields are a different matter."),
+    email: f.text('As publicly listed or personally shared — the source covers it like everything else (CRM-1).'),
+    phone: f.text('Same rule as email: listed or shared, never scraped from a paid enrichment dump without saying so.'),
     gap_note: f.note('For a gap: what is missing and what it would take to find out.'),
     notes: f.note('Working notes.'),
   },
@@ -39,10 +41,10 @@ that absence is a finding worth recording. Guessing is the only real failure her
       status = 'gap';
     }
     const id = H.nextId('P', 'contact');
-    db.prepare(`INSERT INTO contact (id,account_id,role_type,status,name,title,source,confidence_note,linkedin_url,gap_note,notes,created_at,updated_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+    db.prepare(`INSERT INTO contact (id,account_id,role_type,status,name,title,source,confidence_note,linkedin_url,email,phone,gap_note,notes,created_at,updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .run(id, a.account_id, a.role_type, status, a.name || null, a.title || null, a.source || null,
-           a.confidence_note || null, a.linkedin_url || null, a.gap_note || null, a.notes || null, at, at);
+           a.confidence_note || null, a.linkedin_url || null, a.email || null, a.phone || null, a.gap_note || null, a.notes || null, at, at);
     return V.contactView(id);
   },
 });
@@ -62,12 +64,14 @@ defineCommand({
     title:  f.text('Their title, as the source states it.'),
     confidence_note: f.text('How sure, and of what.'),
     linkedin_url: f.text("The person's public LinkedIn profile URL, if the source includes one."),
+    email: f.text('As publicly listed or personally shared, if the source includes one.'),
+    phone: f.text('Same rule as email.'),
   },
   handler(a, { db, at }) {
     const c = H.need('contact', a.contact_id, 'contact');
     if (c.status !== 'gap') throw new Rejected('This contact is not a gap — correct it with an update instead.');
-    db.prepare(`UPDATE contact SET status='named', name=?, title=?, source=?, confidence_note=?, linkedin_url=?, updated_at=? WHERE id = ?`)
-      .run(a.name, a.title || null, a.source, a.confidence_note || null, a.linkedin_url || null, at, a.contact_id);
+    db.prepare(`UPDATE contact SET status='named', name=?, title=?, source=?, confidence_note=?, linkedin_url=?, email=?, phone=?, updated_at=? WHERE id = ?`)
+      .run(a.name, a.title || null, a.source, a.confidence_note || null, a.linkedin_url || null, a.email || null, a.phone || null, at, a.contact_id);
     return V.contactView(a.contact_id);
   },
 });
@@ -90,6 +94,8 @@ human to fill them in; that is correct behavior, not a limitation to route aroun
     confidence_note: f.text(''),
     status: f.pick(['named', 'departed'], 'departed keeps the row and the history.'),
     linkedin_url: f.text("The person's public LinkedIn profile URL."),
+    email: f.text('As publicly listed or personally shared.'),
+    phone: f.text('Same rule as email.'),
     notes: f.note(''),
     mutual_via:    { ...f.text('Who the mutual connection is.'), human_only: HUMAN_WHY },
     mutual_url:    { ...f.text('Link to the mutual, from your own account.'), human_only: HUMAN_WHY },
@@ -100,7 +106,7 @@ human to fill them in; that is correct behavior, not a limitation to route aroun
     if (a.source === '') throw new Rejected('source can be corrected, never removed (CRM-9).');
     if (a.status && c.status === 'gap') throw new Rejected('A gap becomes named only through resolve_gap (CRM-2).');
     if (a.name === '') throw new Rejected('A named contact keeps a name — mark them departed instead of blanking them (CRM-6).');
-    const fields = ['name', 'title', 'source', 'confidence_note', 'status', 'linkedin_url', 'notes', 'mutual_via', 'mutual_url', 'linkedin_path'];
+    const fields = ['name', 'title', 'source', 'confidence_note', 'status', 'linkedin_url', 'email', 'phone', 'notes', 'mutual_via', 'mutual_url', 'linkedin_path'];
     // An explicit empty string means CLEAR (stored as NULL); absent means untouched.
     for (const k of fields) if (a[k] !== undefined) db.prepare(`UPDATE contact SET ${k} = ?, updated_at = ? WHERE id = ?`).run(a[k] === '' ? null : a[k], at, a.contact_id);
     return V.contactView(a.contact_id);
