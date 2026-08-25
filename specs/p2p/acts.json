@@ -1,0 +1,50 @@
+{
+  "area": "p2p",
+  "spec": "0.1-draft",
+  "doc": "spec.md",
+  "status": "skeleton — no module implements this yet; see spec.md",
+  "acts": {
+    "create_po": { "kind": "write", "required": ["vendor", "lines"] },
+    "issue_po": { "kind": "write", "required": ["po"] },
+    "amend_po": { "kind": "write", "required": ["po"] },
+    "cancel_po": { "kind": "write", "required": ["po", "reason"] },
+    "close_po_short": { "kind": "write", "required": ["po", "reason"] },
+    "receive_goods": { "kind": "write", "required": ["po", "lines"] },
+    "record_vendor_bill": { "kind": "write", "required": ["vendor", "bill_number", "lines"] },
+    "dispute_bill": { "kind": "write", "required": ["bill", "reason"] },
+    "approve_bill": { "kind": "write", "required": ["bill"] },
+    "void_bill": { "kind": "write", "required": ["bill", "reason"] },
+    "record_bill_payment": { "kind": "write", "required": ["vendor", "amount"] },
+    "apply_bill_payment": { "kind": "write", "required": ["payment", "bill"] },
+    "record_debit_note": { "kind": "write", "required": ["vendor", "amount", "kind", "reason"] },
+    "apply_debit_note": { "kind": "write", "required": ["debit_note", "bill"] },
+    "return_to_vendor": { "kind": "write", "required": ["po", "lines", "reason"] },
+    "po": { "kind": "read", "required": ["po"] },
+    "vendor_position": { "kind": "read", "required": ["vendor"] },
+    "bill": { "kind": "read", "required": ["bill"] },
+    "ap_aging": { "kind": "read", "required": [] },
+    "unbilled_receipts": { "kind": "read", "required": [] },
+    "payment_worklist": { "kind": "read", "required": [] }
+  },
+  "env_acts": {
+    "create_vendor": { "required": ["name"] },
+    "update_vendor": { "required": ["vendor"], "note": "banking fields are human-only (P2P-6)" },
+    "set_match_tolerance": { "required": ["reason"] }
+  },
+  "invariants": [
+    { "id": "P2P-1", "title": "Money is integer cents, everywhere." },
+    { "id": "P2P-2", "title": "Nothing is paid without an approved bill; nothing approves without a match on the record." },
+    { "id": "P2P-3", "title": "The 3-way match names its numbers; tolerance is config, breach is a refusal." },
+    { "id": "P2P-4", "title": "Stock enters only through a receipt; receipts are immutable facts." },
+    { "id": "P2P-5", "title": "Item cost is derived from receipts, never entered." },
+    { "id": "P2P-6", "title": "Vendor bank details are human-only; an agent can record a bill, never redirect money." },
+    { "id": "P2P-7", "title": "A disputed bill cannot be paid; dispute and resolution carry reasons." },
+    { "id": "P2P-8", "title": "PO prices freeze at issue; variances are shown, never averaged away." },
+    { "id": "P2P-9", "title": "Payments are recorded, never executed — no outbound rails." },
+    { "id": "P2P-10", "title": "The duplicate-bill guard surfaces warnings; it never auto-resolves them." },
+    { "id": "P2P-11", "title": "Over-receipt and over-billing are refusals naming the quantities." },
+    { "id": "P2P-12", "title": "Every write is a logged command with an actor; refusals are logged too." },
+    { "id": "P2P-13", "title": "Journal entries derive balanced: receipt to GRNI, approval to AP, payment to cash; COGS arrives with cost." },
+    { "id": "P2P-14", "title": "Goods received not invoiced is always visible — a real liability, not a residue." }
+  ]
+}
