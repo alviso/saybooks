@@ -45,14 +45,16 @@ const mountsFor = (w) => { try { return (DEMO && !users.isOwnedSpace(w)) ? DEMO_
 const newVisitorWs = () => seedSandbox(`try-${crypto.randomBytes(5).toString('hex')}`);
 
 if (DEMO) {
-  // Sweep: sandboxes older than 24h go; if a crowd shows up, cap at the 400 newest.
+  // Sweep: sandboxes older than 24h go; if a crowd shows up, cap at the 4000 newest.
+  // (A sandbox is a few hundred KB; the cap protects against runaway scripts, not visitors —
+  // 400 proved too tight the day the first X thread landed.)
   const sweep = () => {
     try {
       const tries = wsp.list().filter(w => w.startsWith('try-') && !users.isOwnedSpace(w))
         .map(w => ({ w, at: wsp.ageOf(w) })).sort((a, b) => b.at - a.at);
       const cutoff = Date.now() - 24 * 3600 * 1000;
-      for (const t of tries.slice(400)) { wsp.destroy(t.w); members.purge(t.w); }
-      for (const t of tries.slice(0, 400)) if (t.at < cutoff) { wsp.destroy(t.w); members.purge(t.w); }
+      for (const t of tries.slice(4000)) { wsp.destroy(t.w); members.purge(t.w); }
+      for (const t of tries.slice(0, 4000)) if (t.at < cutoff) { wsp.destroy(t.w); members.purge(t.w); }
     } catch (e) { console.error('sweep failed:', e.message); }
   };
   setInterval(sweep, 30 * 60 * 1000).unref();
