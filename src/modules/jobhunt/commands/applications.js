@@ -55,24 +55,34 @@ defineCommand({
   name: 'hunt_correct_application',
   title: 'Correct record', group: 'Jobhunt', subject: 'application', guardless: true,
   permission: 'sales.write',
-  summary: 'Correct applied_at when the true date surfaces. The reason is part of the record.',
-  doctrine: `A correction replaces "unknown" or a wrong date with a sourced fact — never a guess
-(JH-1). Say where the date came from; the submission touch is re-dated to match.`,
-  effects: ['applied_at corrected', 'submission touch re-dated'],
+  summary: 'Correct applied_at or the submission route (via_contact) when the true facts surface. The reason is part of the record.',
+  doctrine: `A correction replaces "unknown" or a wrong value with a sourced fact — never a guess
+(JH-1). Say where the fact came from; a corrected date re-dates the submission touch to match.`,
+  effects: ['application facts corrected', 'submission touch re-dated when the date moves'],
   args: {
     application_id: { ...f.text('The application, e.g. APP-0008.'), required: true },
-    applied_at: { ...f.text('ISO date, or the literal "unknown" — never a guess (JH-1).'), required: true },
-    reason: { ...f.text('Where the date came from — part of the record.'), required: true },
+    applied_at: f.text('ISO date, or the literal "unknown" — never a guess (JH-1).'),
+    via_contact: f.text('Who actually submitted it, e.g. HC-0001 — the field the double-submission audit reads.'),
+    reason: { ...f.text('Where the fact came from — part of the record.'), required: true },
   },
   handler(a, { db, at }) {
     const app = H.need('hunt_application', a.application_id, 'application');
-    if (a.applied_at !== 'unknown' && !/^\d{4}-\d{2}-\d{2}/.test(a.applied_at)) {
-      throw new Rejected('applied_at must be an ISO date or the literal "unknown" — never a guess (JH-1).');
+    if (a.applied_at === undefined && a.via_contact === undefined) {
+      throw new Rejected('Nothing to correct — pass applied_at, via_contact, or both.');
     }
-    db.prepare('UPDATE hunt_application SET applied_at = ?, updated_at = ? WHERE id = ?').run(a.applied_at, at, a.application_id);
-    // The submission touch is derived from this fact — hunt_apply wrote it — so it moves too.
-    if (a.applied_at !== 'unknown') {
-      db.prepare("UPDATE hunt_interaction SET at = ? WHERE posting_id = ? AND direction = 'out' AND summary LIKE 'Application submitted%'").run(a.applied_at, app.posting_id);
+    if (a.applied_at !== undefined) {
+      if (a.applied_at !== 'unknown' && !/^\d{4}-\d{2}-\d{2}/.test(a.applied_at)) {
+        throw new Rejected('applied_at must be an ISO date or the literal "unknown" — never a guess (JH-1).');
+      }
+      db.prepare('UPDATE hunt_application SET applied_at = ?, updated_at = ? WHERE id = ?').run(a.applied_at, at, a.application_id);
+      // The submission touch is derived from this fact — hunt_apply wrote it — so it moves too.
+      if (a.applied_at !== 'unknown') {
+        db.prepare("UPDATE hunt_interaction SET at = ? WHERE posting_id = ? AND direction = 'out' AND summary LIKE 'Application submitted%'").run(a.applied_at, app.posting_id);
+      }
+    }
+    if (a.via_contact !== undefined) {
+      if (a.via_contact) H.need('hunt_contact', a.via_contact, 'contact');
+      db.prepare('UPDATE hunt_application SET via_contact_id = ?, updated_at = ? WHERE id = ?').run(a.via_contact || null, at, a.application_id);
     }
     return { ...H.get('hunt_application', a.application_id), posting: V.postingView(app.posting_id).title };
   },

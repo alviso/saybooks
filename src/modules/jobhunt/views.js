@@ -56,6 +56,9 @@ function postingView(id) {
   const app = db().prepare('SELECT * FROM hunt_application WHERE posting_id = ?').get(id);
   return {
     ...p,
+    // The posting keeps its own lifecycle (lead|evaluated|skipped|applied — guards read it);
+    // stage is the DERIVED truth a reader wants: the application's state once one exists.
+    stage: app ? app.status : p.status,
     company_name: get('hunt_company', p.company_id).name,
     end_client_name: p.end_client_id ? get('hunt_company', p.end_client_id).name : null,
     resume_version_label: p.resume_version_id ? (get('hunt_resume_version', p.resume_version_id) || {}).label : null,

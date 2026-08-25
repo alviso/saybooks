@@ -237,7 +237,7 @@ async function detail(type, id) {
     fetch(wsUrl(`/api/next-actions?type=${type}&id=${id}`)).then(r => r.json()),
   ]);
   const card = $('<div class="card"></div>');
-  card.append($(`<h2>${entity.name ? `${entity.name} <span style="color:var(--dim);font-weight:400;font-size:15px">${id}</span>` : id} <span class="pill ${entity.status||''}">${entity.status||''}</span></h2>`));
+  card.append($(`<h2>${entity.name ? `${entity.name} <span style="color:var(--dim);font-weight:400;font-size:15px">${id}</span>` : id} <span class="pill ${entity.stage || entity.status || ''}">${entity.stage || entity.status || ''}</span></h2>`));
   const kv = $('<div class="kv"></div>');
   const facts = type === 'order'
     ? { Customer: entity.customer_name, PO: entity.po_ref||'—', Total: entity.total_display, 'Open qty': entity.open_qty, 'Uninvoiced qty': entity.uninvoiced_qty, Quote: entity.quote_id||'—' }
