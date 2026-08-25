@@ -9,21 +9,26 @@ const norm = (s) => (s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace
 
 /** The guard: same req id, same end client + similar title, or same URL. Returns warnings
  *  to SURFACE — never to act on (JH-3). */
-function duplicateWarnings({ title, end_client_id, req_id, url, exclude_id }) {
+function duplicateWarnings({ title, end_client_id, company_id, req_id, url, exclude_id }) {
   const warnings = [];
   const rows = db().prepare('SELECT p.*, ec.name AS end_client_name, c.name AS company_name FROM hunt_posting p LEFT JOIN hunt_company ec ON ec.id = p.end_client_id JOIN hunt_company c ON c.id = p.company_id').all()
     .filter(p => p.id !== exclude_id);
+  // For a direct posting the company IS the end client — the guard falls back to it on both
+  // sides (JH-3), otherwise same-title-same-employer sails through whenever req and url are null.
+  const candidateEC = end_client_id || company_id || null;
   for (const p of rows) {
     if (req_id && p.req_id && norm(p.req_id) === norm(req_id)) {
       warnings.push(`${p.id} (${p.title} via ${p.company_name}) carries the same req id ${p.req_id} — same requisition; applying to both risks a double submission.`);
       continue;
     }
     if (url && p.url && p.url === url) { warnings.push(`${p.id} has the same URL.`); continue; }
-    if (end_client_id && p.end_client_id === end_client_id) {
+    const postingEC = p.end_client_id || p.company_id;
+    if (candidateEC && postingEC === candidateEC) {
       const a = norm(title), b = norm(p.title);
       const overlap = a && b && (a.includes(b) || b.includes(a) ||
         a.split(' ').filter(w => w.length > 3 && b.includes(w)).length >= 2);
-      if (overlap) warnings.push(`${p.id} (${p.title} via ${p.company_name}) targets the same end client with a similar title — likely the same role through another door.`);
+      const label = (end_client_id && p.end_client_id) ? 'end client' : 'employer';
+      if (overlap) warnings.push(`${p.id} (${p.title} via ${p.company_name}) targets the same ${label} with a similar title — likely the same role through another door.`);
     }
   }
   return warnings;

@@ -176,6 +176,10 @@ mechanically checkable invariants via the platform gates.
 
 ---
 
-*Change log: 0.1-draft (2026-08-23) — extracted from huntctrl (schema, tools, doctrine, and a
+*Change log: 0.1-draft amended (2026-08-25) — JH-3's guard falls back to the hiring company
+as the end client for DIRECT postings, on both sides of the comparison: the original key
+(end client only) let same-title-same-employer pass whenever req id and url were null, found
+in live use against real books. check_duplicates gains a `company` argument. ·
+0.1-draft (2026-08-23) — extracted from huntctrl (schema, tools, doctrine, and a
 real pipeline's working practice). The duplicate-guard-as-surfaced-warning (JH-3) and the
 single-open-next-action discipline (JH-6) are the area's distinctive contributions.*

@@ -35,12 +35,15 @@ read({ name: 'hunt_check_duplicates', title: 'Check duplicates', summary: 'The d
   doctrine: 'Warnings are for a person to weigh (JH-3). The same req via several agencies is normal; the double submission is the disqualifier.',
   args: {
     title: { ...f.text('Role title.'), required: true },
-    end_client: f.text('Who the work is for.'), req_id: f.text(''), url: f.text(''),
+    end_client: f.text('Who the work is for.'),
+    company: f.text('The hiring company or agency — for a direct posting the guard falls back to it as the end client.'),
+    req_id: f.text(''), url: f.text(''),
     exclude_posting: f.text('Posting id to ignore when re-checking.'),
   },
   handler: (a) => {
     const H2 = require('../../../db.js');
-    const ec = a.end_client ? H2.db().prepare('SELECT id FROM hunt_company WHERE lower(name) = lower(?)').get(a.end_client) : null;
-    const warnings = V.duplicateWarnings({ title: a.title, end_client_id: ec && ec.id, req_id: a.req_id, url: a.url, exclude_id: a.exclude_posting });
+    const byName2 = (n) => n ? H2.db().prepare('SELECT id FROM hunt_company WHERE lower(name) = lower(?)').get(n) : null;
+    const ec = byName2(a.end_client), co = byName2(a.company);
+    const warnings = V.duplicateWarnings({ title: a.title, end_client_id: ec && ec.id, company_id: co && co.id, req_id: a.req_id, url: a.url, exclude_id: a.exclude_posting });
     return { warnings, warning_count: warnings.length };
   } });
