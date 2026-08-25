@@ -6,6 +6,13 @@ const { db, need, get } = H;
 
 const cfg = (k, d) => Number((db().prepare('SELECT value FROM hunt_config WHERE key = ?').get(k) || {}).value ?? d);
 const norm = (s) => (s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+// Tokens with no discriminating power in a job title: seniority prefixes and the role nouns
+// that appear in nearly everything. (Short domain tags like "sap" already fall to the >3 filter.)
+const TITLE_STOP = new Set(['senior', 'junior', 'lead', 'staff', 'principal', 'chief', 'head',
+  'developer', 'engineer', 'engineering', 'architect', 'consultant', 'manager', 'analyst',
+  'specialist', 'administrator', 'director', 'coordinator', 'technician', 'associate',
+  'technical', 'solution', 'solutions', 'software', 'professional']);
+const toks = (s) => norm(s).split(' ').filter(w => w.length > 3 && !TITLE_STOP.has(w));
 
 /** The guard: same req id, same end client + similar title, or same URL. Returns warnings
  *  to SURFACE — never to act on (JH-3). */
@@ -25,8 +32,15 @@ function duplicateWarnings({ title, end_client_id, company_id, req_id, url, excl
     const postingEC = p.end_client_id || p.company_id;
     if (candidateEC && postingEC === candidateEC) {
       const a = norm(title), b = norm(p.title);
-      const overlap = a && b && (a.includes(b) || b.includes(a) ||
-        a.split(' ').filter(w => w.length > 3 && b.includes(w)).length >= 2);
+      // Similarity counts only tokens that discriminate: seniority prefixes and ubiquitous
+      // role nouns describe nearly every title in a focused hunt, and counting them makes
+      // the guard fire on most same-employer pairs — which teaches people to stop reading it.
+      const ta = toks(title), tb = toks(p.title);
+      const shared = ta.filter(w => tb.includes(w));
+      const overlap = a && b && (a.includes(b) || b.includes(a)
+        || shared.length >= 2
+        || (shared.length >= 1 && (shared.length === ta.length || shared.length === tb.length))
+        || (ta.length === 0 && tb.length === 0 && a.split(' ').filter(w => w.length > 3 && b.includes(w)).length >= 1));
       const label = (end_client_id && p.end_client_id) ? 'end client' : 'employer';
       if (overlap) warnings.push(`${p.id} (${p.title} via ${p.company_name}) targets the same ${label} with a similar title — likely the same role through another door.`);
     }
