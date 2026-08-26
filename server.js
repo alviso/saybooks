@@ -79,7 +79,7 @@ const send = (res, code, body, type = 'application/json; charset=utf-8', headers
  *   cookie                — a member token or a legacy sandbox name
  * Locally everything is the owner; identity games are a demo/multi-user concern.
  */
-const entryOf = (req, url) => {
+const entryOf = (req, url, allowMint = false) => {
   if (!DEMO) {
     const q = url.searchParams.get('ws');
     if (q) return { ws: q, member: { name: process.env.USER || 'operator', role: 'owner' } };
@@ -118,6 +118,10 @@ const entryOf = (req, url) => {
     if (m && sandboxExists(m.workspace)) return { ws: m.workspace, member: m, cookie: ck[1] };
     if (/^try-[a-z0-9]+$/.test(ck[1]) && sandboxExists(ck[1])) return { ws: ck[1], member: { name: 'owner', role: 'owner' }, cookie: ck[1] };
   }
+  // Minting is DELIBERATE: only the SPA's own bootstrap call births a sandbox. A cookie-less
+  // request to any other path gets a wsless entry — scanners were minting hundreds of
+  // databases a day and drowning the birth metric in noise (found 2026-08-26).
+  if (!allowMint) return { ws: null, member: { name: 'visitor', role: 'viewer' } };
   if (!birthAllowed(ipOf(req))) throw Object.assign(new Error('sandbox limit reached for now — try again in an hour'), { status: 429 });
   const fresh = newVisitorWs();
   return { ws: fresh, member: { name: 'owner', role: 'owner' }, cookie: fresh };
@@ -195,6 +199,7 @@ const server = http.createServer((req, res) => {
     req.on('end', () => {
       let body;
       try { body = raw ? JSON.parse(raw) : undefined; } catch { return send(res, 400, { error: 'invalid JSON body' }); }
+      if (DEMO && /^try-/.test(mws) && !users.isOwnedSpace(mws)) require('./src/telemetry.js').record(mws, 'agent');
       require('./src/mcp-http.js').handleMcp(req, res, body, mws, DEMO, mMember, mountsFor(mws))
         .catch(e => { if (!res.headersSent) send(res, 500, { error: e.message }); });
     });
@@ -230,16 +235,21 @@ const server = http.createServer((req, res) => {
   }
 
   let entry;
-  try { entry = entryOf(req, url); }
+  try { entry = entryOf(req, url, req.method === 'GET' && p === '/api/registry'); }
   catch (e) { return send(res, e.status || 500, { error: e.message }); }
   const ws = entry.ws, member = entry.member;
-  const cookie = { 'set-cookie': entry.user
+  if (!ws && p.startsWith('/api')) {
+    return send(res, 401, { error: 'no active books — open https://saybooks.io/app to start' });
+  }
+  const cookie = !ws ? {} : { 'set-cookie': entry.user
     ? `sb_space=${entry.spaceCookie}; Path=/; SameSite=Lax; Max-Age=${180 * 86400}`
     : `otc_ws=${entry.cookie || ws}; Path=/; SameSite=Lax` };
 
   try {
     // The whole UI contract: the command specs, plus enough master data for the lookups.
     if (req.method === 'GET' && p === '/api/registry') {
+      // The "opened the app" event — a JS-executing browser bootstrapping the SPA.
+      if (DEMO && /^try-/.test(ws) && !users.isOwnedSpace(ws)) require('./src/telemetry.js').record(ws, 'read');
       const mounts = mountsFor(ws);
       return wsp.use(ws, () => send(res, 200, {
         workspace: ws,
@@ -349,6 +359,9 @@ const server = http.createServer((req, res) => {
         let body;
         try { body = raw ? JSON.parse(raw) : {}; } catch { return send(res, 400, { error: 'invalid JSON body' }); }
         const { _reason, ...args } = body;
+        if (DEMO && /^try-/.test(ws) && !users.isOwnedSpace(ws)) {
+          require('./src/telemetry.js').record(ws, R.byName[name].intent === 'read' ? 'read' : 'write');
+        }
         try {
           const result = R.execute(name, args, {
             workspace: ws, actor: member.name, actor_kind: 'human', role: member.role,
