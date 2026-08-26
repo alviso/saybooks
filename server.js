@@ -55,6 +55,10 @@ if (DEMO) {
       const cutoff = Date.now() - 24 * 3600 * 1000;
       for (const t of tries.slice(4000)) { wsp.destroy(t.w); members.purge(t.w); }
       for (const t of tries.slice(0, 4000)) if (t.at < cutoff) { wsp.destroy(t.w); members.purge(t.w); }
+      // Evidence, not analytics: the sweep destroys the files that prove yesterday's traffic,
+      // so it writes one line of what it saw. data/ is the volume — the series survives deploys.
+      const live = wsp.list().filter(w => w.startsWith('try-') && !users.isOwnedSpace(w)).length;
+      fs.appendFileSync(path.join(wsp.DATA_DIR, 'metrics.csv'), `${new Date().toISOString()},${live}\n`);
     } catch (e) { console.error('sweep failed:', e.message); }
   };
   setInterval(sweep, 30 * 60 * 1000).unref();
