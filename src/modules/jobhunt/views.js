@@ -17,6 +17,11 @@ const toks = (s) => norm(s).split(' ').filter(w => w.length > 3 && !TITLE_STOP.h
 /** The guard: same req id, same end client + similar title, or same URL. Returns warnings
  *  to SURFACE — never to act on (JH-3). */
 const normJd = (s) => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+// Sentence set for fuzzy JD comparison: reordering and reheading survive, boilerplate headers
+// (< 30 chars) fall out. Overlap is measured against the SMALLER set, so an added section
+// cannot dilute a reformatted copy's score.
+const jdSentences = (s) => new Set((s || '').toLowerCase().split(/[.\n•;]+/)
+  .map(x => x.replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim()).filter(x => x.length >= 30));
 
 function duplicateWarnings({ title, end_client_id, company_id, req_id, url, jd_text, exclude_id }) {
   const warnings = [];
@@ -38,6 +43,19 @@ function duplicateWarnings({ title, end_client_id, company_id, req_id, url, jd_t
       if (ja.length >= 200 && jb.length >= 200 && (ja === jb || ja.includes(jb) || jb.includes(ja))) {
         warnings.push(`${p.id} (${p.title} via ${p.company_name}) carries a matching job description under a different title — retitled same req; applying to both risks a double submission.`);
         continue;
+      }
+      // Reordered into another agency's template: same sentences, new headings, maybe a typo
+      // fixed. High-bar sentence overlap, and the warning STATES its evidence — "shares 85%"
+      // reads differently from "matching", and the person weighs it (JH-3).
+      const A = jdSentences(jd_text), B = jdSentences(p.jd_text);
+      if (A.size >= 5 && B.size >= 5) {
+        const [small, big] = A.size <= B.size ? [A, B] : [B, A];
+        let hit = 0; for (const x of small) if (big.has(x)) hit++;
+        const ratio = hit / small.size;
+        if (ratio >= 0.8) {
+          warnings.push(`${p.id} (${p.title} via ${p.company_name}) shares ${hit} of ${small.size} description sentences (${Math.round(ratio * 100)}%) — likely the same req reformatted into another template; weigh it before applying (JH-3).`);
+          continue;
+        }
       }
     }
     const postingEC = p.end_client_id || p.company_id;
