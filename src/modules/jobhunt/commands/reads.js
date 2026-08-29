@@ -46,5 +46,7 @@ read({ name: 'hunt_check_duplicates', title: 'Check duplicates', summary: 'The d
     const byName2 = (n) => n ? H2.db().prepare('SELECT id FROM hunt_company WHERE lower(name) = lower(?)').get(n) : null;
     const ec = byName2(a.end_client), co = byName2(a.company);
     const warnings = V.duplicateWarnings({ title: a.title, end_client_id: ec && ec.id, company_id: co && co.id, req_id: a.req_id, url: a.url, jd_text: a.jd_text, exclude_id: a.exclude_posting });
-    return { warnings, warning_count: warnings.length };
+    // Evidence rides along even when no warning fires: the closest JD and its overlap ratio.
+    const closest_jd = a.jd_text ? V.closestJd(a.jd_text, a.exclude_posting) : undefined;
+    return { warnings, warning_count: warnings.length, ...(closest_jd !== undefined && { closest_jd }) };
   } });

@@ -205,4 +205,23 @@ function ensureCompany(dbh, name, kind, at) {
   return get('hunt_company', id);
 }
 
-module.exports = { duplicateWarnings, openAction, postingView, contactView, resumeView, pipeline, due, contacts, resumeVersions, ensureCompany, cfg };
+/** The closest JD in the book by sentence overlap — evidence for a person, not a verdict.
+ *  A 74% near-miss the guard stays silent on is exactly the thing worth seeing. */
+function closestJd(jd_text, excludeId) {
+  const A = jdSentences(jd_text);
+  if (A.size < 5) return null;
+  let best = null;
+  const rows = db().prepare("SELECT p.id, p.title, c.name AS company_name, p.jd_text FROM hunt_posting p JOIN hunt_company c ON c.id = p.company_id WHERE p.jd_text IS NOT NULL AND p.jd_text <> ''").all();
+  for (const r of rows) {
+    if (r.id === excludeId) continue;
+    const B = jdSentences(r.jd_text);
+    if (B.size < 5) continue;
+    const [small, big] = A.size <= B.size ? [A, B] : [B, A];
+    let hit = 0; for (const x of small) if (big.has(x)) hit++;
+    const ratio = hit / small.size;
+    if (!best || ratio > best.overlap) best = { posting_id: r.id, title: r.title, company: r.company_name, shared_sentences: hit, of: small.size, overlap: +ratio.toFixed(2) };
+  }
+  return best;
+}
+
+module.exports = { duplicateWarnings, closestJd, openAction, postingView, contactView, resumeView, pipeline, due, contacts, resumeVersions, ensureCompany, cfg };
