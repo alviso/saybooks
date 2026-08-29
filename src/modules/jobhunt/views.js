@@ -16,7 +16,9 @@ const toks = (s) => norm(s).split(' ').filter(w => w.length > 3 && !TITLE_STOP.h
 
 /** The guard: same req id, same end client + similar title, or same URL. Returns warnings
  *  to SURFACE — never to act on (JH-3). */
-function duplicateWarnings({ title, end_client_id, company_id, req_id, url, exclude_id }) {
+const normJd = (s) => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+function duplicateWarnings({ title, end_client_id, company_id, req_id, url, jd_text, exclude_id }) {
   const warnings = [];
   const rows = db().prepare('SELECT p.*, ec.name AS end_client_name, c.name AS company_name FROM hunt_posting p LEFT JOIN hunt_company ec ON ec.id = p.end_client_id JOIN hunt_company c ON c.id = p.company_id').all()
     .filter(p => p.id !== exclude_id);
@@ -29,6 +31,15 @@ function duplicateWarnings({ title, end_client_id, company_id, req_id, url, excl
       continue;
     }
     if (url && p.url && p.url === url) { warnings.push(`${p.id} has the same URL.`); continue; }
+    // Identical body under a different title is the STRONGEST duplicate signal — agencies
+    // retitle the same req routinely, and title similarity misses exactly those.
+    if (jd_text && p.jd_text) {
+      const ja = normJd(jd_text), jb = normJd(p.jd_text);
+      if (ja.length >= 200 && jb.length >= 200 && (ja === jb || ja.includes(jb) || jb.includes(ja))) {
+        warnings.push(`${p.id} (${p.title} via ${p.company_name}) carries a matching job description under a different title — retitled same req; applying to both risks a double submission.`);
+        continue;
+      }
+    }
     const postingEC = p.end_client_id || p.company_id;
     if (candidateEC && postingEC === candidateEC) {
       const a = norm(title), b = norm(p.title);

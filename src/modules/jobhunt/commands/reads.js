@@ -38,12 +38,13 @@ read({ name: 'hunt_check_duplicates', title: 'Check duplicates', summary: 'The d
     end_client: f.text('Who the work is for.'),
     company: f.text('The hiring company or agency — for a direct posting the guard falls back to it as the end client.'),
     req_id: f.text(''), url: f.text(''),
+    jd_text: f.note('The JD body — an identical description under a different title is the strongest duplicate signal there is.'),
     exclude_posting: f.text('Posting id to ignore when re-checking.'),
   },
   handler: (a) => {
     const H2 = require('../../../db.js');
     const byName2 = (n) => n ? H2.db().prepare('SELECT id FROM hunt_company WHERE lower(name) = lower(?)').get(n) : null;
     const ec = byName2(a.end_client), co = byName2(a.company);
-    const warnings = V.duplicateWarnings({ title: a.title, end_client_id: ec && ec.id, company_id: co && co.id, req_id: a.req_id, url: a.url, exclude_id: a.exclude_posting });
+    const warnings = V.duplicateWarnings({ title: a.title, end_client_id: ec && ec.id, company_id: co && co.id, req_id: a.req_id, url: a.url, jd_text: a.jd_text, exclude_id: a.exclude_posting });
     return { warnings, warning_count: warnings.length };
   } });

@@ -38,7 +38,7 @@ disqualify the candidate.`,
   handler(a, { db, at }) {
     const company = V.ensureCompany(db, a.company, a.company_kind, at);
     const endClient = a.end_client ? V.ensureCompany(db, a.end_client, 'end_client', at) : null;
-    const warnings = V.duplicateWarnings({ title: a.title, end_client_id: endClient && endClient.id, company_id: company.id, req_id: a.req_id, url: a.url });
+    const warnings = V.duplicateWarnings({ title: a.title, end_client_id: endClient && endClient.id, company_id: company.id, req_id: a.req_id, url: a.url, jd_text: a.jd_text });
     const id = H.nextId('JP', 'hunt_posting');
     db.prepare(`INSERT INTO hunt_posting (id,title,company_id,end_client_id,req_id,source,url,jd_text,location,work_mode,comp_min,comp_max,comp_notes,employment_type,red_flags,status,created_at,updated_at)
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'lead',?,?)`)

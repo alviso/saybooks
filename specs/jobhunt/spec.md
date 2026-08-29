@@ -176,7 +176,11 @@ mechanically checkable invariants via the platform gates.
 
 ---
 
-*Change log: 0.1-draft amended (2026-08-25) — JH-3's guard falls back to the hiring company
+*Change log: 0.1-draft amended (2026-08-26) — the guard reads jd_text: a matching job
+description under a different title (normalized equality or containment, 200-char floor) is
+the strongest duplicate signal and now warns first, before title similarity — found live when
+a verbatim-identical JD arrived retitled as a fourth copy of one req. ·
+0.1-draft amended (2026-08-25) — JH-3's guard falls back to the hiring company
 as the end client for DIRECT postings, on both sides of the comparison: the original key
 (end client only) let same-title-same-employer pass whenever req id and url were null, found
 in live use against real books. check_duplicates gains a `company` argument. ·
