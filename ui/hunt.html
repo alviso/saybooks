@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Saybooks Jobhunt — your job hunt, on the record</title>
+<meta name="description" content="A free, agent-governed job-hunt tracker. Your Claude connects as your delegate — with rules. Never invents a date, catches retitled duplicate reqs, remembers who ghosted.">
+<meta property="og:title" content="Saybooks Jobhunt — your job hunt, on the record">
+<meta property="og:description" content="Free agent-governed job-hunt tracker for people running their search with Claude. Duplicate guard, ghosted-as-status, never-invented facts. Export or delete everything, anytime.">
+<meta property="og:url" content="https://saybooks.io/hunt">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📒</text></svg>">
+<style>
+  * { box-sizing: border-box; margin: 0 }
+  body { font: 16px/1.6 -apple-system, 'Segoe UI', sans-serif; color: #1c2420; background: #f6f5f1 }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 3em 1.5em 4em }
+  .mark { font-weight: 800; letter-spacing: .1em; font-size: 14px }
+  .mark a { color: inherit; text-decoration: none }
+  .mark span { color: #6b7570; font-weight: 400; letter-spacing: 0 }
+  h1 { font-family: Georgia, serif; font-size: 40px; line-height: 1.15; margin: 1.2em 0 .4em }
+  .sub { font-size: 19px; color: #4a544e; max-width: 40em }
+  .cta { display: inline-block; margin: 1.8em 0 .4em; background: #1e3a2f; color: #fff; padding: .85em 1.6em; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 17px }
+  .cta:hover { background: #2e5443 }
+  .ctasub { font-size: 13px; color: #6b7570 }
+  .log { background: #16281f; border: 1px solid #2e4a3a; border-radius: 10px; padding: 1em 1.2em; margin: 2.5em 0; font: 13px/1.7 ui-monospace, 'Courier New', monospace; overflow-x: auto; white-space: nowrap }
+  .log .t { color: #7fa98e } .log .a { color: #d9b23c; font-weight: 700 } .log .c { color: #cfe3d6 } .log .w { color: #e8a34b }
+  h2 { font-family: Georgia, serif; font-size: 24px; margin: 2.2em 0 .8em }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px }
+  .card { background: #fff; border: 1.5px solid #e2e0d8; border-radius: 12px; padding: 1.1em 1.2em }
+  .card b { display: block; margin-bottom: .35em; color: #1e3a2f }
+  .card p { font-size: 14px; color: #4a544e }
+  .yours { background: #fff; border: 1.5px solid #e2e0d8; border-radius: 12px; padding: 1.3em 1.4em; margin-top: 2.2em }
+  .yours ul { margin: .5em 0 0; padding-left: 1.3em; font-size: 14.5px; color: #4a544e }
+  .yours li { margin-bottom: .3em }
+  .how { font-size: 15px; color: #4a544e; margin-top: .6em }
+  .how code { background: #edece6; padding: .15em .45em; border-radius: 5px; font-size: 13px }
+  .foot { margin-top: 3.5em; padding-top: 1.5em; border-top: 1px solid #e2e0d8; font-size: 13.5px; color: #6b7570 }
+  .foot a { color: #1e3a2f }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="mark"><a href="/">SAYBOOKS</a> <span>· jobhunt</span></div>
+
+  <h1>Your job hunt, on the record.</h1>
+  <p class="sub">A free tracker for people running their search with an AI agent. Your Claude connects
+  as your delegate — and works under rules: it never invents a date or a name, the duplicate guard
+  catches the same req retitled by a fourth agency, and every action lands in an audit trail you can read.</p>
+
+  <a class="cta" href="/auth/google?next=hunt">Start free with Google →</a>
+  <div class="ctasub">No credit card, no trial clock. Your books are yours: export or delete everything, any time.</div>
+
+  <div class="log">
+    <span class="t">2026-08-25 14:02</span>&nbsp; <span class="a">claude</span> <span class="c">hunt_check_duplicates</span>&nbsp; <span class="w">⚠ JP-0010 targets the same employer with a similar title — likely the same role through another door.</span>
+  </div>
+
+  <h2>What the rules catch</h2>
+  <div class="grid">
+    <div class="card"><b>The double-submission guard</b><p>Agencies retitle the same req constantly. The guard matches on req id, URL, employer — and the job description body itself, reordered templates included. Warnings are surfaced for you to weigh, never silently resolved.</p></div>
+    <div class="card"><b>Never an invented fact</b><p>An application date that was never recorded stays <i>"unknown"</i> — the agent is refused if it tries to guess. When the true date surfaces, a correction records it with its source.</p></div>
+    <div class="card"><b>Ghosted is a status, not a deletion</b><p>Silence is an outcome, and which companies go quiet is pattern knowledge. Terminal states stay on the books, one click away.</p></div>
+    <div class="card"><b>One open next action</b><p>Per pursuit, one thing to do next, with a due date. The Due page is your morning list; superseded intentions are kept, not erased.</p></div>
+  </div>
+
+  <h2>How it works with your agent</h2>
+  <p class="how">Sign in → you get a private, persistent space → mint an agent key from the Share dialog →
+  <code>claude mcp add hunt -t http https://saybooks.io/mcp/&lt;your-key&gt;</code> → tell your session about
+  a posting, an interview, a rejection. It records; you see everything in the browser too — same data,
+  same rules, one audit trail. Works with any MCP-capable agent.</p>
+
+  <div class="yours">
+    <b style="color:#1e3a2f">Your data, actually yours</b>
+    <ul>
+      <li><b>Export</b> — one click downloads every table as JSON, audit log included.</li>
+      <li><b>Delete</b> — one button permanently removes your space, its database, and every access key.</li>
+      <li><b>Self-host</b> — the whole thing is open source (AGPL): <a href="https://github.com/alviso/saybooks" style="color:#1e3a2f">github.com/alviso/saybooks</a>. Run it on your laptop if you'd rather.</li>
+      <li>No LinkedIn integration, by design — nothing here touches your account or scrapes anything. You and your agent record what you know.</li>
+    </ul>
+  </div>
+
+  <div class="foot">
+    Built on <a href="/">Saybooks</a> — the open-source ERP where AI agents and humans share one set of rules
+    and one audit trail. The jobhunt module is the proof that the machine generalizes: same registry,
+    same guards, pointed at a personal domain. The founder runs his own hunt on it.
+  </div>
+</div>
+</body>
+</html>

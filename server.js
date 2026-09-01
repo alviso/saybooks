@@ -41,7 +41,12 @@ const seedSandbox = (name) => { require('./src/fixtures.js').load('try', name); 
 // Anonymous demo sandboxes mount the business modules only — jobhunt is a personal area
 // and belongs to owned spaces (where it mounts in full, data or no data).
 const DEMO_MOUNTS = ['core', 'o2c', 'crm'];
-const mountsFor = (w) => { try { return (DEMO && !users.isOwnedSpace(w)) ? DEMO_MOUNTS : null; } catch { return null; } };
+const HUNT_MOUNTS = ['core', 'jobhunt'];   // the free job-hunt offering: one module + the platform
+const mountsFor = (w) => { try {
+  const sp = users.spaceOf(w);
+  if (sp) return sp.kind === 'hunt' ? HUNT_MOUNTS : null;
+  return DEMO ? DEMO_MOUNTS : null;
+} catch { return null; } };
 const newVisitorWs = () => seedSandbox(`try-${crypto.randomBytes(5).toString('hex')}`);
 
 if (DEMO) {
@@ -169,7 +174,7 @@ const server = http.createServer((req, res) => {
 
   // Google sign-in (hosted demo only; a local workbench has no auth and needs none).
   if (DEMO && auth.enabled()) {
-    if (p === '/auth/google') return auth.loginRedirect(res);
+    if (p === '/auth/google') return auth.loginRedirect(res, url.searchParams.get('next'));
     if (p === '/auth/google/callback') { auth.callback(req, res, url).catch(e => { console.error('[auth]', e); if (!res.headersSent) send(res, 500, { error: 'login failed' }); }); return undefined; }
     if (p === '/auth/logout') return auth.logout(req, res);
   }
@@ -284,6 +289,36 @@ const server = http.createServer((req, res) => {
         areas: R.MODULES.filter(m => m.implements && (!mounts || mounts.includes(m.name))).map(m => m.implements.area),
       }, undefined, cookie));
     }
+    // The whole workspace as one JSON document — every table, audit log included. Owner only.
+    // "Your data is yours" is a claim; this is the mechanism.
+    if (req.method === 'GET' && p === '/api/export') {
+      if (member.role !== 'owner') return send(res, 403, { error: 'export is owner-only' });
+      return wsp.use(ws, () => {
+        const db2 = H.db();
+        const tables = db2.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").all().map(t => t.name);
+        const dump = { exported_at: new Date().toISOString(), workspace: ws, tables: {} };
+        for (const t2 of tables) dump.tables[t2] = db2.prepare(`SELECT * FROM "${t2}"`).all();
+        return send(res, 200, JSON.stringify(dump, null, 1), 'application/json; charset=utf-8',
+          { 'content-disposition': `attachment; filename="saybooks-export-${ws}-${new Date().toISOString().slice(0, 10)}.json"` });
+      });
+    }
+    // Permanent space deletion — the other half of "your data is yours". Owner only, and the
+    // workspace database, capability tokens, and space rows all go together.
+    if (req.method === 'POST' && p === '/api/space/delete' && entry.user) {
+      let raw = '';
+      req.on('data', c => { raw += c; });
+      req.on('end', () => {
+        let body; try { body = JSON.parse(raw || '{}'); } catch { return send(res, 400, { error: 'bad json' }); }
+        const target = String(body.ws || '');
+        if (!users.spaceOf(target)) return send(res, 404, { error: 'not a space' });
+        if (!users.deleteSpace(target, entry.user.id)) return send(res, 403, { error: 'only the owner can delete a space' });
+        try { wsp.destroy(target); } catch (e) { console.error('space delete: db removal failed:', e.message); }
+        members.purge(target);
+        return send(res, 200, { ok: true, deleted: target }, undefined,
+          { 'set-cookie': 'sb_space=; Path=/; Max-Age=0' });
+      });
+      return undefined;
+    }
     if (req.method === 'POST' && p === '/api/space/create' && entry.user) {
       let raw = '';
       req.on('data', c => { raw += c; });
@@ -383,6 +418,7 @@ const server = http.createServer((req, res) => {
     // locally the root stays the workbench.
     const file = p === '/' ? (DEMO ? 'landing.html' : 'index.html')
                : (p === '/app' || p === '/app/') ? 'index.html'
+               : (p === '/hunt' || p === '/hunt/') ? 'hunt.html'
                : path.basename(p);
     const full = path.join(UI, file);
     if (full.startsWith(UI) && fs.existsSync(full) && fs.statSync(full).isFile()) {

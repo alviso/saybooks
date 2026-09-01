@@ -1226,7 +1226,20 @@ const boot = async () => {
       <div style="margin-top:6px"><select id="spaceSel" style="width:100%;font-size:11px;padding:3px 6px">${opts}<option value="__new">+ new space…</option></select></div>
       <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--line)"><b style="color:var(--accent)">you here</b><br>${REG.member.name} · <span class="pill">${REG.member.role}</span></div>
       ${REG.grants.includes('workspace.admin') ? '<button id="inviteBtn" style="margin-top:6px;font-size:11px;padding:3px 8px;width:100%">Share this space…</button>' : ''}
+      ${REG.member.role === 'owner' && REG.space ? `<div style="margin-top:6px;display:flex;gap:5px">
+        <a href="${wsUrl('/api/export')}" style="flex:1;text-align:center;font-size:11px;padding:3px 6px;border:1px solid var(--line);border-radius:5px;color:var(--dim);text-decoration:none">Export data</a>
+        <button id="delSpaceBtn" style="flex:1;font-size:11px;padding:3px 6px;color:var(--warn);background:transparent;border:1px solid var(--line)">Delete space…</button>
+      </div>` : ''}
       <a href="/auth/logout" style="display:block;margin-top:6px;font-size:11px;color:var(--dim)">Sign out</a></div>`;
+    const delBtn = document.getElementById('delSpaceBtn');
+    if (delBtn) delBtn.onclick = async () => {
+      const name2 = REG.space;
+      const typed = prompt(`This permanently deletes the space "${name2}" — its books, audit trail, and every access key. Export first if you want a copy.\n\nType the space name to confirm:`);
+      if (typed === null) return;
+      if (typed.trim() !== name2) { toast('Name did not match — nothing deleted'); return; }
+      const r = await fetch(wsUrl('/api/space/delete'), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ws: REG.workspace }) }).then(x => x.json());
+      if (r.ok) location.href = '/app'; else toast('✗ ' + (r.error || 'delete failed'));
+    };
     document.getElementById('spaceSel').onchange = async (e) => {
       if (e.target.value === '__new') {
         const name = prompt('Name the new space (its books start empty):');

@@ -48,6 +48,9 @@ function db() {
     revoked_at TEXT,
     PRIMARY KEY (ws, email)
   )`);
+  // kind: what a space mounts — null = full books, 'hunt' = the free job-hunt offering.
+  const cols = _db.prepare('PRAGMA table_info(space)').all().map(c => c.name);
+  if (!cols.includes('kind')) _db.exec('ALTER TABLE space ADD COLUMN kind TEXT');
   return _db;
 }
 const now = () => new Date().toISOString();
@@ -80,12 +83,22 @@ function userForSession(token) {
 }
 const dropSession = (token) => db().prepare('DELETE FROM session WHERE token = ?').run(token);
 
-function createSpace(userId, displayName, ws) {
+function createSpace(userId, displayName, ws, kind) {
   ws = ws || rid('sp', 5).replace(/-/g, '').slice(0, 20);
-  db().prepare('INSERT INTO space (ws, owner_user_id, display_name, created_at) VALUES (?,?,?,?)').run(ws, userId, displayName, now());
+  db().prepare('INSERT INTO space (ws, owner_user_id, display_name, created_at, kind) VALUES (?,?,?,?,?)').run(ws, userId, displayName, now(), kind || null);
   return db().prepare('SELECT * FROM space WHERE ws = ?').get(ws);
 }
 const claimSpace = (userId, ws, displayName) => createSpace(userId, displayName, ws);
+
+/** Permanent, owner-only. The caller destroys the workspace database and purges tokens;
+ *  this removes the rows that make it a space. */
+function deleteSpace(ws, userId) {
+  const sp = spaceOf(ws);
+  if (!sp || sp.owner_user_id !== userId) return false;
+  db().prepare('DELETE FROM space_member WHERE ws = ?').run(ws);
+  db().prepare('DELETE FROM space WHERE ws = ?').run(ws);
+  return true;
+}
 
 function spacesFor(userId) {
   const u = db().prepare('SELECT * FROM user WHERE id = ?').get(userId);
@@ -121,5 +134,5 @@ function inviteEmail(ws, email, role, invitedBy) {
 const emailMembers = (ws) => db().prepare('SELECT email, role, user_id IS NOT NULL AS joined, revoked_at, created_at FROM space_member WHERE ws = ? ORDER BY created_at').all(ws);
 const revokeEmail = (ws, email) => db().prepare('UPDATE space_member SET revoked_at = ? WHERE ws = ? AND lower(email) = lower(?) AND revoked_at IS NULL').run(now(), ws, email).changes;
 
-module.exports = { db, upsertUser, createSession, userForSession, dropSession, createSpace, claimSpace,
+module.exports = { db, upsertUser, createSession, userForSession, dropSession, createSpace, claimSpace, deleteSpace,
   spacesFor, roleFor, spaceOf, isOwnedSpace, spaceIdentity, inviteEmail, emailMembers, revokeEmail };
