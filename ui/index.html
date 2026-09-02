@@ -221,22 +221,20 @@ function linesEditor(f, state) {
 const cmd = (n) => REG.commands.find(c => c.name === n);
 /* A fresh hunt space teaches instead of showing bare table headers. */
 function huntOnboarding() {
-  const card = $(`<div class="card" style="max-width:640px;margin-top:6px">
+  const card = $(`<div class="card" style="max-width:660px;margin-top:6px">
     <h2 style="margin-bottom:6px">Start your hunt</h2>
     <div style="display:flex;gap:12px;margin-top:14px"><div style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;text-align:center;line-height:26px;font-weight:700">1</div>
-      <div><b>Log your first posting</b><div class="doc" style="margin-top:2px">Paste the whole job description — it feeds search and the duplicate guard.</div>
-      <button class="primary" style="margin-top:8px" id="obNew">New posting</button></div></div>
+      <div><b>Mint a key for your agent</b>
+      <div class="doc" style="margin-top:2px">Open <b id="obShare" style="color:var(--accent);cursor:pointer">Share this space…</b> (also in the sidebar). In the <b>second row</b>, type a name for your agent — <i>claude</i> works — leave the role on <b>controller</b>, and press <b>Mint key</b>. A link appears in the member list, like <span style="font-family:ui-monospace,monospace;font-size:11.5px">https://saybooks.io/mcp/m-…</span> — copy it. That link IS the key: whoever holds it acts as your delegate, so treat it like a password (you can revoke it there any time).</div></div></div>
     <div style="display:flex;gap:12px;margin-top:16px"><div style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;text-align:center;line-height:26px;font-weight:700">2</div>
-      <div><b>Connect Claude</b>
-      <div class="doc" style="margin-top:2px">Open <b>Share this space…</b> (sidebar) → <b>Mint key</b> → copy the agent link (it looks like <span style="font-family:ui-monospace,monospace;font-size:11.5px">https://saybooks.io/mcp/m-…</span>). Then in the Claude app:</div>
-      <div class="doc" style="margin-top:6px"><b>Settings → Connectors → Add custom connector</b> — Name: <b>hunt</b> · Remote MCP server URL: <b>your agent link</b>.</div>
-      <div class="doc" style="margin-top:8px">Open a new session with the connector on, and paste this with a job description under it <a id="obCopy" style="color:var(--accent);cursor:pointer">(copy)</a>:</div>
-      <div id="obPrompt" style="margin-top:6px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font:12px/1.55 ui-monospace,monospace;white-space:pre-wrap">You're my job-hunt assistant, connected to my Saybooks hunt space through the "hunt" connector. Call core_schema first to learn the rules. Then log the posting below: evaluate the fit, run the duplicate check, and give me one next action with a due date.</div>
-      <div class="doc" style="margin-top:4px">From then on, just talk: <i>"the recruiter called, interview Thursday"</i>, <i>"TCS ghosted me"</i>. <span style="color:var(--dim)">(CLI instead? <span style="font-family:ui-monospace,monospace;font-size:11px">claude mcp add hunt -t http &lt;agent link&gt;</span>)</span></div></div></div>
+      <div><b>Add it to Claude</b>
+      <div class="doc" style="margin-top:2px">In the Claude app: <b>Settings → Connectors → Add custom connector</b>. Name: <b>hunt</b> · Remote MCP server URL: <b>the link you copied</b>. Continue.</div></div></div>
     <div style="display:flex;gap:12px;margin-top:16px"><div style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;text-align:center;line-height:26px;font-weight:700">3</div>
-      <div><b>The rules work for you</b><div class="doc" style="margin-top:2px">Your agent can never invent a date or a name, the guard flags the same req arriving retitled through another agency, and everything lands in the <a data-v="audit" style="color:var(--accent);cursor:pointer">audit trail</a>. Export or delete everything, any time — sidebar, bottom left.</div></div></div>
+      <div><b>Open a new session and paste this</b> <a id="obCopy" style="color:var(--accent);cursor:pointer;font-weight:400">(copy)</a>
+      <div id="obPrompt" style="margin-top:6px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font:12px/1.55 ui-monospace,monospace;white-space:pre-wrap">You're my job-hunt assistant, connected to my Saybooks hunt space through the "hunt" connector. Call core_schema first to learn the rules. Then log the posting below: evaluate the fit, run the duplicate check, and give me one next action with a due date.</div>
+      <div class="doc" style="margin-top:4px">…with a job description pasted underneath. From then on, just talk: <i>"the recruiter called, interview Thursday"</i>, <i>"TCS ghosted me"</i>, <i>"what's due today?"</i> Everything it records shows up here — and it can never invent a date or a name, the guard flags the same req retitled by another agency, and it all lands in the <a data-v="audit" style="color:var(--accent);cursor:pointer">audit trail</a>. Export or delete everything any time, bottom of the sidebar. <span style="color:var(--dim)">(Claude Code instead? <span style="font-family:ui-monospace,monospace;font-size:11px">claude mcp add hunt -t http &lt;your link&gt;</span>)</span></div></div></div>
   </div>`);
-  card.querySelector('#obNew').onclick = () => openForm(cmd('hunt_add_posting'));
+  card.querySelector('#obShare').onclick = () => document.getElementById('inviteBtn')?.click();
   card.querySelector('[data-v="audit"]').onclick = () => { view = 'audit'; render(); };
   card.querySelector('#obCopy').onclick = () => {
     navigator.clipboard.writeText(card.querySelector('#obPrompt').textContent).then(
@@ -1064,7 +1062,7 @@ async function openInvite() {
   const draw = async () => {
     const { members } = (await api('core_members', {}));
     dlg.innerHTML = '';
-    dlg.append($(`<header><b>Share this sandbox</b><div class="help">A member is a named key with a role. The link IS the key — share each with exactly one person.
+    dlg.append($(`<header><b>Share this ${REG.space ? 'space' : 'sandbox'}</b><div class="help">A member is a named key with a role. The link IS the key — share each with exactly one person.
 owner: everything · controller: everything but admin · clerk: day-to-day, no credit authority · viewer: read only</div></header>`));
     const body = $('<form style="padding:18px 20px"></form>');
     body.onsubmit = (e) => e.preventDefault();
