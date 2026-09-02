@@ -289,6 +289,43 @@ const server = http.createServer((req, res) => {
         areas: R.MODULES.filter(m => m.implements && (!mounts || mounts.includes(m.name))).map(m => m.implements.area),
       }, undefined, cookie));
     }
+    // Operator dashboard data — gated to the SAYBOOKS_ADMIN Google account, nobody else.
+    if (req.method === 'GET' && p === '/api/admin/stats') {
+      const admin = process.env.SAYBOOKS_ADMIN;
+      const u = auth.enabled() && auth.sessionUser(req);
+      if (!admin || !u || u.email.toLowerCase() !== admin.toLowerCase()) return send(res, 403, { error: 'admin only' });
+      try {
+        const born = fs.readdirSync(wsp.DATA_DIR).filter(f => /^ws_try-.*\.db$/.test(f)).length;
+        let funnel = { touched: 0, engaged: 0, wrote: 0, agent: 0 };
+        let top = [];
+        try {
+          const tdb = require('./src/telemetry.js').db();
+          funnel = tdb.prepare(`SELECT COUNT(*) touched, COALESCE(SUM(api_calls >= 3),0) engaged,
+            COALESCE(SUM(writes > 0),0) wrote, COALESCE(SUM(agent_calls > 0),0) agent FROM ws_activity`).get();
+          top = tdb.prepare('SELECT ws, first_at, last_at, api_calls, writes, agent_calls FROM ws_activity ORDER BY api_calls DESC LIMIT 12').all();
+        } catch { /* telemetry not born yet */ }
+        const udb = users.db();
+        const allUsers = udb.prepare('SELECT id, email, name, created_at FROM user ORDER BY created_at DESC LIMIT 100').all()
+          .map(u2 => ({ ...u2, spaces: udb.prepare('SELECT ws, display_name, kind, created_at FROM space WHERE owner_user_id = ? ORDER BY created_at').all(u2.id) }));
+        const huntSpaces = udb.prepare("SELECT COUNT(*) n FROM space WHERE kind = 'hunt'").get().n;
+        let metrics = [];
+        try {
+          metrics = fs.readFileSync(path.join(wsp.DATA_DIR, 'metrics.csv'), 'utf8').split('\n')
+            .filter(l => /^\d{4}-/.test(l)).map(l => { const [t2, n2] = l.split(','); return [t2, Number(n2)]; });
+        } catch { /* no metrics yet */ }
+        return send(res, 200, {
+          as_of: new Date().toISOString(),
+          funnel: { live_sandboxes_under_24h: born, opened_app: funnel.touched, engaged_3plus_calls: funnel.engaged,
+            wrote_something: funnel.wrote, agent_connected: funnel.agent,
+            google_sign_ins: allUsers.length, hunt_spaces: huntSpaces },
+          users: allUsers, top_active: top, metrics,
+          notes: ['telemetry starts 2026-08-26; earlier sandboxes show as untouched',
+            'birth counts before the 2026-08-26 mint-gate fix are scanner-noise-dominated',
+            'sign-ins include the founder'],
+        });
+      } catch (e) { return send(res, 500, { error: e.message }); }
+    }
+
     // The whole workspace as one JSON document — every table, audit log included. Owner only.
     // "Your data is yours" is a claim; this is the mechanism.
     if (req.method === 'GET' && p === '/api/export') {
@@ -419,6 +456,7 @@ const server = http.createServer((req, res) => {
     const file = p === '/' ? (DEMO ? 'landing.html' : 'index.html')
                : (p === '/app' || p === '/app/') ? 'index.html'
                : (p === '/hunt' || p === '/hunt/') ? 'hunt.html'
+               : (p === '/admin' || p === '/admin/') ? 'admin.html'
                : path.basename(p);
     const full = path.join(UI, file);
     if (full.startsWith(UI) && fs.existsSync(full) && fs.statSync(full).isFile()) {

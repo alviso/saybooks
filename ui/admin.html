@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Saybooks — operator</title>
+<meta name="robots" content="noindex">
+<style>
+  * { box-sizing: border-box; margin: 0 }
+  body { font: 14px/1.55 -apple-system, 'Segoe UI', sans-serif; color: #1c2420; background: #f6f5f1; padding: 2em 1.5em }
+  .wrap { max-width: 1360px; margin: 0 auto }
+  h1 { font-family: Georgia, serif; font-size: 26px; margin-bottom: .2em }
+  .asof { color: #6b7570; font-size: 12.5px; margin-bottom: 1.6em }
+  h2 { font-family: Georgia, serif; font-size: 18px; margin: 1.8em 0 .6em }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px }
+  .stat { background: #fff; border: 1.5px solid #e2e0d8; border-radius: 10px; padding: .8em 1em }
+  .stat b { display: block; font-size: 30px; font-family: Georgia, serif; color: #1e3a2f }
+  .stat span { font-size: 11.5px; color: #6b7570 }
+  table { width: 100%; border-collapse: collapse; background: #fff; border: 1.5px solid #e2e0d8; border-radius: 10px; overflow: hidden }
+  th { text-align: left; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: #6b7570; padding: 8px 12px; border-bottom: 1px solid #e2e0d8 }
+  td { padding: 7px 12px; border-bottom: 1px solid #f0eee8; font-size: 13px }
+  .pill { background: #e9ede9; border-radius: 20px; padding: 1px 9px; font-size: 11px }
+  .pill.hunt { background: #fdf0dd; color: #b45309 }
+  .mono { font-family: ui-monospace, monospace; font-size: 12px }
+  .dim { color: #6b7570 }
+  #chart { background: #fff; border: 1.5px solid #e2e0d8; border-radius: 10px; padding: 12px; width: 100% }
+  .notes { font-size: 12px; color: #6b7570; font-style: italic; margin-top: 1.8em; line-height: 1.7 }
+  #err { background: #fff; border: 1.5px solid #e2e0d8; border-radius: 10px; padding: 2em; text-align: center; display: none }
+  #err a { color: #1e3a2f; font-weight: 700 }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Saybooks — operator</h1>
+  <div class="asof" id="asof">loading…</div>
+  <div id="err"><p>Admin sign-in required.</p><p style="margin-top:8px"><a href="/auth/google">Sign in with Google</a> with the admin account, then reload.</p></div>
+  <div id="main" style="display:none">
+    <div class="cards" id="funnel"></div>
+    <h2>Live sandboxes, last 4 days</h2>
+    <svg id="chart" height="160" preserveAspectRatio="none"></svg>
+    <h2>Sign-ups</h2>
+    <table><thead><tr><th>When</th><th>Who</th><th>Spaces</th></tr></thead><tbody id="users"></tbody></table>
+    <h2>Most active sandboxes (since telemetry began)</h2>
+    <table><thead><tr><th>Sandbox</th><th>First seen</th><th>Last seen</th><th style="text-align:right">API calls</th><th style="text-align:right">Writes</th><th style="text-align:right">Agent calls</th></tr></thead><tbody id="top"></tbody></table>
+    <div class="notes" id="notes"></div>
+  </div>
+</div>
+<script>
+(async () => {
+  const r = await fetch('/api/admin/stats');
+  if (!r.ok) { document.getElementById('err').style.display = 'block'; document.getElementById('asof').textContent = ''; return; }
+  const d = await r.json();
+  document.getElementById('main').style.display = 'block';
+  document.getElementById('asof').textContent = 'as of ' + d.as_of.slice(0, 16).replace('T', ' ') + ' UTC — reload for fresh numbers';
+
+  const F = d.funnel;
+  const cards = [
+    [F.live_sandboxes_under_24h, 'live sandboxes (24h)'],
+    [F.opened_app, 'opened the app'],
+    [F.engaged_3plus_calls, 'engaged (3+ calls)'],
+    [F.wrote_something, 'wrote something'],
+    [F.agent_connected, 'connected an agent'],
+    [F.google_sign_ins, 'Google sign-ins'],
+    [F.hunt_spaces, 'job-hunt spaces'],
+  ];
+  document.getElementById('funnel').innerHTML = cards.map(([n, l]) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`).join('');
+
+  const M = d.metrics;
+  if (M.length > 1) {
+    const svg = document.getElementById('chart');
+    const W = svg.clientWidth - 24, H = 130;
+    svg.setAttribute('viewBox', `0 0 ${W + 24} 160`);
+    const t0 = Date.parse(M[0][0]), t1 = Date.parse(M[M.length - 1][0]);
+    const max = Math.max(...M.map(m => m[1]), 10);
+    const pt = (m) => [12 + (Date.parse(m[0]) - t0) / Math.max(1, t1 - t0) * W, 12 + H - m[1] / max * H];
+    const path = M.map((m, i) => (i ? 'L' : 'M') + pt(m).map(v => v.toFixed(1)).join(',')).join(' ');
+    const last = pt(M[M.length - 1]);
+    svg.innerHTML = `<path d="${path}" fill="none" stroke="#1e3a2f" stroke-width="2"/>` +
+      `<circle cx="${last[0]}" cy="${last[1]}" r="3.5" fill="#b45309"/>` +
+      `<text x="${Math.min(last[0] + 6, W - 30)}" y="${Math.max(last[1] - 6, 14)}" font-size="12" fill="#1c2420" font-weight="700">${M[M.length - 1][1]}</text>` +
+      `<text x="12" y="155" font-size="10" fill="#6b7570">${M[0][0].slice(5, 10)}</text>` +
+      `<text x="${W - 24}" y="155" font-size="10" fill="#6b7570">${M[M.length - 1][0].slice(5, 10)}</text>`;
+  }
+
+  document.getElementById('users').innerHTML = d.users.map(u => `<tr>
+    <td class="dim">${u.created_at.slice(0, 16).replace('T', ' ')}</td>
+    <td><b>${u.name || ''}</b> <span class="dim">${u.email}</span></td>
+    <td>${u.spaces.map(s => `<span class="pill ${s.kind === 'hunt' ? 'hunt' : ''}">${s.display_name}${s.kind === 'hunt' ? ' · hunt' : ''}</span>`).join(' ') || '<span class="dim">none</span>'}</td>
+  </tr>`).join('') || '<tr><td colspan="3" class="dim">nobody yet</td></tr>';
+
+  document.getElementById('top').innerHTML = d.top_active.map(t => `<tr>
+    <td class="mono">${t.ws.slice(0, 14)}…</td>
+    <td class="dim">${t.first_at.slice(5, 16).replace('T', ' ')}</td>
+    <td class="dim">${t.last_at.slice(5, 16).replace('T', ' ')}</td>
+    <td style="text-align:right">${t.api_calls}</td><td style="text-align:right">${t.writes}</td><td style="text-align:right">${t.agent_calls}</td>
+  </tr>`).join('') || '<tr><td colspan="6" class="dim">no activity recorded yet</td></tr>';
+
+  document.getElementById('notes').innerHTML = d.notes.map(n => '· ' + n).join('<br>');
+})();
+</script>
+</body>
+</html>
