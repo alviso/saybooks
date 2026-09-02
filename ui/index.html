@@ -227,14 +227,21 @@ function huntOnboarding() {
       <div><b>Log your first posting</b><div class="doc" style="margin-top:2px">Paste the whole job description — it feeds search and the duplicate guard.</div>
       <button class="primary" style="margin-top:8px" id="obNew">New posting</button></div></div>
     <div style="display:flex;gap:12px;margin-top:16px"><div style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;text-align:center;line-height:26px;font-weight:700">2</div>
-      <div><b>Connect your agent</b><div class="doc" style="margin-top:2px">Open <b>Share this space…</b> in the sidebar, mint an agent key, then in your Claude session:</div>
-      <div style="margin-top:6px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font:12px ui-monospace,monospace;overflow-x:auto">claude mcp add hunt -t http https://saybooks.io/mcp/&lt;your-key&gt;</div>
-      <div class="doc" style="margin-top:4px">Then just talk: <i>"log this posting: …"</i>, <i>"the recruiter called, interview Thursday"</i>, <i>"TCS ghosted me"</i>.</div></div></div>
+      <div><b>Connect Claude</b>
+      <div class="doc" style="margin-top:2px">Open <b>Share this space…</b> (sidebar) → <b>Mint key</b> → copy the agent link (it looks like <span style="font-family:ui-monospace,monospace;font-size:11.5px">https://saybooks.io/mcp/m-…</span>). Then in the Claude app:</div>
+      <div class="doc" style="margin-top:6px"><b>Settings → Connectors → Add custom connector</b> — Name: <b>hunt</b> · Remote MCP server URL: <b>your agent link</b>.</div>
+      <div class="doc" style="margin-top:8px">Open a new session with the connector on, and paste this with a job description under it <a id="obCopy" style="color:var(--accent);cursor:pointer">(copy)</a>:</div>
+      <div id="obPrompt" style="margin-top:6px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font:12px/1.55 ui-monospace,monospace;white-space:pre-wrap">You're my job-hunt assistant, connected to my Saybooks hunt space through the "hunt" connector. Call core_schema first to learn the rules. Then log the posting below: evaluate the fit, run the duplicate check, and give me one next action with a due date.</div>
+      <div class="doc" style="margin-top:4px">From then on, just talk: <i>"the recruiter called, interview Thursday"</i>, <i>"TCS ghosted me"</i>. <span style="color:var(--dim)">(CLI instead? <span style="font-family:ui-monospace,monospace;font-size:11px">claude mcp add hunt -t http &lt;agent link&gt;</span>)</span></div></div></div>
     <div style="display:flex;gap:12px;margin-top:16px"><div style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;text-align:center;line-height:26px;font-weight:700">3</div>
       <div><b>The rules work for you</b><div class="doc" style="margin-top:2px">Your agent can never invent a date or a name, the guard flags the same req arriving retitled through another agency, and everything lands in the <a data-v="audit" style="color:var(--accent);cursor:pointer">audit trail</a>. Export or delete everything, any time — sidebar, bottom left.</div></div></div>
   </div>`);
   card.querySelector('#obNew').onclick = () => openForm(cmd('hunt_add_posting'));
   card.querySelector('[data-v="audit"]').onclick = () => { view = 'audit'; render(); };
+  card.querySelector('#obCopy').onclick = () => {
+    navigator.clipboard.writeText(card.querySelector('#obPrompt').textContent).then(
+      () => toast('✓ starter prompt copied'), () => toast('✗ copy failed — select and copy by hand'));
+  };
   return card;
 }
 

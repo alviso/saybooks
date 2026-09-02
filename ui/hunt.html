@@ -61,11 +61,15 @@
     <div class="card"><b>One open next action</b><p>Per pursuit, one thing to do next, with a due date. The Due page is your morning list; superseded intentions are kept, not erased.</p></div>
   </div>
 
-  <h2>How it works with your agent</h2>
-  <p class="how">Sign in → you get a private, persistent space → mint an agent key from the Share dialog →
-  <code>claude mcp add hunt -t http https://saybooks.io/mcp/&lt;your-key&gt;</code> → tell your session about
-  a posting, an interview, a rejection. It records; you see everything in the browser too — same data,
-  same rules, one audit trail. Works with any MCP-capable agent.</p>
+  <h2>How it works with Claude</h2>
+  <p class="how"><b>1.</b> Sign in above — you get a private, persistent space.<br>
+  <b>2.</b> In the sidebar: <b>Share this space…</b> → <b>Mint key</b> → copy the agent link (<code>https://saybooks.io/mcp/m-…</code>).<br>
+  <b>3.</b> In the Claude app: <b>Settings → Connectors → Add custom connector</b> — Name: <code>hunt</code>, Remote MCP server URL: your agent link.<br>
+  <b>4.</b> Open a new session with the connector on, and paste this with a job description under it:</p>
+  <div class="log" style="white-space:pre-wrap;font-size:13px;color:#cfe3d6">You're my job-hunt assistant, connected to my Saybooks hunt space through the "hunt" connector. Call core_schema first to learn the rules. Then log the posting below: evaluate the fit, run the duplicate check, and give me one next action with a due date.</div>
+  <p class="how">From then on, just talk: <i>"the recruiter called, interview Thursday"</i> · <i>"TCS ghosted me"</i> ·
+  <i>"what's due today?"</i> Everything it records shows up here in the browser too — same data, same rules,
+  one audit trail. Works with any MCP-capable agent (Claude Code: <code>claude mcp add hunt -t http &lt;agent link&gt;</code>).</p>
 
   <div class="yours">
     <b style="color:#1e3a2f">Your data, actually yours</b>
