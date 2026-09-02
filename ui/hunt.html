@@ -22,6 +22,11 @@
   .cta:hover { background: #2e5443 }
   .ctasub { font-size: 13px; color: #6b7570 }
   .log { background: #16281f; border: 1px solid #2e4a3a; border-radius: 10px; padding: 1em 1.2em; margin: 2.5em 0; font: 13px/1.7 ui-monospace, 'Courier New', monospace; overflow-wrap: anywhere }
+  .chat { margin: 2.5em 0; max-width: 44em }
+  .chat .msg { border-radius: 12px; padding: .8em 1.1em; font-size: 15px; line-height: 1.55 }
+  .chat .you { background: #e9ede9; color: #1c2420; margin-right: 3em }
+  .chat .ai { background: #1e3a2f; color: #e8f0ea; margin: .6em 0 0 3em }
+  .chat .ai b { color: #fff }
   .log .t { color: #7fa98e } .log .a { color: #d9b23c; font-weight: 700 } .log .c { color: #cfe3d6 } .log .w { color: #e8a34b }
   h2 { font-family: Georgia, serif; font-size: 24px; margin: 2.2em 0 .8em }
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px }
@@ -61,9 +66,9 @@
   <a class="cta" href="/auth/google?next=hunt">Start free with Google →</a>
   <div class="ctasub">No credit card, no trial clock. Your books are yours: export or delete everything, any time.</div>
 
-  <div class="log">
-    <div><span class="t">2026-08-25 14:02</span>&nbsp; <span class="a">claude</span> <span class="c">hunt_check_duplicates</span></div>
-    <div style="margin-top:2px"><span class="w">⚠ JP-0010 targets the same employer with a similar title — likely the same role through another door.</span></div>
+  <div class="chat">
+    <div class="msg you"><b>You:</b> Log this one — "Senior Operations Manager, Lakeshore Foods", came through a TalentBridge recruiter. JD pasted below.</div>
+    <div class="msg ai"><b>Claude:</b> Logged. One thing before you apply: ⚠ this looks like the <b>same role</b> you already applied to directly at Lakeshore two weeks ago — same employer, near-identical description under a different title. A second submission through an agency can get you disqualified. Want me to mark it a duplicate and skip it?</div>
   </div>
 
   <h2>What the rules catch</h2>
