@@ -113,7 +113,13 @@ const $ = (h) => { const t = document.createElement('template'); t.innerHTML = h
 /* The workspace rides on every API call; the ?ws= in the address bar is the source of truth
    and the server cookie is only a fallback for a bare URL. */
 const WSQ = new URLSearchParams(location.search).get('ws');
-const wsUrl = (u) => WSQ ? u + (u.includes('?') ? '&' : '?') + 'ws=' + encodeURIComponent(WSQ) : u;
+const DEMOQ = new URLSearchParams(location.search).get('demo');   // demo flavor: which sandbox the server mints
+const wsUrl = (u) => {
+  const q = [];
+  if (WSQ) q.push('ws=' + encodeURIComponent(WSQ));
+  if (DEMOQ) q.push('demo=' + encodeURIComponent(DEMOQ));
+  return q.length ? u + (u.includes('?') ? '&' : '?') + q.join('&') : u;
+};
 const cents = (c) => c == null ? '' : '$' + (c/100).toFixed(2);
 function toast(msg) {
   const t = $(`<div style="position:fixed;bottom:22px;right:22px;background:#1e3a2f;color:#fff;padding:10px 16px;border-radius:8px;font-size:13.5px;box-shadow:0 4px 18px rgba(0,0,0,.25);z-index:99;opacity:0;transition:opacity .25s">${msg}</div>`);

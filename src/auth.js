@@ -62,7 +62,11 @@ async function callback(req, res, url) {
     landing = '/app?ws=' + sp.ws;
   } else if (!users.spacesFor(user.id).length) {
     const cur = (/(?:^|;\s*)otc_ws=(try-[a-z0-9]+)/.exec(req.headers.cookie || '') || [])[1];
-    if (cur && fs.existsSync(path.join(wsp.DATA_DIR, `ws_${cur}.db`))) users.claimSpace(user.id, cur, 'My books');
+    if (cur && fs.existsSync(path.join(wsp.DATA_DIR, `ws_${cur}.db`))) {
+      // A jobhunt demo sandbox claims as a hunt-kind space — the visitor keeps the flavor too.
+      if (cur.startsWith('try-h')) users.claimSpace(user.id, cur, 'My job hunt', 'hunt');
+      else users.claimSpace(user.id, cur, 'My books');
+    }
     else {
       const sp = users.createSpace(user.id, 'My books');
       require('./fixtures.js').load('try', sp.ws);

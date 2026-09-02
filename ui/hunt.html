@@ -20,6 +20,8 @@
   .sub { font-size: 19px; color: #4a544e; max-width: 40em }
   .cta { display: inline-block; margin: 1.8em 0 .4em; background: #1e3a2f; color: #fff; padding: .85em 1.6em; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 17px }
   .cta:hover { background: #2e5443 }
+  .cta.ghost { background: transparent; color: #1e3a2f; border: 2px solid #1e3a2f; margin-left: .6em; padding: calc(.85em - 2px) 1.6em }
+  .cta.ghost:hover { background: #e9ede9 }
   .ctasub { font-size: 13px; color: #6b7570 }
   .log { background: #16281f; border: 1px solid #2e4a3a; border-radius: 10px; padding: 1em 1.2em; margin: 2.5em 0; font: 13px/1.7 ui-monospace, 'Courier New', monospace; overflow-wrap: anywhere }
   .chat { margin: 2.5em 0; max-width: 44em }
@@ -64,7 +66,8 @@
   catches the same req retitled by a fourth agency, and every action lands in an audit trail you can read.</p>
 
   <a class="cta" href="/auth/google?next=hunt">Start free with Google →</a>
-  <div class="ctasub">No credit card, no trial clock. Your books are yours: export or delete everything, any time.</div>
+  <a class="cta ghost" href="/app?demo=hunt">See it working first</a>
+  <div class="ctasub">The demo is a live sandbox with a seeded hunt — no account, poke anything. Sign in later to keep a space of your own. No credit card, no trial clock; export or delete everything, any time.</div>
 
   <div class="chat">
     <div class="msg you"><b>You:</b> Log this one — "Senior Operations Manager, Lakeshore Foods", came through a TalentBridge recruiter. JD pasted below.</div>

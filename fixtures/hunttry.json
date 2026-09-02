@@ -1,0 +1,214 @@
+[
+ [
+  "hunt_add_resume_version",
+  {
+   "label": "Ops leadership",
+   "headline": "Operations director, food & beverage",
+   "focus": "P&L ownership, 3PL, workforce systems"
+  },
+  null,
+  "sam",
+  "human"
+ ],
+ [
+  "hunt_add_resume_version",
+  {
+   "label": "Supply chain IC",
+   "headline": "Senior supply chain manager",
+   "focus": "demand planning, S&OP"
+  },
+  null,
+  "sam",
+  "human"
+ ],
+ [
+  "hunt_add_contact",
+  {
+   "name": "Riley Chen",
+   "source": "referred by a former colleague",
+   "company": "TalentBridge Staffing",
+   "company_kind": "staffing_agency",
+   "role": "recruiter",
+   "relationship": "responsive"
+  },
+  null,
+  "sam",
+  "human"
+ ],
+ [
+  "hunt_add_posting",
+  {
+   "title": "Director of Operations",
+   "company": "Lakeshore Foods",
+   "company_kind": "end_client",
+   "source": "linkedin",
+   "location": "Chicago, IL",
+   "work_mode": "hybrid",
+   "comp_min": 16000000,
+   "comp_max": 19000000,
+   "jd_text": "Director of Operations\n\nLakeshore Foods runs three production facilities and a cold-chain fleet across the Midwest.\n\nYou will own plant scheduling, carrier management, and the warehouse P&L. We want someone who has lived through an ERP migration and kept the trucks moving."
+  },
+  null,
+  "sam",
+  "human"
+ ],
+ [
+  "hunt_evaluate_posting",
+  {
+   "posting_id": "JP-0001",
+   "fit_score": 4.5,
+   "fit_notes": "Strong: plant + fleet + ERP migration story. Gap: no food-safety cert.",
+   "resume_version": "Ops leadership"
+  },
+  null,
+  "sam",
+  "human"
+ ],
+ [
+  "hunt_apply",
+  {
+   "posting_id": "JP-0001",
+   "resume_version": "Ops leadership",
+   "channel": "portal",
+   "applied_at": "2026-08-12"
+  },
+  null,
+  "sam",
+  "human"
+ ],
+ [
+  "hunt_log_interaction",
+  {
+   "posting_id": "JP-0001",
+   "direction": "out",
+   "medium": "email",
+   "summary": "Followed the ATS auto-ack with a short note to the plant HR address from the posting.",
+   "next_action": "Chase the recruiter if still silent",
+   "next_action_due": "2026-08-20"
+  },
+  null,
+  "sam",
+  "human"
+ ],
+ [
+  "hunt_add_posting",
+  {
+   "title": "VP Supply Chain (confidential retailer)",
+   "company": "TalentBridge Staffing",
+   "company_kind": "staffing_agency",
+   "req_id": "TB-2291",
+   "source": "direct",
+   "jd_text": "Confidential retained search.\n\nMulti-site retailer, $400M revenue. Owns DC network and transportation. End client disclosed at screen stage."
+  },
+  "end client unknown \u2014 the guard will keep asking until it is named",
+  "sam",
+  "human"
+ ],
+ [
+  "hunt_evaluate_posting",
+  {
+   "posting_id": "JP-0002",
+   "fit_score": 3.5,
+   "fit_notes": "Right scope; blind submission risk until the end client is named.",
+   "resume_version": "Ops leadership"
+  },
+  null,
+  "sam",
+  "human"
+ ],
+ [
+  "hunt_apply",
+  {
+   "posting_id": "JP-0002",
+   "resume_version": "Ops leadership",
+   "channel": "agency_submission",
+   "via_contact": "HC-0001",
+   "applied_at": "2026-08-15"
+  },
+  null,
+  "sam",
+  "human"
+ ],
+ [
+  "hunt_add_interview",
+  {
+   "application_id": "APP-0002",
+   "kind": "recruiter_screen",
+   "scheduled_at": "2026-08-28T15:00:00",
+   "interviewer": "Riley Chen",
+   "notes": "30 min; ask for the end client name first"
+  },
+  null,
+  "sam",
+  "human"
+ ],
+ [
+  "hunt_add_posting",
+  {
+   "title": "Logistics Program Manager",
+   "company": "Baytide Retail Group",
+   "company_kind": "end_client",
+   "source": "linkedin"
+  },
+  null,
+  "sam",
+  "human"
+ ],
+ [
+  "hunt_evaluate_posting",
+  {
+   "posting_id": "JP-0003",
+   "fit_score": 2.5,
+   "fit_notes": "A step down in scope, but the brand is strong.",
+   "resume_version": "Supply chain IC"
+  },
+  null,
+  "sam",
+  "human"
+ ],
+ [
+  "hunt_apply",
+  {
+   "posting_id": "JP-0003",
+   "resume_version": "Supply chain IC",
+   "channel": "easy_apply",
+   "applied_at": "2026-07-30"
+  },
+  null,
+  "sam",
+  "human"
+ ],
+ [
+  "hunt_set_application_status",
+  {
+   "application_id": "APP-0003",
+   "status": "ghosted",
+   "note": "six weeks of silence after the auto-ack \u2014 recorded, not deleted; which companies go quiet is pattern knowledge"
+  },
+  null,
+  "sam",
+  "human"
+ ],
+ [
+  "hunt_add_posting",
+  {
+   "title": "Warehouse automation consultant",
+   "company": "Grindstone Consulting",
+   "company_kind": "consultancy",
+   "source": "referral"
+  },
+  null,
+  "sam",
+  "human"
+ ],
+ [
+  "hunt_evaluate_posting",
+  {
+   "posting_id": "JP-0004",
+   "skip_reason": "day rate below floor and 80% travel \u2014 same pattern as every consultancy pitch this year"
+  },
+  null,
+  "sam",
+  "human"
+ ]
+]

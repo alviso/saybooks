@@ -88,7 +88,7 @@ function createSpace(userId, displayName, ws, kind) {
   db().prepare('INSERT INTO space (ws, owner_user_id, display_name, created_at, kind) VALUES (?,?,?,?,?)').run(ws, userId, displayName, now(), kind || null);
   return db().prepare('SELECT * FROM space WHERE ws = ?').get(ws);
 }
-const claimSpace = (userId, ws, displayName) => createSpace(userId, displayName, ws);
+const claimSpace = (userId, ws, displayName, kind) => createSpace(userId, displayName, ws, kind);
 
 /** Permanent, owner-only. The caller destroys the workspace database and purges tokens;
  *  this removes the rows that make it a space. */

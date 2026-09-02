@@ -36,7 +36,9 @@ const UI = path.join(__dirname, 'ui');
 const crypto = require('crypto');
 
 const sandboxExists = (name) => fs.existsSync(path.join(wsp.DATA_DIR, `ws_${name}.db`));
-const seedSandbox = (name) => { require('./src/fixtures.js').load('try', name); return name; };
+// Sandbox flavor rides in the NAME: try-h… is a jobhunt demo (hunt mounts, hunt story),
+// anything else is the business demo. 'h' is not a hex digit, so random names never collide.
+const seedSandbox = (name) => { require('./src/fixtures.js').load(name.startsWith('try-h') ? 'hunttry' : 'try', name); return name; };
 
 // Anonymous demo sandboxes mount the business modules only — jobhunt is a personal area
 // and belongs to owned spaces (where it mounts in full, data or no data).
@@ -45,9 +47,10 @@ const HUNT_MOUNTS = ['core', 'jobhunt'];   // the free job-hunt offering: one mo
 const mountsFor = (w) => { try {
   const sp = users.spaceOf(w);
   if (sp) return sp.kind === 'hunt' ? HUNT_MOUNTS : null;
-  return DEMO ? DEMO_MOUNTS : null;
+  if (!DEMO) return null;
+  return w.startsWith('try-h') ? HUNT_MOUNTS : DEMO_MOUNTS;
 } catch { return null; } };
-const newVisitorWs = () => seedSandbox(`try-${crypto.randomBytes(5).toString('hex')}`);
+const newVisitorWs = (flavor) => seedSandbox(`try-${flavor === 'hunt' ? 'h' : ''}${crypto.randomBytes(5).toString('hex')}`);
 
 if (DEMO) {
   // Sweep: sandboxes older than 24h go; if a crowd shows up, cap at the 4000 newest.
@@ -128,7 +131,7 @@ const entryOf = (req, url, allowMint = false) => {
   // databases a day and drowning the birth metric in noise (found 2026-08-26).
   if (!allowMint) return { ws: null, member: { name: 'visitor', role: 'viewer' } };
   if (!birthAllowed(ipOf(req))) throw Object.assign(new Error('sandbox limit reached for now — try again in an hour'), { status: 429 });
-  const fresh = newVisitorWs();
+  const fresh = newVisitorWs(url.searchParams.get('demo'));
   return { ws: fresh, member: { name: 'owner', role: 'owner' }, cookie: fresh };
 };
 
