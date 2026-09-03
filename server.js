@@ -303,7 +303,10 @@ const server = http.createServer((req, res) => {
         let top = [];
         try {
           const tdb = require('./src/telemetry.js').db();
-          funnel = tdb.prepare(`SELECT COUNT(*) touched, COALESCE(SUM(api_calls >= 3),0) engaged,
+          // Engaged = came back for more after the first render: 3+ calls AND 30+ seconds of
+          // dwell. A single page load fires up to 3 calls in half a second — that is not engagement.
+          funnel = tdb.prepare(`SELECT COUNT(*) touched,
+            COALESCE(SUM(api_calls >= 3 AND (julianday(last_at) - julianday(first_at)) * 86400 >= 30),0) engaged,
             COALESCE(SUM(writes > 0),0) wrote, COALESCE(SUM(agent_calls > 0),0) agent FROM ws_activity`).get();
           top = tdb.prepare('SELECT ws, first_at, last_at, api_calls, writes, agent_calls FROM ws_activity ORDER BY api_calls DESC LIMIT 12').all();
         } catch { /* telemetry not born yet */ }
