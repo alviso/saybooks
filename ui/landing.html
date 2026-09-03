@@ -3,375 +3,222 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Saybooks — the books you can talk to, that stay books</title>
-<meta name="description" content="A conversational ERP where the agent and the interface are the same system: one command registry, one rulebook, one audit trail. Try the live demo — no signup.">
+<title>Saybooks — tell Claude what happened. Your books stay right.</title>
+<meta name="description" content="A place Claude can keep your records — invoices, clients, orders, a job hunt — with rules it can't break and a log of everything it did. Free to try, no signup.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📒</text></svg>">
 <link rel="canonical" href="https://saybooks.io/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Saybooks">
-<meta property="og:title" content="Saybooks — the books you can talk to, that stay books">
-<meta property="og:description" content="A conversational ERP where the agent and the interface are the same system: one command registry, one rulebook, one audit trail. Try the live demo — no signup.">
+<meta property="og:title" content="Saybooks — tell Claude what happened. Your books stay right.">
+<meta property="og:description" content="A place Claude can keep your records — with rules it can't break and a log of everything it did. Free to try, no signup.">
 <meta property="og:url" content="https://saybooks.io/">
 <meta property="og:image" content="https://saybooks.io/card.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Saybooks: The books you can talk to. The books that stay books. An audit trail with agent and human rows, including a refused command.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Saybooks — the books you can talk to, that stay books">
-<meta name="twitter:description" content="One command registry, one rulebook, one audit trail. Agent and UI, in lockstep. Try the live demo — no signup.">
+<meta name="twitter:title" content="Saybooks — tell Claude what happened. Your books stay right.">
+<meta name="twitter:description" content="A place Claude can keep your records — with rules it can't break and a log of everything it did.">
 <meta name="twitter:image" content="https://saybooks.io/card.png">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-:root{
-  --bg:#FBF7F2; --panel:#ffffff; --ink:#2B2A33; --dim:#7A7784; --rule:#EEEAE3;
-  --green:#0F766E; --green-soft:#E6F4F1; --agent:#5B4BC9; --agent-soft:#EEEBFB;
-  --human:#2C5282; --human-soft:#E3ECF7; --warn:#C2410C; --warn-soft:#FDEFE3; --mono-bg:#F1EEE8;
-  --shadow:0 6px 24px rgba(43,42,51,.05);
-}
+:root{ --bg:#FBF7F2; --panel:#fff; --ink:#2B2A33; --mid:#5A5866; --dim:#7A7784; --rule:#EEEAE3; --teal:#0F766E; --teal2:#115E59; --tint:#E6F4F1; --tint2:#F1EEE8; --warn:#C2410C; --alert:#FDEFE3; --agent:#5B4BC9; --agentsoft:#EEEBFB; --shadow:0 6px 24px rgba(43,42,51,.05) }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--ink);font:400 17px/1.65 'Nunito Sans',-apple-system,'Segoe UI',sans-serif}
-.wrap{max-width:1120px;margin:0 auto;padding:0 28px}
-.prose{max-width:70ch}
-h1,h2,h3{font-family:'Plus Jakarta Sans',system-ui,sans-serif;text-wrap:balance}
-code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
-a{color:var(--green)}
-.btn{display:inline-block;font:700 15px 'Plus Jakarta Sans',sans-serif;padding:12px 22px;border-radius:14px;
-  text-decoration:none;border:1.5px solid var(--green)}
-.btn.solid{background:var(--green);color:#fff;box-shadow:0 6px 20px rgba(15,118,110,.22)}
-.btn.ghost{color:var(--green);background:var(--green-soft)}
-.btn:hover{filter:brightness(1.08)}
-.btn.small{padding:8px 16px;font-size:13.5px}
-
-header.hero{padding:76px 0 50px;border-bottom:1px solid var(--rule)}
-.wordmark{font:700 15px 'Plus Jakarta Sans',sans-serif;letter-spacing:.22em;color:var(--green);margin:0 0 30px}
-h1{font-size:clamp(36px,5.6vw,62px);font-weight:800;line-height:1.06;margin:0 0 20px;letter-spacing:-.015em}
-h1 .quiet{color:var(--dim);font-weight:700}
-.lede{font-size:20px;max-width:62ch;margin:0 0 30px;color:#3d3a34}
+.wrap{max-width:1080px;margin:0 auto;padding:0 28px}
+h1,h2,h3{font-family:'Plus Jakarta Sans',system-ui,sans-serif;text-wrap:balance;letter-spacing:-.02em}
+a{color:var(--teal)}
+.btn{display:inline-block;font:700 15.5px 'Plus Jakarta Sans',sans-serif;padding:13px 22px;border-radius:14px;text-decoration:none}
+.btn.solid{background:var(--teal);color:#fff;box-shadow:0 6px 20px rgba(15,118,110,.22)} .btn.solid:hover{background:var(--teal2)}
+.btn.soft{background:var(--tint);color:var(--teal)} .btn.soft:hover{background:#d7ebe6}
+.btn.small{padding:9px 16px;font-size:13.5px;border-radius:11px}
+.mark{font:800 14px 'Plus Jakarta Sans',sans-serif;letter-spacing:.06em;padding:26px 0 0}
+header.hero{padding:44px 0 56px}
+h1{font-size:clamp(38px,5.4vw,60px);font-weight:800;line-height:1.06;margin:0 0 18px;max-width:14em}
+.lede{font-size:20px;line-height:1.55;max-width:34em;margin:0 0 26px;color:var(--mid)}
 .ctas{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-.ctas .fine{font-size:13.5px;color:var(--dim)}
-
-section{padding:56px 0;border-bottom:1px solid var(--rule)}
-h2{font-size:28px;font-weight:700;margin:0 0 10px}
-.kicker{font:600 12px 'Plus Jakarta Sans',sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--green);margin:0 0 10px}
-p{margin:0 0 15px}
-.sub{color:var(--dim)}
-
-/* the two doors */
-.doors{display:grid;gap:22px;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));margin-top:28px}
-.door{background:var(--panel);border:none;border-radius:20px;padding:30px 32px;box-shadow:var(--shadow);display:flex;flex-direction:column}
-.door.op{background:linear-gradient(#fff,#fff) padding-box}
-.door.dev{background:#FBFAFF}
-.door .aud{font:600 12px 'Plus Jakarta Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase}
-.door.op .aud{color:var(--green)} .door.dev .aud{color:var(--agent)}
-.door h3{font-size:22px;margin:8px 0 12px;line-height:1.25}
-.door p{font-size:15.5px;color:#5A5866}
-.door ul{margin:4px 0 20px;padding-left:1.15em;font-size:15px;color:#5A5866}
-.door li{margin-bottom:9px}
-.door li b{font-weight:600;color:var(--ink)}
-.door .do{margin-top:auto;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.door .fine{font-size:13px;color:var(--dim);width:100%}
-.btn.dev{border-color:var(--agent);color:var(--agent)}
-.btn.dev.solid{background:var(--agent);color:#fff}
-
-/* the trail */
-.split{display:grid;gap:40px;grid-template-columns:minmax(0,5fr) minmax(0,7fr);align-items:start}
-@media (max-width:840px){.split{grid-template-columns:1fr}}
-.trail{background:var(--panel);border:1.5px solid var(--rule);border-radius:16px;overflow-x:auto}
-.trail table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:520px}
-.trail td{padding:9px 14px;border-bottom:1px solid #f2f0ec;vertical-align:top}
+.fine{font-size:13.5px;color:var(--dim);width:100%;margin-top:4px}
+section{padding:52px 0}
+.kicker{font:700 12px 'Plus Jakarta Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);margin:0 0 10px}
+h2{font-size:30px;font-weight:800;margin:0 0 8px}
+.sub{color:var(--mid);max-width:38em;margin:0 0 26px;font-size:17px}
+.cards{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.card{background:var(--panel);border-radius:20px;padding:24px 26px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px}
+.card .tag{align-self:flex-start;font:700 12px 'Plus Jakarta Sans',sans-serif;padding:4px 10px;border-radius:999px;background:var(--tint);color:var(--teal)}
+.card .tag.soon{background:var(--tint2);color:var(--mid)}
+.card h3{font-size:20px;margin:6px 0 0}
+.card p{margin:0;font-size:15px;color:var(--mid)}
+.say{background:var(--tint2);border-radius:14px;padding:10px 14px;font-size:14.5px;margin-top:6px}
+.say b{display:block;font:700 11.5px 'Plus Jakarta Sans',sans-serif;color:var(--dim);margin-bottom:3px;letter-spacing:.06em;text-transform:uppercase}
+.card .do{margin-top:auto;padding-top:14px}
+.steps{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.step{background:var(--panel);border-radius:20px;padding:22px 24px;box-shadow:var(--shadow)}
+.step .n{width:32px;height:32px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font:800 15px 'Plus Jakarta Sans',sans-serif;margin-bottom:12px}
+.step h3{font-size:18px;margin:0 0 6px}
+.step p{margin:0;font-size:15px;color:var(--mid)}
+.chat{display:flex;flex-direction:column;gap:8px;max-width:44em;margin-top:22px}
+.msg{padding:.75em 1.05em;font-size:15px;line-height:1.5;max-width:86%}
+.you{background:var(--tint2);align-self:flex-start;border-radius:18px 18px 18px 4px}
+.ai{background:var(--teal);color:#fff;align-self:flex-end;border-radius:18px 18px 4px 18px} .ai b{color:#fff}
+.quote{background:var(--alert);border-radius:16px;padding:18px 22px;font-family:'IBM Plex Mono',monospace;font-size:14px;line-height:1.6;color:#7c2d12;max-width:46em;margin:14px 0 12px}
+.trail{background:var(--panel);border-radius:16px;box-shadow:var(--shadow);overflow-x:auto;margin-top:18px}
+.trail table{border-collapse:collapse;width:100%;font-size:14px;min-width:560px}
+.trail td{padding:10px 14px;border-bottom:1px solid #F3F0EA;vertical-align:top}
 .trail tr:last-child td{border-bottom:none}
 .who{font:700 11px 'Plus Jakarta Sans',sans-serif;padding:2px 9px;border-radius:999px;white-space:nowrap}
-.who.agent{background:var(--agent-soft);color:var(--agent)} .who.human{background:var(--human-soft);color:var(--human)}
-.trail .cmd{font-family:"IBM Plex Mono",monospace;font-size:12.5px;white-space:nowrap}
-.trail .why{color:var(--dim);font-size:13px}
-.trail .refused{color:var(--warn)}
-.caption{font-size:14px;color:var(--dim);margin-top:10px}
-
-.refusal{background:var(--warn-soft);border-radius:14px;
-  padding:18px 22px;margin:22px 0;font-family:"IBM Plex Mono",monospace;font-size:14px;line-height:1.6;color:#5c2418;max-width:74ch}
-
-.claims{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-top:28px}
-.claim{background:var(--panel);border:none;border-radius:20px;padding:24px 26px;box-shadow:var(--shadow)}
-.claim h3{font-size:17px;margin:0 0 8px}
-.claim p{font-size:14.5px;margin:0;color:#4a463f}
-.claim .proof{display:block;margin-top:12px;font-size:13px;color:var(--dim)}
-.claim .proof b{color:var(--green);font-weight:600}
-
-.story{counter-reset:beat;margin:24px 0 0;padding:0;list-style:none;max-width:78ch}
-.story li{display:grid;grid-template-columns:34px 1fr;gap:14px;padding:13px 0;border-bottom:1px solid var(--rule)}
-.story li:last-child{border-bottom:none}
-.story li::before{counter-increment:beat;content:counter(beat);font:700 14px 'Plus Jakarta Sans',sans-serif;
-  color:var(--green);background:var(--green-soft);width:28px;height:28px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;margin-top:2px}
-.story b{font-weight:600}
-.story .aside{color:var(--dim);font-size:14.5px}
-
-.steps{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-top:26px}
-.step{background:var(--panel);border:none;border-radius:16px;box-shadow:var(--shadow);padding:18px 22px;display:grid;grid-template-columns:30px 1fr;gap:14px}
-.step .n{font:700 15px 'Plus Jakarta Sans',sans-serif;color:var(--green)}
-.step p{margin:0;font-size:15px}
-.step code{background:var(--mono-bg);padding:2px 7px;border-radius:4px;font-size:12px;word-break:break-all}
-
-.honest{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin-top:26px}
-.honest > div{border:none;border-radius:16px;padding:20px 24px;background:var(--panel);box-shadow:var(--shadow)}
-.honest h3{font-size:15px;margin:0 0 10px}
-.honest ul{margin:0;padding-left:1.2em;font-size:14.5px}
-.honest li{margin-bottom:7px}
-.honest .not h3{color:var(--warn)}
-
-footer{padding:38px 0 58px;font-size:13.5px;color:var(--dim)}
-footer .mono{font-size:12px}
-@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+.who.agent{background:var(--agentsoft);color:var(--agent)} .who.human{background:#E3ECF7;color:#2C5282}
+.trail .what{font-family:'IBM Plex Mono',monospace;font-size:12.5px;white-space:nowrap}
+.trail .why{color:var(--dim);font-size:13.5px}
+.trail .no{color:var(--warn);font-weight:600}
+.limits{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.limits div{background:var(--panel);border-radius:16px;padding:18px 20px;box-shadow:var(--shadow);font-size:14.5px;color:var(--mid)}
+.limits b{display:block;color:var(--ink);font-family:'Plus Jakarta Sans',sans-serif;margin-bottom:4px}
+.builders{background:#FBFAFF;border-radius:24px;padding:36px 34px;box-shadow:var(--shadow)}
+.builders .kicker{color:var(--agent)}
+.builders p{font-size:15.5px;color:var(--mid);max-width:60em}
+.builders ul{margin:10px 0 18px;padding-left:1.2em;font-size:15px;color:var(--mid)}
+.builders li{margin-bottom:6px}
+.builders .btn.solid{background:var(--agent);box-shadow:0 6px 20px rgba(91,75,201,.22)} .builders .btn.solid:hover{background:#4a3db0}
+.builders .btn.soft{background:var(--agentsoft);color:var(--agent)}
+video{width:100%;max-width:1000px;border-radius:16px;display:block;margin:18px 0 6px;box-shadow:var(--shadow)}
+footer{padding:36px 0 48px;font-size:13.5px;color:var(--dim)}
+footer a{color:var(--mid)}
+@media (max-width:640px){ h1{font-size:34px} h2{font-size:25px} .lede{font-size:18px} section{padding:40px 0} .builders{padding:26px 22px} }
 </style>
 </head>
 <body>
 <div class="wrap">
+  <div class="mark">SAYBOOKS</div>
 
-<header class="hero">
-  <p class="wordmark">SAYBOOKS</p>
-  <h1>The books you can talk to.<br><span class="quiet">The books that stay books.</span></h1>
-  <p class="lede">Saybooks is an ERP where your agent and your interface are the same system —
-  one command registry, one rulebook, one audit trail. Tell Claude to ship the order, or click
-  the button. Same command, same rules, same record of who did what and why.</p>
-  <div class="ctas">
-    <a class="btn solid" href="/app?demo=1">Try the live demo</a>
-    <a class="btn ghost" href="#refusal">Watch a rule refuse an agent</a>
-    <span class="fine">No signup needed — you get a private sandbox with example books. <a href="/auth/google">Sign in with Google</a> to keep yours.</span>
-  </div>
-</header>
+  <header class="hero">
+    <h1>Tell Claude what happened. Your books stay right.</h1>
+    <p class="lede">Saybooks is a place Claude can keep your records — invoices, clients, orders, even a job hunt.
+    It follows rules it can't break, it never makes things up, and it writes down everything it did so you
+    can check. You talk; it keeps the books.</p>
+    <div class="ctas">
+      <a class="btn solid" href="/app?demo=1">Try it now — no signup</a>
+      <a class="btn soft" href="/auth/google">Sign in with Google</a>
+      <span class="fine">The demo gives you private example books to poke at. Sign in to get books of your own — free.</span>
+    </div>
+  </header>
 
-<section>
-  <p class="kicker">two ways in</p>
-  <h2>Saybooks is for people who run books, and people who build systems.</h2>
-  <div class="doors">
-    <div class="door op">
-      <span class="aud">For operators — run your business on it</span>
-      <h3>An order-to-cash system a 5–200 person company can actually live in.</h3>
-      <p>Quotes, orders, a credit gate that counts committed value, partial shipments and
-      backorders, invoicing from what shipped, returns and credit notes, cash application,
-      write-offs, statements, and an aging your controller would open. Plus the part nobody
-      else has: you can hand routine work to Claude and <em>every act it takes is logged,
-      governed by the same rules, and refused in plain sentences when it shouldn't happen.</em></p>
-      <ul>
-        <li><b>Try the demo</b> — your own private books, seeded with a realistic morning, including one order that deliberately trips the credit gate.</li>
-        <li><b>Connect your Claude</b> — one command from the demo sidebar, then just talk: “receive 20 Widget B and finish Northwind's order.”</li>
-        <li><b>Watch the trail</b> — your words become attributed, reasoned ledger entries next to the human ones.</li>
-      </ul>
-      <div class="do">
-        <a class="btn solid small" href="/app?demo=1">Open the demo</a>
-        <a class="btn ghost small" href="#quickstart">2-minute quickstart</a>
-        <span class="fine">Not for your real books yet — the demo resets daily, and we'd rather say so here.</span>
+  <section>
+    <div class="kicker">What you can run on it</div>
+    <h2>Three things people use it for today</h2>
+    <p class="sub">Each one is its own set of books with its own rules. Pick the one that matches your life — you can have more than one.</p>
+    <div class="cards">
+      <div class="card">
+        <span class="tag">Free</span>
+        <h3>Invoicing for freelancers</h3>
+        <p>Create clean, numbered invoices by describing the work. Track who paid and who hasn't. Get a link to send your client.</p>
+        <div class="say"><b>Say this to Claude</b>"Invoice Meridian for the March consulting — $4,250, net 30."</div>
+        <div class="do"><a class="btn small solid" href="/solo">Start invoicing →</a></div>
+      </div>
+      <div class="card">
+        <span class="tag">Free</span>
+        <h3>A job-hunt tracker</h3>
+        <p>Postings, applications, interviews, recruiters. It catches the same job reaching you twice through different agencies, before you apply twice.</p>
+        <div class="say"><b>Say this to Claude</b>"The recruiter called — interview Thursday at 2."</div>
+        <div class="do"><a class="btn small solid" href="/hunt">Start tracking →</a></div>
+      </div>
+      <div class="card">
+        <span class="tag soon">Early access</span>
+        <h3>Books for a small business</h3>
+        <p>Quotes, orders, shipments, invoices and payments for a company that sells on credit terms — with a credit limit Claude cannot talk its way past.</p>
+        <div class="say"><b>Say this to Claude</b>"Receive 20 Widget B and finish Northwind's order."</div>
+        <div class="do"><a class="btn small soft" href="/app?demo=1">Explore the demo →</a></div>
       </div>
     </div>
-    <div class="door dev">
-      <span class="aud">For builders — write a module for it</span>
-      <h3>A spec that bites back, and a registry that generates both surfaces.</h3>
-      <p>Every business act is declared once; the MCP tool, the UI form, the guard evaluation
-      and the audit row are all derived — a contract test fails the build if they drift. The
-      order-to-cash area is governed by a written spec: 21 invariants, 25 acts, 9 executable
-      conformance scenarios. Modules own their tables, carry their doctrine, and are held to
-      an 11-gate contributor contract. The endgame is <em>competing implementations of the
-      same area</em>, certified by replaying the same scenarios.</p>
-      <ul>
-        <li><b>Read the spec live</b> — the demo's Spec tab shows acts, invariants, and the evidence for each, derived from the last conformance run, never asserted.</li>
-        <li><b>Walk the scenarios</b> — every rule taught as filled-in forms, one step at a time, refusals included, executing for real as you click.</li>
-        <li><b>Read the code</b> — open source under AGPL-3.0: run it, fork it, write a competing module; if you run a modified Saybooks as a service, share your changes.</li>
-      </ul>
-      <div class="do">
-        <a class="btn dev solid small" href="https://github.com/alviso/saybooks">GitHub · AGPL-3.0</a>
-        <a class="btn dev small" href="/app?demo=1#spec">Read the spec</a>
-        <a class="btn dev small" href="mailto:hello@saybooks.io">hello@saybooks.io</a>
+  </section>
+
+  <section>
+    <div class="kicker">How it works</div>
+    <h2>Three steps, then you just talk</h2>
+    <div class="steps">
+      <div class="step"><div class="n">1</div><h3>Sign in with Google</h3><p>You get your own private space. Nothing to install.</p></div>
+      <div class="step"><div class="n">2</div><h3>Connect Claude</h3><p>Copy one link from your space and paste it into Claude's settings (Settings → Connectors → Add). We show you exactly where — it takes a minute.</p></div>
+      <div class="step"><div class="n">3</div><h3>Talk</h3><p>Tell Claude what happened. It asks for what it needs, shows you the numbers, and records it. Everything also appears in your browser, as normal pages.</p></div>
+    </div>
+    <div class="chat">
+      <div class="msg you"><b>You:</b> let's create an invoice</div>
+      <div class="msg ai"><b>Claude:</b> Happy to. You haven't set your company details yet — what's your company name?</div>
+      <div class="msg you"><b>You:</b> Alex Rivera Design</div>
+      <div class="msg ai"><b>Claude:</b> And the address, as it should appear on the invoice?</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">Why you can trust it</div>
+    <h2>Claude is helpful. Your books need to be right.</h2>
+    <p class="sub">Most AI tools will happily fill a gap with a guess. Saybooks is built so that can't happen to your records.</p>
+    <div class="cards">
+      <div class="card">
+        <h3>It can't make things up</h3>
+        <p>An amount, a date, a client's name — if Claude doesn't have it, it asks you. It is not allowed to guess, and the system refuses if it tries.</p>
+      </div>
+      <div class="card">
+        <h3>It gets told no</h3>
+        <p>Every rule your books have applies to Claude exactly as it applies to you. When Claude tries something the rules don't allow, it's refused — in a plain sentence, with the reason.</p>
+      </div>
+      <div class="card">
+        <h3>Everything is on the record</h3>
+        <p>Every change says who made it — you or Claude — and why. Refusals are recorded too. You can read the whole history, export all of it, or delete everything.</p>
       </div>
     </div>
-  </div>
-</section>
+    <p style="margin:26px 0 0;font-size:15.5px;color:var(--mid)">Here's a real one. Claude tried to confirm an order for a customer who was over their credit limit, and got this back:</p>
+    <div class="quote">Credit check failed for Contoso Ltd. Order $2500.00; available $1000.00 (limit $1000.00 less open AR $0.00 and committed $0.00). Short by $1500.00.</div>
+    <p style="font-size:15.5px;color:var(--mid);max-width:44em">Claude relayed it word for word and asked a person what to do — it didn't split the order or quietly raise the limit. That's the behaviour the rules are written to produce.</p>
+  </section>
 
-<section>
-  <p class="kicker">what's inside</p>
-  <h2>Modules — each governed by a written spec you can replay.</h2>
-  <p class="prose">A Saybooks module owns its tables, carries its rules as prose the agent actually
-  reads, and is held to a 14-gate contract. Each functional area is defined by a spec —
-  invariants, acts, lifecycles — with executable scenarios proving the implementation follows
-  it. Three areas ship today — including a deliberately personal one.</p>
-  <div class="claims">
-    <div class="claim">
-      <h3>o2c — Order to Cash</h3>
-      <p>Quotes, orders, and a credit gate that counts committed value; partial shipments and
-      backorders; invoicing from what shipped, never what was ordered; returns, credit notes and
-      write-offs; cash application where unapplied cash is a valid, visible state; statements
-      and an AR aging a controller would actually open. Calibrated for a 5–200 person company
-      selling on account.</p>
-      <span class="proof"><b>Spec:</b> 21 invariants · 25 acts · 9 replayable scenarios — <a href="/app?demo=1#spec">walk them live</a></span>
+  <section>
+    <div class="kicker">One set of books</div>
+    <h2>Click it or say it — it's the same thing</h2>
+    <p class="sub">Claude and the pages in your browser aren't two systems kept in sync. They are one system with two ways in. The same rules, the same record, whichever you use.</p>
+    <div class="trail">
+      <table>
+        <tr><td><span class="who agent">Claude</span></td><td class="what">confirm order</td><td class="why"><span class="no">refused</span> — Credit check failed for Contoso Ltd… Short by $1500.00</td></tr>
+        <tr><td><span class="who human">Sam</span></td><td class="what">raise credit limit</td><td class="why">"approved after reviewing 12 months of on-time payments"</td></tr>
+        <tr><td><span class="who agent">Claude</span></td><td class="what">confirm order</td><td class="why">same order, same rule, new facts — confirmed</td></tr>
+        <tr><td><span class="who human">Sam</span></td><td class="what">record payment</td><td class="why">"bank feed — no remittance advice yet"</td></tr>
+        <tr><td><span class="who agent">Claude</span></td><td class="what">apply payment</td><td class="why">"remittance confirmed by their AP clerk on the phone"</td></tr>
+      </table>
     </div>
-    <div class="claim">
-      <h3>crm — Relationship Pursuit</h3>
-      <p>The anti-funnel: a curated target list where every account can say why it belongs, with
-      a source. Contacts arrive with provenance or as <em>gaps</em> — an unfilled role is a
-      finding with its own worklist, never a guess. Some fields are human-only: the relationship
-      graph is refused to agents regardless of role. Won accounts promote into o2c as customers —
-      pursuit ends where trading begins.</p>
-      <span class="proof"><b>Spec:</b> 11 invariants · 14 acts · 3 replayable scenarios — extracted from a production CRM, <a href="https://github.com/alviso/saybooks/blob/master/specs/crm/spec.md">extraction record included</a></span>
-    </div>
-    <div class="claim">
-      <h3>jobhunt — One Person's Search</h3>
-      <p>A deliberately personal area: postings, applications, interviews, recruiters — with a
-      duplicate guard keyed on the <em>end client</em> behind agency postings (the same req via
-      four agencies is normal; a double submission can disqualify you), one application per
-      posting, one open next action at a time, and "ghosted" as an honest status. It records
-      and suggests; it never sends anything.</p>
-      <span class="proof"><b>Spec:</b> 14 invariants · 18 acts · 3 replayable scenarios — extracted from a working hunt · <a href="/hunt" style="font-weight:700">free for job hunters →</a></span>
-    </div>
-    <div class="claim">
-      <h3>Your area here</h3>
-      <p>Purchasing, projects, field service, a competing take on either area above — the module
-      contract is designed for it. Write the spec first (acts, invariants, scenarios), implement
-      against it, and the same conformance machinery that certifies ours certifies yours.
-      Scenario files speak in acts, not commands, so competing implementations run the same
-      files.</p>
-      <span class="proof"><b>Start here:</b> <a href="https://github.com/alviso/saybooks/blob/master/CONTRIBUTING.md">the module contract</a> · <a href="mailto:hello@saybooks.io">hello@saybooks.io</a></span>
-    </div>
-  </div>
-</section>
+    <p style="font-size:14px;color:var(--dim);margin-top:10px">Purple rows are Claude. Blue rows are a person. One history.</p>
+    <video controls playsinline preload="metadata" poster="/card.png"><source src="/walkthrough.mp4" type="video/mp4"></video>
+    <p style="font-size:14px;color:var(--dim)">Two minutes, recorded from the live demo: a rule teaching, form by form. <a href="/app?demo=1#spec">Walk it yourself →</a></p>
+  </section>
 
-<section>
-  <div class="split">
-    <div>
-      <p class="kicker">one log, two kinds of hands</p>
-      <h2>This is a real audit trail from a real session.</h2>
-      <p>The purple rows are Claude, connected over MCP. The blue rows are a person, clicking.
-      They are not two systems reconciled — they are one system, and the log can tell you, for
-      any number in the books, who put it there and the reason they gave.</p>
-      <p class="caption">Refusals are logged too — a blocked agent action is exactly the thing
-      you want to be able to review later.</p>
+  <section>
+    <div class="kicker">What it isn't</div>
+    <h2>Honest limits</h2>
+    <div class="limits">
+      <div><b>Not accounting software</b>It keeps your operational records. Your accountant's ledger stays where it is — Saybooks exports a clean journal for QuickBooks or Xero.</div>
+      <div><b>It never sends or pays</b>It produces invoices for you to send and records payments you received. It never emails anyone or moves money.</div>
+      <div><b>USD, one company</b>Single currency, single entity today. If that's you, it works; if not, not yet.</div>
+      <div><b>Early</b>Weeks old and moving fast. Your data is yours to export or delete at any moment, and everything is open source.</div>
     </div>
-    <div class="trail"><table>
-      <tr><td><span class="who agent">claude</span></td><td class="cmd">confirm_order</td><td class="why refused">✗ refused — Credit check failed for Contoso Ltd… Short by $1500.00</td></tr>
-      <tr><td><span class="who agent">claude</span></td><td class="cmd">invoice_shipped</td><td class="why">INV-0002, $400.00 — billed what shipped, never what was ordered</td></tr>
-      <tr><td><span class="who agent">claude</span></td><td class="cmd">ship_order</td><td class="why">the open 5 × Widget B — carrier left blank rather than invented</td></tr>
-      <tr><td><span class="who agent">claude</span></td><td class="cmd">receive_stock</td><td class="why">“Supplier delivery received; no PO reference supplied”</td></tr>
-      <tr><td><span class="who human">sam</span></td><td class="cmd">record_payment</td><td class="why">“bank feed — no remittance advice yet”</td></tr>
-      <tr><td><span class="who agent">claude</span></td><td class="cmd">apply_payment</td><td class="why">“remittance confirmed by their AP clerk on the phone”</td></tr>
-      <tr><td><span class="who human">sam</span></td><td class="cmd">invoice_shipped</td><td class="why">“billing what shipped, never what was ordered”</td></tr>
-    </table></div>
-  </div>
-</section>
+  </section>
 
-<section id="refusal">
-  <p class="kicker">rules that refuse, in sentences</p>
-  <h2 class="prose">When the agent asked to confirm an order past its credit limit, this happened:</h2>
-  <div class="refusal">Credit check failed for Contoso Ltd. Order $2500.00; available $1000.00
-  (limit $1000.00 less open AR $0.00 and committed $0.00). Short by $1500.00.</div>
-  <p class="prose">That sentence is written once, in the rule itself. The greyed-out button shows it as a
-  tooltip. The agent receives it verbatim and relays it. The test suite fails if they ever
-  differ. And the rule's own documentation tells the agent what <em>not</em> to do next:
-  don't split the order, don't invoice early, don't quietly raise the limit — report the
-  shortfall and let a person decide. In our sessions, that is what it does.</p>
-</section>
-
-<section>
-  <p class="kicker">watch a rule teach</p>
-  <h2 class="prose">Every scenario in the spec can be walked, form by form, live.</h2>
-  <p class="prose">This is the credit-gate scenario from the demo's Spec tab: each step shows the real
-  form, filled in as a person would fill it, then runs for real in a scratch workspace — and the
-  step that gets refused is framed as the lesson, because it is one.</p>
-  <video autoplay muted loop playsinline controls preload="metadata" width="1100"
-    style="width:100%;max-width:1100px;border:none;border-radius:16px;display:block;margin:20px 0 6px;box-shadow:var(--shadow)"
-    aria-label="Screen recording: the walkthrough stepping through the credit gate scenario, ending in the refusal">
-    <source src="/walkthrough.mp4" type="video/mp4">
-  </video>
-  <p class="caption">Recorded from the live demo, unedited. <a href="/app?demo=1#spec">Walk it yourself →</a></p>
-</section>
-
-<section>
-  <p class="kicker">why it can't drift</p>
-  <h2>Every capability is declared once. Everything else is derived.</h2>
-  <div class="claims">
-    <div class="claim">
-      <h3>Two surfaces, one declaration</h3>
-      <p>Each business act — confirm an order, apply a payment, write off a balance — is defined
-      one time. The agent's tool, the form in the UI, and its validation are all generated from
-      that single definition.</p>
-      <span class="proof"><b>Enforced:</b> a contract test asserts field-for-field parity. Hand-write a form and the build fails.</span>
-    </div>
-    <div class="claim">
-      <h3>A spec you can replay</h3>
-      <p>The order-to-cash area is governed by a written spec: 21 invariants, every act, every
-      lifecycle. Nine executable scenarios prove the implementation follows it — including the
-      refusals.</p>
-      <span class="proof"><b>See it:</b> the demo's Spec tab walks every scenario as filled-in forms, one step at a time, running live.</span>
-    </div>
-    <div class="claim">
-      <h3>Nothing writes off the record</h3>
-      <p>There is exactly one door to the books. A click and a tool call go through the same
-      command, the same guards, the same transaction — and land in the same log, with an actor.</p>
-      <span class="proof"><b>Including no:</b> a refused command is recorded with who asked and why it was refused.</span>
-    </div>
-  </div>
-</section>
-
-<section>
-  <p class="kicker">a governed agent, end to end</p>
-  <h2 class="prose">The Contoso order, as it actually played out</h2>
-  <ol class="story">
-    <li><span><b>The gate refused the agent.</b> <span class="aside">Order $2,500 against a $1,000 limit — refusal logged, with the arithmetic.</span></span></li>
-    <li><span><b>The agent stopped and laid out options.</b> <span class="aside">Raise the limit, split, prepay, or decline — noting it had raised nothing and split nothing, and that Contoso had no payment history to justify more credit.</span></span></li>
-    <li><span><b>A person decided.</b> <span class="aside">The limit moved to $3,000 as its own logged act, with the approver's reason on the record, verbatim.</span></span></li>
-    <li><span><b>The same order confirmed.</b> <span class="aside">The earlier refusal stays in the log beside the approval — the trail you'd want when someone asks why the limit moved.</span></span></li>
-    <li><span><b>Asked to do something the books contradicted, it declined.</b> <span class="aside">Told to apply “the rest” of a payment that was already fully applied, it checked the log, found $0.00 unapplied, cited the evidence, and made no write. The books beat the prompt.</span></span></li>
-  </ol>
-</section>
-
-<section id="quickstart">
-  <p class="kicker">try it in two minutes</p>
-  <h2>Your sandbox is already waiting.</h2>
-  <div class="steps">
-    <div class="step"><span class="n">1</span><p><a href="/app?demo=1">Open the demo</a>. You get a private set of books, seeded with a small
-    distributor's morning: a part-shipped order, an open invoice, cash without a remittance, and
-    one draft order left there deliberately — confirming it trips the credit gate. Try it.</p></div>
-    <div class="step"><span class="n">2</span><p>Point your own Claude at the same books. The sidebar shows your command —
-    <code>claude mcp add -t http saybooks https://saybooks.io/mcp/&lt;your-sandbox&gt;</code> —
-    or add the URL as a custom connector on claude.ai. Then just talk:
-    <em>“receive 20 Widget B and finish Northwind's order.”</em></p></div>
-    <div class="step"><span class="n">3</span><p>Keep the Audit trail tab open while you do. Watching your own words become
-    attributed, reasoned entries in a ledger — next to the human ones — is the product.</p></div>
-  </div>
-</section>
-
-<section>
-  <p class="kicker">plainly</p>
-  <h2>What Saybooks is, and isn't, today</h2>
-  <div class="honest">
-    <div>
-      <h3>IS</h3>
+  <section>
+    <div class="builders">
+      <div class="kicker">For builders</div>
+      <h2 style="font-size:24px">Under the hood: one definition, both surfaces</h2>
+      <p>Every business act is declared once. From that one declaration Saybooks derives the tool Claude sees (over MCP), the form a person sees, the rule that can refuse either, and the audit entry — so the two surfaces can't drift; a contract test fails the build if they do. Each area is governed by a written spec with executable scenarios, and modules are held to a 16-gate contributor contract.</p>
       <ul>
-        <li>A working order-to-cash vertical: quotes, orders, a real credit gate, partial fulfilment and backorders, invoicing from fulfilment, returns and credit notes, cash application, write-offs, statements, aging.</li>
-        <li>Spec-governed: 21 invariants, 25 acts, 9 replayable conformance scenarios.</li>
-        <li>Calibrated for a 5–200 person company selling goods or services on account.</li>
-        <li>This demo — free to play with, wired for both hands.</li>
+        <li>Five modules today: order-to-cash, CRM, jobhunt, solo invoicing, and the core — every one spec-first, with replayable conformance scenarios.</li>
+        <li>Open source under AGPL-3.0. Run it, fork it, write a competing module; scenario files speak in acts, so competing implementations run the same tests.</li>
+        <li>Refusals are one sentence, written once in the rule, shown identically to the button and the agent.</li>
       </ul>
+      <div class="ctas">
+        <a class="btn solid" href="https://github.com/alviso/saybooks">GitHub · AGPL-3.0</a>
+        <a class="btn soft" href="/app?demo=1#spec">Read the specs live</a>
+      </div>
     </div>
-    <div class="not">
-      <h3>ISN'T — yet, or on purpose</h3>
-      <ul>
-        <li>Not multi-currency, multi-entity, or a tax engine — tax is captured and frozen per line; computing rates is an integration's job.</li>
-        <li>It never emails a customer, charges a card, or books a shipment. It records what happened. Outbound is other software's work.</li>
-        <li>Not a place for your real books today — the demo resets daily, and we'd rather tell you that here than let you find out.</li>
-      </ul>
-    </div>
-  </div>
-</section>
+  </section>
 
-<footer>
-  <p><b style="color:var(--ink)">Saybooks</b> — the books you can talk to, that stay books. · <a href="https://github.com/alviso/saybooks">GitHub</a> · AGPL-3.0 · <a href="mailto:hello@saybooks.io">hello@saybooks.io</a></p>
-  <p class="mono">demo sandboxes are private, seeded, and swept daily · every quote on this page is verbatim from the system or a session transcript</p>
-</footer>
-
+  <footer>
+    Saybooks · <a href="/solo">Invoicing</a> · <a href="/hunt">Job hunt</a> · <a href="/app?demo=1">Demo</a> · <a href="https://github.com/alviso/saybooks">Source</a> · <a href="mailto:hello@saybooks.io">hello@saybooks.io</a>
+  </footer>
 </div>
-<script>
-if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
-  document.querySelectorAll('video[autoplay]').forEach(v => { v.removeAttribute('autoplay'); v.pause(); v.setAttribute('controls', ''); });
-}
-</script>
 </body>
 </html>
