@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Saybooks Solo — invoices, kept by conversation</title>
+<meta name="description" content="A free invoice generator for freelancers who work with Claude. Talk your invoice into existence — it asks what it needs, shows you every number, and hands back a document link to send.">
+<meta property="og:title" content="Saybooks Solo — invoices, kept by conversation">
+<meta property="og:description" content="Free invoicing for freelancers with an AI agent. The agent guides you one question at a time; issued invoices are immutable; your data exports or deletes any time. Open source.">
+<meta property="og:url" content="https://saybooks.io/solo">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📒</text></svg>">
+<style>
+  * { box-sizing: border-box; margin: 0 }
+  body { font: 16px/1.6 -apple-system, 'Segoe UI', sans-serif; color: #1c2420; background: #f6f5f1 }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 3em 1.5em 4em }
+  .mark { font-weight: 800; letter-spacing: .1em; font-size: 14px }
+  .mark a { color: inherit; text-decoration: none }
+  .mark span { color: #6b7570; font-weight: 400; letter-spacing: 0 }
+  h1 { font-family: Georgia, serif; font-size: 40px; line-height: 1.15; margin: 1.2em 0 .4em }
+  .sub { font-size: 19px; color: #4a544e; max-width: 40em }
+  .cta { display: inline-block; margin: 1.8em 0 .4em; background: #1e3a2f; color: #fff; padding: .85em 1.6em; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 17px }
+  .cta:hover { background: #2e5443 }
+  .cta.ghost { background: transparent; color: #1e3a2f; border: 2px solid #1e3a2f; margin-left: .6em; padding: calc(.85em - 2px) 1.6em }
+  .cta.ghost:hover { background: #e9ede9 }
+  .ctasub { font-size: 13px; color: #6b7570 }
+  .chat { margin: 2.5em 0; max-width: 44em; display: flex; flex-direction: column; gap: .5em }
+  .msg { border-radius: 12px; padding: .7em 1.05em; font-size: 15px; line-height: 1.5; max-width: 88% }
+  .you { background: #e9ede9; align-self: flex-start }
+  .ai { background: #1e3a2f; color: #e8f0ea; align-self: flex-end }
+  .ai b { color: #fff }
+  .ell { text-align: center; color: #6b7570; font-size: 18px; letter-spacing: .3em }
+  h2 { font-family: Georgia, serif; font-size: 24px; margin: 2.2em 0 .8em }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px }
+  .card { background: #fff; border: 1.5px solid #e2e0d8; border-radius: 12px; padding: 1.1em 1.2em }
+  .card b { display: block; margin-bottom: .35em; color: #1e3a2f }
+  .card p { font-size: 14px; color: #4a544e }
+  .yours { background: #fff; border: 1.5px solid #e2e0d8; border-radius: 12px; padding: 1.3em 1.4em; margin-top: 2.2em }
+  .yours ul { margin: .5em 0 0; padding-left: 1.3em; font-size: 14.5px; color: #4a544e }
+  .yours li { margin-bottom: .3em }
+  .step { display: flex; gap: 14px; margin-top: 1.6em }
+  .step .n { flex: none; width: 28px; height: 28px; border-radius: 50%; background: #1e3a2f; color: #fff; text-align: center; line-height: 28px; font-weight: 700 }
+  .step p { font-size: 14.5px; color: #4a544e; margin-top: .3em }
+  code { background: #edece6; padding: .15em .45em; border-radius: 5px; font-size: 13px; font-family: ui-monospace, monospace }
+  .mock { background: #23262b; border: 1.5px solid #3a3e45; border-radius: 10px; padding: .9em 1em; margin-top: .7em; max-width: 34em }
+  .mocklabel { font-size: 12px; color: #9aa0a6 }
+  .mockfield { background: #2b2f35; border: 1.5px solid #3a3e45; border-radius: 8px; padding: .45em .8em; color: #e8eaed; font-family: ui-monospace, monospace; font-size: 13px; overflow-wrap: anywhere; margin-top: .25em }
+  .foot { margin-top: 3.5em; padding-top: 1.5em; border-top: 1px solid #e2e0d8; font-size: 13.5px; color: #6b7570 }
+  .foot a { color: #1e3a2f }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="mark"><a href="/">SAYBOOKS</a> <span>· solo</span></div>
+
+  <h1>Invoices, kept by conversation.</h1>
+  <p class="sub">A free invoice generator for freelancers who work with Claude. You talk; it asks
+  for exactly what it needs, one question at a time; you get back a clean, immutable invoice with
+  a link to send your client. Ahead of the work, partial, or after — your agreement, your call.</p>
+
+  <a class="cta" href="/auth/google?next=solo">Start free with Google →</a>
+  <a class="cta ghost" href="/app?demo=solo">See it working first</a>
+  <div class="ctasub">The demo is a live sandbox with a freelancer's books already in it — no account needed. No credit card, no trial clock; export or delete everything, any time.</div>
+
+  <div class="chat">
+    <div class="msg you"><b>You:</b> let's create an invoice</div>
+    <div class="msg ai"><b>Claude:</b> Happy to. You haven't set your company details yet — what's your company (or trading) name?</div>
+    <div class="msg you"><b>You:</b> Crankk Inc</div>
+    <div class="msg ai"><b>Claude:</b> And the address, as it should appear on the invoice?</div>
+    <div class="ell">· · ·</div>
+    <div class="msg ai"><b>Claude:</b> Saved. Now the client — who are we invoicing, and what terms did you two agree on?</div>
+    <div class="ell">· · ·</div>
+    <div class="msg ai"><b>Claude:</b> Here's the draft: 17 h consulting × $250 + workshop day $1,200 = <b>$5,450.00, due Oct 2 (net 30)</b>. Issue it? Once issued it's immutable — mistakes become void-and-reissue, on the record.</div>
+    <div class="msg you"><b>You:</b> go</div>
+    <div class="msg ai"><b>Claude:</b> Issued — <b>INV-0001</b>. Your document: <u>saybooks.io/doc/…</u> — save as PDF and send it over. I'll keep an eye on what's outstanding.</div>
+  </div>
+
+  <h2>Why these invoices are worth keeping</h2>
+  <div class="grid">
+    <div class="card"><b>Issued means issued</b><p>An issued invoice is immutable. Fixing a mistake is a void with a reason and a fresh invoice — the number stays burned, the history stays honest. Exactly what your accountant wishes you did.</p></div>
+    <div class="card"><b>Your details, frozen in time</b><p>The seller block — your name, address, payment instructions — freezes onto each invoice at issue. Change banks next year; last year's invoices still say what they said.</p></div>
+    <div class="card"><b>An agent that can't make things up</b><p>It never invents an amount, a rate, or a date — it asks you. And everything it does lands in an audit trail you can read, refusals included.</p></div>
+    <div class="card"><b>Who owes what, honestly</b><p>Payments are recorded as they arrive — unapplied money is a real, visible state, never silently matched. Outstanding shows the truth, oldest first.</p></div>
+  </div>
+
+  <h2>How it works — three steps</h2>
+  <div class="step"><div class="n">1</div><div>
+    <b>Sign in above, then mint a key for your agent.</b>
+    <p>Your space opens with <b>Share this space…</b> in the sidebar: second row, type a name (<i>claude</i> works), leave <b>controller</b>, press <b>Mint key</b>, copy the connector URL. The link is the key — password rules apply; revoke any time.</p>
+  </div></div>
+  <div class="step"><div class="n">2</div><div>
+    <b>Add it to Claude.</b>
+    <p>In the Claude app: <b>Settings → Connectors → Add custom connector</b>, then Continue.</p>
+    <div class="mock">
+      <div class="mocklabel">Name</div><div class="mockfield">books</div>
+      <div class="mocklabel" style="margin-top:8px">Remote MCP server URL</div><div class="mockfield">https://saybooks.io/mcp/m-4f9c21…</div>
+    </div>
+  </div></div>
+  <div class="step"><div class="n">3</div><div>
+    <b>Open a new session and say: <code>let's create an invoice</code></b>
+    <p>That's genuinely all. The agent knows this space's rules and guides you from there — company details, client, the work, every number shown before anything is issued. Prefer forms? The same books are in your browser, and each side picks up what the other did.</p>
+  </div></div>
+
+  <div class="yours">
+    <b style="color:#1e3a2f">Your data, actually yours</b>
+    <ul>
+      <li><b>Export</b> — one click downloads everything as JSON, audit trail included.</li>
+      <li><b>Delete</b> — one button permanently removes your space, its database, and every key.</li>
+      <li><b>Your accountant</b> — a balanced journal exports for QuickBooks/Xero; solo invoices and payments included.</li>
+      <li><b>Self-host</b> — open source (AGPL): <a href="https://github.com/alviso/saybooks" style="color:#1e3a2f">github.com/alviso/saybooks</a>.</li>
+      <li>It produces documents and records payments. It never sends anything or moves money — you stay the only one who does.</li>
+    </ul>
+  </div>
+
+  <div class="foot">
+    Built on <a href="/">Saybooks</a> — the open-source platform where AI agents and humans share
+    one set of rules and one audit trail. Solo is its fourth module: no orders, no credit gates —
+    just invoices, done properly. Also free: <a href="/hunt">the job-hunt tracker</a>.
+  </div>
+</div>
+</body>
+</html>

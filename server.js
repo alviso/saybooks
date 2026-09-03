@@ -38,19 +38,26 @@ const crypto = require('crypto');
 const sandboxExists = (name) => fs.existsSync(path.join(wsp.DATA_DIR, `ws_${name}.db`));
 // Sandbox flavor rides in the NAME: try-h… is a jobhunt demo (hunt mounts, hunt story),
 // anything else is the business demo. 'h' is not a hex digit, so random names never collide.
-const seedSandbox = (name) => { require('./src/fixtures.js').load(name.startsWith('try-h') ? 'hunttry' : 'try', name); return name; };
+const seedSandbox = (name) => {
+  const fixture = name.startsWith('try-h') ? 'hunttry' : name.startsWith('try-s') ? 'solotry' : 'try';
+  require('./src/fixtures.js').load(fixture, name);
+  return name;
+};
 
 // Anonymous demo sandboxes mount the business modules only — jobhunt is a personal area
 // and belongs to owned spaces (where it mounts in full, data or no data).
 const DEMO_MOUNTS = ['core', 'o2c', 'crm'];
 const HUNT_MOUNTS = ['core', 'jobhunt'];   // the free job-hunt offering: one module + the platform
+const SOLO_MOUNTS = ['core', 'solo'];      // the freelancer invoice generator
+const KIND_MOUNTS = { hunt: HUNT_MOUNTS, solo: SOLO_MOUNTS };
 const mountsFor = (w) => { try {
   const sp = users.spaceOf(w);
-  if (sp) return sp.kind === 'hunt' ? HUNT_MOUNTS : null;
+  if (sp) return KIND_MOUNTS[sp.kind] || null;
   if (!DEMO) return null;
-  return w.startsWith('try-h') ? HUNT_MOUNTS : DEMO_MOUNTS;
+  return w.startsWith('try-h') ? HUNT_MOUNTS : w.startsWith('try-s') ? SOLO_MOUNTS : DEMO_MOUNTS;
 } catch { return null; } };
-const newVisitorWs = (flavor) => seedSandbox(`try-${flavor === 'hunt' ? 'h' : ''}${crypto.randomBytes(5).toString('hex')}`);
+const FLAVOR_PREFIX = { hunt: 'h', solo: 's' };   // both non-hex, so random names never collide
+const newVisitorWs = (flavor) => seedSandbox(`try-${FLAVOR_PREFIX[flavor] || ''}${crypto.randomBytes(5).toString('hex')}`);
 
 if (DEMO) {
   // Sweep: sandboxes older than 24h go; if a crowd shows up, cap at the 4000 newest.
@@ -137,6 +144,47 @@ const entryOf = (req, url, allowMint = false) => {
 
 const walks = new Map();          // walkthrough ordering: workspace -> next expected step
 
+/** The printable invoice, rendered server-side for /doc links — same look as the workbench's
+ *  print view. The esc() matters: everything here is user-entered text on a public-ish URL. */
+function renderInvoiceDoc(inv) {
+  const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  const nl = (s) => esc(s).replace(/\n/g, '<br>');
+  const money = (c) => '$' + (c / 100).toFixed(2);
+  const s = inv.seller;
+  const rows = inv.lines.map(l => `<tr><td>${esc(l.description)}</td><td class="n">${l.qty}</td><td class="n">${money(l.rate)}</td>
+    <td class="n">${l.tax_rate_bp ? (l.tax_rate_bp / 100).toFixed(2) + '%' : '—'}</td><td class="n">${money(l.amount)}</td></tr>`).join('');
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${esc(inv.id)}</title><style>
+    body{font:14px/1.5 Georgia,serif;color:#1a1a1a;max-width:52em;margin:3em auto;padding:0 2em}
+    .top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2.5em;gap:2em}
+    h1{font-size:26px;letter-spacing:.04em;margin:0} .muted{color:#666;font-size:12.5px}
+    table{width:100%;border-collapse:collapse;margin:1.5em 0} th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#666;border-bottom:1.5px solid #1a1a1a;padding:6px 8px}
+    td{padding:7px 8px;border-bottom:1px solid #ddd} .n{text-align:right}
+    .totals{margin-left:auto;width:20em} .totals td{border:none;padding:3px 8px} .totals .due td{border-top:1.5px solid #1a1a1a;font-weight:700}
+    .pay{border:1px solid #ccc;padding:.9em 1.1em;margin-top:2em;font-size:13px}
+    .foot{margin-top:2.5em;font-size:12px;color:#666}
+    .bar{margin-bottom:2em} @media print{.bar{display:none}}
+  </style></head><body>
+    <div class="bar"><button onclick="window.print()">Print / Save as PDF</button></div>
+    <div class="top">
+      <div>${s ? `<div style="font-size:19px;font-weight:700">${esc(s.name)}</div><div class="muted">${nl(s.address || '')}${s.tax_id ? '<br>Tax ID ' + esc(s.tax_id) : ''}</div>` : ''}</div>
+      <div style="text-align:right"><h1>INVOICE</h1><div class="muted">${esc(inv.id)}<br>Issued ${esc(inv.issued_at)}<br>Due ${esc(inv.due_at)}</div></div>
+    </div>
+    <div class="muted" style="font-size:11px;letter-spacing:.08em;text-transform:uppercase">Bill to</div>
+    <div style="font-weight:700">${esc(inv.customer_name)}</div>${inv.customer_email ? `<div class="muted">${esc(inv.customer_email)}</div>` : ''}
+    ${inv.notes ? `<div class="muted" style="margin-top:6px">${nl(inv.notes)}</div>` : ''}
+    <table><thead><tr><th>Description</th><th class="n">Qty</th><th class="n">Rate</th><th class="n">Tax</th><th class="n">Amount</th></tr></thead><tbody>${rows}</tbody></table>
+    <table class="totals">
+      <tr><td>Subtotal</td><td class="n">${money(inv.subtotal)}</td></tr>
+      ${inv.tax_total ? `<tr><td>Tax</td><td class="n">${money(inv.tax_total)}</td></tr>` : ''}
+      <tr><td>Total</td><td class="n">${money(inv.total)}</td></tr>
+      ${inv.applied ? `<tr><td>Paid</td><td class="n">−${money(inv.applied)}</td></tr>` : ''}
+      <tr class="due"><td>Balance due</td><td class="n">${money(inv.open)}</td></tr>
+    </table>
+    ${inv.payment_instructions ? `<div class="pay"><b>How to pay</b><br>${nl(inv.payment_instructions)}</div>` : ''}
+    ${s && s.footer_note ? `<div class="foot">${nl(s.footer_note)}</div>` : ''}
+  </body></html>`;
+}
+
 /**
  * Demo abuse guard — deliberately light: a token bucket per IP for requests, and a separate
  * hourly cap on sandbox creation (each sandbox is a database on disk). nginx supplies
@@ -214,6 +262,22 @@ const server = http.createServer((req, res) => {
     return undefined;
   }
 
+  // The document link (S-7): a capability to view ONE issued invoice, nothing else. No
+  // cookie, no session — the URL is workspace + per-invoice token, both required.
+  const docMatch = /^\/doc\/([a-z0-9-]{4,40})\/([a-f0-9]{24})$/.exec(p);
+  if (docMatch && req.method === 'GET') {
+    const [, dws, dtok] = docMatch;
+    if (!sandboxExists(dws)) return send(res, 404, 'Not found', 'text/plain');
+    try {
+      return wsp.use(dws, () => {
+        const inv = H.db().prepare('SELECT id FROM solo_invoice WHERE doc_token = ? AND status IN (\'issued\',\'paid\')').get(dtok);
+        if (!inv) return send(res, 404, 'Not found', 'text/plain');
+        const v = require('./src/modules/solo/views.js').invoiceView(inv.id);
+        return send(res, 200, renderInvoiceDoc(v), 'text/html; charset=utf-8');
+      });
+    } catch (e) { console.error('[doc]', e.message); return send(res, 404, 'Not found', 'text/plain'); }
+  }
+
   // Sign-in-first door: an anonymous FIRST visit to /app gets a choice, never a silent
   // sandbox. Returning visitors (cookie), joins, ?ws links, and ?demo skip straight through.
   if (DEMO && (p === '/app' || p === '/app/') && req.method === 'GET'
@@ -278,6 +342,9 @@ const server = http.createServer((req, res) => {
             (SELECT COALESCE(SUM(qty*unit_price),0) FROM order_line WHERE order_id = o.id) AS total
           FROM "order" o JOIN customer c ON c.id = o.customer_id ORDER BY o.id DESC`).all(),
         items: H.db().prepare('SELECT * FROM item ORDER BY id').all(),
+        solo_invoices: H.db().prepare(`SELECT i.id, i.status, i.total, i.issued_at, i.due_at, c.name AS customer_name,
+            i.total - COALESCE((SELECT SUM(amount) FROM solo_payment_application WHERE invoice_id = i.id), 0) AS open
+          FROM solo_invoice i JOIN customer c ON c.id = i.customer_id ORDER BY i.id DESC`).all(),
         lookups: {
           customer: H.db().prepare('SELECT id, name AS label FROM customer ORDER BY name').all(),
           item:     H.db().prepare('SELECT id, name AS label FROM item ORDER BY id').all(),
@@ -462,6 +529,7 @@ const server = http.createServer((req, res) => {
     const file = p === '/' ? (DEMO ? 'landing.html' : 'index.html')
                : (p === '/app' || p === '/app/') ? 'index.html'
                : (p === '/hunt' || p === '/hunt/') ? 'hunt.html'
+               : (p === '/solo' || p === '/solo/') ? 'solo.html'
                : (p === '/admin' || p === '/admin/') ? 'admin.html'
                : path.basename(p);
     const full = path.join(UI, file);

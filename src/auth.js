@@ -20,7 +20,7 @@ const REDIRECT = 'https://saybooks.io/auth/google/callback';
 function loginRedirect(res, next) {
   const state = crypto.randomBytes(12).toString('hex');
   // Intent rides in the state COOKIE, not the URL — the callback trusts only what we set.
-  const intent = next === 'hunt' ? ':hunt' : '';
+  const intent = ['hunt', 'solo'].includes(next) ? ':' + next : '';
   const url = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
     client_id: CLIENT_ID, redirect_uri: REDIRECT, response_type: 'code',
     scope: 'openid email profile', state, prompt: 'select_account',
@@ -54,17 +54,19 @@ async function callback(req, res, url) {
   const fs = require('fs');
   const path = require('path');
   let landing = '/app';
-  if (intent === 'hunt') {
-    // The free job-hunt door: find or create their hunt-kind space (empty books — a real
-    // hunt starts from zero), and land them in it. No demo fixtures, no 'My books'.
-    let sp = users.spacesFor(user.id).map(s => users.spaceOf(s.ws)).find(s => s && s.kind === 'hunt');
-    if (!sp) { sp = users.createSpace(user.id, 'My job hunt', undefined, 'hunt'); wsp.dbFor(sp.ws); }
+  if (intent === 'hunt' || intent === 'solo') {
+    // A flavored door: find or create their kind-matching space (empty books — real work
+    // starts from zero), and land them in it. No demo fixtures, no 'My books'.
+    const name = intent === 'hunt' ? 'My job hunt' : 'My invoices';
+    let sp = users.spacesFor(user.id).map(s => users.spaceOf(s.ws)).find(s => s && s.kind === intent);
+    if (!sp) { sp = users.createSpace(user.id, name, undefined, intent); wsp.dbFor(sp.ws); }
     landing = '/app?ws=' + sp.ws;
   } else if (!users.spacesFor(user.id).length) {
     const cur = (/(?:^|;\s*)otc_ws=(try-[a-z0-9]+)/.exec(req.headers.cookie || '') || [])[1];
     if (cur && fs.existsSync(path.join(wsp.DATA_DIR, `ws_${cur}.db`))) {
-      // A jobhunt demo sandbox claims as a hunt-kind space — the visitor keeps the flavor too.
+      // A flavored demo sandbox claims as a matching-kind space — the visitor keeps the flavor too.
       if (cur.startsWith('try-h')) users.claimSpace(user.id, cur, 'My job hunt', 'hunt');
+      else if (cur.startsWith('try-s')) users.claimSpace(user.id, cur, 'My invoices', 'solo');
       else users.claimSpace(user.id, cur, 'My books');
     }
     else {

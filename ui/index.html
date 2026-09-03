@@ -96,6 +96,10 @@
   <div class="grp-items" data-gi="hunt">
     <a data-v="huntdue">Due</a><a data-v="huntpipeline">Pipeline</a><a data-v="huntcontacts">Contacts</a><a data-v="huntresumes">Resumes</a>
   </div>
+  <div class="grp" data-g="solo">Invoicing <span class="tog">−</span></div>
+  <div class="grp-items" data-gi="solo">
+    <a data-v="soloinv">Invoices</a><a data-v="soloout">Outstanding</a><a data-v="soloclients">Clients</a>
+  </div>
   <div class="grp" data-g="sys">System <span class="tog">−</span></div>
   <div class="grp-items" data-gi="sys">
     <a data-v="company">Company</a><a data-v="audit">Audit trail</a><a data-v="spec">Spec</a><a data-v="doctrine">Doctrine</a>
@@ -225,6 +229,27 @@ function linesEditor(f, state) {
 
 /* ---------- views ---------- */
 const cmd = (n) => REG.commands.find(c => c.name === n);
+/* A fresh solo space teaches: connecting Claude IS the product — the agent guides from there. */
+function soloOnboarding() {
+  const card = $(`<div class="card" style="max-width:660px;margin-top:6px">
+    <h2 style="margin-bottom:6px">Your first invoice</h2>
+    <div style="display:flex;gap:12px;margin-top:14px"><div style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;text-align:center;line-height:26px;font-weight:700">1</div>
+      <div><b>Mint a key for your agent</b>
+      <div class="doc" style="margin-top:2px">Open <b id="soShare" style="color:var(--accent);cursor:pointer">Share this space…</b> — second row, type <i>claude</i>, leave <b>controller</b>, press <b>Mint key</b>, copy the connector URL. The link IS the key: treat it like a password, revoke it there any time.</div></div></div>
+    <div style="display:flex;gap:12px;margin-top:16px"><div style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;text-align:center;line-height:26px;font-weight:700">2</div>
+      <div><b>Add it to Claude</b>
+      <div class="doc" style="margin-top:2px"><b>Settings → Connectors → Add custom connector</b> — Name: <b>books</b> · Remote MCP server URL: <b>the link you copied</b>.</div></div></div>
+    <div style="display:flex;gap:12px;margin-top:16px"><div style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;text-align:center;line-height:26px;font-weight:700">3</div>
+      <div><b>Open a new session and say:</b> <a id="soCopy" style="color:var(--accent);cursor:pointer;font-weight:400">(copy)</a>
+      <div id="soPrompt" style="margin-top:6px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font:12px/1.55 ui-monospace,monospace;white-space:pre-wrap">Let's create an invoice.</div>
+      <div class="doc" style="margin-top:6px">That's genuinely all. The agent knows this space's rules — it will ask for your company details one question at a time, then your client, then the work you're billing, show you every number, and hand back a document link to send. Prefer forms? <b>Company</b> (under System) and <b>New client</b> here do the same, and the agent picks up whatever you've already filled in.</div></div></div>
+  </div>`);
+  card.querySelector('#soShare').onclick = () => document.getElementById('inviteBtn')?.click();
+  card.querySelector('#soCopy').onclick = () => navigator.clipboard.writeText(card.querySelector('#soPrompt').textContent).then(
+    () => toast('✓ copied'), () => toast('✗ copy failed'));
+  return card;
+}
+
 /* A fresh hunt space teaches instead of showing bare table headers. */
 function huntOnboarding() {
   const card = $(`<div class="card" style="max-width:660px;margin-top:6px">
@@ -261,9 +286,10 @@ const newButtons = (subject) => REG.commands.filter(c => c.subject === subject &
 
 async function detail(type, id) {
   const wrap = $('<div></div>');
+  const idArg = type === 'solo_invoice' ? 'invoice_id' : type + '_id';
   const [entity, na] = await Promise.all([
-    api({ order:'o2c_get_order', customer:'o2c_get_customer', invoice:'o2c_get_invoice', account:'crm_get_account', campaign:'crm_get_campaign', posting:'hunt_get_posting', contact:'hunt_get_contact', resume:'hunt_get_resume' }[type],
-        { [type + '_id']: id }),
+    api({ order:'o2c_get_order', customer:'o2c_get_customer', invoice:'o2c_get_invoice', account:'crm_get_account', campaign:'crm_get_campaign', posting:'hunt_get_posting', contact:'hunt_get_contact', resume:'hunt_get_resume', solo_invoice:'solo_get_invoice' }[type],
+        { [idArg]: id }),
     fetch(wsUrl(`/api/next-actions?type=${type}&id=${id}`)).then(r => r.json()),
   ]);
   const card = $('<div class="card"></div>');
@@ -277,6 +303,8 @@ async function detail(type, id) {
     ? { Campaign: entity.campaign_name ?? '—', Tier: entity.tier ?? '—', Vertical: entity.vertical ?? '—', Trigger: entity.trigger_event ?? '—', Customer: entity.customer_id ?? '— (not promoted)', 'Open gaps': entity.gap_count, Reason: entity.status_reason ?? '—' }
     : type === 'posting'
     ? { Via: entity.company_name, 'End client': entity.end_client_name ?? '—', Req: entity.req_id ?? '—', Fit: entity.fit_score ?? '—', Resume: entity.resume_version_label ?? '—', 'Applied': entity.application ? (entity.application.applied_at || 'yes') : 'no', 'App status': entity.application ? entity.application.status : '—' }
+    : type === 'solo_invoice'
+    ? { Client: entity.customer_name, Total: entity.total_display, Applied: entity.applied_display, Open: entity.open_display, Issued: entity.issued_at ?? '— (draft)', Due: entity.due_at ?? `${entity.due_in_days ?? 30} days from issue`, ...(entity.void_reason && { Voided: entity.void_reason }) }
     : type === 'contact'
     ? { Company: entity.company_name ?? '—', Role: entity.role ?? '—', Email: entity.email ?? '—', Phone: entity.phone ?? '—', LinkedIn: entity.linkedin_url ? `<a href="${entity.linkedin_url}" target="_blank" rel="noopener">profile</a>` : '—', Source: entity.source, 'Last touch': entity.last_touch ? entity.last_touch.slice(0,10) : '—' }
     : type === 'resume'
@@ -292,7 +320,7 @@ async function detail(type, id) {
      Forms open PREFILLED from the entity: the commands are patch-semantics for agents, but a
      person expects an update form to show what is currently there. */
   const prefillFor = (c) => {
-    const p = { [type + '_id']: id };
+    const p = { [idArg]: id };
     for (const f2 of c.fields) {
       if (f2.key in p) continue;
       if (f2.widget === 'lines') {
@@ -458,7 +486,25 @@ async function detail(type, id) {
     bar.append(b); wrap.append(bar);
     if (!entity.seller) wrap.append($('<div class="card doc" style="color:var(--warn)">No company profile yet — the document prints without a seller block. Set it under Customers → Company profile.</div>'));
   }
-  if (entity.lines) {
+  if (type === 'solo_invoice') {
+    const bar2 = $('<div class="acts" style="margin:2px 0 14px"></div>');
+    if (entity.doc_path) {
+      const b = $('<button class="primary">Document — print / save PDF</button>');
+      b.onclick = () => window.open(entity.doc_path, '_blank');
+      const cp = $('<button>Copy client link</button>');
+      cp.onclick = () => navigator.clipboard.writeText(location.origin + entity.doc_path).then(() => toast('✓ link copied — send it to your client'));
+      bar2.append(b, cp);
+    } else if (entity.status === 'draft') {
+      bar2.append($('<span class="sub" style="margin:0;align-self:center">Issuing freezes the numbers and mints the shareable document link.</span>'));
+    }
+    wrap.append(bar2);
+    const lt = $('<table><thead><tr><th>Description</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Tax</th><th class="num">Amount</th></tr></thead><tbody></tbody></table>');
+    for (const l of entity.lines) lt.querySelector('tbody').append($(
+      `<tr><td>${l.description}</td><td class="num">${l.qty}</td><td class="num">${cents(l.rate)}</td><td class="num">${l.tax_rate_bp ? (l.tax_rate_bp / 100).toFixed(2) + '%' : '—'}</td><td class="num">${cents(l.amount)}</td></tr>`));
+    wrap.append(lt);
+    if (entity.notes) wrap.append($(`<div class="card doc" style="margin-top:10px">${entity.notes}</div>`));
+  }
+  if (entity.lines && type !== 'solo_invoice') {
     const t = $('<table><thead><tr><th>#</th><th>Item</th><th class="num">Qty</th><th class="num">Shipped</th><th class="num">Invoiced</th><th class="num">Price</th><th class="num">Amount</th></tr></thead><tbody></tbody></table>');
     for (const l of entity.lines) t.querySelector('tbody').append($(
       `<tr><td>${l.id}</td><td>${l.item_name}</td><td class="num">${l.qty}</td><td class="num">${l.qty_shipped ?? '—'}</td><td class="num">${l.qty_invoiced ?? '—'}</td><td class="num">${cents(l.unit_price)}</td><td class="num">${cents(l.qty*l.unit_price)}</td></tr>`));
@@ -907,6 +953,34 @@ async function render() {
     }
     main.append(rows.length ? t : $('<div class="card doc">Nothing unapplied.</div>'));
   }
+  if (view === 'soloinv') {
+    head('Invoices', 'Drafts are worksheets; issued is immutable — mistakes are void-and-reissue, on the record.');
+    const bar = $('<div class="acts" style="margin-bottom:14px"></div>');
+    newButtons('solo_invoice').forEach(b => bar.append(b)); newButtons('solo_payment').forEach(b => bar.append(b)); main.append(bar);
+    const rows = REG.solo_invoices || [];
+    if (!rows.length) { main.append(soloOnboarding()); return; }
+    const t = $('<table><thead><tr><th>Invoice</th><th>Client</th><th>Status</th><th class="num">Total</th><th class="num">Open</th><th>Issued</th><th>Due</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, rows, r => `<td>${r.id}</td><td>${r.customer_name}</td><td><span class="pill ${r.status}">${r.status}</span></td>
+      <td class="num">${cents(r.total)}</td><td class="num">${r.status === 'void' ? '—' : cents(r.open)}</td>
+      <td style="font-size:12px;color:var(--dim)">${r.issued_at || '—'}</td><td style="font-size:12px;color:var(--dim)">${r.due_at || '—'}</td>`, 'solo_invoice');
+  }
+  if (view === 'soloout') {
+    head('Outstanding', 'Who owes what, oldest first. Chasing is your act — nothing here sends anything.');
+    const o = await api('solo_outstanding', {});
+    if (!o.count) { main.append($('<div class="card doc" style="max-width:560px">Nothing outstanding — everyone has paid up.</div>')); return; }
+    main.append($(`<div class="sub" style="margin:0 0 10px">${o.count} open · total ${o.total_open_display} · as of ${o.as_of}</div>`));
+    const t = $('<table><thead><tr><th>Invoice</th><th>Client</th><th class="num">Open</th><th>Due</th><th class="num">Days overdue</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, o.invoices, r => `<td>${r.id}</td><td>${r.customer_name}</td><td class="num">${r.open_display}</td>
+      <td style="font-size:12px">${r.due_at || '—'}</td><td class="num" style="${r.days_overdue > 0 ? 'color:var(--warn);font-weight:600' : 'color:var(--dim)'}">${r.days_overdue || ''}</td>`, 'solo_invoice');
+  }
+  if (view === 'soloclients') {
+    head('Clients', 'Terms live in your agreement with each client — recorded here, never enforced.');
+    const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('customer').forEach(b => bar.append(b)); main.append(bar);
+    const rows = (REG.lookups && REG.lookups.customer) || [];
+    if (!rows.length) { main.append($('<div class="card doc" style="max-width:560px">No clients yet — add one here, or just tell your agent about them.</div>')); return; }
+    const t = $('<table><thead><tr><th>Client</th><th>Name</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, rows.map(r => ({ id: r.id, name: r.label })), r => `<td>${r.id}</td><td>${r.name}</td>`, 'nolink');
+  }
   if (view === 'journal') {
     head('Journal', 'Double-entry lines derived from the books — nothing posted, nothing stored (INV-23). Export for the ledger of record.');
     const j = await api('core_journal', journalRange);
@@ -1255,7 +1329,7 @@ const boot = async () => {
   REG = await fetch(wsUrl('/api/registry')).then(r => r.json());
   /* Nav groups follow the mounted modules — an unmounted module has no pages here. */
   const has = (prefix) => REG.commands.some(c => c.name.startsWith(prefix));
-  for (const [g, prefix] of [['hunt', 'hunt_'], ['crm', 'crm_'], ['books', 'o2c_']]) {
+  for (const [g, prefix] of [['hunt', 'hunt_'], ['crm', 'crm_'], ['books', 'o2c_'], ['solo', 'solo_']]) {
     if (!has(prefix)) {
       const h = document.querySelector(`[data-g="${g}"]`);
       if (h) { if (h.nextElementSibling && h.nextElementSibling.classList.contains('grp-items')) h.nextElementSibling.remove(); h.remove(); }
@@ -1264,12 +1338,16 @@ const boot = async () => {
   // Company profile is the invoice seller block — meaningless without billing. A job hunter
   // should never wonder what "Company" is doing in their tracker.
   if (!has('o2c_')) document.querySelector('[data-v="company"]')?.remove();
-  // A hunt-only space wears its own line, and lands on the page a hunter opens first.
+  // A single-module space wears its own line, and lands on the page its person opens first.
   if (has('hunt_') && !has('o2c_') && !has('crm_')) {
     const bl = document.getElementById('brandline');
     if (bl) bl.innerHTML = 'jobhunt — your search,<br>on the record';
     if (view === 'orders') view = 'huntdue';
-  } else if (view === 'orders' && !has('o2c_')) view = has('crm_') ? 'today' : 'huntdue';
+  } else if (has('solo_') && !has('o2c_') && !has('crm_')) {
+    const bl = document.getElementById('brandline');
+    if (bl) bl.innerHTML = 'invoices, kept<br>by conversation';
+    if (view === 'orders') view = 'soloinv';
+  } else if (view === 'orders' && !has('o2c_')) view = has('crm_') ? 'today' : has('solo_') ? 'soloinv' : 'huntdue';
   // Rebuild the whole workspace block from a stable container — boot() runs on every render
   // now (fresh lookups while agents write), so it must be idempotent.
   const box = document.getElementById('wsBox');

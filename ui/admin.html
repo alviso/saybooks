@@ -21,6 +21,7 @@
   td { padding: 7px 12px; border-bottom: 1px solid #f0eee8; font-size: 13px }
   .pill { background: #e9ede9; border-radius: 20px; padding: 1px 9px; font-size: 11px }
   .pill.hunt { background: #fdf0dd; color: #b45309 }
+  .pill.solo { background: #e3ecf7; color: #2c5282 }
   .mono { font-family: ui-monospace, monospace; font-size: 12px }
   .dim { color: #6b7570 }
   #chart { background: #fff; border: 1.5px solid #e2e0d8; border-radius: 10px; padding: 12px; width: 100% }
@@ -85,7 +86,7 @@
   document.getElementById('users').innerHTML = d.users.map(u => `<tr>
     <td class="dim">${u.created_at.slice(0, 16).replace('T', ' ')}</td>
     <td><b>${u.name || ''}</b> <span class="dim">${u.email}</span></td>
-    <td>${u.spaces.map(s => `<span class="pill ${s.kind === 'hunt' ? 'hunt' : ''}">${s.display_name}${s.kind === 'hunt' ? ' · hunt' : ''}</span>`).join(' ') || '<span class="dim">none</span>'}</td>
+    <td>${u.spaces.map(s => `<span class="pill ${s.kind === 'hunt' ? 'hunt' : ''}${s.kind === 'solo' ? ' solo' : ''}">${s.display_name}${s.kind ? ' · ' + s.kind : ''}</span>`).join(' ') || '<span class="dim">none</span>'}</td>
   </tr>`).join('') || '<tr><td colspan="3" class="dim">nobody yet</td></tr>';
 
   document.getElementById('top').innerHTML = d.top_active.map(t => `<tr>

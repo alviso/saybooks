@@ -1,0 +1,29 @@
+{
+  "name": "immutability, burned numbers, and the refusal that teaches",
+  "spec": "solo@0.1",
+  "notes": "S-2 issued is immutable, S-3 the no-profile refusal IS the interactive guide, S-4 void burns the number, S-8 refusals are logged.",
+  "env": [
+    ["create_customer", { "name": "Tailwind Studio", "terms": "immediate" }]
+  ],
+  "steps": [
+    { "act": "draft_invoice", "args": { "customer": "C-0001", "lines": [ { "description": "Logo refresh", "rate": 90000 } ] },
+      "expect": { "ok": true, "include": { "status": "draft", "total": 90000 } },
+      "notes": "qty defaults to 1; drafting needs no profile — issuing does" },
+    { "act": "issue_invoice", "args": { "invoice": "INV-0001" },
+      "expect": { "refused": "No company details yet — ask for the company name first" },
+      "notes": "S-3: the refusal is the GUIDE — it tells the agent exactly what to gather, one question at a time. This is the interactive-onboarding mechanism, as a testable sentence" },
+    { "act": "set_company_profile", "args": { "name": "Nora Kis Design", "payment_instructions": "Revolut @norakis, reference the invoice number." },
+      "expect": { "ok": true } },
+    { "act": "issue_invoice", "args": { "invoice": "INV-0001" },
+      "expect": { "ok": true, "include": { "status": "issued", "seller_name": "Nora Kis Design" } } },
+    { "act": "update_draft", "args": { "invoice": "INV-0001", "notes": "trying to sneak in a change" },
+      "expect": { "refused": "Only a draft can be edited" },
+      "notes": "S-2: issued is immutable — the refusal names the path (void-and-reissue)" },
+    { "act": "void_invoice", "args": { "invoice": "INV-0001", "reason": "client cancelled the project before delivery" },
+      "expect": { "ok": true, "include": { "status": "void" } },
+      "notes": "S-4: INV-0001 stays burned; the doc link dies with it" },
+    { "act": "draft_invoice", "args": { "customer": "C-0001", "lines": [ { "description": "Logo refresh — reduced scope", "rate": 45000 } ] },
+      "expect": { "ok": true, "include": { "id": "INV-0002" } },
+      "notes": "the next number, never the old one" }
+  ]
+}

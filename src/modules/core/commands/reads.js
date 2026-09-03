@@ -281,6 +281,31 @@ of record stays wherever it is.`,
       ]);
     }
 
+    // Solo (freelancer invoicing) derives with the same accounts — S-9. All service revenue.
+    for (const i of db.prepare("SELECT * FROM solo_invoice WHERE status IN ('issued','paid') ORDER BY id").all()) {
+      if (!inRange(i.issued_at)) continue;
+      push(i.issued_at, `Invoice ${i.id}`, cname[i.customer_id], [
+        { account: 'Accounts Receivable', debit: i.total },
+        { account: 'Service Revenue', credit: i.total - i.tax_total },
+        { account: 'Sales Tax Payable', credit: i.tax_total },
+      ]);
+    }
+    for (const p of db.prepare('SELECT * FROM solo_payment ORDER BY id').all()) {
+      if (!inRange(p.received_at)) continue;
+      push(p.received_at, `Payment ${p.id}${p.reference ? ' · ' + p.reference : ''}`, cname[p.customer_id], [
+        { account: 'Cash', debit: p.amount },
+        { account: 'Customer Deposits', credit: p.amount },
+      ]);
+    }
+    for (const ap of db.prepare(`SELECT pa.*, p.customer_id FROM solo_payment_application pa
+                                 JOIN solo_payment p ON p.id = pa.payment_id ORDER BY pa.id`).all()) {
+      if (!inRange(ap.applied_at)) continue;
+      push(ap.applied_at, `Apply ${ap.payment_id} → ${ap.invoice_id}`, cname[ap.customer_id], [
+        { account: 'Customer Deposits', debit: ap.amount },
+        { account: 'Accounts Receivable', credit: ap.amount },
+      ]);
+    }
+
     entries.sort((x, y) => x.date < y.date ? -1 : x.date > y.date ? 1 : 0);
     const debits = entries.reduce((s, e) => s + e.lines.reduce((s2, l) => s2 + (l.debit || 0), 0), 0);
     const credits = entries.reduce((s, e) => s + e.lines.reduce((s2, l) => s2 + (l.credit || 0), 0), 0);

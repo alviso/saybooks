@@ -1,0 +1,17 @@
+[
+ ["core_create_customer", {"name": "Meridian Coffee Co.", "email": "accounts@meridiancoffee.example", "terms": "net30"}, "terms as agreed on our kickoff call", "alex", "human"],
+ ["core_create_customer", {"name": "Tailwind Studio", "email": "ap@tailwind.example", "terms": "net15"}, null, "alex", "human"],
+ ["solo_draft_invoice", {"customer_id": "C-0001", "due_in_days": 30, "notes": "Brand refresh — phase 1, per SOW of Aug 12", "lines": [
+   {"description": "Logo system — concepts and two revision rounds", "qty": 1, "rate": 280000},
+   {"description": "Brand guidelines document", "qty": 1, "rate": 150000},
+   {"description": "Design consultation", "qty": 6.5, "rate": 15000}
+ ]}, "drafted in chat; Alex confirmed every number", "claude", "agent"],
+ ["solo_issue_invoice", {"invoice_id": "INV-0001"}, "tried to issue before company details existed — the refusal is the guide", "claude", "agent", "refused"],
+ ["core_set_company_profile", {"name": "Alex Rivera Design", "address": "88 Fremont St\nAustin, TX 78704", "payment_instructions": "ACH to Frost Bank 114000093 / 8837162. Reference the invoice number."}, "gathered by the agent one question at a time", "alex", "human"],
+ ["solo_issue_invoice", {"invoice_id": "INV-0001"}, "Alex said go — seller block frozen, document link minted", "claude", "agent"],
+ ["solo_record_payment", {"customer_id": "C-0001", "amount": 300000, "method": "bank", "reference": "MER-2210"}, "50% up front, as agreed", "alex", "human"],
+ ["solo_apply_payment", {"payment_id": "P-0001", "invoice_id": "INV-0001"}, null, "claude", "agent"],
+ ["solo_draft_invoice", {"customer_id": "C-0002", "due_in_days": 15, "lines": [
+   {"description": "Landing page design sprint", "qty": 1, "rate": 220000}
+ ]}, "draft only — waiting for the sprint to wrap before issuing", "claude", "agent"]
+]
