@@ -1356,15 +1356,15 @@ const boot = async () => {
   const box = document.getElementById('wsBox');
   if (REG.user) {
     const opts = REG.spaces.map(sp => `<option value="${sp.ws}" ${sp.ws === REG.workspace ? 'selected' : ''}>${sp.name} (${sp.role})</option>`).join('');
-    box.innerHTML = `<div style="font-size:11px;color:var(--dim);line-height:1.6;border:1px solid var(--line);border-radius:6px;padding:8px 10px">
+    box.innerHTML = `<div style="font-size:11px;color:var(--dim);line-height:1.6;background:var(--panel);border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;box-shadow:var(--shadow)">
       <div style="display:flex;gap:7px;align-items:center">${REG.user.picture ? `<img src="${REG.user.picture}" referrerpolicy="no-referrer" style="width:22px;height:22px;border-radius:50%">` : ''}
         <b style="color:var(--ink)">${REG.user.name || REG.user.email}</b></div>
       <div style="margin-top:6px"><select id="spaceSel" style="width:100%;font-size:11px;padding:3px 6px">${opts}<option value="__new">+ new space…</option></select></div>
       <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--line)"><b style="color:var(--accent)">you here</b><br>${REG.member.name} · <span class="pill">${REG.member.role}</span></div>
       ${REG.grants.includes('workspace.admin') ? '<button id="inviteBtn" style="margin-top:6px;font-size:11px;padding:3px 8px;width:100%">Share this space…</button>' : ''}
       ${REG.member.role === 'owner' && REG.space ? `<div style="margin-top:6px;display:flex;gap:5px">
-        <a href="${wsUrl('/api/export')}" style="flex:1;text-align:center;font-size:11px;padding:3px 6px;border:1px solid var(--line);border-radius:5px;color:var(--dim);text-decoration:none">Export data</a>
-        <button id="delSpaceBtn" style="flex:1;font-size:11px;padding:3px 6px;color:var(--warn);background:transparent;border:1px solid var(--line)">Delete space…</button>
+        <a href="${wsUrl('/api/export')}" style="flex:1;text-align:center;font-size:11px;padding:4px 6px;border:1.5px solid var(--line);border-radius:10px;color:var(--mid);text-decoration:none;font-family:var(--display);font-weight:700;white-space:nowrap">Export</a>
+        <button id="delSpaceBtn" style="flex:1;font-size:11px;padding:3px 6px;color:var(--warn);background:transparent;border:1.5px solid var(--line);white-space:nowrap">Delete…</button>
       </div>` : ''}
       <a href="/auth/logout" style="display:block;margin-top:6px;font-size:11px;color:var(--dim)">Sign out</a></div>`;
     const delBtn = document.getElementById('delSpaceBtn');
@@ -1392,7 +1392,7 @@ const boot = async () => {
   if (REG.demo) {
     const isAdmin = REG.grants.includes('workspace.admin');
     const mcpUrl = location.origin + '/mcp/' + REG.workspace;
-    box.innerHTML = `<div style="font-size:11px;color:var(--dim);line-height:1.6;border:1px solid var(--line);border-radius:6px;padding:8px 10px">
+    box.innerHTML = `<div style="font-size:11px;color:var(--dim);line-height:1.6;background:var(--panel);border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;box-shadow:var(--shadow)">
       <b style="color:var(--accent)">your sandbox</b><br>${REG.workspace}<br>private to you · swept after 24h
       <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><b style="color:var(--accent)">talk to it</b><br>
       point Claude at this sandbox:<br>
