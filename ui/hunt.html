@@ -9,51 +9,52 @@
 <meta property="og:description" content="Free agent-governed job-hunt tracker for people running their search with Claude. Duplicate guard, ghosted-as-status, never-invented facts. Export or delete everything, anytime.">
 <meta property="og:url" content="https://saybooks.io/hunt">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📒</text></svg>">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap">
 <style>
   * { box-sizing: border-box; margin: 0 }
-  body { font: 16px/1.6 -apple-system, 'Segoe UI', sans-serif; color: #1c2420; background: #f6f5f1 }
+  body { font: 16px/1.6 'Nunito Sans', -apple-system, 'Segoe UI', sans-serif; color: #2B2A33; background: #FBF7F2 }
   .wrap { max-width: 880px; margin: 0 auto; padding: 3em 1.5em 4em }
-  .mark { font-weight: 800; letter-spacing: .1em; font-size: 14px }
+  .mark { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; letter-spacing: .06em; font-size: 14px }
   .mark a { color: inherit; text-decoration: none }
-  .mark span { color: #6b7570; font-weight: 400; letter-spacing: 0 }
-  h1 { font-family: Georgia, serif; font-size: 40px; line-height: 1.15; margin: 1.2em 0 .4em }
-  .sub { font-size: 19px; color: #4a544e; max-width: 40em }
-  .cta { display: inline-block; margin: 1.8em 0 .4em; background: #1e3a2f; color: #fff; padding: .85em 1.6em; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 17px }
-  .cta:hover { background: #2e5443 }
-  .cta.ghost { background: transparent; color: #1e3a2f; border: 2px solid #1e3a2f; margin-left: .6em; padding: calc(.85em - 2px) 1.6em }
-  .cta.ghost:hover { background: #e9ede9 }
-  .ctasub { font-size: 13px; color: #6b7570 }
-  .log { background: #16281f; border: 1px solid #2e4a3a; border-radius: 10px; padding: 1em 1.2em; margin: 2.5em 0; font: 13px/1.7 ui-monospace, 'Courier New', monospace; overflow-wrap: anywhere }
+  .mark span { color: #7A7784; font-weight: 400; letter-spacing: 0 }
+  h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; letter-spacing: -.025em; font-size: 46px; line-height: 1.08; margin: 1.1em 0 .4em }
+  .sub { font-size: 19px; color: #5A5866; max-width: 40em }
+  .cta { display: inline-block; margin: 1.8em 0 .4em; background: #0F766E; color: #fff; padding: .9em 1.6em; border-radius: 14px; text-decoration: none; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 17px; box-shadow: 0 6px 24px rgba(15,118,110,.22) }
+  .cta:hover { background: #115E59 }
+  .cta.ghost { background: #E6F4F1; color: #0F766E; border: none; margin-left: .6em; box-shadow: none }
+  .cta.ghost:hover { background: #d7ebe6 }
+  .ctasub { font-size: 13px; color: #7A7784 }
+  .log { background: #0A3D37; border: 1px solid #155E56; border-radius: 16px; padding: 1em 1.2em; margin: 2.5em 0; font: 13px/1.7 ui-monospace, 'Courier New', monospace; overflow-wrap: anywhere }
   .chat { margin: 2.5em 0; max-width: 44em }
-  .chat .msg { border-radius: 12px; padding: .8em 1.1em; font-size: 15px; line-height: 1.55 }
-  .chat .you { background: #e9ede9; color: #1c2420; margin-right: 3em }
-  .chat .ai { background: #1e3a2f; color: #e8f0ea; margin: .6em 0 0 3em }
+  .chat .msg { padding: .8em 1.1em; font-size: 15px; line-height: 1.55 }
+  .chat .you { background: #F1EEE8; color: #2B2A33; margin-right: 3em; border-radius: 18px 18px 18px 4px }
+  .chat .ai { background: #0F766E; color: #fff; margin: .6em 0 0 3em; border-radius: 18px 18px 4px 18px }
   .chat .ai b { color: #fff }
-  .log .t { color: #7fa98e } .log .a { color: #d9b23c; font-weight: 700 } .log .c { color: #cfe3d6 } .log .w { color: #e8a34b }
-  h2 { font-family: Georgia, serif; font-size: 24px; margin: 2.2em 0 .8em }
+  .log .t { color: #8FCBBF } .log .a { color: #F2C14E; font-weight: 700 } .log .c { color: #CFEDE6 } .log .w { color: #F2A54E }
+  h2 { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; letter-spacing: -.02em; font-size: 26px; margin: 2.2em 0 .8em }
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px }
-  .card { background: #fff; border: 1.5px solid #e2e0d8; border-radius: 12px; padding: 1.1em 1.2em }
-  .card b { display: block; margin-bottom: .35em; color: #1e3a2f }
-  .card p { font-size: 14px; color: #4a544e }
-  .yours { background: #fff; border: 1.5px solid #e2e0d8; border-radius: 12px; padding: 1.3em 1.4em; margin-top: 2.2em }
-  .yours ul { margin: .5em 0 0; padding-left: 1.3em; font-size: 14.5px; color: #4a544e }
+  .card { background: #fff; border: none; border-radius: 20px; padding: 1.3em 1.4em; box-shadow: 0 6px 24px rgba(43,42,51,.05) }
+  .card b { display: block; margin-bottom: .35em; color: #2B2A33; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 17px }
+  .card p { font-size: 14px; color: #5A5866 }
+  .yours { background: #fff; border: none; border-radius: 20px; padding: 1.4em 1.5em; margin-top: 2.2em; box-shadow: 0 6px 24px rgba(43,42,51,.05) }
+  .yours ul { margin: .5em 0 0; padding-left: 1.3em; font-size: 14.5px; color: #5A5866 }
   .yours li { margin-bottom: .3em }
-  .how { font-size: 15px; color: #4a544e; margin-top: .6em }
-  .how code { background: #edece6; padding: .15em .45em; border-radius: 5px; font-size: 13px }
-  .foot { margin-top: 3.5em; padding-top: 1.5em; border-top: 1px solid #e2e0d8; font-size: 13.5px; color: #6b7570 }
-  .foot a { color: #1e3a2f }
+  .how { font-size: 15px; color: #5A5866; margin-top: .6em }
+  .how code { background: #F1EEE8; padding: .15em .45em; border-radius: 5px; font-size: 13px }
+  .foot { margin-top: 3.5em; padding-top: 1.5em; border-top: 1px solid #EEEAE3; font-size: 13.5px; color: #7A7784 }
+  .foot a { color: #0F766E }
   .step { display: flex; gap: 14px; margin-top: 1.6em }
-  .step .n { flex: none; width: 28px; height: 28px; border-radius: 50%; background: #1e3a2f; color: #fff; text-align: center; line-height: 28px; font-weight: 700 }
-  .step p { font-size: 14.5px; color: #4a544e; margin-top: .3em }
-  .mock { background: #fff; border: 1.5px solid #e2e0d8; border-radius: 10px; padding: .9em 1em; margin-top: .7em; max-width: 34em }
+  .step .n { flex: none; width: 30px; height: 30px; border-radius: 50%; background: #0F766E; font-family: 'Plus Jakarta Sans', sans-serif; color: #fff; text-align: center; line-height: 28px; font-weight: 700 }
+  .step p { font-size: 14.5px; color: #5A5866; margin-top: .3em }
+  .mock { background: #fff; border: 1.5px solid #EEEAE3; border-radius: 16px; padding: .9em 1em; margin-top: .7em; max-width: 34em }
   .mock.dark { background: #23262b; border-color: #3a3e45 }
   .mockrow { display: flex; gap: 8px; align-items: center }
-  .mockfield { flex: 1; border: 1.5px solid #d8d5cc; border-radius: 8px; padding: .45em .8em; color: #1c2420; font-size: 14px; background: #fff }
+  .mockfield { flex: 1; border: 1.5px solid #d8d5cc; border-radius: 8px; padding: .45em .8em; color: #2B2A33; font-size: 14px; background: #fff }
   .mockfield.dark { background: #2b2f35; border-color: #3a3e45; color: #e8eaed; font-family: ui-monospace, monospace; font-size: 13px; overflow-wrap: anywhere }
-  .mocksel { border: 1.5px solid #d8d5cc; border-radius: 8px; padding: .45em .8em; color: #1c2420; font-size: 14px; background: #fff }
-  .mockbtn { background: #1e3a2f; color: #fff; border-radius: 8px; padding: .45em 1em; font-weight: 700; font-size: 14px }
+  .mocksel { border: 1.5px solid #d8d5cc; border-radius: 8px; padding: .45em .8em; color: #2B2A33; font-size: 14px; background: #fff }
+  .mockbtn { background: #0F766E; color: #fff; border-radius: 8px; padding: .45em 1em; font-weight: 700; font-size: 14px }
   .mocklabel { font-size: 12px; color: #9aa0a6 }
-  .mockout { margin-top: .7em; padding-top: .7em; border-top: 1px solid #eceae3; font-size: 13px; color: #1c2420; font-family: ui-monospace, monospace; overflow-wrap: anywhere }
+  .mockout { margin-top: .7em; padding-top: .7em; border-top: 1px solid #eceae3; font-size: 13px; color: #2B2A33; font-family: ui-monospace, monospace; overflow-wrap: anywhere }
 </style>
 </head>
 <body>
@@ -91,7 +92,7 @@
     and copy the link that appears. The link <i>is</i> the key — treat it like a password; revoke it there any time.</p>
     <div class="mock">
       <div class="mockrow"><span class="mockfield">claude</span><span class="mocksel">controller ▾</span><span class="mockbtn">Mint key</span></div>
-      <div class="mockout">claude · controller · <b>https://saybooks.io/mcp/m-4f9c21…</b> &nbsp;<span style="color:#6b7570">← copy this</span></div>
+      <div class="mockout">claude · controller · <b>https://saybooks.io/mcp/m-4f9c21…</b> &nbsp;<span style="color:#7A7784">← copy this</span></div>
     </div>
   </div></div>
 
@@ -106,18 +107,18 @@
 
   <div class="step"><div class="n">3</div><div>
     <b>Open a new session with the connector on, and paste this — with a job description under it.</b>
-    <div class="log" style="white-space:pre-wrap;font-size:13px;color:#cfe3d6;margin:0.8em 0">You're my job-hunt assistant, connected to my Saybooks hunt space through the "hunt" connector. Call core_schema first to learn the rules. Then log the posting below: evaluate the fit, run the duplicate check, and give me one next action with a due date.</div>
+    <div class="log" style="white-space:pre-wrap;font-size:13px;color:#CFEDE6;margin:0.8em 0">You're my job-hunt assistant, connected to my Saybooks hunt space through the "hunt" connector. Call core_schema first to learn the rules. Then log the posting below: evaluate the fit, run the duplicate check, and give me one next action with a due date.</div>
     <p>From then on, just talk: <i>"the recruiter called, interview Thursday"</i> · <i>"TCS ghosted me"</i> ·
     <i>"what's due today?"</i> Everything it records shows up in your browser too — same data, same rules,
     one audit trail. Works with any MCP-capable agent (Claude Code: <code>claude mcp add hunt -t http &lt;your link&gt;</code>).</p>
   </div></div>
 
   <div class="yours">
-    <b style="color:#1e3a2f">Your data, actually yours</b>
+    <b style="color:#0F766E">Your data, actually yours</b>
     <ul>
       <li><b>Export</b> — one click downloads every table as JSON, audit log included.</li>
       <li><b>Delete</b> — one button permanently removes your space, its database, and every access key.</li>
-      <li><b>Self-host</b> — the whole thing is open source (AGPL): <a href="https://github.com/alviso/saybooks" style="color:#1e3a2f">github.com/alviso/saybooks</a>. Run it on your laptop if you'd rather.</li>
+      <li><b>Self-host</b> — the whole thing is open source (AGPL): <a href="https://github.com/alviso/saybooks" style="color:#0F766E">github.com/alviso/saybooks</a>. Run it on your laptop if you'd rather.</li>
       <li>No LinkedIn integration, by design — nothing here touches your account or scrapes anything. You and your agent record what you know.</li>
     </ul>
   </div>

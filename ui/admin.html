@@ -5,29 +5,30 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Saybooks — operator</title>
 <meta name="robots" content="noindex">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&display=swap">
 <style>
   * { box-sizing: border-box; margin: 0 }
-  body { font: 14px/1.55 -apple-system, 'Segoe UI', sans-serif; color: #1c2420; background: #f6f5f1; padding: 2em 1.5em }
+  body { font: 14px/1.55 -apple-system, 'Segoe UI', sans-serif; color: #2B2A33; background: #FBF7F2; padding: 2em 1.5em }
   .wrap { max-width: 1360px; margin: 0 auto }
-  h1 { font-family: Georgia, serif; font-size: 26px; margin-bottom: .2em }
-  .asof { color: #6b7570; font-size: 12.5px; margin-bottom: 1.6em }
-  h2 { font-family: Georgia, serif; font-size: 18px; margin: 1.8em 0 .6em }
+  h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; letter-spacing: -.02em; font-size: 26px; margin-bottom: .2em }
+  .asof { color: #7A7784; font-size: 12.5px; margin-bottom: 1.6em }
+  h2 { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; letter-spacing: -.02em; font-size: 18px; margin: 1.8em 0 .6em }
   .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px }
-  .stat { background: #fff; border: 1.5px solid #e2e0d8; border-radius: 10px; padding: .8em 1em }
-  .stat b { display: block; font-size: 30px; font-family: Georgia, serif; color: #1e3a2f }
-  .stat span { font-size: 11.5px; color: #6b7570 }
-  table { width: 100%; border-collapse: collapse; background: #fff; border: 1.5px solid #e2e0d8; border-radius: 10px; overflow: hidden }
-  th { text-align: left; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: #6b7570; padding: 8px 12px; border-bottom: 1px solid #e2e0d8 }
-  td { padding: 7px 12px; border-bottom: 1px solid #f0eee8; font-size: 13px }
-  .pill { background: #e9ede9; border-radius: 20px; padding: 1px 9px; font-size: 11px }
+  .stat { background: #fff; border: 1.5px solid #EEEAE3; border-radius: 16px; padding: .8em 1em }
+  .stat b { display: block; font-size: 30px; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; letter-spacing: -.02em; color: #0F766E }
+  .stat span { font-size: 11.5px; color: #7A7784 }
+  table { width: 100%; border-collapse: collapse; background: #fff; border: 1.5px solid #EEEAE3; border-radius: 16px; overflow: hidden }
+  th { text-align: left; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: #7A7784; padding: 8px 12px; border-bottom: 1px solid #EEEAE3 }
+  td { padding: 7px 12px; border-bottom: 1px solid #F3F0EA; font-size: 13px }
+  .pill { background: #F1EEE8; border-radius: 20px; padding: 1px 9px; font-size: 11px }
   .pill.hunt { background: #fdf0dd; color: #b45309 }
   .pill.solo { background: #e3ecf7; color: #2c5282 }
   .mono { font-family: ui-monospace, monospace; font-size: 12px }
-  .dim { color: #6b7570 }
-  #chart { background: #fff; border: 1.5px solid #e2e0d8; border-radius: 10px; padding: 12px; width: 100% }
-  .notes { font-size: 12px; color: #6b7570; font-style: italic; margin-top: 1.8em; line-height: 1.7 }
-  #err { background: #fff; border: 1.5px solid #e2e0d8; border-radius: 10px; padding: 2em; text-align: center; display: none }
-  #err a { color: #1e3a2f; font-weight: 700 }
+  .dim { color: #7A7784 }
+  #chart { background: #fff; border: 1.5px solid #EEEAE3; border-radius: 16px; padding: 12px; width: 100% }
+  .notes { font-size: 12px; color: #7A7784; font-style: italic; margin-top: 1.8em; line-height: 1.7 }
+  #err { background: #fff; border: 1.5px solid #EEEAE3; border-radius: 16px; padding: 2em; text-align: center; display: none }
+  #err a { color: #0F766E; font-weight: 700 }
 </style>
 </head>
 <body>
@@ -76,11 +77,11 @@
     const pt = (m) => [12 + (Date.parse(m[0]) - t0) / Math.max(1, t1 - t0) * W, 12 + H - m[1] / max * H];
     const path = M.map((m, i) => (i ? 'L' : 'M') + pt(m).map(v => v.toFixed(1)).join(',')).join(' ');
     const last = pt(M[M.length - 1]);
-    svg.innerHTML = `<path d="${path}" fill="none" stroke="#1e3a2f" stroke-width="2"/>` +
+    svg.innerHTML = `<path d="${path}" fill="none" stroke="#0F766E" stroke-width="2"/>` +
       `<circle cx="${last[0]}" cy="${last[1]}" r="3.5" fill="#b45309"/>` +
-      `<text x="${Math.min(last[0] + 6, W - 30)}" y="${Math.max(last[1] - 6, 14)}" font-size="12" fill="#1c2420" font-weight="700">${M[M.length - 1][1]}</text>` +
-      `<text x="12" y="155" font-size="10" fill="#6b7570">${M[0][0].slice(5, 10)}</text>` +
-      `<text x="${W - 24}" y="155" font-size="10" fill="#6b7570">${M[M.length - 1][0].slice(5, 10)}</text>`;
+      `<text x="${Math.min(last[0] + 6, W - 30)}" y="${Math.max(last[1] - 6, 14)}" font-size="12" fill="#2B2A33" font-weight="700">${M[M.length - 1][1]}</text>` +
+      `<text x="12" y="155" font-size="10" fill="#7A7784">${M[0][0].slice(5, 10)}</text>` +
+      `<text x="${W - 24}" y="155" font-size="10" fill="#7A7784">${M[M.length - 1][0].slice(5, 10)}</text>`;
   }
 
   document.getElementById('users').innerHTML = d.users.map(u => `<tr>
