@@ -1340,7 +1340,7 @@ const boot = async () => {
   }
   // Company profile is the invoice seller block — meaningless without billing. A job hunter
   // should never wonder what "Company" is doing in their tracker.
-  if (!has('o2c_')) document.querySelector('[data-v="company"]')?.remove();
+  if (!has('o2c_') && !has('solo_')) document.querySelector('[data-v="company"]')?.remove();
   // A single-module space wears its own line, and lands on the page its person opens first.
   if (has('hunt_') && !has('o2c_') && !has('crm_')) {
     const bl = document.getElementById('brandline');
