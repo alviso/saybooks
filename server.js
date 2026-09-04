@@ -17,6 +17,7 @@ const C = require('./src/conformance.js');
 const wsp = require('./src/workspace.js');
 const BASE = require('./src/base-doctrine.js');
 const H = require('./src/db.js');
+const CFG = require('./src/config.js');
 const members = require('./src/members.js');
 const users = require('./src/users.js');
 const auth = require('./src/auth.js');
@@ -180,6 +181,7 @@ if (DEMO) setInterval(() => {
 }, 600000).unref();
 
 const server = http.createServer(async (req, res) => {
+  CFG.learn(req);   // the public origin, for links handed to people
   const host = (req.headers.host || '').split(':')[0];
   if (!DEMO && !['127.0.0.1', 'localhost', '[::1]', '::1'].includes(host)) return send(res, 403, { error: 'localhost only' });
   if (DEMO && rateLimited(ipOf(req))) return send(res, 429, { error: 'slow down — this is a demo, and it is being fair to everyone else' });

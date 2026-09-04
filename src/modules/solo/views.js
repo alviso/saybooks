@@ -2,6 +2,7 @@
 /** solo read models — the invoice IS the document (o2c INV-22 family). */
 const H = require('../../db.js');
 const wsp = require('../../workspace.js');
+const CFG = require('../../config.js');
 const { db, money, need, get, today } = H;
 
 const invoiceApplied = (id) => db().prepare(
@@ -31,6 +32,9 @@ function invoiceView(id) {
     payment_instructions: seller ? seller.payment_instructions : null,
     doc_path: inv.doc_token ? `/doc/${wsp.currentName()}/${inv.doc_token}` : null,
     pdf_path: inv.doc_token && inv.status !== 'draft' ? `/doc/${wsp.currentName()}/${inv.doc_token}.pdf` : null,
+    // Absolute forms: what you hand to a person. Both are unauthenticated capability links.
+    doc_url: CFG.absolute(inv.doc_token ? `/doc/${wsp.currentName()}/${inv.doc_token}` : null),
+    pdf_url: CFG.absolute(inv.doc_token && inv.status !== 'draft' ? `/doc/${wsp.currentName()}/${inv.doc_token}.pdf` : null),
   };
 }
 
