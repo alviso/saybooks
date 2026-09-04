@@ -1,4 +1,10 @@
 'use strict';
+// Servers cannot go stale; clients cache. Say so where the agent will read it.
+const CACHE_NOTE = `
+
+If core_schema lists a command your tools do not have, or shows more arguments than a tool accepts, your
+client cached an older tool list: remove and re-add this connector, then start a new chat. core_schema is
+generated from the registry the tools come from and is always current.`;
 /**
  * The hosted MCP endpoint — surface #1 over HTTP, so a visitor can point their own agent at
  * their own sandbox: `claude mcp add -t http saybooks https://saybooks.io/mcp/<workspace>`.
@@ -49,7 +55,7 @@ actor_kind=agent, in the same audit trail as their clicks. Play freely; nothing 
 
   const server = new Server(
     { name: 'saybooks', version: '0.3.0' },
-    { capabilities: { tools: {} }, instructions: ownedNote + R.instructions(BASE, { modules: mounts }) + demoNote },
+    { capabilities: { tools: {} }, instructions: ownedNote + R.instructions(BASE, { modules: mounts }) + demoNote + CACHE_NOTE },
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: R.mcpTools({ modules: mounts }) }));

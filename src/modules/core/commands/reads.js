@@ -9,7 +9,11 @@ const read = (def) => defineCommand({ intent: 'read', scope: 'collection', group
 read({
   name: 'core_schema',
   title: 'Schema', summary: 'The shape of the system: modules, entities, lifecycles, the encoded rules, and every command.',
-  doctrine: 'Call this first in a new session. It is cheaper than guessing and it is generated from the same registry the tools come from, so it cannot go stale.',
+  doctrine: `Call this first in a new session. It is cheaper than guessing, and it is generated from the
+same registry the tools come from — so the SERVER cannot serve a stale one. Your client can: connector
+tool lists are cached by the app when the connector is added. If a command listed here is missing from
+your tools, or a tool has fewer arguments than this schema says, remove and re-add the connector and
+start a new chat. This schema is the truth; the tool list is a cache of it.`,
   args: {},
   handler: (a, ctx) => ({
     you_are: (() => {
