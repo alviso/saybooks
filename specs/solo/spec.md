@@ -40,7 +40,9 @@ authority), multi-currency, recurring invoices, sending anything anywhere.
   real document, stamped DRAFT until issued (0.1.1: the preview a person looks at before the
   point of no return, so nobody hand-rolls a document). At issue the same link becomes the
   invoice — the link the freelancer forwards to their client — and `<token>.pdf` is the same
-  document as a file (issued invoices only). Void kills both.
+  document as a file (issued invoices only). Void does not kill the link: the document stays
+  readable and printable, stamped VOID, because a record you cannot read is not a record;
+  `open` is 0 on a void invoice so no reader has to remember the status.
 
 ## 4. The acts
 
@@ -102,4 +104,4 @@ burned; paid-invoice void refused.
 
 *Change log: 0.1-draft (2026-09-02) — drafted with Peter's refocus from an o2c door to a
 freelancer invoice generator; the interactive-guide doctrine and S-5 came from that
-conversation. 0.1.1 (2026-09-04) — client address + tax id, bill-to block frozen at issue, preview link from the first draft (DRAFT-stamped), document read returning the rendered page and the PDF.*
+conversation. 0.1.1 (2026-09-04) — client address + tax id, bill-to block frozen at issue, preview link from the first draft (DRAFT-stamped), document read returning the rendered page and the PDF; void invoices stay readable (VOID-stamped) with open = 0.*

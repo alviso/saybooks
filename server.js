@@ -234,7 +234,7 @@ const server = http.createServer(async (req, res) => {
     try {
       // Drafts render too, marked DRAFT — the preview a person sees before the point of no return (S-7).
       const { v, logo } = wsp.use(dws, () => {
-        const inv = H.db().prepare('SELECT id FROM solo_invoice WHERE doc_token = ? AND status IN (\'draft\',\'issued\',\'paid\')').get(dtok);
+        const inv = H.db().prepare('SELECT id FROM solo_invoice WHERE doc_token = ? AND status IN (\'draft\',\'issued\',\'paid\',\'void\')').get(dtok);   // void stays readable, stamped
         if (!inv) return {};
         // Branding, not a fact: the logo is read live, never from the frozen blocks.
         return { v: require('./src/modules/solo/views.js').invoiceView(inv.id), logo: (H.db().prepare('SELECT logo FROM company_profile WHERE id = 1').get() || {}).logo || null };

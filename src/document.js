@@ -18,13 +18,15 @@ const longDate = (iso) => iso ? new Date(iso + 'T00:00:00Z').toLocaleDateString(
 
 function renderInvoiceHtml(inv, logo) {
   const s = inv.seller, c = inv.customer || {};
-  const draft = inv.status === 'draft';
+  const draft = inv.status === 'draft', voided = inv.status === 'void';
+  const stamp = draft ? 'DRAFT' : voided ? 'VOID' : null;
   const rows = inv.lines.map((l, i) => `<tr><td class="n muted">${i + 1}</td><td>${esc(l.description)}</td><td class="n">${l.qty}</td><td class="n">${money(l.rate)}</td>
     <td class="n">${l.tax_rate_bp ? (l.tax_rate_bp / 100).toFixed(2) + '%' : '—'}</td><td class="n">${money(l.amount)}</td></tr>`).join('');
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${draft ? 'DRAFT ' : ''}${esc(inv.id)} — ${esc(s ? s.name : 'Invoice')}</title><style>
     body{margin:0;background:#eef0f3;font:14px/1.5 -apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:hsl(215 40% 16%)}
     .page{max-width:800px;margin:32px auto;background:#fff;padding:56px 64px;box-shadow:0 2px 12px rgba(0,0,0,.08);position:relative}
     .stamp{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%) rotate(-28deg);font-size:110px;font-weight:800;color:rgba(180,83,9,.08);letter-spacing:.1em;pointer-events:none}
+    .stamp.void{color:rgba(180,30,30,.10)} .status.void{background:#fde2e2;color:#8a1c1c}
     .head{display:flex;justify-content:space-between;align-items:flex-start;gap:2em}
     .head img{height:56px;display:block;margin-bottom:12px}
     .seller{font-size:14px;line-height:1.5} .seller b{font-size:17px;display:block}
@@ -45,10 +47,10 @@ function renderInvoiceHtml(inv, logo) {
   </style></head><body>
     <div class="bar">${!draft && inv.pdf_path ? `<a href="${esc(inv.pdf_path)}" style="margin-right:8px;font-size:13px">Download PDF</a>` : ''}<button onclick="window.print()">Print</button></div>
     <div class="page">
-      ${draft ? '<div class="stamp">DRAFT</div>' : ''}
+      ${stamp ? `<div class="stamp${voided ? ' void' : ''}">${stamp}</div>` : ''}
       <div class="head">
         <div class="seller">${logo ? `<img src="${esc(logo)}" alt="">` : ''}${s ? `<b>${esc(s.name)}</b>${nl(s.address || '')}${s.tax_id ? `<br>Tax ID ${esc(s.tax_id)}` : ''}` : ''}</div>
-        <div class="title"><h1>INVOICE</h1><div class="no">${esc(inv.id)}</div>${draft ? '<span class="status">DRAFT — not yet issued</span>' : ''}</div>
+        <div class="title"><h1>INVOICE</h1><div class="no">${esc(inv.id)}</div>${draft ? '<span class="status">DRAFT — not yet issued</span>' : voided ? `<span class="status void">VOID${inv.void_reason ? ` — ${esc(inv.void_reason)}` : ''}</span>` : ''}</div>
       </div>
       <div class="meta">
         <div><h4>Bill to</h4><b>${esc(c.name || inv.customer_name)}</b>${c.address ? `<br>${nl(c.address)}` : ''}${c.tax_id ? `<br>Tax ID ${esc(c.tax_id)}` : ''}${c.email ? `<br>${esc(c.email)}` : ''}</div>
@@ -59,7 +61,7 @@ function renderInvoiceHtml(inv, logo) {
         <tr><td>Subtotal</td><td class="n">${money(inv.subtotal)}</td></tr>
         <tr><td>Tax</td><td class="n">${money(inv.tax_total || 0)}</td></tr>
         ${inv.applied ? `<tr><td>Paid</td><td class="n">−${money(inv.applied)}</td></tr>` : ''}
-        <tr class="due"><td>${inv.applied ? 'Balance due' : 'Total due'}</td><td class="n">${money(inv.open)}</td></tr>
+        <tr class="due"><td>${voided ? 'Void — nothing due' : inv.applied ? 'Balance due' : 'Total due'}</td><td class="n">${money(voided ? (inv.total - (inv.applied || 0)) : inv.open)}</td></tr>
       </table>
       <div class="foot">
         ${inv.payment_instructions ? `<div><h4>Payment instructions</h4>${nl(inv.payment_instructions)}</div>` : ''}
@@ -67,6 +69,7 @@ function renderInvoiceHtml(inv, logo) {
       </div>
       ${s && s.footer_note ? `<div class="fine">${nl(s.footer_note)}</div>` : ''}
       ${draft ? '<div class="fine">Preview of the draft as recorded. Numbers can still change; this link becomes the invoice when it is issued.</div>' : ''}
+      ${voided ? '<div class="fine">This invoice was voided and is kept for the record. Nothing on it is payable; the number is not reused.</div>' : ''}
     </div>
   </body></html>`;
 }
@@ -75,7 +78,7 @@ function renderInvoiceHtml(inv, logo) {
 function renderInvoicePdf(inv, logo) {
   return new Promise((resolve, reject) => {
     const s = inv.seller, c = inv.customer || {};
-    const draft = inv.status === 'draft';
+    const draft = inv.status === 'draft', voided = inv.status === 'void';
     const NAVY = '#16304f', INK = '#182a44', MUTED = '#777777', RULE = '#e6e6e6';
     const doc = new PDFDocument({ size: 'LETTER', margins: { top: 56, bottom: 56, left: 56, right: 56 }, info: { Title: `${inv.id} — ${s ? s.name : 'Invoice'}`, Author: s ? s.name : 'Saybooks' } });
     const chunks = [];
@@ -88,11 +91,13 @@ function renderInvoicePdf(inv, logo) {
     if (m) { try { doc.image(Buffer.from(m[2], 'base64'), L, y, { fit: [160, 44] }); y += 54; } catch { /* a logo that will not decode is not a reason to fail the invoice */ } }
     doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(26).text('INVOICE', L, doc.page.margins.top, { width: W, align: 'right', characterSpacing: 1.5 });
     doc.fillColor(MUTED).font('Helvetica').fontSize(11).text(inv.id, L, doc.page.margins.top + 32, { width: W, align: 'right' });
-    if (draft) {
-      doc.fillColor('#7a5a00').font('Helvetica-Bold').fontSize(9).text('DRAFT — NOT YET ISSUED', L, doc.page.margins.top + 50, { width: W, align: 'right', characterSpacing: 0.8 });
-      doc.save().rotate(-28, { origin: [doc.page.width / 2, doc.page.height * 0.42] }).fillColor('#b45309').opacity(0.08).font('Helvetica-Bold').fontSize(120);
-      const sw = doc.widthOfString('DRAFT', { characterSpacing: 10 });
-      doc.text('DRAFT', doc.page.width / 2 - sw / 2, doc.page.height * 0.42 - 70, { lineBreak: false, characterSpacing: 10 }).restore().opacity(1);
+    if (draft || voided) {
+      const label = draft ? 'DRAFT — NOT YET ISSUED' : `VOID${inv.void_reason ? ' — ' + inv.void_reason : ''}`;
+      doc.fillColor(draft ? '#7a5a00' : '#8a1c1c').font('Helvetica-Bold').fontSize(9).text(label, L, doc.page.margins.top + 50, { width: W, align: 'right', characterSpacing: 0.8 });
+      const word = draft ? 'DRAFT' : 'VOID';
+      doc.save().rotate(-28, { origin: [doc.page.width / 2, doc.page.height * 0.42] }).fillColor(draft ? '#b45309' : '#b41e1e').opacity(draft ? 0.08 : 0.10).font('Helvetica-Bold').fontSize(120);
+      const sw = doc.widthOfString(word, { characterSpacing: 10 });
+      doc.text(word, doc.page.width / 2 - sw / 2, doc.page.height * 0.42 - 70, { lineBreak: false, characterSpacing: 10 }).restore().opacity(1);
     }
     if (s) {
       doc.fillColor(INK).font('Helvetica-Bold').fontSize(13).text(s.name, L, y, { width: W * 0.55 });
@@ -142,7 +147,7 @@ function renderInvoicePdf(inv, logo) {
     tot('Subtotal', money(inv.subtotal)); tot('Tax', money(inv.tax_total || 0));
     if (inv.applied) tot('Paid', '-' + money(inv.applied));
     doc.moveTo(tx, y + 1).lineTo(R, y + 1).lineWidth(1.5).strokeColor(INK).stroke(); y += 8;
-    tot(inv.applied ? 'Balance due' : 'Total due', money(inv.open), true);
+    tot(voided ? 'Void' : inv.applied ? 'Balance due' : 'Total due', money(voided ? inv.total - (inv.applied || 0) : inv.open), true);
 
     // Foot: payment instructions + notes
     y += 26; if (y > doc.page.height - 140) { doc.addPage(); y = doc.page.margins.top; }

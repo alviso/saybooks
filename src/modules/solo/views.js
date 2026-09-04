@@ -25,7 +25,8 @@ function invoiceView(id) {
     customer: cust, customer_as_issued: !!csnap, customer_name: cust.name, customer_email: cust.email,
     subtotal_display: money(inv.subtotal), tax_display: money(inv.tax_total), total_display: money(inv.total),
     applied, applied_display: money(applied),
-    open: inv.total - applied, open_display: money(inv.total - applied),
+    // Nothing on a void invoice is collectible: open is 0 here so no reader has to remember the status.
+    open: inv.status === 'void' ? 0 : inv.total - applied, open_display: money(inv.status === 'void' ? 0 : inv.total - applied),
     seller, seller_name: seller ? seller.name : null, seller_as_issued: !!snap,
     payment_instructions: seller ? seller.payment_instructions : null,
     doc_path: inv.doc_token ? `/doc/${wsp.currentName()}/${inv.doc_token}` : null,

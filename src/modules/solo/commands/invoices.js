@@ -140,10 +140,12 @@ defineCommand({
   permission: 'billing.write',
   title: 'Void', group: 'Invoicing', subject: 'solo_invoice',
   summary: 'Kill an invoice, on the record. The number stays burned (S-4).',
-  doctrine: `Void is for mistakes and cancellations; the reason is part of the record. An
-invoice with payments applied cannot be voided at 0.1 — unwinding applied cash needs its own
-design (see the spec's deferred list). Reissue corrected work as a fresh draft.`,
-  effects: ['invoice void', 'number burned', 'document link dead'],
+  doctrine: `Void is for mistakes and cancellations; the reason is part of the record. The
+document stays readable and printable, stamped VOID, at the same link — a record you cannot
+read is not a record. Nothing on it is collectible: open drops to 0. An invoice with payments
+applied cannot be voided at 0.1 — unwinding applied cash needs its own design (see the spec's
+deferred list). Reissue corrected work as a fresh draft.`,
+  effects: ['invoice void', 'number burned', 'open = 0', 'document stays readable, stamped VOID'],
   guards: [
     (i) => i.status !== 'void' || `${i.id} is already void.`,
     (i) => (i.applied || 0) === 0 || `${i.id} has ${i.applied_display} applied — applied cash cannot be unwound at 0.1; the record stands.`,
@@ -156,7 +158,8 @@ design (see the spec's deferred list). Reissue corrected work as a fresh draft.`
     const inv = V.invoiceView(a.invoice_id);
     if (inv.status === 'void') throw new Rejected(`${inv.id} is already void.`);
     if (inv.applied > 0) throw new Rejected(`${inv.id} has ${inv.applied_display} applied — applied cash cannot be unwound at 0.1; the record stands.`);
-    db.prepare("UPDATE solo_invoice SET status = 'void', void_reason = ?, doc_token = NULL, updated_at = ? WHERE id = ?").run(a.reason, at, a.invoice_id);
+    // The link survives: the document is part of the record, stamped VOID from here on.
+    db.prepare("UPDATE solo_invoice SET status = 'void', void_reason = ?, updated_at = ? WHERE id = ?").run(a.reason, at, a.invoice_id);
     return V.invoiceView(a.invoice_id);
   },
 });
