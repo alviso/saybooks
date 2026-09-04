@@ -1394,18 +1394,19 @@ const boot = async () => {
     const mcpUrl = location.origin + '/mcp/' + REG.workspace;
     box.innerHTML = `<div style="font-size:11px;color:var(--dim);line-height:1.6;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 12px;box-shadow:var(--shadow)">
       <b style="color:var(--accent)">your sandbox</b><br>${REG.workspace}<br>private to you · swept after 24h
-      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><b style="color:var(--accent)">talk to it</b><br>
-      point Claude at this sandbox:<br>
-      <code style="font-size:10px;word-break:break-all;user-select:all">claude mcp add -t http saybooks ${mcpUrl}</code>
-      <button id="mcpCopy" style="margin-top:5px;font-size:11px;padding:3px 8px;width:100%">Copy command</button></div>
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><b style="color:var(--accent)">connect Claude</b><br>
+      In the Claude app: <b>Settings → Connectors → Add custom connector</b>, name it <i>saybooks</i>, paste this URL:<br>
+      <code style="font-size:10px;word-break:break-all;user-select:all">${mcpUrl}</code>
+      <button id="mcpCopy" style="margin-top:5px;font-size:11px;padding:3px 8px;width:100%">Copy connector URL</button>
+      <div style="margin-top:5px;font-size:10.5px;color:var(--dim)">Claude Code instead: <code style="font-size:10px;user-select:all">claude mcp add -t http saybooks ${mcpUrl}</code></div></div>
       <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><b style="color:var(--accent)">you</b><br>
       ${REG.member.name} · <span class="pill">${REG.member.role}</span></div>
       ${isAdmin ? '<button id="inviteBtn" style="margin-top:6px;font-size:11px;padding:3px 8px;width:100%">Share this sandbox…</button>' : ''}
       ${isAdmin ? '<button id="demoReset" style="margin-top:6px;font-size:11px;padding:3px 8px;width:100%">Reset demo data</button>' : ''}
       ${REG.auth_enabled ? '<a href="/auth/google" style="display:block;margin-top:8px;text-align:center;font-size:11.5px;font-weight:600;padding:6px 8px;border:1px solid var(--accent);border-radius:6px;color:var(--accent);text-decoration:none">Sign in with Google — keep this space</a>' : ''}</div>`;
     document.getElementById('mcpCopy').onclick = (e) => {
-      navigator.clipboard.writeText('claude mcp add -t http saybooks ' + mcpUrl);
-      e.target.textContent = 'Copied ✓'; setTimeout(() => e.target.textContent = 'Copy command', 1500);
+      navigator.clipboard.writeText(mcpUrl);
+      e.target.textContent = 'Copied ✓'; setTimeout(() => e.target.textContent = 'Copy connector URL', 1500);
     };
     if (isAdmin) {
       document.getElementById('demoReset').onclick = async () => {
