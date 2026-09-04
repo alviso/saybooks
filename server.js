@@ -477,10 +477,16 @@ const server = http.createServer(async (req, res) => {
           require('./src/telemetry.js').record(ws, R.byName[name].intent === 'read' ? 'read' : 'write');
         }
         try {
-          const result = R.execute(name, await R.prepare(name, args), {
+          const result = await R.execute(name, await R.prepare(name, args), {
             workspace: ws, actor: member.name, actor_kind: 'human', role: member.role,
             session: `workbench-${ws}`, reason: _reason,
           });
+          // Binary attachments are for agents; the workbench has the links. Report what was rendered, not the bytes.
+          if (result && result._attachments) {
+            const { _attachments, ...rest } = result;
+            rest.attachments = _attachments.map(x => ({ kind: x.kind, mime: x.mime, name: x.name, bytes: Math.floor(x.data.length * 3 / 4) }));
+            return send(res, 200, { ok: true, result: rest });
+          }
           return send(res, 200, { ok: true, result });
         } catch (e) {
           return send(res, 400, { ok: false, error: e.message });

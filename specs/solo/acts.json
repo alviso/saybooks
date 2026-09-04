@@ -49,6 +49,12 @@
         "invoice"
       ]
     },
+    "document": {
+      "kind": "read",
+      "required": [
+        "invoice"
+      ]
+    },
     "outstanding": {
       "kind": "read",
       "required": []

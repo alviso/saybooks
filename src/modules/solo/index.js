@@ -41,8 +41,8 @@ ONE question at a time:
   record them, never enforce them.
 - The invoice: gather lines as they describe the work (description, quantity or hours,
   rate). Draft it, SHOW every number — lines, subtotal, tax, total, due date — and issue
-  only after they confirm. Then hand them the document link: they save it as PDF and send
-  it themselves (S-7).
+  only after they confirm — solo_get_document shows you the real render first. Then call
+  solo_get_document again: the PDF is attached; hand it over, they send it themselves (S-7).
 Never invent an amount, a rate, a date, or terms (S-6).`,
   implements: {
     area: 'solo', spec: '0.1',
@@ -51,7 +51,7 @@ Never invent an amount, a rate, a date, or terms (S-6).`,
       draft_invoice: 'solo_draft_invoice', update_draft: 'solo_update_draft',
       issue_invoice: 'solo_issue_invoice', void_invoice: 'solo_void_invoice',
       record_payment: 'solo_record_payment', apply_payment: 'solo_apply_payment',
-      invoice: 'solo_get_invoice', outstanding: 'solo_outstanding', statement: 'solo_statement',
+      invoice: 'solo_get_invoice', document: 'solo_get_document', outstanding: 'solo_outstanding', statement: 'solo_statement',
     },
   },
   search: (like) => ({

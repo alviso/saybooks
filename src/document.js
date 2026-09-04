@@ -7,6 +7,7 @@
  * themselves (S-7). Both read the same invoiceView so they cannot disagree on a number.
  * The logo is branding, not a fact: read live, never from the frozen blocks.
  */
+const path = require('path');
 const PDFDocument = require('pdfkit');
 
 const money = (c) => (c < 0 ? '-$' : '$') + (Math.abs(c) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -74,6 +75,7 @@ function renderInvoiceHtml(inv, logo) {
 function renderInvoicePdf(inv, logo) {
   return new Promise((resolve, reject) => {
     const s = inv.seller, c = inv.customer || {};
+    const draft = inv.status === 'draft';
     const NAVY = '#16304f', INK = '#182a44', MUTED = '#777777', RULE = '#e6e6e6';
     const doc = new PDFDocument({ size: 'LETTER', margins: { top: 56, bottom: 56, left: 56, right: 56 }, info: { Title: `${inv.id} — ${s ? s.name : 'Invoice'}`, Author: s ? s.name : 'Saybooks' } });
     const chunks = [];
@@ -86,6 +88,12 @@ function renderInvoicePdf(inv, logo) {
     if (m) { try { doc.image(Buffer.from(m[2], 'base64'), L, y, { fit: [160, 44] }); y += 54; } catch { /* a logo that will not decode is not a reason to fail the invoice */ } }
     doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(26).text('INVOICE', L, doc.page.margins.top, { width: W, align: 'right', characterSpacing: 1.5 });
     doc.fillColor(MUTED).font('Helvetica').fontSize(11).text(inv.id, L, doc.page.margins.top + 32, { width: W, align: 'right' });
+    if (draft) {
+      doc.fillColor('#7a5a00').font('Helvetica-Bold').fontSize(9).text('DRAFT — NOT YET ISSUED', L, doc.page.margins.top + 50, { width: W, align: 'right', characterSpacing: 0.8 });
+      doc.save().rotate(-28, { origin: [doc.page.width / 2, doc.page.height * 0.42] }).fillColor('#b45309').opacity(0.08).font('Helvetica-Bold').fontSize(120);
+      const sw = doc.widthOfString('DRAFT', { characterSpacing: 10 });
+      doc.text('DRAFT', doc.page.width / 2 - sw / 2, doc.page.height * 0.42 - 70, { lineBreak: false, characterSpacing: 10 }).restore().opacity(1);
+    }
     if (s) {
       doc.fillColor(INK).font('Helvetica-Bold').fontSize(13).text(s.name, L, y, { width: W * 0.55 });
       doc.font('Helvetica').fontSize(10).fillColor(INK);
@@ -105,9 +113,9 @@ function renderInvoicePdf(inv, logo) {
     if (c.email) doc.text(c.email, { width: W / 2 });
     const leftEnd = doc.y;
     doc.font('Helvetica').fontSize(10).fillColor(INK)
-      .text(`Issue date: ${longDate(inv.issued_at)}`, L + W / 2, topY, { width: W / 2, align: 'right' })
+      .text(draft ? 'Issue date: set at issue' : `Issue date: ${longDate(inv.issued_at)}`, L + W / 2, topY, { width: W / 2, align: 'right' })
       .text(`Terms: ${termsOf(inv)}`, { width: W / 2, align: 'right' })
-      .text(`Due date: ${longDate(inv.due_at)}`, { width: W / 2, align: 'right' });
+      .text(draft ? `Due: ${inv.due_in_days ?? 30} days from issue` : `Due date: ${longDate(inv.due_at)}`, { width: W / 2, align: 'right' });
     y = Math.max(leftEnd, doc.y) + 30;
 
     // Lines
@@ -146,4 +154,28 @@ function renderInvoicePdf(inv, logo) {
   });
 }
 
-module.exports = { renderInvoiceHtml, renderInvoicePdf };
+/**
+ * The PDF as a picture: one page rasterized with pdf.js, glyphs drawn as paths so no system
+ * fonts are needed. This is how an agent SEES the document — the image is the PDF by
+ * construction, never a third layout. ~1.6x scale ≈ 115 dpi: legible, 100–200 KB a page.
+ */
+let pdfjsPromise = null;
+async function rasterizePdf(pdfBuf, pageNo = 1, scale = 1.6) {
+  pdfjsPromise = pdfjsPromise || import('pdfjs-dist/legacy/build/pdf.mjs');
+  const pdfjs = await pdfjsPromise;
+  const { createCanvas } = require('@napi-rs/canvas');
+  const doc = await pdfjs.getDocument({
+    data: new Uint8Array(pdfBuf), disableFontFace: true, isEvalSupported: false,
+    standardFontDataUrl: path.join(path.dirname(require.resolve('pdfjs-dist/package.json')), 'standard_fonts') + path.sep,
+  }).promise;
+  const n = Math.min(Math.max(1, pageNo | 0), doc.numPages);
+  const page = await doc.getPage(n);
+  const vp = page.getViewport({ scale });
+  const canvas = createCanvas(Math.ceil(vp.width), Math.ceil(vp.height));
+  await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+  const png = canvas.toBuffer('image/png');
+  await doc.destroy();
+  return { png, page: n, pages: doc.numPages, width: canvas.width, height: canvas.height };
+}
+
+module.exports = { renderInvoiceHtml, renderInvoicePdf, rasterizePdf };

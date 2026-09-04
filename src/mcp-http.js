@@ -65,7 +65,18 @@ actor_kind=agent, in the same audit trail as their clicks. Play freely; nothing 
     if (!R.byName[name] || (mounts && !mounts.includes(R.byName[name].module))) return { isError: true, content: [{ type: 'text', text: `unknown tool ${name}` }] };
     const { _reason, ...rest } = args;
     try {
-      const out = R.execute(name, await R.prepare(name, rest), { workspace, actor: member.name, actor_kind: 'agent', role: member.role, session: `mcp-http:${workspace}`, reason: _reason });
+      const out = await R.execute(name, await R.prepare(name, rest), { workspace, actor: member.name, actor_kind: 'agent', role: member.role, session: `mcp-http:${workspace}`, reason: _reason });
+      // A result may carry binary attachments (a rendered page, a PDF). They become MCP content blocks:
+      // an image the model can look at, a resource the client can hand to the person.
+      if (out && typeof out === 'object' && Array.isArray(out._attachments)) {
+        const { _attachments, ...rest } = out;
+        const content = [{ type: 'text', text: JSON.stringify(rest, null, 1) }];
+        for (const a of _attachments) {
+          if (a.kind === 'image') content.push({ type: 'image', data: a.data, mimeType: a.mime });
+          else content.push({ type: 'resource', resource: { uri: a.uri || `saybooks://${a.name}`, mimeType: a.mime, blob: a.data } });
+        }
+        return { content };
+      }
       return { content: [{ type: 'text', text: typeof out === 'string' ? out : JSON.stringify(out, null, 1) }] };
     } catch (e) {
       // Business refusals come back as text the model should relay, not swallow.

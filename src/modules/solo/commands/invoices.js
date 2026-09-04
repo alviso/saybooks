@@ -41,8 +41,9 @@ hours, rate — and SHOW them the numbers before issuing. Timing is their agreem
 client: ahead of the work, partial, or after — never question it (S-5). Never invent an
 amount or a rate (S-6). If there is no client yet, ask for the client's name, billing address,
 email, and the agreed terms — one question at a time — and create the customer first. The draft
-comes back with doc_path: a preview link that renders the real document marked DRAFT. Hand it
-to the person to look at BEFORE asking whether to issue; never hand-roll the document yourself.`,
+comes back with doc_path: a preview link that renders the real document marked DRAFT. Call
+solo_get_document to see that render yourself and hand the person the link BEFORE asking whether
+to issue; never hand-roll the document yourself.`,
   effects: ['draft created with computed totals', 'preview link minted'],
   args: {
     customer_id: { ...f.ref('customer', 'The client.'), required: true },
@@ -103,7 +104,8 @@ company profile and the bill-to block from the customer (S-3), the due date is c
 the draft's terms, and the preview link becomes the document. Show the person the preview
 (doc_path) and the full numbers and get their confirmation BEFORE calling this. Refused
 without a company profile or a customer billing address — the refusal says what to gather.
-Hand them the doc link (doc_path) and the PDF (pdf_path) after — they send it themselves (S-7).`,
+After: call solo_get_document — the PDF comes attached; hand it (and doc_path) to the person, they
+send it themselves (S-7).`,
   effects: ['invoice issued and immutable', 'seller and bill-to blocks frozen', 'document link final', 'PDF available'],
   guards: [
     (i) => i.status === 'draft' || `${i.id} is already ${i.status}.`,

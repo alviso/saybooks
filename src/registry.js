@@ -274,7 +274,9 @@ function execute(name, args = {}, ctx = {}) {
     const db = wsp.db();
 
     // Reads go through the same door — same validation, same arg names, same refusals — but
-    // they are not logged. The audit trail answers "what changed and who changed it"; burying
+    // they are not logged. A read handler may return a promise for pure rendering work (a PDF,
+    // a picture) provided every database read happened synchronously first: the workspace is
+    // only current inside this call. Both servers await execute(). The audit trail answers "what changed and who changed it"; burying
     // that under every list refresh would make it useless for the one job it has.
     if (cmd.intent === 'read') {
       if (!hasGrant(role, cmd.permission)) throw new Rejected(denial(cmd, role));

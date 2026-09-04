@@ -45,7 +45,7 @@ authority), multi-currency, recurring invoices, sending anything anywhere.
 ## 4. The acts
 
 Writes (6): draft_invoice, update_draft, issue_invoice, void_invoice, record_payment,
-apply_payment. Reads (3): invoice, outstanding, statement. Environment (core, existing):
+apply_payment. Reads (4): invoice, document, outstanding, statement. Environment (core, existing):
 create_customer, update_customer, set_company_profile.
 
 ## 5. Invariants
@@ -69,7 +69,9 @@ create_customer, update_customer, set_company_profile.
 
 ## 6. Required read models
 
-invoice (the whole document: lines, seller snapshot, applied/open, the doc link),
+invoice (the whole document: lines, seller and bill-to snapshots, applied/open, the doc link),
+document (0.1.1: the rendered page as a picture, DRAFT-stamped until issued, and the PDF file once issued —
+so an agent looks at the real render before issue and hands over the file after),
 outstanding (issued-unpaid, oldest first, days overdue, totals), statement (one client's
 invoices and payments, chronological, closing balance).
 
@@ -100,4 +102,4 @@ burned; paid-invoice void refused.
 
 *Change log: 0.1-draft (2026-09-02) — drafted with Peter's refocus from an o2c door to a
 freelancer invoice generator; the interactive-guide doctrine and S-5 came from that
-conversation. 0.1.1 (2026-09-04) — client address + tax id, bill-to block frozen at issue, preview link from the first draft (DRAFT-stamped).*
+conversation. 0.1.1 (2026-09-04) — client address + tax id, bill-to block frozen at issue, preview link from the first draft (DRAFT-stamped), document read returning the rendered page and the PDF.*
