@@ -162,6 +162,14 @@ function openForm(spec, prefill = {}) {
         el.append(new Option(o.label + (o.label !== o.id ? `  (${o.id})` : ''), o.id));
       el.value = state[f.key] ?? '';
       el.onchange = () => state[f.key] = el.value || undefined;
+    } else if (f.widget === 'file') {
+      /* a file field sends the file as a data URL — the same argument an agent passes over MCP */
+      el = Object.assign(document.createElement('input'), { type:'file', accept:'image/png,image/jpeg,image/svg+xml,image/webp' });
+      el.onchange = () => {
+        const file = el.files[0];
+        if (!file) { state[f.key] = undefined; return; }
+        const r = new FileReader(); r.onload = () => { state[f.key] = r.result; }; r.readAsDataURL(file);
+      };
     } else if (f.widget === 'checkbox') {
       el = Object.assign(document.createElement('input'), { type:'checkbox', checked: state[f.key] !== false });
       el.style.width = 'auto'; el.onchange = () => state[f.key] = el.checked;
@@ -1017,7 +1025,7 @@ async function render() {
   }
   if (view === 'company') {
     head('Company', "Your business's own facts — the seller on every document. More business-level records will live here.");
-    const p = await api('core_company_profile', {});
+    const p = await api('core_company_profile', { with_logo: true });
     const has = p && p.name;
     const bar = $('<div class="acts" style="margin-bottom:14px"></div>');
     const eb = $(`<button class="primary">${has ? 'Edit profile' : 'Set company profile'}</button>`);
@@ -1027,12 +1035,24 @@ async function render() {
       if (has) for (const f2 of spec2.fields) if (p[f2.key] !== undefined && p[f2.key] !== null) pre[f2.key] = p[f2.key];
       openForm(spec2, pre);
     };
-    bar.append(eb); main.append(bar);
+    bar.append(eb);
+    if (has) {
+      const lb = $(`<button>${p.logo ? 'Change logo…' : 'Add logo…'}</button>`);
+      lb.onclick = () => openForm(cmd('core_set_company_logo'), { remove: false });
+      bar.append(lb);
+      if (p.logo) {
+        const rb = $('<button>Remove logo</button>');
+        rb.onclick = async () => { await api('core_set_company_logo', { remove: true, _reason: 'removed from the Company page' }); location.reload(); };
+        bar.append(rb);
+      }
+    }
+    main.append(bar);
     if (!has) {
       main.append($('<div class="card doc">Nothing set yet. The invoice document prints without a seller block until this exists — incomplete, not wrong (INV-22).</div>'));
     } else {
       const nl2 = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>');
       main.append($(`<div class="card" style="max-width:640px">
+        ${p.logo ? `<img src="${p.logo}" alt="" style="max-height:72px;max-width:240px;display:block;margin-bottom:12px">` : ''}
         <h2 style="margin-bottom:4px">${nl2(p.name)}</h2>
         <div class="kv">
           ${p.address ? `<div><span>Address</span>${nl2(p.address)}</div>` : ''}

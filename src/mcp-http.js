@@ -59,7 +59,7 @@ actor_kind=agent, in the same audit trail as their clicks. Play freely; nothing 
     if (!R.byName[name] || (mounts && !mounts.includes(R.byName[name].module))) return { isError: true, content: [{ type: 'text', text: `unknown tool ${name}` }] };
     const { _reason, ...rest } = args;
     try {
-      const out = R.execute(name, rest, { workspace, actor: member.name, actor_kind: 'agent', role: member.role, session: `mcp-http:${workspace}`, reason: _reason });
+      const out = R.execute(name, await R.prepare(name, rest), { workspace, actor: member.name, actor_kind: 'agent', role: member.role, session: `mcp-http:${workspace}`, reason: _reason });
       return { content: [{ type: 'text', text: typeof out === 'string' ? out : JSON.stringify(out, null, 1) }] };
     } catch (e) {
       // Business refusals come back as text the model should relay, not swallow.

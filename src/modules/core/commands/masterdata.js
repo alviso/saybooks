@@ -188,6 +188,67 @@ only the first time.`,
                 ON CONFLICT(id) DO UPDATE SET name=excluded.name, address=excluded.address, tax_id=excluded.tax_id,
                   payment_instructions=excluded.payment_instructions, footer_note=excluded.footer_note, updated_at=excluded.updated_at`)
       .run(next.name, next.address ?? null, next.tax_id ?? null, next.payment_instructions ?? null, next.footer_note ?? null, at);
-    return db.prepare('SELECT * FROM company_profile WHERE id = 1').get();
+    const { logo, ...profile } = db.prepare('SELECT * FROM company_profile WHERE id = 1').get();
+    return { ...profile, has_logo: !!logo };
+  },
+});
+
+const LOGO_MAX = 300 * 1024;
+const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'];
+function checkLogoDataUrl(d) {
+  const m = /^data:(image\/(?:png|jpeg|svg\+xml|webp));base64,([A-Za-z0-9+/=\s]+)$/.exec(d || '');
+  if (!m) throw new Rejected('logo_data must be a data URL of a PNG, JPEG, SVG or WebP image (data:image/png;base64,…).');
+  const bytes = Math.floor(m[2].replace(/\s/g, '').length * 3 / 4);
+  if (bytes > LOGO_MAX) throw new Rejected(`The logo is ${Math.round(bytes / 1024)} KB; the limit is 300 KB. Shrink it first.`);
+  return { type: m[1], bytes };
+}
+async function fetchLogo(url) {
+  let u; try { u = new URL(url); } catch { throw new Rejected('logo_url must be a full https URL.'); }
+  if (u.protocol !== 'https:') throw new Rejected('logo_url must use https.');
+  if (/^(localhost$|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|0\.|169\.254\.|\[|::1$|\d+\.\d+\.\d+\.\d+$)/.test(u.hostname)) throw new Rejected('logo_url must point at a public host name.');
+  const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 6000);
+  let res;
+  try { res = await fetch(u, { signal: ac.signal, redirect: 'follow' }); }
+  catch (e) { throw new Rejected(`Could not fetch the logo: ${e.name === 'AbortError' ? 'timed out after 6s' : e.message}.`); }
+  finally { clearTimeout(t); }
+  if (!res.ok) throw new Rejected(`Could not fetch the logo: HTTP ${res.status}.`);
+  const type = (res.headers.get('content-type') || '').split(';')[0].trim();
+  if (!LOGO_TYPES.includes(type)) throw new Rejected(`logo_url must serve a PNG, JPEG, SVG or WebP image; it served ${type || 'no content type'}.`);
+  const buf = Buffer.from(await res.arrayBuffer());
+  if (buf.length > LOGO_MAX) throw new Rejected(`The logo is ${Math.round(buf.length / 1024)} KB; the limit is 300 KB. Shrink it first.`);
+  return `data:${type};base64,${buf.toString('base64')}`;
+}
+
+defineCommand({
+  name: 'core_set_company_logo',
+  permission: 'workspace.admin',
+  title: 'Company logo', group: 'Master data', subject: 'company_profile', scope: 'collection',
+  summary: 'Put your logo on the invoice document. Upload a file, or give a public https URL and it is fetched once.',
+  doctrine: `Branding, not a fact: the logo is NOT part of the frozen seller block, so changing it
+re-brands past documents while their names, addresses and amounts stay exactly as issued.
+PNG, JPEG, SVG or WebP, 300 KB at most; the image is stored, never hotlinked. Needs a company
+profile first. Pass remove=true to take it off.`,
+  effects: ['company logo stored (or removed)'],
+  redact: ['logo_data'],
+  args: {
+    logo_data: f.text('The image itself as a data URL (data:image/png;base64,…). From the form: pick a file.', { widget: 'file' }),
+    logo_url: f.text('Public https URL of the image. Fetched once and stored; the URL itself is not kept.'),
+    remove: f.bool('Remove the current logo.'),
+  },
+  async prepare(a) {
+    if (a.logo_url && !a.logo_data && !a.remove) return { ...a, logo_data: await fetchLogo(a.logo_url) };
+    return a;
+  },
+  handler(a, { db, at }) {
+    const cur = db.prepare('SELECT id FROM company_profile WHERE id = 1').get();
+    if (!cur) throw new Rejected('Set the company profile first (core_set_company_profile, the name at least); then the logo has somewhere to live.');
+    if (a.remove && !a.logo_data) {
+      db.prepare('UPDATE company_profile SET logo = NULL, updated_at = ? WHERE id = 1').run(at);
+      return { has_logo: false, removed: true };
+    }
+    if (!a.logo_data) throw new Rejected('Pass logo_data (a file, or a data URL) or logo_url — or remove=true.');
+    const { type, bytes } = checkLogoDataUrl(a.logo_data);
+    db.prepare('UPDATE company_profile SET logo = ?, updated_at = ? WHERE id = 1').run(a.logo_data, at);
+    return { has_logo: true, logo_type: type, logo_bytes: bytes };
   },
 });

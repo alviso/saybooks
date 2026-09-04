@@ -319,5 +319,12 @@ read({
   name: 'core_company_profile',
   title: 'Company profile', summary: "The business's own identity as it prints on documents: seller block, tax id, payment instructions.",
   args: {},
-  handler: () => H.db().prepare('SELECT * FROM company_profile WHERE id = 1').get() || { name: null, address: null, tax_id: null, payment_instructions: null, footer_note: null, set: false },
+  args: { with_logo: f.bool('Include the logo itself as a data URL — large. Otherwise only its type and size come back.') },
+  handler: (a) => {
+    const p = H.db().prepare('SELECT * FROM company_profile WHERE id = 1').get();
+    if (!p) return { name: null, address: null, tax_id: null, payment_instructions: null, footer_note: null, has_logo: false, set: false };
+    const { logo, ...rest } = p;
+    const m = logo ? /^data:([^;]+);base64,([\s\S]*)$/.exec(logo) : null;
+    return { ...rest, has_logo: !!logo, logo_type: m ? m[1] : null, logo_bytes: m ? Math.floor(m[2].length * 3 / 4) : 0, ...(a.with_logo && logo ? { logo } : {}) };
+  },
 });

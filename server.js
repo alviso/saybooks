@@ -146,7 +146,7 @@ const walks = new Map();          // walkthrough ordering: workspace -> next exp
 
 /** The printable invoice, rendered server-side for /doc links — same look as the workbench's
  *  print view. The esc() matters: everything here is user-entered text on a public-ish URL. */
-function renderInvoiceDoc(inv) {
+function renderInvoiceDoc(inv, logo) {
   const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   const nl = (s) => esc(s).replace(/\n/g, '<br>');
   const money = (c) => '$' + (c / 100).toFixed(2);
@@ -166,7 +166,7 @@ function renderInvoiceDoc(inv) {
   </style></head><body>
     <div class="bar"><button onclick="window.print()">Print / Save as PDF</button></div>
     <div class="top">
-      <div>${s ? `<div style="font-size:19px;font-weight:700">${esc(s.name)}</div><div class="muted">${nl(s.address || '')}${s.tax_id ? '<br>Tax ID ' + esc(s.tax_id) : ''}</div>` : ''}</div>
+      <div>${logo ? `<img src="${esc(logo)}" alt="" style="max-height:64px;max-width:220px;display:block;margin-bottom:10px">` : ''}${s ? `<div style="font-size:19px;font-weight:700">${esc(s.name)}</div><div class="muted">${nl(s.address || '')}${s.tax_id ? '<br>Tax ID ' + esc(s.tax_id) : ''}</div>` : ''}</div>
       <div style="text-align:right"><h1>INVOICE</h1><div class="muted">${esc(inv.id)}<br>Issued ${esc(inv.issued_at)}<br>Due ${esc(inv.due_at)}</div></div>
     </div>
     <div class="muted" style="font-size:11px;letter-spacing:.08em;text-transform:uppercase">Bill to</div>
@@ -273,7 +273,9 @@ const server = http.createServer((req, res) => {
         const inv = H.db().prepare('SELECT id FROM solo_invoice WHERE doc_token = ? AND status IN (\'issued\',\'paid\')').get(dtok);
         if (!inv) return send(res, 404, 'Not found', 'text/plain');
         const v = require('./src/modules/solo/views.js').invoiceView(inv.id);
-        return send(res, 200, renderInvoiceDoc(v), 'text/html; charset=utf-8');
+        // Branding, not a fact: the logo is read live, never from the frozen seller block.
+        const logo = (H.db().prepare('SELECT logo FROM company_profile WHERE id = 1').get() || {}).logo || null;
+        return send(res, 200, renderInvoiceDoc(v, logo), 'text/html; charset=utf-8');
       });
     } catch (e) { console.error('[doc]', e.message); return send(res, 404, 'Not found', 'text/plain'); }
   }
@@ -500,7 +502,7 @@ const server = http.createServer((req, res) => {
       if (cmdMounts && !cmdMounts.includes(R.byName[name].module)) return send(res, 404, { error: `unknown command ${name}` });
       let raw = '';
       req.on('data', c => { raw += c; if (raw.length > 4e6) req.destroy(); });
-      req.on('end', () => {
+      req.on('end', async () => {
         let body;
         try { body = raw ? JSON.parse(raw) : {}; } catch { return send(res, 400, { error: 'invalid JSON body' }); }
         const { _reason, ...args } = body;
@@ -508,7 +510,7 @@ const server = http.createServer((req, res) => {
           require('./src/telemetry.js').record(ws, R.byName[name].intent === 'read' ? 'read' : 'write');
         }
         try {
-          const result = R.execute(name, args, {
+          const result = R.execute(name, await R.prepare(name, args), {
             workspace: ws, actor: member.name, actor_kind: 'human', role: member.role,
             session: `workbench-${ws}`, reason: _reason,
           });

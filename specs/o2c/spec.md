@@ -319,6 +319,12 @@ the company profile never reprints history — the document forever shows the id
 details in force when it was issued (`seller_as_issued: true`). Only invoices issued before a
 profile existed fall back to the live profile, and say so.
 
+- **Logo (0.2.1).** The company profile may carry a logo, printed at the head of every
+document. It is branding, not a fact: it is **not** part of the frozen seller block, so
+re-branding re-brands past documents while their names, addresses and amounts stay exactly as
+issued. Stored as the image itself (PNG/JPEG/SVG/WebP, 300 KB cap), never hotlinked; set from a
+file or fetched once from a public https URL.
+
 - **INV-22 — The books produce documents; they never send them.** Rendering an invoice, a
   statement, or an export is a read. Transmitting it to a customer is the operator's act, done
   outside the system, on purpose. No implementation may email, post, or push a document at a
@@ -355,4 +361,4 @@ is the operating layer in front of it.
 
 *Change log: 0.1-draft (2026-08-22) — initial curation, extracted from the reference
 implementation and calibrated against SMB practice (QuickBooks-class gaps, Odoo invoicing
-policies, standard AR/dunning/write-off practice). 0.2 (2026-08-23) — company profile environment act, invoice-as-document read model, derived journal read model; INV-22, INV-23.*
+policies, standard AR/dunning/write-off practice). 0.2 (2026-08-23) — company profile environment act, invoice-as-document read model, derived journal read model; INV-22, INV-23. 0.2.1 (2026-09-04) — company logo: branding, not frozen.*

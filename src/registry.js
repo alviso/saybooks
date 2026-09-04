@@ -150,6 +150,21 @@ function defineCommand(def) {
   return cmd;
 }
 
+/**
+ * Some arguments need the outside world before the transaction can begin — fetching a logo
+ * from a URL, say. A command may declare `prepare(args) -> Promise<args>`; both surfaces call
+ * it before execute(), outside the transaction. A refusal thrown here is a refusal like any
+ * other, except that nothing was attempted against the books, so nothing is logged.
+ */
+async function prepare(name, args = {}) {
+  const cmd = byName[name];
+  return cmd && cmd.prepare ? cmd.prepare(args) : args;
+}
+
+/** Arguments listed in `redact` are logged by size, not content — a 300 KB image is not an audit fact. */
+const logArgs = (cmd, args) => !cmd.redact ? args
+  : Object.fromEntries(Object.entries(args).map(([k, v]) => [k, cmd.redact.includes(k) && v != null ? `<${String(v).length} chars, not logged>` : v]));
+
 /** Called by a module's index.js around its requires so commands get attributed. */
 function inModule(mod, fn) {
   definingModule = mod;
@@ -280,7 +295,7 @@ function execute(name, args = {}, ctx = {}) {
       db.prepare(`INSERT INTO command_log (at, command, actor_kind, actor, session, reason, subject_type, subject_id, args_json, ok, result_json)
                   VALUES (?,?,?,?,?,?,?,?,?,1,?)`)
         .run(at, name, who.actor_kind, who.actor, who.session, who.reason, cmd.subject || null,
-             String(args[`${cmd.subject}_id`] || (result && result.id) || ''), JSON.stringify(args), JSON.stringify(result));
+             String(args[`${cmd.subject}_id`] || (result && result.id) || ''), JSON.stringify(logArgs(cmd, args)), JSON.stringify(result));
       return result;
     });
 
@@ -291,12 +306,12 @@ function execute(name, args = {}, ctx = {}) {
       db.prepare(`INSERT INTO command_log (at, command, actor_kind, actor, session, reason, subject_type, subject_id, args_json, ok, error)
                   VALUES (?,?,?,?,?,?,?,?,?,0,?)`)
         .run(at, name, who.actor_kind, who.actor, who.session, who.reason, cmd.subject || null,
-             String(args[`${cmd.subject}_id`] || ''), JSON.stringify(args), e.message);
+             String(args[`${cmd.subject}_id`] || ''), JSON.stringify(logArgs(cmd, args)), e.message);
       throw e;
     }
   });
 }
 
 module.exports = { COMMANDS, byName, MODULES, SUBJECTS, defineModule, defineSubject, defineCommand, inModule,
-  loadModules, f, mcpTools, formSpec, instructions, availableFor, nextActions, execute, Rejected,
+  loadModules, f, mcpTools, formSpec, instructions, availableFor, nextActions, execute, prepare, Rejected,
   PERMISSIONS, ROLE_GRANTS, hasGrant, denial };
