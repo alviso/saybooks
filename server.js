@@ -285,17 +285,17 @@ const server = http.createServer((req, res) => {
       && !url.searchParams.get('join') && !url.searchParams.get('ws') && !url.searchParams.has('demo')
       && !/(?:^|;\s*)otc_ws=/.test(req.headers.cookie || '')) {
     return send(res, 200, `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Saybooks — whose books?</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600&display=swap"><style>
-  body{font:16px/1.55 'Nunito Sans',-apple-system,'Segoe UI',sans-serif;color:#2B2A33;background:#FBF7F2;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
+<title>Saybooks — whose books?</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"><style>
+  body{font:16px/1.55 'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif;color:hsl(215 40% 16%);background:hsl(210 20% 98%);display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
   .wrap{max-width:700px;padding:2em}
-  .mark{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spacing:.06em;font-size:14px} .tag{color:#7A7784;font-size:13px;margin-bottom:2.4em}
-  h1{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spacing:-.02em;font-size:30px;margin:.2em 0 1.1em}
+  .mark{font-family:'IBM Plex Sans',sans-serif;font-weight:700;letter-spacing:.06em;font-size:14px} .tag{color:hsl(215 15% 46%);font-size:13px;margin-bottom:2.4em}
+  h1{font-family:'IBM Plex Sans',sans-serif;font-weight:700;letter-spacing:-.02em;font-size:30px;margin:.2em 0 1.1em}
   .doors{display:flex;gap:16px;flex-wrap:wrap}
-  a.door{flex:1;min-width:250px;text-decoration:none;color:inherit;border-radius:20px;padding:1.3em 1.4em;background:#fff;box-shadow:0 6px 24px rgba(43,42,51,.05)}
-  a.door:hover{box-shadow:0 10px 30px rgba(43,42,51,.09)} a.door b{display:block;margin-bottom:.4em;font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:800}
-  a.door span{font-size:13.5px;color:#5A5866}
-  .in b{color:#0F766E} .back{margin-top:2.2em;font-size:13px}
-  .back a{color:#7A7784}</style></head><body><div class="wrap">
+  a.door{flex:1;min-width:250px;text-decoration:none;color:inherit;border-radius:8px;padding:1.3em 1.4em;background:#fff;box-shadow:none}
+  a.door:hover{box-shadow:none} a.door b{display:block;margin-bottom:.4em;font-family:'IBM Plex Sans',sans-serif;font-size:18px;font-weight:700}
+  a.door span{font-size:13.5px;color:hsl(215 20% 36%)}
+  .in b{color:hsl(215 60% 22%)} .back{margin-top:2.2em;font-size:13px}
+  .back a{color:hsl(215 15% 46%)}</style></head><body><div class="wrap">
   <div class="mark">SAYBOOKS</div><div class="tag">the books you can talk to — that stay books</div>
   <h1>Whose books are these?</h1>
   <div class="doors">

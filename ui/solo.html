@@ -9,44 +9,44 @@
 <meta property="og:description" content="Free invoicing for freelancers with an AI agent. The agent guides you one question at a time; issued invoices are immutable; your data exports or deletes any time. Open source.">
 <meta property="og:url" content="https://saybooks.io/solo">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📒</text></svg>">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
   * { box-sizing: border-box; margin: 0 }
-  body { font: 16px/1.6 'Nunito Sans', -apple-system, 'Segoe UI', sans-serif; color: #2B2A33; background: #FBF7F2 }
+  body { font: 16px/1.6 'IBM Plex Sans', -apple-system, 'Segoe UI', sans-serif; color: hsl(215 40% 16%); background: hsl(210 20% 98%) }
   .wrap { max-width: 880px; margin: 0 auto; padding: 3em 1.5em 4em }
-  .mark { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; letter-spacing: .06em; font-size: 14px }
+  .mark { font-family: 'IBM Plex Sans', sans-serif; font-weight:700; letter-spacing: .06em; font-size: 14px }
   .mark a { color: inherit; text-decoration: none }
-  .mark span { color: #7A7784; font-weight: 400; letter-spacing: 0 }
-  h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; letter-spacing: -.025em; font-size: 46px; line-height: 1.08; margin: 1.1em 0 .4em }
-  .sub { font-size: 19px; color: #5A5866; max-width: 40em }
-  .cta { display: inline-block; margin: 1.8em 0 .4em; background: #0F766E; color: #fff; padding: .9em 1.6em; border-radius: 14px; text-decoration: none; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 17px; box-shadow: 0 6px 24px rgba(15,118,110,.22) }
-  .cta:hover { background: #115E59 }
-  .cta.ghost { background: #E6F4F1; color: #0F766E; border: none; margin-left: .6em; box-shadow: none }
-  .cta.ghost:hover { background: #d7ebe6 }
-  .ctasub { font-size: 13px; color: #7A7784 }
+  .mark span { color: hsl(215 15% 46%); font-weight: 400; letter-spacing: 0 }
+  h1 { font-family: 'IBM Plex Sans', sans-serif; font-weight:700; letter-spacing: -.025em; font-size: 46px; line-height: 1.08; margin: 1.1em 0 .4em }
+  .sub { font-size: 19px; color: hsl(215 20% 36%); max-width: 40em }
+  .cta { display: inline-block; margin: 1.8em 0 .4em; background: hsl(215 60% 22%); color: #fff; padding: .9em 1.6em; border-radius: 6px; text-decoration: none; font-family: 'IBM Plex Sans', sans-serif; font-weight: 700; font-size: 17px; box-shadow: none }
+  .cta:hover { background: hsl(215 60% 17%) }
+  .cta.ghost { background: hsl(210 20% 94%); color: hsl(215 60% 22%); border: none; margin-left: .6em; box-shadow: none }
+  .cta.ghost:hover { background: hsl(210 25% 90%) }
+  .ctasub { font-size: 13px; color: hsl(215 15% 46%) }
   .chat { margin: 2.5em 0; max-width: 44em; display: flex; flex-direction: column; gap: .5em }
   .msg { padding: .75em 1.05em; font-size: 15px; line-height: 1.5; max-width: 88% }
-  .you { background: #F1EEE8; align-self: flex-start; border-radius: 18px 18px 18px 4px }
-  .ai { background: #0F766E; color: #fff; align-self: flex-end; border-radius: 18px 18px 4px 18px }
+  .you { background: hsl(210 20% 94%); align-self: flex-start; border-radius: 18px 18px 18px 4px }
+  .ai { background: hsl(215 60% 22%); color: #fff; align-self: flex-end; border-radius: 18px 18px 4px 18px }
   .ai b { color: #fff }
-  .ell { text-align: center; color: #7A7784; font-size: 18px; letter-spacing: .3em }
-  h2 { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; letter-spacing: -.02em; font-size: 26px; margin: 2.2em 0 .8em }
+  .ell { text-align: center; color: hsl(215 15% 46%); font-size: 18px; letter-spacing: .3em }
+  h2 { font-family: 'IBM Plex Sans', sans-serif; font-weight:700; letter-spacing: -.02em; font-size: 26px; margin: 2.2em 0 .8em }
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px }
-  .card { background: #fff; border: none; border-radius: 20px; padding: 1.3em 1.4em; box-shadow: 0 6px 24px rgba(43,42,51,.05) }
-  .card b { display: block; margin-bottom: .35em; color: #2B2A33; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 17px }
-  .card p { font-size: 14px; color: #5A5866 }
-  .yours { background: #fff; border: none; border-radius: 20px; padding: 1.4em 1.5em; margin-top: 2.2em; box-shadow: 0 6px 24px rgba(43,42,51,.05) }
-  .yours ul { margin: .5em 0 0; padding-left: 1.3em; font-size: 14.5px; color: #5A5866 }
+  .card { background: #fff; border: 1px solid hsl(215 25% 88%); border-radius: 8px; padding: 1.3em 1.4em; box-shadow: none }
+  .card b { display: block; margin-bottom: .35em; color: hsl(215 40% 16%); font-family: 'IBM Plex Sans', sans-serif; font-size: 17px }
+  .card p { font-size: 14px; color: hsl(215 20% 36%) }
+  .yours { background: #fff; border: 1px solid hsl(215 25% 88%); border-radius: 8px; padding: 1.4em 1.5em; margin-top: 2.2em; box-shadow: none }
+  .yours ul { margin: .5em 0 0; padding-left: 1.3em; font-size: 14.5px; color: hsl(215 20% 36%) }
   .yours li { margin-bottom: .3em }
   .step { display: flex; gap: 14px; margin-top: 1.6em }
-  .step .n { flex: none; width: 30px; height: 30px; border-radius: 50%; background: #0F766E; font-family: 'Plus Jakarta Sans', sans-serif; color: #fff; text-align: center; line-height: 28px; font-weight: 700 }
-  .step p { font-size: 14.5px; color: #5A5866; margin-top: .3em }
-  code { background: #F1EEE8; padding: .15em .45em; border-radius: 5px; font-size: 13px; font-family: ui-monospace, monospace }
-  .mock { background: #23262b; border: 1.5px solid #3a3e45; border-radius: 10px; padding: .9em 1em; margin-top: .7em; max-width: 34em }
+  .step .n { flex: none; width: 30px; height: 30px; border-radius: 50%; background: hsl(215 60% 22%); font-family: 'IBM Plex Sans', sans-serif; color: #fff; text-align: center; line-height: 28px; font-weight: 700 }
+  .step p { font-size: 14.5px; color: hsl(215 20% 36%); margin-top: .3em }
+  code { background: hsl(210 20% 94%); padding: .15em .45em; border-radius: 5px; font-size: 13px; font-family: ui-monospace, monospace }
+  .mock { background: #23262b; border: 1px solid #3a3e45; border-radius: 6px; padding: .9em 1em; margin-top: .7em; max-width: 34em }
   .mocklabel { font-size: 12px; color: #9aa0a6 }
-  .mockfield { background: #2b2f35; border: 1.5px solid #3a3e45; border-radius: 8px; padding: .45em .8em; color: #e8eaed; font-family: ui-monospace, monospace; font-size: 13px; overflow-wrap: anywhere; margin-top: .25em }
-  .foot { margin-top: 3.5em; padding-top: 1.5em; border-top: 1px solid #EEEAE3; font-size: 13.5px; color: #7A7784 }
-  .foot a { color: #0F766E }
+  .mockfield { background: #2b2f35; border: 1px solid #3a3e45; border-radius: 8px; padding: .45em .8em; color: #e8eaed; font-family: ui-monospace, monospace; font-size: 13px; overflow-wrap: anywhere; margin-top: .25em }
+  .foot { margin-top: 3.5em; padding-top: 1.5em; border-top: 1px solid hsl(215 25% 88%); font-size: 13.5px; color: hsl(215 15% 46%) }
+  .foot a { color: hsl(215 60% 22%) }
 </style>
 </head>
 <body>
@@ -102,12 +102,12 @@
   </div></div>
 
   <div class="yours">
-    <b style="color:#0F766E">Your data, actually yours</b>
+    <b style="color:hsl(215 60% 22%)">Your data, actually yours</b>
     <ul>
       <li><b>Export</b> — one click downloads everything as JSON, audit trail included.</li>
       <li><b>Delete</b> — one button permanently removes your space, its database, and every key.</li>
       <li><b>Your accountant</b> — a balanced journal exports for QuickBooks/Xero; solo invoices and payments included.</li>
-      <li><b>Self-host</b> — open source (AGPL): <a href="https://github.com/alviso/saybooks" style="color:#0F766E">github.com/alviso/saybooks</a>.</li>
+      <li><b>Self-host</b> — open source (AGPL): <a href="https://github.com/alviso/saybooks" style="color:hsl(215 60% 22%)">github.com/alviso/saybooks</a>.</li>
       <li>It produces documents and records payments. It never sends anything or moves money — you stay the only one who does.</li>
     </ul>
   </div>

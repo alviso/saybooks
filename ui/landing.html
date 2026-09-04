@@ -19,93 +19,115 @@
 <meta name="twitter:title" content="Saybooks — tell Claude what happened. Your books stay right.">
 <meta name="twitter:description" content="A place Claude can keep your records — with rules it can't break and a log of everything it did.">
 <meta name="twitter:image" content="https://saybooks.io/card.png">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-:root{ --bg:#FBF7F2; --panel:#fff; --ink:#2B2A33; --mid:#5A5866; --dim:#7A7784; --rule:#EEEAE3; --teal:#0F766E; --teal2:#115E59; --tint:#E6F4F1; --tint2:#F1EEE8; --warn:#C2410C; --alert:#FDEFE3; --agent:#5B4BC9; --agentsoft:#EEEBFB; --shadow:0 6px 24px rgba(43,42,51,.05) }
+:root{
+  --bg:hsl(210 20% 98%); --panel:#fff; --ink:hsl(215 40% 16%); --navy:hsl(215 60% 22%); --navy2:hsl(215 60% 17%);
+  --mid:hsl(215 20% 36%); --muted:hsl(215 15% 46%); --line:hsl(215 25% 88%); --line2:hsl(215 25% 93%); --tint:hsl(210 20% 94%);
+  --refuse:hsl(0 72% 42%); --refuse-muted:hsl(0 80% 96%); --agent:hsl(248 52% 52%); --agent-muted:hsl(248 60% 96%);
+  --ok:hsl(152 60% 34%); --r:6px;
+}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--ink);font:400 17px/1.65 'Nunito Sans',-apple-system,'Segoe UI',sans-serif}
-.wrap{max-width:1080px;margin:0 auto;padding:0 28px}
-h1,h2,h3{font-family:'Plus Jakarta Sans',system-ui,sans-serif;text-wrap:balance;letter-spacing:-.02em}
-a{color:var(--teal)}
-.btn{display:inline-block;font:700 15.5px 'Plus Jakarta Sans',sans-serif;padding:13px 22px;border-radius:14px;text-decoration:none}
-.btn.solid{background:var(--teal);color:#fff;box-shadow:0 6px 20px rgba(15,118,110,.22)} .btn.solid:hover{background:var(--teal2)}
-.btn.soft{background:var(--tint);color:var(--teal)} .btn.soft:hover{background:#d7ebe6}
-.btn.small{padding:9px 16px;font-size:13.5px;border-radius:11px}
-.top{display:flex;align-items:center;gap:22px;padding:22px 0 0}
-.mark{font:800 14px 'Plus Jakarta Sans',sans-serif;letter-spacing:.06em;color:var(--ink);text-decoration:none;margin-right:auto}
-.top .links{display:flex;gap:22px;align-items:center}
-.top .links a{color:var(--mid);text-decoration:none;font:600 15px 'Plus Jakarta Sans',sans-serif} .top .links a:hover{color:var(--ink)}
-.top .links a.btn{color:var(--teal)} .top .links a.btn:hover{color:var(--teal)}
-header.hero{padding:44px 0 56px}
-h1{font-size:clamp(38px,5.4vw,60px);font-weight:800;line-height:1.06;margin:0 0 18px;max-width:14em}
-.lede{font-size:20px;line-height:1.55;max-width:34em;margin:0 0 26px;color:var(--mid)}
-.ctas{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-.fine{font-size:13.5px;color:var(--dim);width:100%;margin-top:4px}
-section{padding:52px 0}
-.kicker{font:700 12px 'Plus Jakarta Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);margin:0 0 10px}
-h2{font-size:30px;font-weight:800;margin:0 0 8px}
-.sub{color:var(--mid);max-width:38em;margin:0 0 26px;font-size:17px}
-.cards{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
-.card{background:var(--panel);border-radius:20px;padding:24px 26px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px}
-.card .tag{align-self:flex-start;font:700 12px 'Plus Jakarta Sans',sans-serif;padding:4px 10px;border-radius:999px;background:var(--tint);color:var(--teal)}
-.card .tag.soon{background:var(--tint2);color:var(--mid)}
-.card h3{font-size:20px;margin:6px 0 0}
-.card p{margin:0;font-size:15px;color:var(--mid)}
-.say{background:var(--tint2);border-radius:14px;padding:10px 14px;font-size:14.5px;margin-top:6px}
-.say b{display:block;font:700 11.5px 'Plus Jakarta Sans',sans-serif;color:var(--dim);margin-bottom:3px;letter-spacing:.06em;text-transform:uppercase}
-.card .do{margin-top:auto;padding-top:14px}
-.rows{background:var(--panel);border-radius:20px;box-shadow:var(--shadow);padding:4px 26px}
-.row{display:grid;grid-template-columns:1.15fr 1fr 160px;gap:28px;align-items:center;padding:22px 0;border-top:1px solid var(--rule)}
-.row .btn{justify-self:end}
-.row:first-child{border-top:none}
-.row h3{font-size:20px;margin:0;display:inline}
-.row .tag{display:inline-block;vertical-align:middle;margin-left:10px;font:700 12px 'Plus Jakarta Sans',sans-serif;padding:3px 10px;border-radius:999px;background:var(--tint);color:var(--teal)}
-.row .tag.soon{background:var(--tint2);color:var(--mid)}
-.row p{margin:6px 0 0;font-size:15px;color:var(--mid)}
-.row .say{margin-top:0}
-.row .btn{white-space:nowrap}
-.refusal{display:grid;gap:10px;max-width:46em;margin:22px 0 14px}
-.refusal .rlabel{font:700 11.5px 'Plus Jakarta Sans',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
-.panel{background:var(--panel);border-radius:14px;padding:14px 18px;box-shadow:var(--shadow);font-size:15px;line-height:1.5}
-.panel b{display:block;font:700 11.5px 'Plus Jakarta Sans',sans-serif;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.6 'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif;font-feature-settings:'cv02','cv03','cv04','cv11'}
+body::before{content:"";display:block;height:4px;background:var(--navy)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 40px}
+h1,h2,h3{letter-spacing:-.015em;text-wrap:balance}
+a{color:var(--navy)}
+.mono{font-family:'IBM Plex Mono',monospace}
+.btn{display:inline-block;font:600 15px 'IBM Plex Sans',sans-serif;padding:11px 20px;border-radius:var(--r);text-decoration:none;border:1px solid transparent;line-height:1.3}
+.btn.solid{background:var(--navy);color:#fff;border-color:var(--navy)} .btn.solid:hover{background:var(--navy2)}
+.btn.line{background:#fff;color:var(--navy);border-color:var(--line)} .btn.line:hover{border-color:var(--navy)}
+.btn.small{padding:8px 14px;font-size:13.5px}
+nav.top{display:flex;align-items:center;gap:26px;padding:22px 0;border-bottom:1px solid var(--line)}
+.mark{font:700 15px 'IBM Plex Sans',sans-serif;letter-spacing:.14em;color:var(--ink);text-decoration:none;margin-right:auto}
+nav.top .links{display:flex;gap:26px;align-items:center}
+nav.top .links a{color:var(--mid);text-decoration:none;font-size:14.5px;font-weight:500} nav.top .links a:hover{color:var(--ink)}
+header.hero{display:grid;grid-template-columns:7fr 5fr;gap:64px;align-items:center;padding:76px 0 72px;border-bottom:1px solid var(--line)}
+.kicker{font:600 11.5px 'IBM Plex Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 14px}
+h1{font-size:60px;font-weight:700;line-height:1.05;margin:0 0 20px;color:var(--ink)}
+.lede{font-size:18.5px;line-height:1.55;max-width:32em;margin:0 0 28px;color:var(--mid)}
+.ctas{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.fine{font-size:13px;color:var(--muted);width:100%;margin-top:6px}
+.figure{border:1px solid var(--line);background:#fff;border-radius:var(--r);padding:18px 20px 20px}
+.figure .cap{display:flex;justify-content:space-between;font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.panel{border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;font-size:14.5px;line-height:1.5;margin-top:10px;background:#fff}
+.panel b{display:block;font:600 11px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px;color:var(--muted)}
 .panel.agent{border-left:3px solid var(--agent)} .panel.agent b{color:var(--agent)}
-.panel.rule{background:var(--alert);color:#7c2d12;font-family:'IBM Plex Mono',monospace;font-size:13.5px;box-shadow:none} .panel.rule b{color:var(--warn);font-family:'Plus Jakarta Sans',sans-serif}
-.steps{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
-.step{background:var(--panel);border-radius:20px;padding:22px 24px;box-shadow:var(--shadow)}
-.step .n{width:32px;height:32px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font:800 15px 'Plus Jakarta Sans',sans-serif;margin-bottom:12px}
-.step h3{font-size:18px;margin:0 0 6px}
-.step p{margin:0;font-size:15px;color:var(--mid)}
-.chat{display:flex;flex-direction:column;gap:8px;max-width:44em;margin-top:22px}
-.msg{padding:.75em 1.05em;font-size:15px;line-height:1.5;max-width:86%}
-.you{background:var(--tint2);align-self:flex-start;border-radius:18px 18px 18px 4px}
-.ai{background:var(--teal);color:#fff;align-self:flex-end;border-radius:18px 18px 4px 18px} .ai b{color:#fff}
-.trail{background:var(--panel);border-radius:16px;box-shadow:var(--shadow);overflow-x:auto;margin-top:18px}
-.trail table{border-collapse:collapse;width:100%;font-size:14px;min-width:560px}
-.trail th{font:700 11px 'Plus Jakarta Sans',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);text-align:left;padding:11px 14px;border-bottom:1px solid var(--rule)}
-.trail td{padding:10px 14px;border-bottom:1px solid #F3F0EA;vertical-align:top}
-.trail .t{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--dim);white-space:nowrap}
+.panel.rule{background:var(--refuse-muted);border-color:hsl(0 60% 88%);color:hsl(0 60% 28%);font-family:'IBM Plex Mono',monospace;font-size:13px} .panel.rule b{color:var(--refuse);font-family:'IBM Plex Sans',sans-serif}
+section{padding:60px 0;border-bottom:1px solid var(--line)}
+h2{font-size:30px;font-weight:700;margin:0 0 8px;line-height:1.15}
+.sub{color:var(--mid);max-width:40em;margin:0 0 28px;font-size:16.5px}
+.split{display:grid;grid-template-columns:300px 1fr;gap:56px;align-items:start}
+.row{display:grid;grid-template-columns:1.1fr 1fr 172px;gap:28px;align-items:center;padding:20px 0;border-top:1px solid var(--line)}
+.row:last-child{border-bottom:1px solid var(--line)}
+.row h3{font-size:18px;font-weight:600;margin:0;display:inline}
+.tag{display:inline-block;margin-left:10px;white-space:nowrap;font:600 11px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--ok);vertical-align:middle}
+.tag.soon{color:var(--muted)}
+.row p{margin:4px 0 0;font-size:14.5px;color:var(--mid)}
+.say{border-left:2px solid var(--agent);padding:2px 0 2px 14px;font-size:14.5px}
+.say b{display:block;font:600 11px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.say i{color:var(--ink)}
+.row .btn{justify-self:end;white-space:nowrap}
+ol.steps{list-style:none;margin:0;padding:0}
+ol.steps li{display:grid;grid-template-columns:44px 1fr;gap:14px;padding:16px 0;border-top:1px solid var(--line)}
+ol.steps li:last-child{border-bottom:1px solid var(--line)}
+ol.steps .n{font:500 26px 'IBM Plex Mono',monospace;color:var(--navy);line-height:1.1}
+ol.steps h3{font-size:17px;font-weight:600;margin:0 0 3px}
+ol.steps p{margin:0;font-size:14.5px;color:var(--mid)}
+.transcript{border:1px solid var(--line);border-radius:var(--r);background:#fff;padding:18px 20px;font-size:14.5px;line-height:1.55}
+.transcript .cap{font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.transcript div.l{display:grid;grid-template-columns:64px 1fr;gap:10px;padding:5px 0}
+.transcript .who{font-weight:600;color:var(--navy)} .transcript .who.ai{color:var(--agent)}
+.trust{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-top:8px}
+.trust div{border-top:2px solid var(--ink);padding-top:14px}
+.trust h3{font-size:17px;font-weight:600;margin:0 0 6px}
+.trust p{margin:0;font-size:14.5px;color:var(--mid)}
+.trail{border:1px solid var(--line);border-radius:var(--r);background:#fff;overflow-x:auto;margin-top:18px}
+.trail table{border-collapse:collapse;width:100%;font-size:14px}
+.trail th{font:600 11px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:left;padding:11px 16px;border-bottom:1px solid var(--line);background:var(--tint)}
+.trail td{padding:11px 16px;border-bottom:1px solid var(--line2);vertical-align:top}
 .trail tr:last-child td{border-bottom:none}
-.who{font:700 11px 'Plus Jakarta Sans',sans-serif;padding:2px 9px;border-radius:999px;white-space:nowrap}
-.who.agent{background:var(--agentsoft);color:var(--agent)} .who.human{background:#E3ECF7;color:#2C5282}
-.trail .what{font-family:'IBM Plex Mono',monospace;font-size:12.5px;white-space:nowrap}
-.trail .why{color:var(--dim);font-size:13.5px}
-.trail .no{color:var(--warn);font-weight:600}
-.limits{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
-.limits div{background:var(--panel);border-radius:16px;padding:18px 20px;box-shadow:var(--shadow);font-size:14.5px;color:var(--mid)}
-.limits b{display:block;color:var(--ink);font-family:'Plus Jakarta Sans',sans-serif;margin-bottom:4px}
-.builders{background:#FBFAFF;border-radius:24px;padding:36px 34px;box-shadow:var(--shadow)}
-.builders .kicker{color:var(--agent)}
-.builders p{font-size:15.5px;color:var(--mid);max-width:60em}
-.builders ul{margin:10px 0 18px;padding-left:1.2em;font-size:15px;color:var(--mid)}
-.builders li{margin-bottom:6px}
-.builders .btn.solid{background:var(--agent);box-shadow:0 6px 20px rgba(91,75,201,.22)} .builders .btn.solid:hover{background:#4a3db0}
-.builders .btn.soft{background:var(--agentsoft);color:var(--agent)}
-video{width:100%;max-width:1000px;border-radius:16px;display:block;margin:18px 0 6px;box-shadow:var(--shadow)}
-footer{padding:36px 0 48px;font-size:13.5px;color:var(--dim)}
-footer a{color:var(--mid)}
-@media (max-width:820px){ .row{grid-template-columns:1fr;gap:12px} .row .btn{justify-self:start} }
-@media (max-width:640px){ h1{font-size:34px} h2{font-size:25px} .lede{font-size:18px} section{padding:40px 0} .builders{padding:26px 22px} .top .links a:not(.btn){display:none} .rows{padding:4px 18px} }
+.trail .t{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--muted);white-space:nowrap}
+.who{font-weight:600;white-space:nowrap}
+.who::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;vertical-align:1px}
+.who.agent{color:var(--agent)} .who.agent::before{background:var(--agent)}
+.who.human{color:var(--navy)} .who.human::before{background:var(--navy)}
+.trail .what{font-family:'IBM Plex Mono',monospace;font-size:13px;white-space:nowrap}
+.trail .why{color:var(--mid);font-size:13.5px}
+.trail .no{color:var(--refuse);font-weight:600}
+.limits{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid var(--line)}
+.limits div{padding:18px 20px 0 0;font-size:14px;color:var(--mid)}
+.limits div+div{border-left:1px solid var(--line);padding-left:20px}
+.limits b{display:block;color:var(--ink);font-weight:600;margin-bottom:4px}
+.builders{background:var(--navy);color:#fff;border-radius:var(--r);padding:40px 44px;display:grid;grid-template-columns:1.2fr 1fr;gap:48px}
+.builders .kicker{color:hsl(210 60% 80%)}
+.builders h2{color:#fff;font-size:26px}
+.builders p{font-size:15px;color:hsl(210 30% 88%);max-width:60em}
+.builders ul{margin:0;padding:0;list-style:none;font-size:14.5px;color:hsl(210 30% 88%)}
+.builders li{padding:12px 0;border-top:1px solid hsl(215 40% 35%)}
+.builders .btn.solid{background:#fff;color:var(--navy);border-color:#fff}
+.builders .btn.line{background:transparent;color:#fff;border-color:hsl(215 40% 45%)}
+footer{padding:28px 0 44px;font-size:13.5px;color:var(--muted);display:flex;gap:18px;flex-wrap:wrap}
+footer a{color:var(--mid);text-decoration:none}
+footer .mark{font-size:13px;margin-right:auto}
+@media (max-width:900px){ header.hero,.split,.builders{grid-template-columns:1fr} .trust,.limits{grid-template-columns:1fr} .row{grid-template-columns:1fr;gap:12px} .row .btn{justify-self:start} h1{font-size:42px} nav.top .links a:not(.btn){display:none} }
+
+header.hero{display:block;padding:64px 0 0;border-bottom:none}
+.hero2{display:grid;grid-template-columns:1.1fr 1fr;gap:56px;align-items:end;margin-bottom:36px}
+h1{font-size:64px}
+.hero2 .lede{font-size:17.5px;margin:0 0 22px}
+.frame{border:1px solid var(--line);border-radius:8px;background:#fff;overflow:hidden;box-shadow:0 1px 2px hsl(215 40% 16% / .05)}
+.frame .bar{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line);background:var(--tint)}
+.frame .bar i{width:10px;height:10px;border-radius:50%;background:var(--line);display:block}
+.frame .bar span{margin-left:10px;font:500 12px 'IBM Plex Mono',monospace;color:var(--muted)}
+.frame img{display:block;width:100%}
+.caption{font-size:14px;color:var(--mid);margin:12px 0 0;max-width:60em}
+.caption b{color:var(--refuse);font-weight:600}
+.evidence{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:40px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.evidence div{padding:18px 20px 18px 0;font:500 13px 'IBM Plex Mono',monospace;color:var(--mid);line-height:1.5}
+.evidence div+div{border-left:1px solid var(--line);padding-left:20px}
+.evidence b{display:block;font:600 20px 'IBM Plex Sans',sans-serif;color:var(--ink);letter-spacing:-.01em;margin-bottom:2px}
 </style>
 </head>
 <body>
@@ -116,61 +138,86 @@ footer a{color:var(--mid)}
       <a href="/solo">Invoicing</a>
       <a href="/hunt">Job hunt</a>
       <a href="https://github.com/alviso/saybooks">Source</a>
-      <a class="btn small soft" href="/auth/google">Sign in with Google</a>
+      <a class="btn line small" href="/auth/google">Sign in with Google</a>
     </div>
   </nav>
 
   <header class="hero">
-    <h1>Tell Claude what happened. Your books stay right.</h1>
-    <p class="lede">Saybooks is a place Claude can keep your records — invoices, clients, orders, even a job hunt.
-    It follows rules it can't break, it never makes things up, and it writes down everything it did so you
-    can check. You talk; it keeps the books.</p>
-    <div class="ctas">
-      <a class="btn solid" href="/app?demo=1">Try it now — no signup</a>
-      <a class="btn soft" href="/auth/google">Sign in with Google</a>
-      <span class="fine">The demo gives you private example books to poke at. Sign in to get books of your own — free.</span>
+    <div class="hero2">
+      <div>
+        <div class="kicker">Records Claude keeps · Rules it can't break</div>
+        <h1>Your books stay right.</h1>
+      </div>
+      <div>
+        <p class="lede">Tell Claude what happened, and Saybooks keeps the record — invoices, clients, orders, even a job hunt. It follows rules it can't break, it never makes things up, and every action it takes is written down where you can check it.</p>
+        <div class="ctas">
+          <a class="btn solid" href="/app?demo=1">Try it now — no signup</a>
+          <a class="btn line" href="/auth/google">Sign in with Google</a>
+          <span class="fine">The demo gives you private example books to poke at. Sign in to get books of your own — free.</span>
+        </div>
+      </div>
+    </div>
+    <div class="frame">
+      <div class="bar"><i></i><i></i><i></i><span>saybooks.io/app · Audit trail</span></div>
+      <img src="/audit-hero.png" alt="The Saybooks audit trail: Claude's confirm-order command refused by the credit check, on the record next to every other action.">
+    </div>
+    <p class="caption">Straight from the demo books. Claude tried to confirm an order for a customer over their credit limit and got <b>refused</b> — in one sentence, with the numbers. The refusal is on the record next to everything else, and a person decided what happened next.</p>
+    <div class="evidence">
+      <div><b>Open source</b>AGPL-3.0 · run it yourself</div>
+      <div><b>97 commands</b>5 modules, one definition each</div>
+      <div><b>16-gate contract</b>tested on every build</div>
+      <div><b>In daily use</b>the founder's own books and job hunt</div>
     </div>
   </header>
 
   <section>
-    <div class="kicker">What you can run on it</div>
-    <h2>Three things people use it for today</h2>
-    <p class="sub">Each one is its own set of books with its own rules. Pick the one that matches your life — you can have more than one.</p>
-    <div class="rows">
-      <div class="row">
-        <div><h3>Invoicing for freelancers</h3><span class="tag">Free</span>
-          <p>Create clean, numbered invoices by describing the work. Track who paid and who hasn't. Get a link to send your client.</p></div>
-        <div class="say"><b>Say this to Claude</b>"Invoice Meridian for the March consulting — $4,250, net 30."</div>
-        <a class="btn small solid" href="/solo">Start invoicing →</a>
+    <div class="split">
+      <div>
+        <div class="kicker">What you can run on it</div>
+        <h2>Three things people use it for today</h2>
+        <p class="sub" style="margin:0">Each one is its own set of books with its own rules. Pick the one that matches your life — you can have more than one.</p>
       </div>
-      <div class="row">
-        <div><h3>A job-hunt tracker</h3><span class="tag">Free</span>
-          <p>Postings, applications, interviews, recruiters. It catches the same job reaching you twice through different agencies, before you apply twice.</p></div>
-        <div class="say"><b>Say this to Claude</b>"The recruiter called — interview Thursday at 2."</div>
-        <a class="btn small solid" href="/hunt">Start tracking →</a>
-      </div>
-      <div class="row">
-        <div><h3>Books for a small business</h3><span class="tag soon">Early access</span>
-          <p>Quotes, orders, shipments, invoices and payments for a company that sells on credit terms — with a credit limit Claude cannot talk its way past.</p></div>
-        <div class="say"><b>Say this to Claude</b>"Receive 20 Widget B and finish Northwind's order."</div>
-        <a class="btn small soft" href="/app?demo=1">Explore the demo →</a>
+      <div>
+        <div class="row">
+          <div><h3>Invoicing for freelancers</h3><span class="tag">Free</span>
+            <p>Create clean, numbered invoices by describing the work. Track who paid and who hasn't. Get a link to send your client.</p></div>
+          <div class="say"><b>Say this to Claude</b><i>"Invoice Meridian for the March consulting — $4,250, net 30."</i></div>
+          <a class="btn small solid" href="/solo">Start invoicing →</a>
+        </div>
+        <div class="row">
+          <div><h3>A job-hunt tracker</h3><span class="tag">Free</span>
+            <p>Postings, applications, interviews, recruiters. It catches the same job reaching you twice through different agencies, before you apply twice.</p></div>
+          <div class="say"><b>Say this to Claude</b><i>"The recruiter called — interview Thursday at 2."</i></div>
+          <a class="btn small solid" href="/hunt">Start tracking →</a>
+        </div>
+        <div class="row">
+          <div><h3>Books for a small business</h3><span class="tag soon">Early access</span>
+            <p>Quotes, orders, shipments, invoices and payments for a company that sells on credit terms — with a credit limit Claude cannot talk its way past.</p></div>
+          <div class="say"><b>Say this to Claude</b><i>"Receive 20 Widget B and finish Northwind's order."</i></div>
+          <a class="btn small line" href="/app?demo=1">Explore the demo →</a>
+        </div>
       </div>
     </div>
   </section>
 
   <section>
-    <div class="kicker">How it works</div>
-    <h2>Three steps, then you just talk</h2>
-    <div class="steps">
-      <div class="step"><div class="n">1</div><h3>Sign in with Google</h3><p>You get your own private space. Nothing to install.</p></div>
-      <div class="step"><div class="n">2</div><h3>Connect Claude</h3><p>Copy one link from your space and paste it into Claude's settings (Settings → Connectors → Add). We show you exactly where — it takes a minute.</p></div>
-      <div class="step"><div class="n">3</div><h3>Talk</h3><p>Tell Claude what happened. It asks for what it needs, shows you the numbers, and records it. Everything also appears in your browser, as normal pages.</p></div>
-    </div>
-    <div class="chat">
-      <div class="msg you"><b>You:</b> let's create an invoice</div>
-      <div class="msg ai"><b>Claude:</b> Happy to. You haven't set your company details yet — what's your company name?</div>
-      <div class="msg you"><b>You:</b> Alex Rivera Design</div>
-      <div class="msg ai"><b>Claude:</b> And the address, as it should appear on the invoice?</div>
+    <div class="split">
+      <div>
+        <div class="kicker">How it works</div>
+        <h2>Three steps, then you just talk</h2>
+        <ol class="steps" style="margin-top:22px">
+          <li><span class="n">01</span><div><h3>Sign in with Google</h3><p>You get your own private space. Nothing to install.</p></div></li>
+          <li><span class="n">02</span><div><h3>Connect Claude</h3><p>Copy one link from your space and paste it into Claude's settings (Settings → Connectors → Add). We show you exactly where — it takes a minute.</p></div></li>
+          <li><span class="n">03</span><div><h3>Talk</h3><p>Tell Claude what happened. It asks for what it needs, shows you the numbers, and records it. Everything also appears in your browser, as normal pages.</p></div></li>
+        </ol>
+      </div>
+      <div class="transcript" style="margin-top:78px">
+        <div class="cap">Transcript · first invoice</div>
+        <div class="l"><span class="who">You</span><span>let's create an invoice</span></div>
+        <div class="l"><span class="who ai">Claude</span><span>Happy to. You haven't set your company details yet — what's your company name?</span></div>
+        <div class="l"><span class="who">You</span><span>Alex Rivera Design</span></div>
+        <div class="l"><span class="who ai">Claude</span><span>And the address, as it should appear on the invoice?</span></div>
+      </div>
     </div>
   </section>
 
@@ -178,28 +225,12 @@ footer a{color:var(--mid)}
     <div class="kicker">Why you can trust it</div>
     <h2>Claude is helpful. Your books need to be right.</h2>
     <p class="sub">Most AI tools will happily fill a gap with a guess. Saybooks is built so that can't happen to your records.</p>
-    <div class="cards">
-      <div class="card">
-        <h3>It can't make things up</h3>
-        <p>An amount, a date, a client's name — if Claude doesn't have it, it asks you. It is not allowed to guess, and the system refuses if it tries.</p>
-      </div>
-      <div class="card">
-        <h3>It gets told no</h3>
-        <p>Every rule your books have applies to Claude exactly as it applies to you. When Claude tries something the rules don't allow, it's refused — in a plain sentence, with the reason.</p>
-      </div>
-      <div class="card">
-        <h3>Everything is on the record</h3>
-        <p>Every change says who made it — you or Claude — and why. Refusals are recorded too. You can read the whole history, export all of it, or delete everything.</p>
-      </div>
+    <div class="trust">
+      <div><h3>It can't make things up</h3><p>An amount, a date, a client's name — if Claude doesn't have it, it asks you. It is not allowed to guess, and the system refuses if it tries.</p></div>
+      <div><h3>It gets told no</h3><p>Every rule your books have applies to Claude exactly as it applies to you. When Claude tries something the rules don't allow, it's refused — in a plain sentence, with the reason.</p></div>
+      <div><h3>Everything is on the record</h3><p>Every change says who made it — you or Claude — and why. Refusals are recorded too. You can read the whole history, export all of it, or delete everything.</p></div>
     </div>
-    <p style="margin:26px 0 0;font-size:15.5px;color:var(--mid)">Here's a real one. Claude tried to confirm an order for a customer who was over their credit limit:</p>
-    <div class="refusal">
-      <div class="rlabel">Order #1042 · Contoso Ltd</div>
-      <div class="panel agent"><b>Claude → confirm order</b>Confirming order #1042 for Contoso Ltd, $2,500.00.</div>
-      <div class="panel rule"><b>Rule → refused</b>Credit check failed for Contoso Ltd. Order $2500.00; available $1000.00 (limit $1000.00 less open AR $0.00 and committed $0.00). Short by $1500.00.</div>
-      <div class="panel agent"><b>Claude → you</b>The order can't be confirmed: Contoso is $1,500 over their credit limit. Would you like to raise the limit, split the order, or hold it?</div>
-    </div>
-    <p style="font-size:15.5px;color:var(--mid);max-width:44em">Claude relayed the refusal word for word and asked a person what to do — it didn't split the order or quietly raise the limit. That's the behaviour the rules are written to produce.</p>
+    <p style="margin:28px 0 0;font-size:15px;color:var(--mid);max-width:46em">The refusal at the top of this page is a real one. Claude relayed it word for word and asked a person what to do — it didn't split the order or quietly raise the limit. That's the behaviour the rules are written to produce.</p>
   </section>
 
   <section>
@@ -216,15 +247,15 @@ footer a{color:var(--mid)}
         <tr><td class="t">16:02:11</td><td><span class="who agent">Claude</span></td><td class="what">apply payment</td><td class="why">"remittance confirmed by their AP clerk on the phone"</td></tr>
       </table>
     </div>
-    <p style="font-size:14px;color:var(--dim);margin-top:10px">Purple rows are Claude. Blue rows are a person. One history.</p>
-    <video controls playsinline preload="metadata" poster="/card.png"><source src="/walkthrough.mp4" type="video/mp4"></video>
-    <p style="font-size:14px;color:var(--dim)">Two minutes, recorded from the live demo: a rule teaching, form by form. <a href="/app?demo=1#spec">Walk it yourself →</a></p>
+    <p style="font-size:13.5px;color:var(--muted);margin-top:10px">Violet is Claude. Navy is a person. One history.</p>
+    <video controls playsinline preload="metadata" poster="/card.png" style="width:100%;border:1px solid var(--line);border-radius:var(--r);display:block;margin:26px 0 8px"><source src="/walkthrough.mp4" type="video/mp4"></video>
+    <p style="font-size:13.5px;color:var(--muted)">Two minutes, recorded from the live demo: a rule teaching, form by form. <a href="/app?demo=1#spec">Walk it yourself →</a></p>
   </section>
 
   <section>
     <div class="kicker">What it isn't</div>
     <h2>Honest limits</h2>
-    <div class="limits">
+    <div class="limits" style="margin-top:22px">
       <div><b>Not accounting software</b>It keeps your operational records. Your accountant's ledger stays where it is — Saybooks exports a clean journal for QuickBooks or Xero.</div>
       <div><b>It never sends or pays</b>It produces invoices for you to send and records payments you received. It never emails anyone or moves money.</div>
       <div><b>USD, one company</b>Single currency, single entity today. If that's you, it works; if not, not yet.</div>
@@ -232,25 +263,28 @@ footer a{color:var(--mid)}
     </div>
   </section>
 
-  <section>
+  <section style="border-bottom:none">
     <div class="builders">
-      <div class="kicker">For builders</div>
-      <h2 style="font-size:24px">Under the hood: one definition, both surfaces</h2>
-      <p>Every business act is declared once. From that one declaration Saybooks derives the tool Claude sees (over MCP), the form a person sees, the rule that can refuse either, and the audit entry — so the two surfaces can't drift; a contract test fails the build if they do. Each area is governed by a written spec with executable scenarios, and modules are held to a 16-gate contributor contract.</p>
+      <div>
+        <div class="kicker">For builders</div>
+        <h2>Under the hood: one definition, both surfaces</h2>
+        <p>Every business act is declared once. From that one declaration Saybooks derives the tool Claude sees (over MCP), the form a person sees, the rule that can refuse either, and the audit entry — so the two surfaces can't drift; a contract test fails the build if they do. Each area is governed by a written spec with executable scenarios, and modules are held to a 16-gate contributor contract.</p>
+        <div class="ctas">
+          <a class="btn solid" href="https://github.com/alviso/saybooks">GitHub · AGPL-3.0</a>
+          <a class="btn line" href="/app?demo=1#spec">Read the specs live</a>
+        </div>
+      </div>
       <ul>
         <li>Five modules today: order-to-cash, CRM, jobhunt, solo invoicing, and the core — every one spec-first, with replayable conformance scenarios.</li>
         <li>Open source under AGPL-3.0. Run it, fork it, write a competing module; scenario files speak in acts, so competing implementations run the same tests.</li>
         <li>Refusals are one sentence, written once in the rule, shown identically to the button and the agent.</li>
       </ul>
-      <div class="ctas">
-        <a class="btn solid" href="https://github.com/alviso/saybooks">GitHub · AGPL-3.0</a>
-        <a class="btn soft" href="/app?demo=1#spec">Read the specs live</a>
-      </div>
     </div>
   </section>
 
   <footer>
-    Saybooks · <a href="/solo">Invoicing</a> · <a href="/hunt">Job hunt</a> · <a href="/app?demo=1">Demo</a> · <a href="https://github.com/alviso/saybooks">Source</a> · <a href="mailto:hello@saybooks.io">hello@saybooks.io</a>
+    <span class="mark">SAYBOOKS</span>
+    <a href="/solo">Invoicing</a> <a href="/hunt">Job hunt</a> <a href="/app?demo=1">Demo</a> <a href="https://github.com/alviso/saybooks">Source</a> <a href="mailto:hello@saybooks.io">hello@saybooks.io</a>
   </footer>
 </div>
 </body>
