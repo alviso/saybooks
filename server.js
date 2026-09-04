@@ -285,7 +285,7 @@ const server = http.createServer((req, res) => {
       && !url.searchParams.get('join') && !url.searchParams.get('ws') && !url.searchParams.has('demo')
       && !/(?:^|;\s*)otc_ws=/.test(req.headers.cookie || '')) {
     return send(res, 200, `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Saybooks — whose books?</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"><style>
+<title>Saybooks — whose books?</title><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"><style>
   body{font:16px/1.55 'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif;color:hsl(215 40% 16%);background:hsl(210 20% 98%);display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
   .wrap{max-width:700px;padding:2em}
   .mark{font-family:'IBM Plex Sans',sans-serif;font-weight:700;letter-spacing:.06em;font-size:14px} .tag{color:hsl(215 15% 46%);font-size:13px;margin-bottom:2.4em}
@@ -296,7 +296,7 @@ const server = http.createServer((req, res) => {
   a.door span{font-size:13.5px;color:hsl(215 20% 36%)}
   .in b{color:hsl(215 60% 22%)} .back{margin-top:2.2em;font-size:13px}
   .back a{color:hsl(215 15% 46%)}</style></head><body><div class="wrap">
-  <div class="mark">SAYBOOKS</div><div class="tag">the books you can talk to — that stay books</div>
+  <div class="mark" style="display:flex;align-items:center;gap:7px"><svg class="wv" width="16" height="18" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".3"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span><svg class="wv" width="16" height="18" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19" opacity=".3"/></svg></div><div class="tag">the books you can talk to — that stay books</div>
   <h1>Whose books are these?</h1>
   <div class="doors">
     <a class="door in" href="/auth/google"><b>Sign in with Google →</b><span>Your own space: named, persistent, private. Invite people by email, mint keys for agents — every act on the record.</span></a>
