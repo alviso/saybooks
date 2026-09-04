@@ -62,7 +62,8 @@ function renderInvoiceHtml(inv, logo) {
         <tr><td>Subtotal</td><td class="n">${money(inv.subtotal)}</td></tr>
         <tr><td>Tax</td><td class="n">${money(inv.tax_total || 0)}</td></tr>
         ${inv.applied ? `<tr><td>Paid</td><td class="n">−${money(inv.applied)}</td></tr>` : ''}
-        <tr class="due"><td>${voided ? 'Void — nothing due' : inv.applied ? 'Balance due' : 'Total due'}</td><td class="n">${money(voided ? (inv.total - (inv.applied || 0)) : inv.open)}</td></tr>
+        ${voided ? `<tr><td>Total (void)</td><td class="n">${money(inv.total)}</td></tr><tr class="due"><td>Amount payable</td><td class="n">${money(0)}</td></tr>`
+                 : `<tr class="due"><td>${inv.applied ? 'Balance due' : 'Total due'}</td><td class="n">${money(inv.open)}</td></tr>`}
       </table>
       <div class="foot">
         ${inv.payment_instructions ? `<div><h4>Payment instructions</h4>${nl(inv.payment_instructions)}</div>` : ''}
@@ -148,7 +149,8 @@ function renderInvoicePdf(inv, logo) {
     tot('Subtotal', money(inv.subtotal)); tot('Tax', money(inv.tax_total || 0));
     if (inv.applied) tot('Paid', '-' + money(inv.applied));
     doc.moveTo(tx, y + 1).lineTo(R, y + 1).lineWidth(1.5).strokeColor(INK).stroke(); y += 8;
-    tot(voided ? 'Void' : inv.applied ? 'Balance due' : 'Total due', money(voided ? inv.total - (inv.applied || 0) : inv.open), true);
+    if (voided) { tot('Total (void)', money(inv.total)); tot('Amount payable', money(0), true); }
+    else tot(inv.applied ? 'Balance due' : 'Total due', money(inv.open), true);
 
     // Foot: payment instructions + notes
     y += 26; if (y > doc.page.height - 140) { doc.addPage(); y = doc.page.margins.top; }
