@@ -25,32 +25,38 @@ authority), multi-currency, recurring invoices, sending anything anywhere.
 
 ## 3. Entities and lifecycles
 
-- **client** — core's customer, as-is. Terms live in the human agreement; the record keeps
-  the default terms note for convenience, never enforces them.
+- **client** — core's customer, as-is, carrying a billing address and tax id (0.1.1). Terms
+  live in the human agreement; the record keeps the default terms note for convenience, never
+  enforces them. A client without a billing address cannot be issued to: the document would
+  be incomplete, and the refusal says what to ask for.
 - **invoice** — draft → issued → paid | void. A draft is a worksheet: lines are free text
   (description · qty · rate, optional per-line tax rate), editable until issued. Issuing
   assigns nothing new — the number existed from the draft — but freezes everything: the
-  seller block from the company profile, the amounts, the due date. Paid is derived from
-  applications. Void requires a reason and burns the number forever.
+  seller block from the company profile, the bill-to block from the client, the amounts, the
+  due date. Paid is derived from applications. Void requires a reason and burns the number forever.
 - **payment** — recorded as received (unapplied is a real state), applied to invoices with
   bounds on both sides, refusals naming the numbers.
-- **document link** — issuing mints a per-invoice token; `/doc/<space>/<token>` renders the
-  printable document and nothing else. The link the freelancer forwards to their client.
+- **document link** — the draft mints a per-invoice token; `/doc/<space>/<token>` renders the
+  real document, stamped DRAFT until issued (0.1.1: the preview a person looks at before the
+  point of no return, so nobody hand-rolls a document). At issue the same link becomes the
+  invoice — the link the freelancer forwards to their client — and `<token>.pdf` is the same
+  document as a file (issued invoices only). Void kills both.
 
 ## 4. The acts
 
 Writes (6): draft_invoice, update_draft, issue_invoice, void_invoice, record_payment,
 apply_payment. Reads (3): invoice, outstanding, statement. Environment (core, existing):
-create_customer, set_company_profile.
+create_customer, update_customer, set_company_profile.
 
 ## 5. Invariants
 
 - **S-1** Money is integer cents, everywhere.
 - **S-2** An issued invoice is immutable. Mistakes are void-and-reissue, on the record; a
   draft is the only editable state.
-- **S-3** The seller block freezes at issuance. Changing company details never reprints
-  history. Issuing without a company profile is refused — and the refusal tells the agent to
-  gather the details conversationally, one question at a time.
+- **S-3** The seller block and the bill-to block freeze at issuance. Changing company or
+  client details never reprints history. Issuing without a company profile, or to a client
+  without a billing address, is refused — and the refusal tells the agent to gather the
+  details conversationally, one question at a time.
 - **S-4** Numbers are sequential and never reused. A voided number stays burned.
 - **S-5** Invoice timing is the freelancer's agreement — ahead of the work, partial, or
   after. The system records; it never gatekeeps terms.
@@ -94,4 +100,4 @@ burned; paid-invoice void refused.
 
 *Change log: 0.1-draft (2026-09-02) — drafted with Peter's refocus from an o2c door to a
 freelancer invoice generator; the interactive-guide doctrine and S-5 came from that
-conversation.*
+conversation. 0.1.1 (2026-09-04) — client address + tax id, bill-to block frozen at issue, preview link from the first draft (DRAFT-stamped).*

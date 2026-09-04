@@ -1,7 +1,7 @@
 {
   "name": "saybooks",
   "version": "0.2.0",
-  "description": "Saybooks \u2014 a conversational ERP where the agent and the UI are the same system: one command registry, one rulebook, one audit trail.",
+  "description": "Saybooks — a conversational ERP where the agent and the UI are the same system: one command registry, one rulebook, one audit trail.",
   "type": "commonjs",
   "private": true,
   "bin": {
@@ -18,7 +18,8 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.0",
-    "better-sqlite3": "^11.10.0"
+    "better-sqlite3": "^11.10.0",
+    "pdfkit": "^0.17.1"
   },
   "license": "AGPL-3.0-only"
 }

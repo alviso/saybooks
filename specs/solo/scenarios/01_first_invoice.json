@@ -3,32 +3,142 @@
   "spec": "solo@0.1",
   "notes": "The whole product in one sitting. S-1 cents, S-3 seller frozen at issue, S-5 the terms are the agreement, S-7 the doc link is produced not sent.",
   "env": [
-    ["set_company_profile", { "name": "Vega Consulting", "address": "12 Oak Lane, Portland, OR", "payment_instructions": "ACH to First Federal 026009593 / 5550123. Reference the invoice number." }],
-    ["create_customer", { "name": "Meridian Logistics", "email": "ap@meridian.example", "terms": "net30" }]
+    [
+      "set_company_profile",
+      {
+        "name": "Vega Consulting",
+        "address": "12 Oak Lane, Portland, OR",
+        "payment_instructions": "ACH to First Federal 026009593 / 5550123. Reference the invoice number."
+      }
+    ],
+    [
+      "create_customer",
+      {
+        "name": "Meridian Logistics",
+        "email": "ap@meridian.example",
+        "terms": "net30",
+        "address": "400 Harbor Blvd, Suite 210, Tacoma, WA 98402"
+      }
+    ]
   ],
   "steps": [
-    { "act": "draft_invoice", "args": { "customer": "C-0001", "due_in_days": 30, "lines": [
-        { "description": "March consulting — BTP integration review", "qty": 17, "rate": 25000 },
-        { "description": "Workshop day on-site", "qty": 1, "rate": 120000 } ] },
-      "expect": { "ok": true, "include": { "status": "draft", "total": 545000 } },
-      "notes": "S-1: 17 × $250.00 + $1,200.00 = $5,450.00, all integer cents. S-5: net-30 is THEIR agreement — recorded, not judged" },
-    { "act": "update_draft", "args": { "invoice": "INV-0001", "lines": [
-        { "description": "March consulting — BTP integration review", "qty": 17, "rate": 25000 },
-        { "description": "Workshop day on-site", "qty": 1, "rate": 120000 },
-        { "description": "Travel time", "qty": 3, "rate": 12500 } ] },
-      "expect": { "ok": true, "include": { "total": 582500 } },
-      "notes": "drafts are worksheets — add the forgotten line, totals recompute" },
-    { "act": "issue_invoice", "args": { "invoice": "INV-0001" },
-      "expect": { "ok": true, "include": { "status": "issued", "seller_name": "Vega Consulting", "seller_as_issued": true } },
-      "notes": "S-3: the seller block froze from the profile; the doc link now exists for the freelancer to SEND THEMSELVES (S-7)" },
-    { "act": "record_payment", "args": { "customer": "C-0001", "amount": 300000, "method": "bank", "reference": "MER-4471" },
-      "expect": { "ok": true } },
-    { "act": "apply_payment", "args": { "payment": "P-0001", "invoice": "INV-0001" },
-      "expect": { "ok": true } },
-    { "act": "outstanding", "args": {},
-      "expect": { "ok": true, "include": { "count": 1, "total_open": 282500 } },
-      "notes": "partial payment leaves the honest remainder on the morning list" },
-    { "act": "statement", "args": { "customer": "C-0001" },
-      "expect": { "ok": true, "include": { "closing_balance": 282500 } } }
+    {
+      "act": "draft_invoice",
+      "args": {
+        "customer": "C-0001",
+        "due_in_days": 30,
+        "lines": [
+          {
+            "description": "March consulting — BTP integration review",
+            "qty": 17,
+            "rate": 25000
+          },
+          {
+            "description": "Workshop day on-site",
+            "qty": 1,
+            "rate": 120000
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "draft",
+          "total": 545000
+        }
+      },
+      "notes": "S-1: 17 × $250.00 + $1,200.00 = $5,450.00, all integer cents. S-5: net-30 is THEIR agreement — recorded, not judged"
+    },
+    {
+      "act": "update_draft",
+      "args": {
+        "invoice": "INV-0001",
+        "lines": [
+          {
+            "description": "March consulting — BTP integration review",
+            "qty": 17,
+            "rate": 25000
+          },
+          {
+            "description": "Workshop day on-site",
+            "qty": 1,
+            "rate": 120000
+          },
+          {
+            "description": "Travel time",
+            "qty": 3,
+            "rate": 12500
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "total": 582500
+        }
+      },
+      "notes": "drafts are worksheets — add the forgotten line, totals recompute"
+    },
+    {
+      "act": "issue_invoice",
+      "args": {
+        "invoice": "INV-0001"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "issued",
+          "seller_name": "Vega Consulting",
+          "seller_as_issued": true
+        }
+      },
+      "notes": "S-3: the seller block froze from the profile; the doc link now exists for the freelancer to SEND THEMSELVES (S-7)"
+    },
+    {
+      "act": "record_payment",
+      "args": {
+        "customer": "C-0001",
+        "amount": 300000,
+        "method": "bank",
+        "reference": "MER-4471"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "apply_payment",
+      "args": {
+        "payment": "P-0001",
+        "invoice": "INV-0001"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "outstanding",
+      "args": {},
+      "expect": {
+        "ok": true,
+        "include": {
+          "count": 1,
+          "total_open": 282500
+        }
+      },
+      "notes": "partial payment leaves the honest remainder on the morning list"
+    },
+    {
+      "act": "statement",
+      "args": {
+        "customer": "C-0001"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "closing_balance": 282500
+        }
+      }
+    }
   ]
 }

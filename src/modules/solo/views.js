@@ -10,8 +10,11 @@ const paymentUnapplied = (p) => p.amount - db().prepare(
   'SELECT COALESCE(SUM(amount),0) s FROM solo_payment_application WHERE payment_id = ?').get(p.id).s;
 
 function invoiceView(id) {
-  const { seller_json, ...inv } = need('solo_invoice', id, 'invoice');
-  const cust = get('customer', inv.customer_id);
+  const { seller_json, customer_json, ...inv } = need('solo_invoice', id, 'invoice');
+  const live = get('customer', inv.customer_id);
+  // The bill-to block freezes at issue like the seller block (S-3); drafts show the live customer.
+  const csnap = customer_json ? JSON.parse(customer_json) : null;
+  const cust = csnap || { name: live.name, email: live.email, address: live.address, tax_id: live.tax_id };
   const applied = invoiceApplied(id);
   // Issued invoices show the frozen seller (S-3); drafts preview the live profile.
   const snap = seller_json ? JSON.parse(seller_json) : null;
@@ -19,13 +22,14 @@ function invoiceView(id) {
   return {
     ...inv,
     lines: db().prepare('SELECT * FROM solo_invoice_line WHERE invoice_id = ? ORDER BY pos').all(id),
-    customer_name: cust.name, customer_email: cust.email,
+    customer: cust, customer_as_issued: !!csnap, customer_name: cust.name, customer_email: cust.email,
     subtotal_display: money(inv.subtotal), tax_display: money(inv.tax_total), total_display: money(inv.total),
     applied, applied_display: money(applied),
     open: inv.total - applied, open_display: money(inv.total - applied),
     seller, seller_name: seller ? seller.name : null, seller_as_issued: !!snap,
     payment_instructions: seller ? seller.payment_instructions : null,
     doc_path: inv.doc_token ? `/doc/${wsp.currentName()}/${inv.doc_token}` : null,
+    pdf_path: inv.doc_token && inv.status !== 'draft' ? `/doc/${wsp.currentName()}/${inv.doc_token}.pdf` : null,
   };
 }
 

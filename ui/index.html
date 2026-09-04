@@ -499,14 +499,17 @@ async function detail(type, id) {
   }
   if (type === 'solo_invoice') {
     const bar2 = $('<div class="acts" style="margin:2px 0 14px"></div>');
-    if (entity.doc_path) {
+    if (entity.doc_path && entity.status === 'draft') {
+      const b = $('<button class="primary">Preview document</button>');
+      b.onclick = () => window.open(entity.doc_path, '_blank');
+      bar2.append(b, $('<span class="sub" style="margin:0;align-self:center">Marked DRAFT until issued — issuing freezes the numbers and this link becomes the invoice.</span>'));
+    } else if (entity.doc_path) {
       const b = $('<button class="primary">Document — print / save PDF</button>');
       b.onclick = () => window.open(entity.doc_path, '_blank');
       const cp = $('<button>Copy client link</button>');
       cp.onclick = () => navigator.clipboard.writeText(location.origin + entity.doc_path).then(() => toast('✓ link copied — send it to your client'));
       bar2.append(b, cp);
-    } else if (entity.status === 'draft') {
-      bar2.append($('<span class="sub" style="margin:0;align-self:center">Issuing freezes the numbers and mints the shareable document link.</span>'));
+      if (entity.pdf_path) { const pb = $('<button>Download PDF</button>'); pb.onclick = () => window.open(entity.pdf_path, '_blank'); bar2.append(pb); }
     }
     wrap.append(bar2);
     const lt = $('<table><thead><tr><th>Description</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Tax</th><th class="num">Amount</th></tr></thead><tbody></tbody></table>');

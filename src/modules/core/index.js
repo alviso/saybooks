@@ -15,7 +15,7 @@ const mod = R.defineModule({
   tables: ['customer', 'item', 'company_profile'],
   env_acts: { create_customer: 'core_create_customer', create_item: 'core_create_item', receive_stock: 'core_receive_stock', set_price: 'core_set_price',
               set_credit_limit: 'core_set_credit_limit', hold_customer: 'core_hold_customer', release_customer: 'core_release_customer',
-              set_company_profile: 'core_set_company_profile' },
+              set_company_profile: 'core_set_company_profile', update_customer: 'core_update_customer' },
   env_argmap: { item: 'item_id', customer: 'customer_id' },
   doctrine: `Master data is slow-moving and load-bearing. A credit limit of 0 means prepay only —
 a real position, not a missing value. Set stocked=false for services; they never deplete and
@@ -27,14 +27,14 @@ never block a shipment. Never invent a customer to make another command work.`,
      * it). Same rules as the command; a function because nested execute() would nest
      * transactions on one connection, which SQLite forbids.
      */
-    createCustomer(db, { name, email, terms, credit_limit }, at) {
+    createCustomer(db, { name, email, terms, credit_limit, address, tax_id }, at) {
       if (!name) throw new R.Rejected('A customer needs a name.');
       if (db.prepare('SELECT id FROM customer WHERE lower(name) = lower(?)').get(name)) {
         throw new R.Rejected(`A customer named ${name} already exists. Use it, or give this one a distinguishing name.`);
       }
       const id = H.nextId('C', 'customer');
-      db.prepare('INSERT INTO customer (id,name,email,terms,credit_limit,created_at) VALUES (?,?,?,?,?,?)')
-        .run(id, name, email || null, terms || 'net30', credit_limit || 0, at || new Date().toISOString());
+      db.prepare('INSERT INTO customer (id,name,email,terms,credit_limit,address,tax_id,created_at) VALUES (?,?,?,?,?,?,?,?)')
+        .run(id, name, email || null, terms || 'net30', credit_limit || 0, address || null, tax_id || null, at || new Date().toISOString());
       return H.get('customer', id);
     },
     needItem: (id) => H.need('item', id, 'item'),

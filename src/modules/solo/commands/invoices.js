@@ -11,6 +11,7 @@ const LINE = {
   tax_rate_bp: f.int('Tax rate in basis points (875 = 8.75%). 0 or omitted = untaxed. Determining the rate is your job; capturing it is ours.'),
 };
 
+const NO_ADDRESS = (c) => `${c.name} has no billing address — the document needs a bill-to block. Ask for it (one question), call core_update_customer, and come back (S-3).`;
 const NO_PROFILE = 'No company details yet — ask for the company name first (one question at a time), then the address as it should print, then how clients pay; then call core_set_company_profile and come back (S-3).';
 const profile = (db) => db.prepare('SELECT * FROM company_profile WHERE id = 1').get();
 
@@ -38,9 +39,11 @@ defineCommand({
   doctrine: `Gather the lines as the person describes the work — description, quantity or
 hours, rate — and SHOW them the numbers before issuing. Timing is their agreement with the
 client: ahead of the work, partial, or after — never question it (S-5). Never invent an
-amount or a rate (S-6). If there is no client yet, ask for the client's name, email, and the
-agreed terms — one question at a time — and create the customer first.`,
-  effects: ['draft created with computed totals'],
+amount or a rate (S-6). If there is no client yet, ask for the client's name, billing address,
+email, and the agreed terms — one question at a time — and create the customer first. The draft
+comes back with doc_path: a preview link that renders the real document marked DRAFT. Hand it
+to the person to look at BEFORE asking whether to issue; never hand-roll the document yourself.`,
+  effects: ['draft created with computed totals', 'preview link minted'],
   args: {
     customer_id: { ...f.ref('customer', 'The client.'), required: true },
     lines: { ...f.lines(LINE, 'The work being billed.'), required: true },
@@ -51,8 +54,9 @@ agreed terms — one question at a time — and create the customer first.`,
     H.need('customer', a.customer_id, 'customer');
     if (!a.lines || !a.lines.length) throw new Rejected('An invoice needs at least one line.');
     const id = H.nextId('INV', 'solo_invoice');
-    db.prepare(`INSERT INTO solo_invoice (id,customer_id,status,due_in_days,notes,created_at,updated_at)
-                VALUES (?,?,'draft',?,?,?,?)`).run(id, a.customer_id, a.due_in_days ?? 30, a.notes || null, at, at);
+    // The preview link exists from the first draft (S-7): the same token becomes the document at issue.
+    db.prepare(`INSERT INTO solo_invoice (id,customer_id,status,due_in_days,notes,doc_token,created_at,updated_at)
+                VALUES (?,?,'draft',?,?,?,?,?)`).run(id, a.customer_id, a.due_in_days ?? 30, a.notes || null, crypto.randomBytes(12).toString('hex'), at, at);
     const { subtotal, taxTotal } = writeLines(db, id, a.lines);
     db.prepare('UPDATE solo_invoice SET subtotal = ?, tax_total = ?, total = ?, updated_at = ? WHERE id = ?')
       .run(subtotal, taxTotal, subtotal + taxTotal, at, id);
@@ -93,15 +97,18 @@ defineCommand({
   name: 'solo_issue_invoice',
   permission: 'billing.write',
   title: 'Issue', group: 'Invoicing', subject: 'solo_invoice',
-  summary: 'Make it real: freeze the seller block, set the due date, mint the document link.',
+  summary: 'Make it real: freeze the seller and bill-to blocks, set the due date; the preview link becomes the document.',
   doctrine: `Issuing is the point of no return (S-2): the seller block freezes from your
-company profile (S-3), the due date is computed from the draft's terms, and the document
-link is minted. Show the person the full numbers and get their confirmation BEFORE calling
-this. Hand them the doc link after — they save it as PDF and send it themselves (S-7).`,
-  effects: ['invoice issued and immutable', 'seller block frozen', 'document link minted'],
+company profile and the bill-to block from the customer (S-3), the due date is computed from
+the draft's terms, and the preview link becomes the document. Show the person the preview
+(doc_path) and the full numbers and get their confirmation BEFORE calling this. Refused
+without a company profile or a customer billing address — the refusal says what to gather.
+Hand them the doc link (doc_path) and the PDF (pdf_path) after — they send it themselves (S-7).`,
+  effects: ['invoice issued and immutable', 'seller and bill-to blocks frozen', 'document link final', 'PDF available'],
   guards: [
     (i) => i.status === 'draft' || `${i.id} is already ${i.status}.`,
     (i, ctx) => !!(ctx && ctx.has_profile) || NO_PROFILE,
+    (i) => !!(i.customer && i.customer.address) || NO_ADDRESS(i.customer || { name: i.customer_name }),
   ],
   args: { invoice_id: { ...f.text('The draft to issue.'), required: true } },
   handler(a, { db, at }) {
@@ -109,14 +116,19 @@ this. Hand them the doc link after — they save it as PDF and send it themselve
     if (inv.status !== 'draft') throw new Rejected(`${inv.id} is already ${inv.status}.`);
     const seller = profile(db);
     if (!seller) throw new Rejected(NO_PROFILE);
+    const cust = H.need('customer', inv.customer_id, 'customer');
+    if (!cust.address) throw new Rejected(NO_ADDRESS(cust));
     if (!db.prepare('SELECT COUNT(*) n FROM solo_invoice_line WHERE invoice_id = ?').get(inv.id).n) {
       throw new Rejected('An invoice needs at least one line.');
     }
     const issued = at.slice(0, 10);
     const due = H.addDays(issued, inv.due_in_days ?? 30);
-    const token = crypto.randomBytes(12).toString('hex');
-    db.prepare(`UPDATE solo_invoice SET status = 'issued', issued_at = ?, due_at = ?, seller_json = ?, doc_token = ?, updated_at = ? WHERE id = ?`)
-      .run(issued, due, JSON.stringify({ name: seller.name, address: seller.address, tax_id: seller.tax_id, payment_instructions: seller.payment_instructions, footer_note: seller.footer_note, updated_at: seller.updated_at }), token, at, inv.id);
+    const token = inv.doc_token || crypto.randomBytes(12).toString('hex');   // drafts from before previews existed
+    db.prepare(`UPDATE solo_invoice SET status = 'issued', issued_at = ?, due_at = ?, seller_json = ?, customer_json = ?, doc_token = ?, updated_at = ? WHERE id = ?`)
+      .run(issued, due,
+           JSON.stringify({ name: seller.name, address: seller.address, tax_id: seller.tax_id, payment_instructions: seller.payment_instructions, footer_note: seller.footer_note, updated_at: seller.updated_at }),
+           JSON.stringify({ name: cust.name, email: cust.email, address: cust.address, tax_id: cust.tax_id }),
+           token, at, inv.id);
     return V.invoiceView(inv.id);
   },
 });

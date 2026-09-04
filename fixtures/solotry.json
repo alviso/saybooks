@@ -1,6 +1,6 @@
 [
- ["core_create_customer", {"name": "Meridian Coffee Co.", "email": "accounts@meridiancoffee.example", "terms": "net30"}, "terms as agreed on our kickoff call", "alex", "human"],
- ["core_create_customer", {"name": "Tailwind Studio", "email": "ap@tailwind.example", "terms": "net15"}, null, "alex", "human"],
+ ["core_create_customer", {"name": "Meridian Coffee Co.", "email": "accounts@meridiancoffee.example", "address": "1520 Pearl St, Boulder, CO 80302", "terms": "net30"}, "terms as agreed on our kickoff call", "alex", "human"],
+ ["core_create_customer", {"name": "Tailwind Studio", "email": "ap@tailwind.example", "address": "88 Mill St, Burlington, VT 05401", "terms": "net15"}, null, "alex", "human"],
  ["solo_draft_invoice", {"customer_id": "C-0001", "due_in_days": 30, "notes": "Brand refresh — phase 1, per SOW of Aug 12", "lines": [
    {"description": "Logo system — concepts and two revision rounds", "qty": 1, "rate": 280000},
    {"description": "Brand guidelines document", "qty": 1, "rate": 150000},

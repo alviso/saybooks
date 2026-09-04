@@ -3,29 +3,116 @@
   "spec": "0.1",
   "doc": "spec.md",
   "acts": {
-    "draft_invoice": { "kind": "write", "required": ["customer", "lines"] },
-    "update_draft": { "kind": "write", "required": ["invoice"] },
-    "issue_invoice": { "kind": "write", "required": ["invoice"] },
-    "void_invoice": { "kind": "write", "required": ["invoice", "reason"] },
-    "record_payment": { "kind": "write", "required": ["customer", "amount"] },
-    "apply_payment": { "kind": "write", "required": ["payment", "invoice"] },
-    "invoice": { "kind": "read", "required": ["invoice"] },
-    "outstanding": { "kind": "read", "required": [] },
-    "statement": { "kind": "read", "required": ["customer"] }
+    "draft_invoice": {
+      "kind": "write",
+      "required": [
+        "customer",
+        "lines"
+      ]
+    },
+    "update_draft": {
+      "kind": "write",
+      "required": [
+        "invoice"
+      ]
+    },
+    "issue_invoice": {
+      "kind": "write",
+      "required": [
+        "invoice"
+      ]
+    },
+    "void_invoice": {
+      "kind": "write",
+      "required": [
+        "invoice",
+        "reason"
+      ]
+    },
+    "record_payment": {
+      "kind": "write",
+      "required": [
+        "customer",
+        "amount"
+      ]
+    },
+    "apply_payment": {
+      "kind": "write",
+      "required": [
+        "payment",
+        "invoice"
+      ]
+    },
+    "invoice": {
+      "kind": "read",
+      "required": [
+        "invoice"
+      ]
+    },
+    "outstanding": {
+      "kind": "read",
+      "required": []
+    },
+    "statement": {
+      "kind": "read",
+      "required": [
+        "customer"
+      ]
+    }
   },
   "env_acts": {
-    "create_customer": { "required": ["name"] },
-    "set_company_profile": { "required": ["name"] }
+    "create_customer": {
+      "required": [
+        "name"
+      ]
+    },
+    "set_company_profile": {
+      "required": [
+        "name"
+      ]
+    },
+    "update_customer": {
+      "required": [
+        "customer"
+      ]
+    }
   },
   "invariants": [
-    { "id": "S-1", "title": "Money is integer cents, everywhere." },
-    { "id": "S-2", "title": "An issued invoice is immutable — mistakes are void-and-reissue, on the record." },
-    { "id": "S-3", "title": "The seller block freezes at issuance; issuing without a profile is refused with the guide sentence." },
-    { "id": "S-4", "title": "Numbers are sequential and never reused; a voided number stays burned." },
-    { "id": "S-5", "title": "Invoice timing is the freelancer's agreement — the system records, never gatekeeps terms." },
-    { "id": "S-6", "title": "No invented facts: amounts, dates and names come from the person or stay empty." },
-    { "id": "S-7", "title": "Documents are produced, never sent; the doc link views one document and nothing more." },
-    { "id": "S-8", "title": "Every write is a logged act with an actor; refusals are logged too." },
-    { "id": "S-9", "title": "Journal derivation balances: issue to AR/Revenue, receipt to Cash/Deposits, application to Deposits/AR." }
+    {
+      "id": "S-1",
+      "title": "Money is integer cents, everywhere."
+    },
+    {
+      "id": "S-2",
+      "title": "An issued invoice is immutable \u2014 mistakes are void-and-reissue, on the record."
+    },
+    {
+      "id": "S-3",
+      "title": "The seller and bill-to blocks freeze at issuance; issuing without a profile or a client address is refused with the guide sentence."
+    },
+    {
+      "id": "S-4",
+      "title": "Numbers are sequential and never reused; a voided number stays burned."
+    },
+    {
+      "id": "S-5",
+      "title": "Invoice timing is the freelancer's agreement \u2014 the system records, never gatekeeps terms."
+    },
+    {
+      "id": "S-6",
+      "title": "No invented facts: amounts, dates and names come from the person or stay empty."
+    },
+    {
+      "id": "S-7",
+      "title": "Documents are produced, never sent; the doc link views one document (DRAFT-stamped until issued) and nothing more."
+    },
+    {
+      "id": "S-8",
+      "title": "Every write is a logged act with an actor; refusals are logged too."
+    },
+    {
+      "id": "S-9",
+      "title": "Journal derivation balances: issue to AR/Revenue, receipt to Cash/Deposits, application to Deposits/AR."
+    }
   ]
 }

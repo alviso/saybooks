@@ -146,44 +146,7 @@ const walks = new Map();          // walkthrough ordering: workspace -> next exp
 
 /** The printable invoice, rendered server-side for /doc links — same look as the workbench's
  *  print view. The esc() matters: everything here is user-entered text on a public-ish URL. */
-function renderInvoiceDoc(inv, logo) {
-  const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-  const nl = (s) => esc(s).replace(/\n/g, '<br>');
-  const money = (c) => '$' + (c / 100).toFixed(2);
-  const s = inv.seller;
-  const rows = inv.lines.map(l => `<tr><td>${esc(l.description)}</td><td class="n">${l.qty}</td><td class="n">${money(l.rate)}</td>
-    <td class="n">${l.tax_rate_bp ? (l.tax_rate_bp / 100).toFixed(2) + '%' : '—'}</td><td class="n">${money(l.amount)}</td></tr>`).join('');
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${esc(inv.id)}</title><style>
-    body{font:14px/1.5 Georgia,serif;color:#1a1a1a;max-width:52em;margin:3em auto;padding:0 2em}
-    .top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2.5em;gap:2em}
-    h1{font-size:26px;letter-spacing:.04em;margin:0} .muted{color:#666;font-size:12.5px}
-    table{width:100%;border-collapse:collapse;margin:1.5em 0} th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#666;border-bottom:1.5px solid #1a1a1a;padding:6px 8px}
-    td{padding:7px 8px;border-bottom:1px solid #ddd} .n{text-align:right}
-    .totals{margin-left:auto;width:20em} .totals td{border:none;padding:3px 8px} .totals .due td{border-top:1.5px solid #1a1a1a;font-weight:700}
-    .pay{border:1px solid #ccc;padding:.9em 1.1em;margin-top:2em;font-size:13px}
-    .foot{margin-top:2.5em;font-size:12px;color:#666}
-    .bar{margin-bottom:2em} @media print{.bar{display:none}}
-  </style></head><body>
-    <div class="bar"><button onclick="window.print()">Print / Save as PDF</button></div>
-    <div class="top">
-      <div>${logo ? `<img src="${esc(logo)}" alt="" style="max-height:64px;max-width:220px;display:block;margin-bottom:10px">` : ''}${s ? `<div style="font-size:19px;font-weight:700">${esc(s.name)}</div><div class="muted">${nl(s.address || '')}${s.tax_id ? '<br>Tax ID ' + esc(s.tax_id) : ''}</div>` : ''}</div>
-      <div style="text-align:right"><h1>INVOICE</h1><div class="muted">${esc(inv.id)}<br>Issued ${esc(inv.issued_at)}<br>Due ${esc(inv.due_at)}</div></div>
-    </div>
-    <div class="muted" style="font-size:11px;letter-spacing:.08em;text-transform:uppercase">Bill to</div>
-    <div style="font-weight:700">${esc(inv.customer_name)}</div>${inv.customer_email ? `<div class="muted">${esc(inv.customer_email)}</div>` : ''}
-    ${inv.notes ? `<div class="muted" style="margin-top:6px">${nl(inv.notes)}</div>` : ''}
-    <table><thead><tr><th>Description</th><th class="n">Qty</th><th class="n">Rate</th><th class="n">Tax</th><th class="n">Amount</th></tr></thead><tbody>${rows}</tbody></table>
-    <table class="totals">
-      <tr><td>Subtotal</td><td class="n">${money(inv.subtotal)}</td></tr>
-      ${inv.tax_total ? `<tr><td>Tax</td><td class="n">${money(inv.tax_total)}</td></tr>` : ''}
-      <tr><td>Total</td><td class="n">${money(inv.total)}</td></tr>
-      ${inv.applied ? `<tr><td>Paid</td><td class="n">−${money(inv.applied)}</td></tr>` : ''}
-      <tr class="due"><td>Balance due</td><td class="n">${money(inv.open)}</td></tr>
-    </table>
-    ${inv.payment_instructions ? `<div class="pay"><b>How to pay</b><br>${nl(inv.payment_instructions)}</div>` : ''}
-    ${s && s.footer_note ? `<div class="foot">${nl(s.footer_note)}</div>` : ''}
-  </body></html>`;
-}
+const { renderInvoiceHtml, renderInvoicePdf } = require('./src/document.js');
 
 /**
  * Demo abuse guard — deliberately light: a token bucket per IP for requests, and a separate
@@ -216,7 +179,7 @@ if (DEMO) setInterval(() => {
   for (const [ip, l] of births) if (!l.some(t => now - t < 3600000)) births.delete(ip);
 }, 600000).unref();
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   const host = (req.headers.host || '').split(':')[0];
   if (!DEMO && !['127.0.0.1', 'localhost', '[::1]', '::1'].includes(host)) return send(res, 403, { error: 'localhost only' });
   if (DEMO && rateLimited(ipOf(req))) return send(res, 429, { error: 'slow down — this is a demo, and it is being fair to everyone else' });
@@ -264,19 +227,23 @@ const server = http.createServer((req, res) => {
 
   // The document link (S-7): a capability to view ONE issued invoice, nothing else. No
   // cookie, no session — the URL is workspace + per-invoice token, both required.
-  const docMatch = /^\/doc\/([a-z0-9-]{4,40})\/([a-f0-9]{24})$/.exec(p);
+  const docMatch = /^\/doc\/([a-z0-9-]{4,40})\/([a-f0-9]{24})(\.pdf)?$/.exec(p);
   if (docMatch && req.method === 'GET') {
-    const [, dws, dtok] = docMatch;
+    const [, dws, dtok, wantPdf] = docMatch;
     if (!sandboxExists(dws)) return send(res, 404, 'Not found', 'text/plain');
     try {
-      return wsp.use(dws, () => {
-        const inv = H.db().prepare('SELECT id FROM solo_invoice WHERE doc_token = ? AND status IN (\'issued\',\'paid\')').get(dtok);
-        if (!inv) return send(res, 404, 'Not found', 'text/plain');
-        const v = require('./src/modules/solo/views.js').invoiceView(inv.id);
-        // Branding, not a fact: the logo is read live, never from the frozen seller block.
-        const logo = (H.db().prepare('SELECT logo FROM company_profile WHERE id = 1').get() || {}).logo || null;
-        return send(res, 200, renderInvoiceDoc(v, logo), 'text/html; charset=utf-8');
+      // Drafts render too, marked DRAFT — the preview a person sees before the point of no return (S-7).
+      const { v, logo } = wsp.use(dws, () => {
+        const inv = H.db().prepare('SELECT id FROM solo_invoice WHERE doc_token = ? AND status IN (\'draft\',\'issued\',\'paid\')').get(dtok);
+        if (!inv) return {};
+        // Branding, not a fact: the logo is read live, never from the frozen blocks.
+        return { v: require('./src/modules/solo/views.js').invoiceView(inv.id), logo: (H.db().prepare('SELECT logo FROM company_profile WHERE id = 1').get() || {}).logo || null };
       });
+      if (!v) return send(res, 404, 'Not found', 'text/plain');
+      if (!wantPdf) return send(res, 200, renderInvoiceHtml(v, logo), 'text/html; charset=utf-8');
+      if (v.status === 'draft') return send(res, 409, 'A draft has no final numbers — issue it first, then the PDF exists.', 'text/plain');
+      const pdf = await renderInvoicePdf(v, logo);
+      return send(res, 200, pdf, 'application/pdf', { 'content-disposition': `inline; filename="${v.id}.pdf"` });
     } catch (e) { console.error('[doc]', e.message); return send(res, 404, 'Not found', 'text/plain'); }
   }
 

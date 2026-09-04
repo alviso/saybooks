@@ -15,11 +15,42 @@ authority to change it changes it, and that change is its own logged command.`,
   args: {
     name:         { ...f.text('Legal or trading name as it will appear on the invoice.', { label: 'Customer name' }), required: true },
     email:        f.text('Billing email.'),
+    address:      f.note('Billing address, as it should print in the bill-to block. Required before a solo invoice can be issued.'),
+    tax_id:       f.text('Their VAT / EIN, printed on the document where present.'),
     terms:        f.pick(['immediate', 'net15', 'net30', 'net60'], 'Payment terms. Drives the invoice due date.'),
     credit_limit: f.money('How much unpaid exposure we will carry for this customer.'),
   },
   handler(a, { db, at }) {
     return api().createCustomer(db, a, at);
+  },
+});
+
+defineCommand({
+  name: 'core_update_customer',
+  permission: 'sales.write',
+  title: 'Update customer', group: 'Master data', subject: 'customer',
+  guardless: true,   // contact facts are always editable; nothing about a customer's state forbids fixing an address
+  summary: "Change a customer's contact facts: email, billing address, tax id, terms.",
+  doctrine: `Patch semantics: only the fields you pass change. These are the customer's own facts —
+ask, never guess an address. Credit limit and hold have their own commands because they are
+authority, not contact details. Issued documents keep the bill-to block they were issued with.`,
+  effects: ['customer record updated'],
+  args: {
+    customer_id: { ...f.ref('customer', 'The customer.'), required: true },
+    email:   f.text('Billing email.'),
+    address: f.note('Billing address, as it should print.'),
+    tax_id:  f.text('Their VAT / EIN.'),
+    terms:   f.pick(['immediate', 'net15', 'net30', 'net60'], 'Payment terms.'),
+  },
+  handler(a, { db, at }) {
+    const cur = H.need('customer', a.customer_id, 'customer');
+    const next = { ...cur };
+    let touched = 0;
+    for (const k of ['email', 'address', 'tax_id', 'terms']) if (a[k] !== undefined) { next[k] = a[k] === '' ? null : a[k]; touched++; }
+    if (!touched) throw new Rejected('Nothing to change — pass email, address, tax_id or terms.');
+    if (next.terms === null) throw new Rejected('terms cannot be cleared; pick one of immediate, net15, net30, net60.');
+    db.prepare('UPDATE customer SET email = ?, address = ?, tax_id = ?, terms = ? WHERE id = ?').run(next.email, next.address, next.tax_id, next.terms, cur.id);
+    return H.get('customer', cur.id);
   },
 });
 
