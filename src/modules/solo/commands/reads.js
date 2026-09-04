@@ -36,7 +36,7 @@ to the person, they send it themselves (S-7). Pages count from 1.`,
         id: v.id, status: v.status, customer_name: v.customer_name, total_display: v.total_display, open_display: v.open_display,
         issued_at: v.issued_at, due_at: v.due_at, page: r.page, pages: r.pages, doc_path: v.doc_path, pdf_path: v.pdf_path,
         note: draft ? 'Rendered as it stands, stamped DRAFT. The PDF exists once it is issued.'
-          : v.status === 'void' ? `Void${v.void_reason ? ` — ${v.void_reason}` : ''}. Stamped VOID; nothing is collectible. ${wantPdf ? 'pdf_base64 is the stamped file.' : 'with_pdf=true for the stamped file.'}`
+          : v.status === 'void' ? `Void${v.void_reason ? ` — ${String(v.void_reason).replace(/[.\s]+$/, '')}` : ''}. Stamped VOID; nothing is collectible. ${wantPdf ? 'pdf_base64 is the stamped file.' : 'with_pdf=true for the stamped file.'}`
           : wantPdf ? `pdf_base64 is the file ${v.id}.pdf (${pdf.length} bytes decoded) — write it out and hand it to the person; they send it themselves.`
           : 'Issued. Call again with with_pdf=true for the file bytes, or use pdf_path.',
         ...(wantPdf ? { pdf_filename: `${v.id}.pdf`, pdf_bytes: pdf.length, pdf_base64: pdf.toString('base64') } : {}),

@@ -50,7 +50,7 @@ function renderInvoiceHtml(inv, logo) {
       ${stamp ? `<div class="stamp${voided ? ' void' : ''}">${stamp}</div>` : ''}
       <div class="head">
         <div class="seller">${logo ? `<img src="${esc(logo)}" alt="">` : ''}${s ? `<b>${esc(s.name)}</b>${nl(s.address || '')}${s.tax_id ? `<br>Tax ID ${esc(s.tax_id)}` : ''}` : ''}</div>
-        <div class="title"><h1>INVOICE</h1><div class="no">${esc(inv.id)}</div>${draft ? '<span class="status">DRAFT — not yet issued</span>' : voided ? `<span class="status void">VOID${inv.void_reason ? ` — ${esc(inv.void_reason)}` : ''}</span>` : ''}</div>
+        <div class="title"><h1>INVOICE</h1><div class="no">${esc(inv.id)}</div>${draft ? '<span class="status">DRAFT — not yet issued</span>' : voided ? '<span class="status void">VOID — not payable</span>' : ''}</div>
       </div>
       <div class="meta">
         <div><h4>Bill to</h4><b>${esc(c.name || inv.customer_name)}</b>${c.address ? `<br>${nl(c.address)}` : ''}${c.tax_id ? `<br>Tax ID ${esc(c.tax_id)}` : ''}${c.email ? `<br>${esc(c.email)}` : ''}</div>
@@ -69,7 +69,7 @@ function renderInvoiceHtml(inv, logo) {
       </div>
       ${s && s.footer_note ? `<div class="fine">${nl(s.footer_note)}</div>` : ''}
       ${draft ? '<div class="fine">Preview of the draft as recorded. Numbers can still change; this link becomes the invoice when it is issued.</div>' : ''}
-      ${voided ? '<div class="fine">This invoice was voided and is kept for the record. Nothing on it is payable; the number is not reused.</div>' : ''}
+      ${voided ? `<div class="fine">Voided${inv.void_reason ? `: ${esc(inv.void_reason)}` : ''}. Kept for the record; nothing on it is payable and the number is not reused.</div>` : ''}
     </div>
   </body></html>`;
 }
@@ -92,7 +92,7 @@ function renderInvoicePdf(inv, logo) {
     doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(26).text('INVOICE', L, doc.page.margins.top, { width: W, align: 'right', characterSpacing: 1.5 });
     doc.fillColor(MUTED).font('Helvetica').fontSize(11).text(inv.id, L, doc.page.margins.top + 32, { width: W, align: 'right' });
     if (draft || voided) {
-      const label = draft ? 'DRAFT — NOT YET ISSUED' : `VOID${inv.void_reason ? ' — ' + inv.void_reason : ''}`;
+      const label = draft ? 'DRAFT — NOT YET ISSUED' : 'VOID — NOT PAYABLE';
       doc.fillColor(draft ? '#7a5a00' : '#8a1c1c').font('Helvetica-Bold').fontSize(9).text(label, L, doc.page.margins.top + 50, { width: W, align: 'right', characterSpacing: 0.8 });
       const word = draft ? 'DRAFT' : 'VOID';
       doc.save().rotate(-28, { origin: [doc.page.width / 2, doc.page.height * 0.42] }).fillColor(draft ? '#b45309' : '#b41e1e').opacity(draft ? 0.08 : 0.10).font('Helvetica-Bold').fontSize(120);
@@ -154,7 +154,8 @@ function renderInvoicePdf(inv, logo) {
     const colW = (W - 30) / 2; let footEnd = y;
     if (inv.payment_instructions) { label('Payment instructions', L, colW, 'left'); doc.fillColor(INK).font('Helvetica').fontSize(9.5).text(inv.payment_instructions, L, y + 14, { width: colW }); footEnd = Math.max(footEnd, doc.y); }
     if (inv.notes) { label('Notes', L + colW + 30, colW, 'left'); doc.fillColor(INK).font('Helvetica').fontSize(9.5).text(inv.notes, L + colW + 30, y + 14, { width: colW }); footEnd = Math.max(footEnd, doc.y); }
-    if (s && s.footer_note) { doc.fillColor(MUTED).font('Helvetica').fontSize(8.5).text(s.footer_note, L, footEnd + 30, { width: W, align: 'center' }); }
+    if (s && s.footer_note) { doc.fillColor(MUTED).font('Helvetica').fontSize(8.5).text(s.footer_note, L, footEnd + 30, { width: W, align: 'center' }); footEnd = doc.y; }
+    if (voided) { doc.fillColor('#8a1c1c').font('Helvetica').fontSize(8.5).text(`Voided${inv.void_reason ? ': ' + inv.void_reason : ''}. Kept for the record; nothing on it is payable and the number is not reused.`, L, footEnd + 16, { width: W, align: 'center' }); }
     doc.end();
   });
 }
