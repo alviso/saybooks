@@ -14,6 +14,7 @@ const money = (c) => (c < 0 ? '-$' : '$') + (Math.abs(c) / 100).toLocaleString('
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 const nl = (s) => esc(s).replace(/\n/g, '<br>');
 const termsOf = (inv) => inv.due_in_days === 0 ? 'Due on receipt' : `Net ${inv.due_in_days ?? 30}`;
+const reasonOf = (inv) => inv.void_reason ? String(inv.void_reason).trim().replace(/[.\s]+$/, '') : '';
 const longDate = (iso) => iso ? new Date(iso + 'T00:00:00Z').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }) : '';
 
 function renderInvoiceHtml(inv, logo) {
@@ -69,7 +70,7 @@ function renderInvoiceHtml(inv, logo) {
       </div>
       ${s && s.footer_note ? `<div class="fine">${nl(s.footer_note)}</div>` : ''}
       ${draft ? '<div class="fine">Preview of the draft as recorded. Numbers can still change; this link becomes the invoice when it is issued.</div>' : ''}
-      ${voided ? `<div class="fine">Voided${inv.void_reason ? `: ${esc(inv.void_reason)}` : ''}. Kept for the record; nothing on it is payable and the number is not reused.</div>` : ''}
+      ${voided ? `<div class="fine">Voided${reasonOf(inv) ? `: ${esc(reasonOf(inv))}` : ''}. Kept for the record; nothing on it is payable and the number is not reused.</div>` : ''}
     </div>
   </body></html>`;
 }
@@ -155,7 +156,7 @@ function renderInvoicePdf(inv, logo) {
     if (inv.payment_instructions) { label('Payment instructions', L, colW, 'left'); doc.fillColor(INK).font('Helvetica').fontSize(9.5).text(inv.payment_instructions, L, y + 14, { width: colW }); footEnd = Math.max(footEnd, doc.y); }
     if (inv.notes) { label('Notes', L + colW + 30, colW, 'left'); doc.fillColor(INK).font('Helvetica').fontSize(9.5).text(inv.notes, L + colW + 30, y + 14, { width: colW }); footEnd = Math.max(footEnd, doc.y); }
     if (s && s.footer_note) { doc.fillColor(MUTED).font('Helvetica').fontSize(8.5).text(s.footer_note, L, footEnd + 30, { width: W, align: 'center' }); footEnd = doc.y; }
-    if (voided) { doc.fillColor('#8a1c1c').font('Helvetica').fontSize(8.5).text(`Voided${inv.void_reason ? ': ' + inv.void_reason : ''}. Kept for the record; nothing on it is payable and the number is not reused.`, L, footEnd + 16, { width: W, align: 'center' }); }
+    if (voided) { doc.fillColor('#8a1c1c').font('Helvetica').fontSize(8.5).text(`Voided${reasonOf(inv) ? ': ' + reasonOf(inv) : ''}. Kept for the record; nothing on it is payable and the number is not reused.`, L, footEnd + 16, { width: W, align: 'center' }); }
     doc.end();
   });
 }
