@@ -228,9 +228,12 @@ function validate(cmd, args) {
   for (const k of cmd.required) {
     if (args[k] === undefined || args[k] === null || args[k] === '') throw new Rejected(`${cmd.name}: ${k} is required.`);
   }
+  const unknown = Object.keys(args).filter(k => !cmd.args[k]);
+  if (unknown.length) {
+    throw new Rejected(`${cmd.name}: unknown argument${unknown.length > 1 ? 's' : ''} ${unknown.join(', ')}. It takes: ${Object.keys(cmd.args).join(', ')}.`);
+  }
   for (const [k, v] of Object.entries(args)) {
     const spec = cmd.args[k];
-    if (!spec) throw new Rejected(`${cmd.name}: unknown argument ${k}.`);
     if (v === undefined || v === null) continue;
     if (spec.type === 'integer' && (!Number.isInteger(v))) throw new Rejected(`${cmd.name}: ${k} must be a whole number${spec.ui.widget === 'money' ? ' of cents' : ''}.`);
     if (spec.enum && !spec.enum.includes(v)) throw new Rejected(`${cmd.name}: ${k} must be one of ${spec.enum.join(', ')}.`);
