@@ -291,8 +291,8 @@ const server = http.createServer((req, res) => {
   .mark{font-family:'IBM Plex Sans',sans-serif;font-weight:700;letter-spacing:.06em;font-size:14px} .tag{color:hsl(215 15% 46%);font-size:13px;margin-bottom:2.4em}
   h1{font-family:'IBM Plex Sans',sans-serif;font-weight:700;letter-spacing:-.02em;font-size:30px;margin:.2em 0 1.1em}
   .doors{display:flex;gap:16px;flex-wrap:wrap}
-  a.door{flex:1;min-width:250px;text-decoration:none;color:inherit;border-radius:8px;padding:1.3em 1.4em;background:#fff;box-shadow:none}
-  a.door:hover{box-shadow:none} a.door b{display:block;margin-bottom:.4em;font-family:'IBM Plex Sans',sans-serif;font-size:18px;font-weight:700}
+  a.door{flex:1;min-width:250px;text-decoration:none;color:inherit;border-radius:8px;padding:1.3em 1.4em;background:#fff;border:1px solid hsl(215 25% 88%)}
+  a.door:hover{border-color:hsl(215 60% 22%)} a.door b{display:block;margin-bottom:.4em;font-family:'IBM Plex Sans',sans-serif;font-size:18px;font-weight:700}
   a.door span{font-size:13.5px;color:hsl(215 20% 36%)}
   .in b{color:hsl(215 60% 22%)} .back{margin-top:2.2em;font-size:13px}
   .back a{color:hsl(215 15% 46%)}</style></head><body><div class="wrap">
