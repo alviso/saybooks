@@ -104,8 +104,8 @@ company profile and the bill-to block from the customer (S-3), the due date is c
 the draft's terms, and the preview link becomes the document. Show the person the preview
 (doc_path) and the full numbers and get their confirmation BEFORE calling this. Refused
 without a company profile or a customer billing address — the refusal says what to gather.
-After: call solo_get_document — the PDF comes attached; hand it (and doc_path) to the person, they
-send it themselves (S-7).`,
+After: call solo_get_document with with_pdf=true — the PDF bytes come back; write the file and hand it
+(and doc_path) to the person, they send it themselves (S-7).`,
   effects: ['invoice issued and immutable', 'seller and bill-to blocks frozen', 'document link final', 'PDF available'],
   guards: [
     (i) => i.status === 'draft' || `${i.id} is already ${i.status}.`,

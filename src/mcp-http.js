@@ -66,14 +66,18 @@ actor_kind=agent, in the same audit trail as their clicks. Play freely; nothing 
     const { _reason, ...rest } = args;
     try {
       const out = await R.execute(name, await R.prepare(name, rest), { workspace, actor: member.name, actor_kind: 'agent', role: member.role, session: `mcp-http:${workspace}`, reason: _reason });
-      // A result may carry binary attachments (a rendered page, a PDF). They become MCP content blocks:
-      // an image the model can look at, a resource the client can hand to the person.
+      // A result may carry attachments (a rendered page, a PDF). They become MCP content blocks:
+      // an image the model can look at, and a resource_link for a file. Observed 2026-09-04: the
+      // claude.ai connector gateway rewrites embedded blob resources (blob dropped, _meta: null)
+      // and the client then discards the WHOLE result — so file bytes never travel as an embedded
+      // resource. A file's bytes ride in the text result instead, on request (with_pdf), where
+      // they pass through untouched.
       if (out && typeof out === 'object' && Array.isArray(out._attachments)) {
         const { _attachments, ...rest } = out;
         const content = [{ type: 'text', text: JSON.stringify(rest, null, 1) }];
         for (const a of _attachments) {
           if (a.kind === 'image') content.push({ type: 'image', data: a.data, mimeType: a.mime });
-          else content.push({ type: 'resource', resource: { uri: a.uri || `saybooks://${a.name}`, mimeType: a.mime, blob: a.data } });
+          else content.push({ type: 'resource_link', uri: a.uri || `saybooks://${a.name}`, name: a.name, mimeType: a.mime, description: a.description || a.name });
         }
         return { content };
       }

@@ -42,7 +42,8 @@ ONE question at a time:
 - The invoice: gather lines as they describe the work (description, quantity or hours,
   rate). Draft it, SHOW every number — lines, subtotal, tax, total, due date — and issue
   only after they confirm — solo_get_document shows you the real render first. Then call
-  solo_get_document again: the PDF is attached; hand it over, they send it themselves (S-7).
+  solo_get_document with with_pdf=true: the PDF bytes come back; hand the file over, they
+  send it themselves (S-7).
 Never invent an amount, a rate, a date, or terms (S-6).`,
   implements: {
     area: 'solo', spec: '0.1',
