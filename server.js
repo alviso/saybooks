@@ -128,6 +128,9 @@ const entryOf = (req, url, allowMint = false) => {
     if (!sandboxExists(q)) { if (!birthAllowed(ipOf(req))) throw Object.assign(new Error('sandbox limit reached for now — try again in an hour'), { status: 429 }); seedSandbox(q); }
     return { ws: q, member: { name: 'owner', role: 'owner' }, cookie: q };
   }
+  // A private space's link, signed out: never a minted demo in its place (found 2026-09-04 —
+  // the address bar said one space, the page showed another). Sign in, then the link works.
+  if (q) throw Object.assign(new Error('this link opens a private space — sign in to open it'), { status: 401 });
   const ck = /(?:^|;\s*)otc_ws=([a-z0-9-]+)/.exec(req.headers.cookie || '');
   if (ck) {
     const m = members.resolve(ck[1]);
@@ -190,7 +193,7 @@ const server = http.createServer(async (req, res) => {
 
   // Google sign-in (hosted demo only; a local workbench has no auth and needs none).
   if (DEMO && auth.enabled()) {
-    if (p === '/auth/google') return auth.loginRedirect(res, url.searchParams.get('next'));
+    if (p === '/auth/google') return auth.loginRedirect(res, url.searchParams.get('next'), url.searchParams.get('ws'));
     if (p === '/auth/google/callback') { auth.callback(req, res, url).catch(e => { console.error('[auth]', e); if (!res.headersSent) send(res, 500, { error: 'login failed' }); }); return undefined; }
     if (p === '/auth/logout') return auth.logout(req, res);
   }
@@ -247,6 +250,33 @@ const server = http.createServer(async (req, res) => {
       const pdf = await renderInvoicePdf(v, logo);
       return send(res, 200, pdf, 'application/pdf', { 'content-disposition': `inline; filename="${v.id}.pdf"` });
     } catch (e) { console.error('[doc]', e.message); return send(res, 404, 'Not found', 'text/plain'); }
+  }
+
+  // A private space's link. Signed out: a door that comes back here after sign-in. Signed in
+  // but not a member: say so, never silently open a different space.
+  const wsParam = url.searchParams.get('ws');
+  if (DEMO && (p === '/app' || p === '/app/') && req.method === 'GET' && auth.enabled() && wsParam && !/^try-/.test(wsParam)) {
+    const u = auth.sessionUser(req);
+    if (u && users.roleFor(u.id, wsParam)) { /* a member: fall through to the workbench */ }
+    else {
+      const signedIn = !!u;
+      return send(res, signedIn ? 403 : 401, `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Saybooks — a private space</title><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"><style>
+  body{font:16px/1.55 'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif;color:hsl(215 40% 16%);background:hsl(210 20% 98%);display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
+  .wrap{max-width:560px;padding:2em} .mark{font-weight:700;letter-spacing:.14em;font-size:14px}
+  h1{font-weight:700;letter-spacing:-.015em;font-size:26px;margin:.6em 0 .4em} p{color:hsl(215 20% 36%);margin:0 0 1.4em}
+  a.btn{display:inline-block;background:hsl(215 60% 22%);color:#fff;text-decoration:none;font-weight:600;padding:11px 20px;border-radius:6px}
+  .back{margin-top:2em;font-size:13px} .back a{color:hsl(215 15% 46%)}</style></head><body><div class="wrap">
+  <div class="mark">SAYBOOKS</div>
+  ${signedIn
+    ? `<h1>You're not a member of this space.</h1><p>The link points to a private space that ${u.email} has no role in. Ask its owner for an invitation, or open your own books.</p><a class="btn" href="/app">Open my books</a>`
+    : `<h1>This link opens a private space.</h1><p>Sign in with the Google account that has access, and you'll land in it.</p><a class="btn" href="/auth/google?ws=${encodeURIComponent(wsParam)}">Sign in with Google →</a>`}
+  <div class="back"><a href="/">← saybooks.io</a></div>
+</div></body></html>`, 'text/html; charset=utf-8');
+    }
+  }
+  if (DEMO && (p === '/app' || p === '/app/') && req.method === 'GET' && url.searchParams.get('notmember')) {
+    return send(res, 302, '', 'text/plain', { location: '/app?ws=' + encodeURIComponent(url.searchParams.get('notmember')) });
   }
 
   // Sign-in-first door: an anonymous FIRST visit to /app gets a choice, never a silent
