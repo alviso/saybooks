@@ -127,7 +127,7 @@
 </body>
 </html>
 <script>(function(){fetch('/api/whoami',{credentials:'same-origin'}).then(function(r){return r.json()}).then(function(d){if(!d||!d.user)return;var sp=d.spaces||[];var by=function(k){return sp.find(function(s){return (s.kind||null)===k})};var full=by(null),solo=by('solo'),hunt=by('hunt');var first=sp[0];var open=function(s){return '/app?ws='+encodeURIComponent(s.ws)};
-document.querySelectorAll('a[href="/auth/google"]').forEach(function(a){a.textContent='Open my books';a.href=first?open(first):'/app'});
+document.querySelectorAll('a[href="/auth/google"]').forEach(function(a){if(a.classList.contains('line')&&!a.classList.contains('small')){a.textContent='Try the demo';a.href='/app?demo=1';return}a.textContent='Open my books';a.href=first?open(first):'/app'});
 document.querySelectorAll('a[href="/app?demo=1"]').forEach(function(a){if(a.classList.contains('box')){if(full){a.href=open(full);var g=a.querySelector('.go');if(g)g.textContent='Open my books →'}return}if(a.classList.contains('solid')){a.href=first?open(first):'/app';a.textContent='Open my books'}else{a.textContent='Try the demo';}});
 document.querySelectorAll('a[href="/auth/google?next=solo"],a.box[href="/solo"]').forEach(function(a){if(solo){a.href=open(solo);var g=a.querySelector('.go');if(g)g.textContent='Open my invoices →';else a.textContent='Open my invoices →'}});
 document.querySelectorAll('a[href="/auth/google?next=hunt"],a.box[href="/hunt"]').forEach(function(a){if(hunt){a.href=open(hunt);var g=a.querySelector('.go');if(g)g.textContent='Open my hunt →';else a.textContent='Open my hunt →'}});
