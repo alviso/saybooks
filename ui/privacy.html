@@ -11,7 +11,7 @@
 :root{--bg:hsl(210 20% 98%);--ink:hsl(215 40% 16%);--navy:hsl(215 60% 22%);--mid:hsl(215 20% 36%);--muted:hsl(215 15% 46%);--line:hsl(215 25% 88%);--tint:hsl(210 20% 94%)}
 *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif} body::before{content:"";display:block;height:4px;background:var(--navy)}
 .wrap{max-width:760px;margin:0 auto;padding:0 28px 60px} nav.top{display:flex;align-items:center;gap:22px;padding:20px 0;border-bottom:1px solid var(--line);margin-bottom:28px}
-.mark{font:700 14px 'IBM Plex Sans',sans-serif;letter-spacing:.14em;color:var(--ink);text-decoration:none;margin-right:auto} nav.top a{color:var(--mid);text-decoration:none;font-size:14px;font-weight:500}
+.mark{display:inline-flex;align-items:center;gap:6px;font:700 14px 'IBM Plex Sans',sans-serif;letter-spacing:.14em;color:var(--ink);text-decoration:none;margin-right:auto} .mark .wv{flex:none} a{color:var(--navy)} nav.top a{color:var(--mid);text-decoration:none;font-size:14px;font-weight:500}
 h1{font-size:32px;line-height:1.1;letter-spacing:-.015em;margin:.2em 0 .3em} h2{font-size:20px;margin:1.8em 0 .5em} p,li{color:var(--mid)} ul{padding-left:1.3em} li{margin-bottom:.4em}
 code{font-family:'IBM Plex Mono',monospace;font-size:.88em;background:var(--tint);padding:.1em .35em;border-radius:4px}
 table{border-collapse:collapse;width:100%;font-size:14px;background:#fff;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:0 0 1.2em} th{text-align:left;font:600 11px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:9px 12px;border-bottom:1px solid var(--line);background:var(--tint)} td{padding:9px 12px;border-bottom:1px solid hsl(215 25% 93%);vertical-align:top;color:var(--mid)} tr:last-child td{border-bottom:none}
@@ -21,7 +21,7 @@ footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-si
 </head>
 <body>
 <div class="wrap">
-  <nav class="top"><a class="mark" href="/">SAYBOOKS</a><a href="/docs">Docs</a><a href="/specs">Specs</a><a href="https://github.com/alviso/saybooks">Source</a></nav>
+  <nav class="top"><a class="mark" href="/"><svg class="wv" width="17" height="20" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".3"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span><svg class="wv" width="17" height="20" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19" opacity=".3"/></svg></a><a href="/docs">Docs</a><a href="/specs">Specs</a><a href="https://github.com/alviso/saybooks">Source</a></nav>
 
   <div class="kicker">Privacy</div>
   <h1>What Saybooks keeps, and what it doesn't</h1>
