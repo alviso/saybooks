@@ -198,6 +198,14 @@ const server = http.createServer(async (req, res) => {
   // Google sign-in (hosted demo only; a local workbench has no auth and needs none).
   if (DEMO && auth.enabled()) {
     if (p === '/auth/google') return auth.loginRedirect(res, url.searchParams.get('next'), url.searchParams.get('ws'));
+    // The public pages ask this to greet a signed-in person instead of offering them a demo. No
+    // workspace is touched and nothing is minted; a stranger gets { user: null }.
+    if (req.method === 'GET' && p === '/api/whoami') {
+      const u = DEMO && auth.enabled() && auth.sessionUser(req);
+      if (!u) return send(res, 200, { user: null }, 'application/json; charset=utf-8', { 'cache-control': 'no-store' });
+      const spaces = users.spacesFor(u.id).map(s => ({ ws: s.ws, name: s.display_name, role: s.role, kind: (users.spaceOf(s.ws) || {}).kind || null }));
+      return send(res, 200, { user: { name: u.name || u.email.split('@')[0], email: u.email }, spaces }, 'application/json; charset=utf-8', { 'cache-control': 'no-store' });
+    }
     // OAuth 2.0 front door (authorization server metadata, registration, authorize, token, revoke).
     if (DEMO && auth.enabled() && oauth.handles(p)) return oauth.handle(req, res, PUBLIC_FALLBACK());
     if (DEMO && auth.enabled() && p === '/oauth/consent') {
