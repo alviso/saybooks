@@ -102,6 +102,17 @@ const provider = {
       state: params.state || null, scopes: params.scopes || [], codeChallenge: params.codeChallenge,
       redirectUri: params.redirectUri, resource: params.resource ? String(params.resource) : null,
     }), now() + PEND_TTL);
+    // Acquisition: someone who arrives here without a first-touch cookie never saw the site;
+    // they came through a connector. The bare /mcp is what the directory lists, so it is
+    // tagged "directory"; a door is tagged by its name. The space created at sign-in
+    // inherits this cookie exactly as a landing-page visit would.
+    if (!users.parseSrcCookie(req.headers.cookie)) {
+      const f = resourceFilter(params.resource ? String(params.resource) : null);
+      const medium = !f ? 'other' : f.ws ? 'space' : f.label || 'directory';
+      const v = { r: '', p: (() => { try { return new URL(String(params.resource)).pathname; } catch { return '/mcp'; } })(), s: 'connector', m: medium,
+                  c: String(client.client_name || client.client_id || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40), t: new Date().toISOString().slice(0, 10) };
+      res.setHeader('set-cookie', `sb_src=${encodeURIComponent(JSON.stringify(v))}; Path=/; Max-Age=2592000; SameSite=Lax`);
+    }
     const user = auth.enabled() && auth.sessionUser(req);
     if (!user) return auth.loginRedirect(res, null, null, `/oauth/consent?pend=${id}`);
     res.redirect(302, `/oauth/consent?pend=${id}`);

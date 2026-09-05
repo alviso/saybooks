@@ -30,7 +30,8 @@ function loginRedirect(res, next, returnWs, returnTo) {
     client_id: CLIENT_ID, redirect_uri: REDIRECT, response_type: 'code',
     scope: 'openid email profile', state, prompt: 'select_account',
   });
-  res.writeHead(302, { location: url, 'set-cookie': `sb_oauth=${state}${intent}${back}${rt}; Path=/; Max-Age=600; HttpOnly; Secure; SameSite=Lax` });
+  const prior = res.getHeader('set-cookie'); res.removeHeader('set-cookie');
+  res.writeHead(302, { location: url, 'set-cookie': [`sb_oauth=${state}${intent}${back}${rt}; Path=/; Max-Age=600; HttpOnly; Secure; SameSite=Lax`].concat(prior || []) });
   res.end();
 }
 
