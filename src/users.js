@@ -51,6 +51,10 @@ function db() {
   // kind: what a space mounts — null = full books, 'hunt' = the free job-hunt offering.
   const cols = _db.prepare('PRAGMA table_info(space)').all().map(c => c.name);
   if (!cols.includes('kind')) _db.exec('ALTER TABLE space ADD COLUMN kind TEXT');
+  // Where a workspace came from: the first-touch cookie the public pages set (referrer host,
+  // landing path, utm tags). One row per workspace; the only way to know which channel pays.
+  _db.exec(`CREATE TABLE IF NOT EXISTS acquisition (
+    ws TEXT PRIMARY KEY, kind TEXT NOT NULL, referrer TEXT, landing TEXT, source TEXT, medium TEXT, campaign TEXT, first_seen TEXT, at TEXT NOT NULL)`);
   return _db;
 }
 const now = () => new Date().toISOString();
@@ -134,5 +138,27 @@ function inviteEmail(ws, email, role, invitedBy) {
 const emailMembers = (ws) => db().prepare('SELECT email, role, user_id IS NOT NULL AS joined, revoked_at, created_at FROM space_member WHERE ws = ? ORDER BY created_at').all(ws);
 const revokeEmail = (ws, email) => db().prepare('UPDATE space_member SET revoked_at = ? WHERE ws = ? AND lower(email) = lower(?) AND revoked_at IS NULL').run(now(), ws, email).changes;
 
+/** The first-touch cookie, as the public pages set it: sb_src=<urlencoded JSON {r,p,s,m,c,t}>. */
+function parseSrcCookie(cookieHeader) {
+  const m = /(?:^|;\s*)sb_src=([^;]+)/.exec(cookieHeader || '');
+  if (!m) return null;
+  try { const v = JSON.parse(decodeURIComponent(m[1])); return typeof v === 'object' && v ? v : null; } catch { return null; }
+}
+function recordAcquisition(ws, kind, src) {
+  const v = src || {};
+  db().prepare(`INSERT OR IGNORE INTO acquisition (ws, kind, referrer, landing, source, medium, campaign, first_seen, at) VALUES (?,?,?,?,?,?,?,?,?)`)
+    .run(ws, kind, v.r || null, v.p || null, v.s || null, v.m || null, v.c || null, v.t || null, now());
+}
+const acquisitionOf = (ws) => db().prepare('SELECT * FROM acquisition WHERE ws = ?').get(ws) || null;
+/** Channel label for a row: utm_source first, else the referrer host, else 'direct / unknown'. */
+const channelOf = (a) => !a ? 'unknown' : (a.source ? `${a.source}${a.medium ? '/' + a.medium : ''}` : (a.referrer || 'direct'));
+function acquisitionSummary() {
+  const rows = db().prepare('SELECT * FROM acquisition').all();
+  const by = {};
+  for (const a of rows) { const k = channelOf(a); by[k] = by[k] || { channel: k, sandboxes: 0, spaces: 0 }; by[k][a.kind === 'space' ? 'spaces' : 'sandboxes']++; }
+  return Object.values(by).sort((x, y) => (y.spaces * 10 + y.sandboxes) - (x.spaces * 10 + x.sandboxes));
+}
+
 module.exports = { db, upsertUser, createSession, userForSession, dropSession, createSpace, claimSpace, deleteSpace,
+  parseSrcCookie, recordAcquisition, acquisitionOf, channelOf, acquisitionSummary,
   spacesFor, roleFor, spaceOf, isOwnedSpace, spaceIdentity, inviteEmail, emailMembers, revokeEmail };

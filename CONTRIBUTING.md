@@ -8,9 +8,13 @@ The unit of contribution is the **module**, and the contract is enforced, not as
    lifecycles, read models, contract-vs-freedom, deferred-with-reasons.
 2. Open the demo's **Spec tab** and walk a scenario or two — it teaches the rules as
    filled-in forms, refusals included.
-3. Run `npm test`. Those 12 gates are the review. A PR that adds a hand-written form, a
-   prefix-less command, a cross-module table write, or an unpermissioned command fails in CI,
-   not in code review.
+3. Run `npm test`. The contract gates are the review (16 checks at the time of writing —
+   the header of `test/contract.test.js` names them: parity, namespace, doctrine, guards,
+   ownership, budget, mounts, one sentence, audit, fixtures, conformance, permissions,
+   human-only). A PR that adds a hand-written form, a prefix-less command, a cross-module
+   table write, or an unpermissioned command fails in CI, not in code review.
+4. The specs are public at [saybooks.io/specs](https://saybooks.io/specs) — every area, its
+   acts and invariants, every scenario, and the last conformance run.
 
 ## The module contract, in prose
 
@@ -28,6 +32,19 @@ The unit of contribution is the **module**, and the contract is enforced, not as
   single curator per area.
 - **Competing implementations are welcome** — that is the point. Claim an area with
   `implements: {area, spec, acts, argmap}` and pass its scenarios.
+- **Reads may render.** A read handler may return a promise for pure rendering work (a PDF,
+  a picture), provided every database read happened synchronously first — the workspace is
+  only current inside the call. Results may carry `_attachments`; the MCP layer projects
+  them to content blocks, the HTTP API reports them by name and size.
+- **Refusals name the fix.** "X has no billing address — ask for it, call
+  core_update_customer, and come back." The agent reading it at 3 a.m. should know what to do.
+
+## A good first module
+
+Mirror an existing module at a different calibration, the way `solo` mirrors the invoicing
+half of `o2c` for a company of one: spec first (`specs/<area>/spec.md`, `acts.json`, two
+scenario files with at least one refusal), then the module. Look for the issue labelled
+**good first module** in the tracker; it names a candidate area and the acts it needs.
 
 ## Practical notes
 

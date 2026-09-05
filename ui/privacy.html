@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy — Saybooks</title>
+<meta name="description" content="What Saybooks stores, why, for how long, and how to take it with you or delete it.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:hsl(210 20% 98%);--ink:hsl(215 40% 16%);--navy:hsl(215 60% 22%);--mid:hsl(215 20% 36%);--muted:hsl(215 15% 46%);--line:hsl(215 25% 88%);--tint:hsl(210 20% 94%)}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif} body::before{content:"";display:block;height:4px;background:var(--navy)}
+.wrap{max-width:760px;margin:0 auto;padding:0 28px 60px} nav.top{display:flex;align-items:center;gap:22px;padding:20px 0;border-bottom:1px solid var(--line);margin-bottom:28px}
+.mark{font:700 14px 'IBM Plex Sans',sans-serif;letter-spacing:.14em;color:var(--ink);text-decoration:none;margin-right:auto} nav.top a{color:var(--mid);text-decoration:none;font-size:14px;font-weight:500}
+h1{font-size:32px;line-height:1.1;letter-spacing:-.015em;margin:.2em 0 .3em} h2{font-size:20px;margin:1.8em 0 .5em} p,li{color:var(--mid)} ul{padding-left:1.3em} li{margin-bottom:.4em}
+code{font-family:'IBM Plex Mono',monospace;font-size:.88em;background:var(--tint);padding:.1em .35em;border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:14px;background:#fff;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:0 0 1.2em} th{text-align:left;font:600 11px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:9px 12px;border-bottom:1px solid var(--line);background:var(--tint)} td{padding:9px 12px;border-bottom:1px solid hsl(215 25% 93%);vertical-align:top;color:var(--mid)} tr:last-child td{border-bottom:none}
+.kicker{font:600 11.5px 'IBM Plex Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)} .asof{font-size:13px;color:var(--muted)}
+footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)} footer a{color:var(--mid)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="top"><a class="mark" href="/">SAYBOOKS</a><a href="/docs">Docs</a><a href="/specs">Specs</a><a href="https://github.com/alviso/saybooks">Source</a></nav>
+
+  <div class="kicker">Privacy</div>
+  <h1>What Saybooks keeps, and what it doesn't</h1>
+  <p class="asof">Effective 2026-09-05. Saybooks is operated by Peter Varga, the sole founder, and this page is written by him rather than by a template. If something here is unclear, write to <a href="mailto:hello@saybooks.io">hello@saybooks.io</a>.</p>
+
+  <h2>The short version</h2>
+  <ul>
+    <li>Your books are yours. Every space exports completely as JSON, audit log included, and one button deletes it permanently.</li>
+    <li>We store what you put in your books, who did it, and when. We do not read your books, sell anything, or run advertising.</li>
+    <li>Saybooks never emails your customers, never charges a card, never moves money. It records.</li>
+    <li>Anonymous demo sandboxes are deleted after 24 hours unless you sign in to keep one.</li>
+  </ul>
+
+  <h2>What we store</h2>
+  <table><thead><tr><th>Data</th><th>Why</th><th>How long</th></tr></thead><tbody>
+    <tr><td>Your Google identity when you sign in: account id, email, name, profile picture</td><td>To know whose books are whose and to let you invite people by email</td><td>Until you delete your last space and ask us to remove the account</td></tr>
+    <tr><td>Everything in your books: customers, invoices, orders, postings, payments, the company profile and logo</td><td>That is the product</td><td>Until you delete the space</td></tr>
+    <tr><td>The audit log: every command, who ran it (you, an invited person, or an agent holding your key), the reason given, and refusals</td><td>The record is the point; it is what makes an agent safe to let in</td><td>Until you delete the space; exported with it</td></tr>
+    <tr><td>Keys you mint for agents and invitations you send</td><td>So an agent can act as your delegate, with your permissions, until you revoke it</td><td>Until revoked or the space is deleted</td></tr>
+    <tr><td>Usage counts per workspace: number of calls, writes, agent calls, first and last activity</td><td>To see whether the product is used at all; counts only, never content</td><td>Rolling; sandboxes' rows go with the sandbox</td></tr>
+    <tr><td>Where you came from: the referring site's host name, the page you landed on, and any utm tags in the link</td><td>To learn which channel brings people who stay</td><td>30-day cookie; one row per workspace</td></tr>
+    <tr><td>Standard web server logs (IP address, path, time, browser string)</td><td>Abuse protection and debugging</td><td>Briefly, on the server</td></tr>
+  </tbody></table>
+
+  <h2>Cookies</h2>
+  <p>All first-party. <code>sb_sess</code> keeps you signed in (30 days). <code>sb_space</code> remembers which of your spaces you opened last. <code>otc_ws</code> ties a browser to an anonymous demo sandbox. <code>sb_oauth</code> lives for ten minutes during Google sign-in. <code>sb_src</code> records the first page you arrived on and the site that sent you (30 days). There is no third-party analytics script and no advertising pixel.</p>
+
+  <h2>Who else sees anything</h2>
+  <ul>
+    <li><b>Google</b>, when you choose to sign in with Google. We receive only the fields listed above.</li>
+    <li><b>Google Fonts</b> serves the typefaces on the public pages, which means Google sees the request for the font file. The workbench uses the same fonts.</li>
+    <li><b>Hetzner</b> hosts the server, in the European Union.</li>
+    <li><b>Anyone holding a key or a document link you created.</b> An agent key acts as you; a document link opens one invoice without a sign-in. Both are capabilities: treat them like passwords and revoke or void them when you no longer want them to work.</li>
+    <li><b>Nobody else.</b> We do not sell or share data, and we do not train anything on your books.</li>
+  </ul>
+
+  <h2>Agents and AI</h2>
+  <p>When you connect Claude or another agent, it reads and writes your books through the same commands you use, under the role of the key you minted, and every action lands in your audit log with the agent named as the actor. Saybooks itself does not call any AI model and does not send your data to one; whatever your agent sees is governed by your agreement with its provider.</p>
+
+  <h2>Your controls</h2>
+  <ul>
+    <li><b>Export</b>: in the workbench sidebar, one click downloads every table of the space as JSON, audit log included.</li>
+    <li><b>Delete</b>: one button permanently removes the space, its database, and every key and invitation on it. There is no soft-delete and no retention copy.</li>
+    <li><b>Revoke</b>: keys and invitations are revoked from the same dialog that created them.</li>
+    <li><b>Account removal</b>: after deleting your spaces, email us and the Google identity row goes too.</li>
+  </ul>
+
+  <h2>Open source</h2>
+  <p>The whole system is published under AGPL-3.0 at <a href="https://github.com/alviso/saybooks">github.com/alviso/saybooks</a>. If you would rather not trust a hosted service, run it yourself; the code that handles your data is the code you can read.</p>
+
+  <h2>Changes</h2>
+  <p>If this page changes in a way that matters, the change is dated here and announced on the site. Prices, where they exist, change with twelve months' notice.</p>
+
+  <footer><a href="/">saybooks.io</a> · <a href="/docs">Docs</a> · <a href="mailto:hello@saybooks.io">hello@saybooks.io</a></footer>
+</div>
+</body>
+</html>

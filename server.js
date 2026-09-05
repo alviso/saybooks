@@ -143,6 +143,7 @@ const entryOf = (req, url, allowMint = false) => {
   if (!allowMint) return { ws: null, member: { name: 'visitor', role: 'viewer' } };
   if (!birthAllowed(ipOf(req))) throw Object.assign(new Error('sandbox limit reached for now — try again in an hour'), { status: 429 });
   const fresh = newVisitorWs(url.searchParams.get('demo'));
+  users.recordAcquisition(fresh, 'sandbox', users.parseSrcCookie(req.headers.cookie));
   return { ws: fresh, member: { name: 'owner', role: 'owner' }, cookie: fresh };
 };
 
@@ -380,7 +381,9 @@ const server = http.createServer(async (req, res) => {
         } catch { /* telemetry not born yet */ }
         const udb = users.db();
         const allUsers = udb.prepare('SELECT id, email, name, created_at FROM user ORDER BY created_at DESC LIMIT 100').all()
-          .map(u2 => ({ ...u2, spaces: udb.prepare('SELECT ws, display_name, kind, created_at FROM space WHERE owner_user_id = ? ORDER BY created_at').all(u2.id) }));
+          .map(u2 => ({ ...u2, spaces: udb.prepare('SELECT ws, display_name, kind, created_at FROM space WHERE owner_user_id = ? ORDER BY created_at').all(u2.id)
+            .map(s => ({ ...s, channel: users.channelOf(users.acquisitionOf(s.ws)) })) }));
+        const topWithSource = (rows) => rows.map(t => ({ ...t, channel: users.channelOf(users.acquisitionOf(t.ws)) }));
         const huntSpaces = udb.prepare("SELECT COUNT(*) n FROM space WHERE kind = 'hunt'").get().n;
         let metrics = [];
         try {
@@ -392,8 +395,9 @@ const server = http.createServer(async (req, res) => {
           funnel: { live_sandboxes_under_24h: born, opened_app: funnel.touched, engaged_3plus_calls: funnel.engaged,
             wrote_something: funnel.wrote, agent_connected: funnel.agent,
             google_sign_ins: allUsers.length, hunt_spaces: huntSpaces },
-          users: allUsers, top_active: top, metrics,
-          notes: ['telemetry starts 2026-08-26; earlier sandboxes show as untouched',
+          users: allUsers, top_active: topWithSource(top), metrics, by_channel: users.acquisitionSummary(),
+          notes: ['acquisition source recorded from 2026-09-05 (first-touch cookie: referrer host, landing path, utm); earlier rows show as unknown',
+            'telemetry starts 2026-08-26; earlier sandboxes show as untouched',
             'birth counts before the 2026-08-26 mint-gate fix are scanner-noise-dominated',
             'sign-ins include the founder'],
         });
@@ -446,6 +450,14 @@ const server = http.createServer(async (req, res) => {
 
     // The spec, as a live object: status from the last full run, acts from the implements
     // map, scenarios with their step-by-step evidence.
+    // Public, linkable spec pages: the curated spec, its acts and invariants, the scenarios,
+    // and the last conformance run. The specs are the proof of the positioning; hiding them
+    // inside the demo app wasted them.
+    if (req.method === 'GET' && /^\/specs(\/[a-z0-9]+)?\/?$/.test(p)) {
+      const area = (p.split('/')[2] || '').replace(/\/$/, '');
+      try { return send(res, 200, require('./src/specpage.js').render(area || null), 'text/html; charset=utf-8'); }
+      catch (e) { return send(res, 404, 'Not found', 'text/plain'); }
+    }
     if (req.method === 'GET' && p === '/api/spec') {
       const area = url.searchParams.get('area') || 'o2c';
       return send(res, 200, { report: C.lastReport(area), spec: C.specOf(area) });
@@ -543,6 +555,8 @@ const server = http.createServer(async (req, res) => {
                : (p === '/hunt' || p === '/hunt/') ? 'hunt.html'
                : (p === '/solo' || p === '/solo/') ? 'solo.html'
                : (p === '/admin' || p === '/admin/') ? 'admin.html'
+               : (p === '/privacy' || p === '/privacy/') ? 'privacy.html'
+               : (p === '/docs' || p === '/docs/') ? 'docs.html'
                : path.basename(p);
     const full = path.join(UI, file);
     if (full.startsWith(UI) && fs.existsSync(full) && fs.statSync(full).isFile()) {

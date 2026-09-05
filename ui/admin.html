@@ -45,7 +45,8 @@
     <table><thead><tr><th>When</th><th>Who</th><th>Spaces</th></tr></thead><tbody id="users"></tbody></table>
     <h2>Most active sandboxes (since telemetry began)</h2>
     <table><thead><tr><th>Sandbox</th><th>First seen</th><th>Last seen</th><th style="text-align:right">API calls</th><th style="text-align:right">Writes</th><th style="text-align:right">Agent calls</th></tr></thead><tbody id="top"></tbody></table>
-    <div class="notes" id="notes"></div>
+    <h2>By channel</h2><table><thead><tr><th>Channel (utm_source/medium, else referrer host)</th><th style="text-align:right">Sandboxes</th><th style="text-align:right">Spaces</th></tr></thead><tbody id="bychannel"></tbody></table>
+<div class="notes" id="notes"></div>
   </div>
 </div>
 <script>
@@ -88,7 +89,7 @@
   document.getElementById('users').innerHTML = d.users.map(u => `<tr>
     <td class="dim">${u.created_at.slice(0, 16).replace('T', ' ')}</td>
     <td><b>${u.name || ''}</b> <span class="dim">${u.email}</span></td>
-    <td>${u.spaces.map(s => `<span class="pill ${s.kind === 'hunt' ? 'hunt' : ''}${s.kind === 'solo' ? ' solo' : ''}">${s.display_name}${s.kind ? ' · ' + s.kind : ''}</span>`).join(' ') || '<span class="dim">none</span>'}</td>
+    <td>${u.spaces.map(s => `<span class="pill ${s.kind === 'hunt' ? 'hunt' : ''}${s.kind === 'solo' ? ' solo' : ''}">${s.display_name}${s.kind ? ' · ' + s.kind : ''}</span> <span class="dim mono">${s.channel || ''}</span>`).join(' ') || '<span class="dim">none</span>'}</td>
   </tr>`).join('') || '<tr><td colspan="3" class="dim">nobody yet</td></tr>';
 
   document.getElementById('top').innerHTML = d.top_active.map(t => `<tr>
@@ -98,6 +99,9 @@
     <td style="text-align:right">${t.api_calls}</td><td style="text-align:right">${t.writes}</td><td style="text-align:right">${t.agent_calls}</td>
   </tr>`).join('') || '<tr><td colspan="6" class="dim">no activity recorded yet</td></tr>';
 
+  const bc = document.getElementById('bychannel');
+  if (bc) bc.innerHTML = (d.by_channel || []).map(c => `<tr><td class="mono">${c.channel}</td><td style="text-align:right">${c.sandboxes}</td><td style="text-align:right">${c.spaces}</td></tr>`).join('')
+    || '<tr><td colspan="3" class="dim">nothing recorded yet</td></tr>';
   document.getElementById('notes').innerHTML = d.notes.map(n => '· ' + n).join('<br>');
 })();
 </script>

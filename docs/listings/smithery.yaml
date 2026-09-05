@@ -1,0 +1,16 @@
+# Smithery listing for a remote MCP server where the user supplies their own key.
+# The key is minted in the Saybooks workbench (Share this space… → Mint key) and becomes the
+# last path segment of the endpoint. See https://saybooks.io/docs#connect
+startCommand:
+  type: http
+  configSchema:
+    type: object
+    required: [key]
+    properties:
+      key:
+        type: string
+        title: Saybooks key
+        description: The key minted for your agent in the Saybooks workbench (the part after /mcp/ in the connector URL).
+  exampleConfig:
+    key: m-4f9c21example
+  url: https://saybooks.io/mcp/{key}

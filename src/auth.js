@@ -62,7 +62,7 @@ async function callback(req, res, url) {
     // starts from zero), and land them in it. No demo fixtures, no 'My books'.
     const name = intent === 'hunt' ? 'My job hunt' : 'My invoices';
     let sp = users.spacesFor(user.id).map(s => users.spaceOf(s.ws)).find(s => s && s.kind === intent);
-    if (!sp) { sp = users.createSpace(user.id, name, undefined, intent); wsp.dbFor(sp.ws); }
+    if (!sp) { sp = users.createSpace(user.id, name, undefined, intent); wsp.dbFor(sp.ws); users.recordAcquisition(sp.ws, 'space', users.parseSrcCookie(req.headers.cookie)); }
     landing = '/app?ws=' + sp.ws;
   } else if (!users.spacesFor(user.id).length) {
     const cur = (/(?:^|;\s*)otc_ws=(try-[a-z0-9]+)/.exec(req.headers.cookie || '') || [])[1];
@@ -71,10 +71,13 @@ async function callback(req, res, url) {
       if (cur.startsWith('try-h')) users.claimSpace(user.id, cur, 'My job hunt', 'hunt');
       else if (cur.startsWith('try-s')) users.claimSpace(user.id, cur, 'My invoices', 'solo');
       else users.claimSpace(user.id, cur, 'My books');
+      // A claimed sandbox keeps the source it was minted with; mark that it became a space.
+      users.recordAcquisition(cur, 'space', users.parseSrcCookie(req.headers.cookie));
     }
     else {
       const sp = users.createSpace(user.id, 'My books');
       require('./fixtures.js').load('try', sp.ws);
+      users.recordAcquisition(sp.ws, 'space', users.parseSrcCookie(req.headers.cookie));
     }
   }
 

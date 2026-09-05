@@ -109,7 +109,8 @@ ol.steps p{margin:0;font-size:14.5px;color:var(--mid)}
 .builders li{padding:12px 0;border-top:1px solid hsl(215 40% 35%)}
 .builders .btn.solid{background:#fff;color:var(--navy);border-color:#fff}
 .builders .btn.line{background:transparent;color:#fff;border-color:hsl(215 40% 45%)}
-footer{padding:28px 0 44px;font-size:13.5px;color:var(--muted);display:flex;gap:18px;flex-wrap:wrap}
+.promise{margin:44px 0 0;padding:16px 0 0;border-top:1px solid var(--line);font-size:14px;color:var(--mid)}
+footer{padding:16px 0 44px;font-size:13.5px;color:var(--muted);display:flex;gap:18px;flex-wrap:wrap}
 footer a{color:var(--mid);text-decoration:none}
 footer .mark{font-size:13px;margin-right:auto}
 @media (max-width:900px){ header.hero,.split,.builders{grid-template-columns:1fr} .trust,.limits{grid-template-columns:1fr} .row{grid-template-columns:1fr;gap:12px} .row .btn{justify-self:start} h1{font-size:42px} nav.top .links a:not(.btn){display:none} }
@@ -233,7 +234,7 @@ h1{font-size:64px}
         <h2>Three steps, then you just talk</h2>
         <ol class="steps" style="margin-top:22px">
           <li><span class="n">01</span><div><h3>Sign in with Google</h3><p>You get your own private space. Nothing to install.</p></div></li>
-          <li><span class="n">02</span><div><h3>Connect Claude</h3><p>Copy one link from your space and paste it into Claude's settings (Settings → Connectors → Add). We show you exactly where — it takes a minute.</p></div></li>
+          <li><span class="n">02</span><div><h3>Connect Claude</h3><p>Copy one link from your space and paste it into Claude's settings (Customize → Connectors → Add). We show you exactly where — it takes a minute.</p></div></li>
           <li><span class="n">03</span><div><h3>Talk</h3><p>Tell Claude what happened. It asks for what it needs, shows you the numbers, and records it. Everything also appears in your browser, as normal pages.</p></div></li>
         </ol>
       </div>
@@ -301,7 +302,7 @@ h1{font-size:64px}
       <div><b>Not accounting software</b>It keeps your operational records. Your accountant's ledger stays where it is — Saybooks exports a clean journal for QuickBooks or Xero.</div>
       <div><b>It never sends or pays</b>It produces invoices for you to send and records payments you received. It never emails anyone or moves money.</div>
       <div><b>USD, one company</b>Single currency, single entity today. If that's you, it works; if not, not yet.</div>
-      <div><b>Early</b>Weeks old and moving fast. Your data is yours to export or delete at any moment, and everything is open source.</div>
+      <div><b>Shipping weekly</b>This week: the invoice PDF, DRAFT previews, client addresses, voids that stay readable. The <a href="https://github.com/alviso/saybooks/commits/main">commit log</a> is the changelog. Your data is yours to export or delete at any moment.</div>
     </div>
   </section>
 
@@ -313,7 +314,7 @@ h1{font-size:64px}
         <p>Every business act is declared once. From that one declaration Saybooks derives the tool Claude sees (over MCP), the form a person sees, the rule that can refuse either, and the audit entry — so the two surfaces can't drift; a contract test fails the build if they do. Each area is governed by a written spec with executable scenarios, and modules are held to a 16-gate contributor contract.</p>
         <div class="ctas">
           <a class="btn solid" href="https://github.com/alviso/saybooks">GitHub · AGPL-3.0</a>
-          <a class="btn line" href="/app?demo=1#spec">Read the specs live</a>
+          <a class="btn line" href="/specs">Read the specs</a>
         </div>
       </div>
       <ul>
@@ -324,10 +325,12 @@ h1{font-size:64px}
     </div>
   </section>
 
+  <p class="promise">Your data exports completely, in open formats, on every plan, forever. Prices, where they exist, change with twelve months' notice.</p>
   <footer>
     <span class="mark"><svg class="wv" width="14" height="16" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".3"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span><svg class="wv" width="14" height="16" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19" opacity=".3"/></svg></span>
-    <a href="/solo">Invoicing</a> <a href="/hunt">Job hunt</a> <a href="/app?demo=1">Demo</a> <a href="https://github.com/alviso/saybooks">Source</a> <a href="mailto:hello@saybooks.io">hello@saybooks.io</a>
+    <a href="/solo">Invoicing</a> <a href="/hunt">Job hunt</a> <a href="/app?demo=1">Demo</a> <a href="/docs">Docs</a> <a href="/specs">Specs</a> <a href="/privacy">Privacy</a> <a href="https://github.com/alviso/saybooks">Source</a> <a href="mailto:hello@saybooks.io">hello@saybooks.io</a>
   </footer>
 </div>
+<script>(function(){try{if(/(?:^|; )sb_src=/.test(document.cookie))return;var q=new URLSearchParams(location.search);var r='';try{r=document.referrer?new URL(document.referrer).host:''}catch(e){}if(r===location.host)r='';var v={r:r,p:location.pathname+(location.search?location.search.slice(0,80):''),s:q.get('utm_source')||'',m:q.get('utm_medium')||'',c:q.get('utm_campaign')||'',t:new Date().toISOString().slice(0,10)};document.cookie='sb_src='+encodeURIComponent(JSON.stringify(v))+'; Path=/; Max-Age=2592000; SameSite=Lax'}catch(e){}})();</script>
 </body>
 </html>
