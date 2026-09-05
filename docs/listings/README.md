@@ -4,10 +4,13 @@ Everything needed to list Saybooks where MCP servers are listed. None of these s
 Claude; they are backlinks and the places a developer checks that you exist. Do them once,
 update on version bumps.
 
-Saybooks' hosted endpoint is per key: `https://saybooks.io/mcp/<key>`. There is no single
-public URL that opens someone's books, and there must not be. Listings therefore describe a
-**remote server that the user supplies their own key for**, and point people at
-https://saybooks.io/docs#connect to mint one. Self-hosters run `node mcp-server.js` (stdio).
+Saybooks' hosted endpoint is `https://saybooks.io/mcp`, an OAuth-protected resource: a client
+signs the person in with Google, a consent page asks which of their books to open and what the
+agent may do, and the connection gets a key minted for it. Keys can also be minted by hand in
+the workbench and used as `https://saybooks.io/mcp/<key>` by clients without OAuth. Listings
+describe the OAuth endpoint and point at https://saybooks.io/docs#connect. Self-hosters run
+`node mcp-server.js` (stdio). The Claude Connectors Directory has its own copy in
+`claude-directory.md` and needs a Team or Enterprise org to submit.
 
 ## 1. Official MCP Registry (registry.modelcontextprotocol.io)
 
