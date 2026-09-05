@@ -43,8 +43,12 @@ system never sends an email, never submits an application, never clicks anything
     },
   },
   search: (like) => ({
-    postings: H.db().prepare(`SELECT p.id, p.title, p.status, c.name AS company FROM hunt_posting p JOIN hunt_company c ON c.id = p.company_id
-      WHERE p.id LIKE ? OR p.title LIKE ? OR p.jd_text LIKE ? OR p.fit_notes LIKE ? OR p.skip_reason LIKE ? LIMIT 10`).all(like, like, like, like, like),
+    // A requisition number, a URL, a location or the company's name are the things a person
+    // actually pastes into search; the JD text is the haystack they search last.
+    postings: H.db().prepare(`SELECT p.id, p.title, p.status, p.req_id, p.location, c.name AS company FROM hunt_posting p JOIN hunt_company c ON c.id = p.company_id
+      LEFT JOIN hunt_company e ON e.id = p.end_client_id
+      WHERE p.id LIKE ? OR p.req_id LIKE ? OR p.url LIKE ? OR p.title LIKE ? OR c.name LIKE ? OR e.name LIKE ? OR p.location LIKE ?
+         OR p.jd_text LIKE ? OR p.fit_notes LIKE ? OR p.skip_reason LIKE ? OR p.red_flags LIKE ? LIMIT 10`).all(like, like, like, like, like, like, like, like, like, like, like),
     hunt_contacts: H.db().prepare('SELECT id, name, role, relationship FROM hunt_contact WHERE id LIKE ? OR name LIKE ? OR notes LIKE ? LIMIT 10').all(like, like, like),
     hunt_companies: H.db().prepare('SELECT id, name, kind FROM hunt_company WHERE id LIKE ? OR name LIKE ? LIMIT 10').all(like, like),
   }),
