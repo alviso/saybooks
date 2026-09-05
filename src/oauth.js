@@ -17,7 +17,7 @@
  */
 const crypto = require('crypto');
 const express = require('express');
-const { mcpAuthRouter } = require('@modelcontextprotocol/sdk/server/auth/router.js');
+const { mcpAuthRouter, createOAuthMetadata } = require('@modelcontextprotocol/sdk/server/auth/router.js');
 const users = require('./users.js');
 const members = require('./members.js');
 
@@ -46,9 +46,36 @@ function db() {
   return d;
 }
 
-// ---------------------------------------------------------------- clients (dynamic registration)
+// ---------------------------------------------------------------- clients
+// Two ways a client identifies itself. Dynamic registration (RFC 7591) stores a row per
+// registration. Client ID metadata documents (CIMD) make the client_id an https URL whose
+// JSON body IS the registration — nothing stored, fetched once an hour. Claude recommends the
+// latter; busy servers otherwise fill up with registrations.
+const CIMD_TTL = 3600 * 1000;
+const cimdCache = new Map();   // url -> { at, client }
+async function fetchClientMetadata(url) {
+  const hit = cimdCache.get(url);
+  if (hit && Date.now() - hit.at < CIMD_TTL) return hit.client;
+  let u; try { u = new URL(url); } catch { return undefined; }
+  if (u.protocol !== 'https:' || u.username || u.password || u.hash) return undefined;
+  const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 5000);
+  let doc;
+  try {
+    const res = await fetch(u, { signal: ac.signal, redirect: 'error', headers: { accept: 'application/json' } });
+    if (!res.ok || !/json/i.test(res.headers.get('content-type') || '')) return undefined;
+    const text = await res.text(); if (text.length > 64 * 1024) return undefined;
+    doc = JSON.parse(text);
+  } catch { return undefined; } finally { clearTimeout(t); }
+  // The document must claim its own URL as client_id and list where codes may go.
+  if (!doc || typeof doc !== 'object' || doc.client_id !== url || !Array.isArray(doc.redirect_uris) || !doc.redirect_uris.length) return undefined;
+  const client = { ...doc, client_id: url, token_endpoint_auth_method: 'none' };
+  delete client.client_secret;
+  cimdCache.set(url, { at: Date.now(), client });
+  return client;
+}
 const clientsStore = {
-  getClient(clientId) {
+  async getClient(clientId) {
+    if (/^https:\/\//.test(clientId || '')) return fetchClientMetadata(clientId);
     const r = db().prepare('SELECT json FROM oauth_client WHERE client_id = ?').get(clientId);
     return r ? JSON.parse(r.json) : undefined;
   },
@@ -206,6 +233,9 @@ function build(publicUrl) {
   const issuer = new URL(publicUrl);
   app = express();
   app.set('trust proxy', 1);
+  // Advertise metadata-document client ids (the router's own metadata handler does not know the flag).
+  const meta = { ...createOAuthMetadata({ provider, issuerUrl: issuer, scopesSupported: ['books'], serviceDocumentationUrl: new URL('/docs', issuer) }), client_id_metadata_document_supported: true };
+  app.get('/.well-known/oauth-authorization-server', (_req, res) => res.json(meta));
   app.use(mcpAuthRouter({
     provider, issuerUrl: issuer, resourceServerUrl: new URL('/mcp', issuer), scopesSupported: ['books'],
     serviceDocumentationUrl: new URL('/docs', issuer),
