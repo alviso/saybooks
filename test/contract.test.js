@@ -201,6 +201,20 @@ for (const tag of R.PERMISSIONS) {
   assert.ok(vDenied, 'viewer write must be denied naming the permission');
   execute('o2c_ar_aging', {}, { ...human, role: 'viewer' });
   ok('permissions: every command tagged, every tag reachable; denial is one sentence on both surfaces, logged; viewer reads but cannot write');
+
+// ---------------------------------------------------------------- ui scripts parse
+// Not a module gate — a build guard. The workbench is one HTML file whose only </body> lives
+// inside a JavaScript string; a careless insertion once split the script and served the
+// source as text. Every inline script in every page must compile.
+{
+  const vm = require('vm');
+  for (const f of fs.readdirSync(path.join(__dirname, '..', 'ui')).filter(n => n.endsWith('.html'))) {
+    const html = fs.readFileSync(path.join(__dirname, '..', 'ui', f), 'utf8');
+    const blocks = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m => m[1]);
+    blocks.forEach((src, i) => { try { new vm.Script(src, { filename: `${f}#${i}` }); } catch (e) { assert.fail(`${f}: inline script ${i} does not parse — ${e.message}`); } });
+  }
+  ok('ui scripts: every inline script in ui/*.html parses');
+}
 }
 
 // ---------------------------------------------------------------- 13. human-only fields
