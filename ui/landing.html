@@ -142,6 +142,30 @@ h1{font-size:64px}
 .box .foot .tag{margin:0}
 .box .go{font:600 14px 'IBM Plex Sans',sans-serif;color:var(--navy)}
 @media (max-width:900px){.aud{grid-template-columns:1fr}}
+
+/* Small screens: one column everywhere, tighter type. Declared last so it wins over the desktop rules above. */
+@media (max-width:900px){
+  .wrap{padding:0 20px}
+  nav.top{gap:14px;padding:16px 0} nav.top .links a.btn{padding:7px 11px;font-size:13px;white-space:nowrap}
+  header.hero{padding:36px 0 0}
+  .hero2{grid-template-columns:1fr;gap:18px;align-items:start;margin-bottom:28px}
+  h1{font-size:40px;line-height:1.08;margin:0 0 6px} .kicker{margin-bottom:10px}
+  .hero2 .lede{font-size:16.5px;margin:0 0 16px} .ctas .btn{padding:10px 16px;font-size:14.5px}
+  section{padding:40px 0} h2{font-size:24px}
+  .split{gap:22px} .split .transcript{margin-top:0 !important}
+  .evidence{grid-template-columns:1fr 1fr;margin-top:26px}
+  .evidence div{padding:14px 12px 14px 0;border-bottom:1px solid var(--line)} .evidence div+div{border-left:none;padding-left:0}
+  .evidence div:nth-child(even){border-left:1px solid var(--line);padding-left:12px}
+  .evidence div:nth-child(n+3){border-bottom:none}
+  .caption{font-size:13.5px}
+  /* the audit-trail screenshot and the ledger keep a readable width and pan sideways instead of shrinking to a smear */
+  .frame{overflow-x:auto;-webkit-overflow-scrolling:touch} .frame img{width:760px;max-width:none}
+  .frame .bar span::after{content:" · scroll →";color:var(--muted)}
+  .trail table{min-width:720px} .trail .why{white-space:nowrap}
+  .limits{grid-template-columns:1fr} .limits div{padding:14px 0 !important;border-left:none !important;border-bottom:1px solid var(--line)}
+  .builders{padding:26px 22px;gap:22px}
+  footer{gap:12px} footer .mark{width:100%}
+}
 </style>
 </head>
 <body>
@@ -267,7 +291,7 @@ h1{font-size:64px}
     </div>
     <p style="font-size:13.5px;color:var(--muted);margin-top:10px">Violet is Claude. Navy is a person. One history.</p>
     <video controls playsinline preload="metadata" poster="/card.png" style="width:100%;border:1px solid var(--line);border-radius:var(--r);display:block;margin:26px 0 8px"><source src="/walkthrough.mp4" type="video/mp4"></video>
-    <p style="font-size:13.5px;color:var(--muted)">Two minutes, recorded from the live demo: a rule teaching, form by form. <a href="/app?demo=1#spec">Walk it yourself →</a></p>
+    <p style="font-size:13.5px;color:var(--muted)">Recorded from the live demo: a rule teaching, form by form. <a href="/app?demo=1#spec">Walk it yourself →</a></p>
   </section>
 
   <section>
