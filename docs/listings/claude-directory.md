@@ -55,7 +55,7 @@ Enterprise org, submitted by an Owner). Character limits are the portal's. Paste
 **Documentation URL**: https://saybooks.io/docs
 **Privacy policy URL**: https://saybooks.io/privacy
 **Support contact**: hello@saybooks.io  (confirm the mailbox receives mail before submitting)
-**Icon**: `icon/saybooks-512.png` (also 1024 in the same directory)
+**Icon URL**: https://saybooks.io/icon-512.png (also https://saybooks.io/icon-1024.png)
 **Slug**: `saybooks` (permanent once published)
 
 ## Use cases
