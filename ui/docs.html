@@ -35,13 +35,14 @@ footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-si
   <h2 id="connect">Connect Claude</h2>
   <ol>
     <li><b>Sign in with Google</b> at <a href="/app">saybooks.io/app</a>. You get your own private space. Nothing to install.</li>
-    <li><b>Mint a key.</b> In the sidebar, open <b>Share this space…</b>. In the second row, type a name for your agent (<i>claude</i> works), leave the role on <b>controller</b>, press <b>Mint key</b>, and copy the connector URL that appears. It looks like <code>https://saybooks.io/mcp/m-…</code></li>
-    <li><b>Add it to Claude.</b> In the Claude app: <b>Customize → Connectors → Add</b>. Name it after your books, paste the URL, continue.
-      <div class="mock"><div class="mocklabel">Name</div><div class="mockfield">invoices</div><div class="mocklabel" style="margin-top:8px">Remote MCP server URL</div><div class="mockfield">https://saybooks.io/mcp/m-4f9c21…</div></div></li>
+    <li><b>Add Saybooks to Claude.</b> In the Claude app: <b>Customize → Connectors → Add</b> (<a href="https://claude.ai/customize/connectors">claude.ai/customize/connectors</a>). Name it, paste the address, Continue.
+      <div class="mock"><div class="mocklabel">Name</div><div class="mockfield">books</div><div class="mocklabel" style="margin-top:8px">Remote MCP server URL</div><div class="mockfield">https://saybooks.io/mcp</div></div></li>
+    <li><b>Sign in and choose.</b> Claude sends you to Google, then to a Saybooks page that asks which of your books to open, what the agent may do (controller by default), and the name it gets in the audit log. Allow, and Claude reports the connector as connected. Every action it takes from then on is logged under that name.</li>
     <li><b>Start a new chat</b> with the connector on and say what happened.</li>
   </ol>
-  <p><b>Claude Code</b> instead of the app: <code>claude mcp add -t http books &lt;your connector URL&gt;</code>. Any other MCP client works the same way; the endpoint speaks streamable HTTP.</p>
-  <div class="note"><b>The link is the key.</b> Whoever holds a connector URL acts as your delegate with that key's role. Treat it like a password. Revoke it from the same dialog any time; a revoked key stops working immediately and stays in the audit log as history.</div>
+  <p><b>Claude Code:</b> <code>claude mcp add books -t http https://saybooks.io/mcp</code>, then <code>/mcp</code> in a session to sign in. Any client that speaks MCP over streamable HTTP with OAuth works the same way; the endpoint publishes its discovery metadata and accepts both dynamic registration and metadata-document client ids.</p>
+  <h3>Keys instead of sign-in</h3>
+  <p>A script, a second agent, or a client without OAuth can use a key directly. In the sidebar open <b>Share this space…</b>, type a name for the agent, pick its role, press <b>Mint key</b>, and use the URL that appears: <code>https://saybooks.io/mcp/m-…</code>. The link is the key: whoever holds it acts as your delegate with that role. Revoke it from the same dialog; the connection made through sign-in above is a key of exactly this kind, minted for you at consent, and shows up in the same list.</p>
   <div class="note"><b>After an update, remove and re-add the connector.</b> Claude caches a connector's tool list when it is added. If Saybooks gains a command and your Claude cannot see it, or a tool has fewer arguments than the schema says, that is the cache: remove the connector, add it again, start a new chat.</div>
 
   <h2 id="talk">Talking to it</h2>

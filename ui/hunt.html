@@ -86,22 +86,16 @@
   <h2>How it works with Claude — three steps</h2>
 
   <div class="step"><div class="n">1</div><div>
-    <b>Sign in above, then mint a key for your agent.</b>
-    <p>Your space opens with a <b>Share this space…</b> button in the sidebar. In its second row, type a
-    name for your agent (<i>claude</i> works), leave the role on <b>controller</b>, press <b>Mint key</b>,
-    and copy the link that appears. The link <i>is</i> the key — treat it like a password; revoke it there any time.</p>
-    <div class="mock">
-      <div class="mockrow"><span class="mockfield">claude</span><span class="mocksel">controller ▾</span><span class="mockbtn">Mint key</span></div>
-      <div class="mockout">claude · controller · <b>https://saybooks.io/mcp/m-4f9c21…</b> &nbsp;<span style="color:hsl(215 15% 46%)">← copy this</span></div>
-    </div>
+    <b>Sign in above.</b>
+    <p>You get your own private space for the hunt. Nothing to install.</p>
   </div></div>
 
   <div class="step"><div class="n">2</div><div>
-    <b>Add it to Claude as a connector.</b>
-    <p>In the Claude app: <b>Customize → Connectors → Add</b> (or open <a href="https://claude.ai/customize/connectors" style="color:inherit">claude.ai/customize/connectors</a>) — then Continue.</p>
+    <b>Add Saybooks to Claude as a connector.</b>
+    <p>In the Claude app: <b>Customize → Connectors → Add</b> (or open <a href="https://claude.ai/customize/connectors" style="color:inherit">claude.ai/customize/connectors</a>), paste the address below, Continue. Claude sends you to sign in with Google and asks which books to open and what the agent may do — pick your hunt, leave <b>controller</b>, and you're connected. Revoke it any time under <b>Share this space…</b>.</p>
     <div class="mock dark">
       <div class="mocklabel">Name</div><div class="mockfield dark">hunt</div>
-      <div class="mocklabel" style="margin-top:8px">Remote MCP server URL</div><div class="mockfield dark">https://saybooks.io/mcp/m-4f9c21…</div>
+      <div class="mocklabel" style="margin-top:8px">Remote MCP server URL</div><div class="mockfield dark">https://saybooks.io/mcp</div>
     </div>
   </div></div>
 
@@ -110,7 +104,7 @@
     <div class="log" style="white-space:pre-wrap;font-size:13px;color:#CFEDE6;margin:0.8em 0">You're my job-hunt assistant, connected to my Saybooks hunt space through the "hunt" connector. Call core_schema first to learn the rules. Then log the posting below: evaluate the fit, run the duplicate check, and give me one next action with a due date.</div>
     <p>From then on, just talk: <i>"the recruiter called, interview Thursday"</i> · <i>"TCS ghosted me"</i> ·
     <i>"what's due today?"</i> Everything it records shows up in your browser too — same data, same rules,
-    one audit trail. Works with any MCP-capable agent (Claude Code: <code>claude mcp add hunt -t http &lt;your link&gt;</code>).</p>
+    one audit trail. Works with any MCP-capable agent (Claude Code: <code>claude mcp add hunt -t http https://saybooks.io/mcp</code>, then <code>/mcp</code> to sign in).</p>
   </div></div>
 
   <div class="yours">
