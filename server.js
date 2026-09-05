@@ -200,6 +200,28 @@ const server = http.createServer(async (req, res) => {
     if (p === '/auth/google') return auth.loginRedirect(res, url.searchParams.get('next'), url.searchParams.get('ws'));
     // The public pages ask this to greet a signed-in person instead of offering them a demo. No
     // workspace is touched and nothing is minted; a stranger gets { user: null }.
+    // Search engines: the public pages, the docs, and every spec page. Nothing private: the
+    // workbench, the API, document links, the MCP endpoint and the OAuth door are excluded.
+    if (req.method === 'GET' && (p === '/sitemap.xml' || p === '/robots.txt')) {
+      const origin = PUBLIC_FALLBACK();
+      if (p === '/robots.txt') {
+        return send(res, 200, `User-agent: *\nAllow: /\nDisallow: /app\nDisallow: /api/\nDisallow: /doc/\nDisallow: /mcp\nDisallow: /oauth/\nDisallow: /authorize\nDisallow: /token\nDisallow: /register\nDisallow: /admin\n\nSitemap: ${origin}/sitemap.xml\n`, 'text/plain; charset=utf-8');
+      }
+      const areas = fs.readdirSync(path.join(__dirname, 'specs')).filter(a => fs.existsSync(path.join(__dirname, 'specs', a, 'spec.md'))).sort();
+      const mtime = (f) => { try { return fs.statSync(f).mtime.toISOString().slice(0, 10); } catch { return new Date().toISOString().slice(0, 10); } };
+      const pages = [
+        ['/', mtime(path.join(UI, 'landing.html')), 'weekly', '1.0'],
+        ['/solo', mtime(path.join(UI, 'solo.html')), 'weekly', '0.9'],
+        ['/hunt', mtime(path.join(UI, 'hunt.html')), 'weekly', '0.9'],
+        ['/docs', mtime(path.join(UI, 'docs.html')), 'weekly', '0.8'],
+        ['/specs', mtime(path.join(__dirname, 'specs')), 'weekly', '0.8'],
+        ...areas.map(a => [`/specs/${a}`, mtime(path.join(__dirname, 'specs', a, 'spec.md')), 'weekly', '0.7']),
+        ['/privacy', mtime(path.join(UI, 'privacy.html')), 'monthly', '0.3'],
+      ];
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+        pages.map(([u, d, f, pr]) => `  <url><loc>${origin}${u}</loc><lastmod>${d}</lastmod><changefreq>${f}</changefreq><priority>${pr}</priority></url>`).join('\n') + `\n</urlset>\n`;
+      return send(res, 200, xml, 'application/xml; charset=utf-8');
+    }
     if (req.method === 'GET' && p === '/api/whoami') {
       const u = DEMO && auth.enabled() && auth.sessionUser(req);
       if (!u) return send(res, 200, { user: null }, 'application/json; charset=utf-8', { 'cache-control': 'no-store' });
