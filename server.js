@@ -487,7 +487,12 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'GET' && p === '/api/next-actions') {
       return wsp.use(ws, () => {
-        try { return send(res, 200, R.nextActions(url.searchParams.get('type'), url.searchParams.get('id'), member.role)); }
+        try {
+          const na = R.nextActions(url.searchParams.get('type'), url.searchParams.get('id'), member.role);
+          const m = mountsFor(ws);   // a solo space never offers an o2c button it cannot run
+          if (m) na.actions = na.actions.filter(a => !R.byName[a.command] || m.includes(R.byName[a.command].module));
+          return send(res, 200, na);
+        }
         catch (e) { return send(res, 400, { error: e.message }); }
       });
     }

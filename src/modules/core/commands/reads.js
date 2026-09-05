@@ -320,6 +320,13 @@ of record stays wherever it is.`,
 });
 
 read({
+  name: 'core_get_customer', title: 'Customer', subject: 'customer',
+  summary: 'One customer as master data: contact facts, billing address, tax id, terms, hold state. (o2c adds the live credit position in o2c_get_customer.)',
+  args: { customer_id: { ...f.ref('customer', 'The customer.'), required: true } },
+  handler: (a) => { const c = H.need('customer', a.customer_id, 'customer'); return { ...c, credit_limit_display: H.money(c.credit_limit), on_hold: !!c.on_hold }; },
+});
+
+read({
   name: 'core_company_profile',
   title: 'Company profile', summary: "The business's own identity as it prints on documents: seller block, tax id, payment instructions.",
   args: {},

@@ -299,7 +299,7 @@ async function detail(type, id) {
   const wrap = $('<div></div>');
   const idArg = type === 'solo_invoice' ? 'invoice_id' : type + '_id';
   const [entity, na] = await Promise.all([
-    api({ order:'o2c_get_order', customer:'o2c_get_customer', invoice:'o2c_get_invoice', account:'crm_get_account', campaign:'crm_get_campaign', posting:'hunt_get_posting', contact:'hunt_get_contact', resume:'hunt_get_resume', solo_invoice:'solo_get_invoice' }[type],
+    api({ order:'o2c_get_order', customer: cmd('o2c_get_customer') ? 'o2c_get_customer' : 'core_get_customer', invoice:'o2c_get_invoice', account:'crm_get_account', campaign:'crm_get_campaign', posting:'hunt_get_posting', contact:'hunt_get_contact', resume:'hunt_get_resume', solo_invoice:'solo_get_invoice' }[type],
         { [idArg]: id }),
     fetch(wsUrl(`/api/next-actions?type=${type}&id=${id}`)).then(r => r.json()),
   ]);
@@ -309,7 +309,9 @@ async function detail(type, id) {
   const facts = type === 'order'
     ? { Customer: entity.customer_name, PO: entity.po_ref||'—', Total: entity.total_display, 'Open qty': entity.open_qty, 'Uninvoiced qty': entity.uninvoiced_qty, Quote: entity.quote_id||'—' }
     : type === 'customer'
-    ? { Terms: entity.terms, 'Credit limit': entity.credit_limit_display, 'Open AR': entity.open_balance_display, Committed: entity.committed_display, Available: entity.credit_available_display }
+    ? { Email: entity.email || '—', 'Billing address': entity.address ? String(entity.address).replace(/\n/g, '<br>') : '— (needed before an invoice can be issued)', 'Tax id': entity.tax_id || '—', Terms: entity.terms,
+        ...(entity.credit_available_display !== undefined ? { 'Credit limit': entity.credit_limit_display, 'Open AR': entity.open_balance_display, Committed: entity.committed_display, Available: entity.credit_available_display } : {}),
+        ...(entity.on_hold ? { Hold: 'on hold' } : {}) }
     : type === 'account'
     ? { Campaign: entity.campaign_name ?? '—', Tier: entity.tier ?? '—', Vertical: entity.vertical ?? '—', Trigger: entity.trigger_event ?? '—', Customer: entity.customer_id ?? '— (not promoted)', 'Open gaps': entity.gap_count, Reason: entity.status_reason ?? '—' }
     : type === 'posting'
@@ -990,10 +992,12 @@ async function render() {
   if (view === 'soloclients') {
     head('Clients', 'Terms live in your agreement with each client — recorded here, never enforced.');
     const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('customer').forEach(b => bar.append(b)); main.append(bar);
-    const rows = (REG.lookups && REG.lookups.customer) || [];
-    if (!rows.length) { main.append($('<div class="card doc" style="max-width:560px">No clients yet — add one here, or just tell your agent about them.</div>')); return; }
-    const t = $('<table><thead><tr><th>Client</th><th>Name</th></tr></thead><tbody></tbody></table>');
-    rowsInto(t, rows.map(r => ({ id: r.id, name: r.label })), r => `<td>${r.id}</td><td>${r.name}</td>`, 'nolink');
+    const ids = (REG.lookups && REG.lookups.customer) || [];
+    if (!ids.length) { main.append($('<div class="card doc" style="max-width:560px">No clients yet — add one here, or just tell your agent about them.</div>')); return; }
+    const rows = await Promise.all(ids.map(c => api('core_get_customer', { customer_id: c.id })));
+    const t = $('<table><thead><tr><th>Client</th><th>Name</th><th>Email</th><th>Billing address</th><th>Terms</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, rows, r => `<td>${r.id}</td><td>${r.name}</td><td>${r.email || ''}</td><td>${r.address ? String(r.address).split('\n')[0] : '<span style="color:var(--warn)">missing</span>'}</td><td>${r.terms}</td>`, 'customer');
+    main.append($('<p class="sub" style="margin-top:10px">Click a client to see everything and edit it. An invoice cannot be issued to a client without a billing address.</p>'));
   }
   if (view === 'journal') {
     head('Journal', 'Double-entry lines derived from the books — nothing posted, nothing stored (INV-23). Export for the ledger of record.');
