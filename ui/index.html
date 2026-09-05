@@ -689,8 +689,7 @@ function invoiceDoc(inv) {
     </table>
     ${inv.payment_instructions ? `<div class="pay"><b>How to pay</b><br>${nl(inv.payment_instructions)}</div>` : ''}
     ${s && s.footer_note ? `<div class="foot">${nl(s.footer_note)}</div>` : ''}
-  <script>(function(){try{if(/(?:^|; )sb_src=/.test(document.cookie))return;var q=new URLSearchParams(location.search);var r='';try{r=document.referrer?new URL(document.referrer).host:''}catch(e){}if(r===location.host)r='';var v={r:r,p:location.pathname+(location.search?location.search.slice(0,80):''),s:q.get('utm_source')||'',m:q.get('utm_medium')||'',c:q.get('utm_campaign')||'',t:new Date().toISOString().slice(0,10)};document.cookie='sb_src='+encodeURIComponent(JSON.stringify(v))+'; Path=/; Max-Age=2592000; SameSite=Lax'}catch(e){}})();</script>
-</body></html>`);
+  </body></html>`);
   w.document.close();
 }
 
@@ -1470,3 +1469,4 @@ document.querySelectorAll('nav .grp').forEach(g => {
 if (['spec','doctrine','audit'].includes(location.hash.slice(1))) view = location.hash.slice(1);
 boot().then(render);
 </script>
+<script>(function(){try{if(/(?:^|; )sb_src=/.test(document.cookie))return;var q=new URLSearchParams(location.search);var r='';try{r=document.referrer?new URL(document.referrer).host:''}catch(e){}if(r===location.host)r='';var v={r:r,p:location.pathname+(location.search?location.search.slice(0,80):''),s:q.get('utm_source')||'',m:q.get('utm_medium')||'',c:q.get('utm_campaign')||'',t:new Date().toISOString().slice(0,10)};document.cookie='sb_src='+encodeURIComponent(JSON.stringify(v))+'; Path=/; Max-Age=2592000; SameSite=Lax'}catch(e){}})();</script>
