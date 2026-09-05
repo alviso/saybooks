@@ -18,6 +18,8 @@ const wsp = require('./src/workspace.js');
 const BASE = require('./src/base-doctrine.js');
 const H = require('./src/db.js');
 const CFG = require('./src/config.js');
+const oauth = require('./src/oauth.js');
+const PUBLIC_FALLBACK = () => CFG.publicUrl || `http://127.0.0.1:${PORT}`;
 const members = require('./src/members.js');
 const users = require('./src/users.js');
 const auth = require('./src/auth.js');
@@ -65,6 +67,7 @@ if (DEMO) {
   // (A sandbox is a few hundred KB; the cap protects against runaway scripts, not visitors —
   // 400 proved too tight the day the first X thread landed.)
   const sweep = () => {
+    try { oauth.sweep(); } catch { /* users store not born yet */ }
     try {
       const tries = wsp.list().filter(w => w.startsWith('try-') && !users.isOwnedSpace(w))
         .map(w => ({ w, at: wsp.ageOf(w) })).sort((a, b) => b.at - a.at);
@@ -195,6 +198,18 @@ const server = http.createServer(async (req, res) => {
   // Google sign-in (hosted demo only; a local workbench has no auth and needs none).
   if (DEMO && auth.enabled()) {
     if (p === '/auth/google') return auth.loginRedirect(res, url.searchParams.get('next'), url.searchParams.get('ws'));
+    // OAuth 2.0 front door (authorization server metadata, registration, authorize, token, revoke).
+    if (DEMO && auth.enabled() && oauth.handles(p)) return oauth.handle(req, res, PUBLIC_FALLBACK());
+    if (DEMO && auth.enabled() && p === '/oauth/consent') {
+      const u = auth.sessionUser(req);
+      if (!u) return auth.loginRedirect(res, null, null, `/oauth/consent?pend=${url.searchParams.get('pend') || ''}`);
+      if (req.method === 'GET') return oauth.consentGet(req, res, url, u);
+      if (req.method === 'POST') {
+        let raw = ''; req.on('data', c => { raw += c; if (raw.length > 1e5) req.destroy(); });
+        req.on('end', () => { try { oauth.consentPost(req, res, Object.fromEntries(new URLSearchParams(raw)), u); } catch (e) { send(res, 500, { error: e.message }); } });
+        return undefined;
+      }
+    }
     if (p === '/auth/google/callback') { auth.callback(req, res, url).catch(e => { console.error('[auth]', e); if (!res.headersSent) send(res, 500, { error: 'login failed' }); }); return undefined; }
     if (p === '/auth/logout') return auth.logout(req, res);
   }
@@ -206,7 +221,19 @@ const server = http.createServer(async (req, res) => {
   if (mcpMatch) {
     let mws = mcpMatch[1] || (DEMO ? null : 'main');
     let mMember = { name: 'owner', role: 'owner' };
-    if (DEMO) {
+    // The bare /mcp is the OAuth-protected resource: a bearer token resolves to a member key.
+    // Without one, answer 401 with the pointer a client needs to start the flow.
+    let bearer = null;
+    if (DEMO && !mcpMatch[1]) {
+      bearer = await oauth.memberForBearer(req);
+      if (!bearer) {
+        res.writeHead(401, { 'content-type': 'application/json; charset=utf-8', 'www-authenticate': `Bearer resource_metadata="${PUBLIC_FALLBACK()}/.well-known/oauth-protected-resource/mcp"` });
+        return res.end(JSON.stringify({ error: 'unauthorized', hint: 'connect with OAuth (this endpoint) or use a key URL /mcp/<key> — see https://saybooks.io/docs#connect' }));
+      }
+      if (!sandboxExists(bearer.workspace)) return send(res, 404, { error: 'that space no longer exists' });
+      mws = bearer.workspace; mMember = bearer;
+    }
+    if (DEMO && !bearer) {
       const tok = mws && members.resolve(mws);
       if (tok && sandboxExists(tok.workspace)) { mws = tok.workspace; mMember = tok; }
       else if (mws && /^try-[a-z0-9]{6,24}$/.test(mws)) {

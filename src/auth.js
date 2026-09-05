@@ -17,18 +17,20 @@ const enabled = () => !!(CLIENT_ID && CLIENT_SECRET);
 
 const REDIRECT = 'https://saybooks.io/auth/google/callback';
 
-function loginRedirect(res, next, returnWs) {
+function loginRedirect(res, next, returnWs, returnTo) {
   const state = crypto.randomBytes(12).toString('hex');
   // Intent rides in the state COOKIE, not the URL — the callback trusts only what we set.
   // A private link (?ws=) opened signed-out rides along the same way and is honoured only if
   // the user who comes back is a member of that space.
   const intent = ['hunt', 'solo'].includes(next) ? ':' + next : '';
   const back = returnWs && /^[a-z0-9-]{4,40}$/.test(returnWs) && !/^try-/.test(returnWs) ? ':ws-' + returnWs : '';
+  // A relative path to come back to (the OAuth consent page). Only our own paths, base64url so the cookie stays one token.
+  const rt = !back && returnTo && /^\/oauth\/consent\?pend=[a-f0-9]+$/.test(returnTo) ? ':rt-' + Buffer.from(returnTo).toString('base64url') : '';
   const url = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
     client_id: CLIENT_ID, redirect_uri: REDIRECT, response_type: 'code',
     scope: 'openid email profile', state, prompt: 'select_account',
   });
-  res.writeHead(302, { location: url, 'set-cookie': `sb_oauth=${state}${intent}${back}; Path=/; Max-Age=600; HttpOnly; Secure; SameSite=Lax` });
+  res.writeHead(302, { location: url, 'set-cookie': `sb_oauth=${state}${intent}${back}${rt}; Path=/; Max-Age=600; HttpOnly; Secure; SameSite=Lax` });
   res.end();
 }
 
@@ -39,7 +41,7 @@ const post = (url, form) => fetch(url, {
 async function callback(req, res, url) {
   const state = url.searchParams.get('state');
   const code = url.searchParams.get('code');
-  const [, cookieState, intent, returnWs] = /(?:^|;\s*)sb_oauth=([a-f0-9]+)(?::(hunt|solo))?(?::ws-([a-z0-9-]+))?/.exec(req.headers.cookie || '') || [];
+  const [, cookieState, intent, returnWs, returnTo] = /(?:^|;\s*)sb_oauth=([a-f0-9]+)(?::(hunt|solo))?(?::ws-([a-z0-9-]+))?(?::rt-([A-Za-z0-9_-]+))?/.exec(req.headers.cookie || '') || [];
   const fail = (why) => { res.writeHead(302, { location: '/?login=failed' }); res.end(); console.error('[auth]', why); };
   if (!code || !state || state !== cookieState) return fail('state mismatch or missing code');
 
@@ -83,6 +85,7 @@ async function callback(req, res, url) {
 
   // Back to the private link they came in on — if, and only if, they are a member of it.
   if (returnWs) landing = users.roleFor(user.id, returnWs) ? '/app?ws=' + returnWs : '/app?notmember=' + returnWs;
+  if (returnTo) { const back = Buffer.from(returnTo, 'base64url').toString('utf8'); if (/^\/oauth\/consent\?pend=[a-f0-9]+$/.test(back)) landing = back; }
 
   const sess = users.createSession(user.id);
   res.writeHead(302, { location: landing, 'set-cookie': [

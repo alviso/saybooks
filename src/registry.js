@@ -179,10 +179,15 @@ const inMount = (c, modules) => !modules || modules.includes(c.module);
 
 /** Pass {modules: ['core','o2c']} to mount a subset — a finance reviewer's session gets
  *  GL + AR only. Tool-count discipline is per session, not per deployment. */
+const DESTRUCTIVE = /_(void|cancel|delete|reset|revoke|write_off|refund)_?|_void$|_cancel$/;
 const mcpTools = (opts = {}) => COMMANDS.filter(c => inMount(c, opts.modules)).map(c => ({
   name: c.name,
+  title: c.title || c.name,
   description: description(c),
   inputSchema: { type: 'object', properties: strip(c.args), required: [...c.required], additionalProperties: false },
+  // Hints for clients and directories: reads are safe to call freely; the few acts that end
+  // something are flagged; nothing here reaches outside the books (no email, no money).
+  annotations: { title: c.title || c.name, readOnlyHint: c.intent === 'read', destructiveHint: c.intent !== 'read' && DESTRUCTIVE.test(c.name), idempotentHint: c.intent === 'read', openWorldHint: false },
 }));
 
 /** Server instructions compose from the base doctrine plus each mounted module's. */
