@@ -22,6 +22,7 @@ table{border-collapse:collapse;width:100%;font-size:14px;background:#fff;border:
 .note{border-left:3px solid var(--agent);padding:4px 0 4px 14px;font-size:14.5px;margin:1em 0} .refusal{border-left:3px solid var(--refuse);padding:4px 0 4px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:hsl(0 60% 28%);margin:1em 0}
 footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)} footer a{color:var(--mid)}
 table.plain{border-collapse:collapse;width:100%;font-size:14px;margin:0 0 1em} table.plain td{padding:6px 10px 6px 0;border-bottom:1px solid var(--line);vertical-align:top;color:var(--mid)} table.plain td:first-child{white-space:nowrap}
+.mocktabs{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px;font-size:12px;color:#9aa0a6} .mocktabs span{margin-right:4px} .mocktabs button{font:500 12px 'IBM Plex Sans',sans-serif;background:transparent;color:#c9ccd1;border:1px solid #3a3e45;border-radius:6px;padding:3px 9px;cursor:pointer} .mocktabs button.on{background:#e8eaed;color:#23262b;border-color:#e8eaed}
 </style>
 </head>
 <body>
@@ -37,7 +38,9 @@ table.plain{border-collapse:collapse;width:100%;font-size:14px;margin:0 0 1em} t
   <ol>
     <li><b>Sign in with Google</b> at <a href="/app">saybooks.io/app</a>. You get your own private space. Nothing to install.</li>
     <li><b>Add Saybooks to Claude.</b> In the Claude app: <b>Customize → Connectors → Add</b> (<a href="https://claude.ai/customize/connectors">claude.ai/customize/connectors</a>). Name it, paste the address, Continue.
-      <div class="mock"><div class="mocklabel">Name</div><div class="mockfield">books</div><div class="mocklabel" style="margin-top:8px">Remote MCP server URL</div><div class="mockfield">https://saybooks.io/mcp</div></div></li>
+      <div class="mock"><div class="mocktabs"><span>Which books?</span><button type="button" class="on" data-name="invoices" data-url="https://saybooks.io/mcp/invoices">Invoicing</button><button type="button" data-name="hunt" data-url="https://saybooks.io/mcp/hunt">Job hunt</button><button type="button" data-name="books" data-url="https://saybooks.io/mcp/books">Order to cash</button><button type="button" data-name="books" data-url="https://saybooks.io/mcp">Any</button></div>
+        <div class="mocklabel">Name</div><div class="mockfield" id="mockName">invoices</div><div class="mocklabel" style="margin-top:8px">Remote MCP server URL</div><div class="mockfield" id="mockUrl">https://saybooks.io/mcp/invoices</div></div>
+      <script>(function(){var t=document.querySelector('.mocktabs');t.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;t.querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x===b)});document.getElementById('mockName').textContent=b.dataset.name;document.getElementById('mockUrl').textContent=b.dataset.url;});})();</script></li>
     <li><b>Sign in and choose.</b> Claude sends you to Google, then to a Saybooks page that asks which of your books to open, what the agent may do (controller by default), and the name it gets in the audit log. Allow, and Claude reports the connector as connected. Every action it takes from then on is logged under that name.</li>
     <li><b>Start a new chat</b> with the connector on and say what happened.</li>
   </ol>
