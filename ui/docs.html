@@ -21,6 +21,7 @@ code{font-family:'IBM Plex Mono',monospace;font-size:.88em;background:var(--tint
 table{border-collapse:collapse;width:100%;font-size:14px;background:#fff;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:0 0 1.2em} th{text-align:left;font:600 11px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:9px 12px;border-bottom:1px solid var(--line);background:var(--tint)} td{padding:9px 12px;border-bottom:1px solid hsl(215 25% 93%);vertical-align:top;color:var(--mid)} tr:last-child td{border-bottom:none}
 .note{border-left:3px solid var(--agent);padding:4px 0 4px 14px;font-size:14.5px;margin:1em 0} .refusal{border-left:3px solid var(--refuse);padding:4px 0 4px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:hsl(0 60% 28%);margin:1em 0}
 footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)} footer a{color:var(--mid)}
+table.plain{border-collapse:collapse;width:100%;font-size:14px;margin:0 0 1em} table.plain td{padding:6px 10px 6px 0;border-bottom:1px solid var(--line);vertical-align:top;color:var(--mid)} table.plain td:first-child{white-space:nowrap}
 </style>
 </head>
 <body>
@@ -41,6 +42,16 @@ footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-si
     <li><b>Start a new chat</b> with the connector on and say what happened.</li>
   </ol>
   <p><b>Claude Code:</b> <code>claude mcp add books -t http https://saybooks.io/mcp</code>, then <code>/mcp</code> in a session to sign in. Any client that speaks MCP over streamable HTTP with OAuth works the same way; the endpoint publishes its discovery metadata and accepts both dynamic registration and metadata-document client ids.</p>
+  <h3>One address per kind of books</h3>
+  <p>Claude allows one connector per address, and one Saybooks connection opens one space. So each kind of books has an address of its own, and you can hold several connectors side by side, say invoices and a job hunt:</p>
+  <table class="plain"><tbody>
+    <tr><td><code>https://saybooks.io/mcp</code></td><td>any of your spaces; consent asks which</td></tr>
+    <tr><td><code>https://saybooks.io/mcp/invoices</code></td><td>your invoicing spaces only</td></tr>
+    <tr><td><code>https://saybooks.io/mcp/hunt</code></td><td>your job-hunt spaces only</td></tr>
+    <tr><td><code>https://saybooks.io/mcp/books</code></td><td>your full order-to-cash spaces only</td></tr>
+    <tr><td><code>https://saybooks.io/mcp/s/&lt;space id&gt;</code></td><td>exactly that space, for two of the same kind; the id is the <code>ws=</code> part of the space's URL</td></tr>
+  </tbody></table>
+  <p>Each one signs in the same way and mints the same kind of key; the address only decides which spaces consent offers.</p>
   <h3>Keys instead of sign-in</h3>
   <p>A script, a second agent, or a client without OAuth can use a key directly. In the sidebar open <b>Share this space…</b>, type a name for the agent, pick its role, press <b>Mint key</b>, and use the URL that appears: <code>https://saybooks.io/mcp/m-…</code>. The link is the key: whoever holds it acts as your delegate with that role. Revoke it from the same dialog; the connection made through sign-in above is a key of exactly this kind, minted for you at consent, and shows up in the same list.</p>
   <div class="note"><b>After an update, remove and re-add the connector.</b> Claude caches a connector's tool list when it is added. If Saybooks gains a command and your Claude cannot see it, or a tool has fewer arguments than the schema says, that is the cache: remove the connector, add it again, start a new chat.</div>

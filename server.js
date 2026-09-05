@@ -247,17 +247,19 @@ const server = http.createServer(async (req, res) => {
   // Hosted MCP: /mcp/<workspace>. The workspace is the URL — no cookie, no session store.
   // In demo mode only try-* names are addressable, and an unknown one is seeded on first
   // contact so an agent can arrive before a browser ever has.
-  const mcpMatch = /^\/mcp(?:\/([a-z0-9][a-z0-9_-]{0,40}))?$/.exec(p);
+  const mcpMatch = /^\/mcp(?:\/(s\/[a-z0-9][a-z0-9-]{3,40}|[a-z0-9][a-z0-9_-]{0,40}))?\/?$/.exec(p);
   if (mcpMatch) {
     let mws = mcpMatch[1] || (DEMO ? null : 'main');
     let mMember = { name: 'owner', role: 'owner' };
-    // The bare /mcp is the OAuth-protected resource: a bearer token resolves to a member key.
-    // Without one, answer 401 with the pointer a client needs to start the flow.
+    // The bare /mcp and its doors (/mcp/invoices, /mcp/hunt, /mcp/books, /mcp/s/<space>) are
+    // OAuth-protected resources: a bearer token resolves to a member key. Without one, answer
+    // 401 with the pointer a client needs to start the flow. Keys and sandboxes stay path-addressed.
     let bearer = null;
-    if (DEMO && !mcpMatch[1]) {
+    const isDoor = DEMO && oauth.isResourcePath(p);
+    if (isDoor) {
       bearer = await oauth.memberForBearer(req);
       if (!bearer) {
-        res.writeHead(401, { 'content-type': 'application/json; charset=utf-8', 'www-authenticate': `Bearer resource_metadata="${PUBLIC_FALLBACK()}/.well-known/oauth-protected-resource/mcp"` });
+        res.writeHead(401, { 'content-type': 'application/json; charset=utf-8', 'www-authenticate': `Bearer resource_metadata="${PUBLIC_FALLBACK()}/.well-known/oauth-protected-resource${p.replace(/\/$/, '')}"` });
         return res.end(JSON.stringify({ error: 'unauthorized', hint: 'connect with OAuth (this endpoint) or use a key URL /mcp/<key> — see https://saybooks.io/docs#connect' }));
       }
       if (!sandboxExists(bearer.workspace)) return send(res, 404, { error: 'that space no longer exists' });

@@ -164,6 +164,24 @@ async function memberForBearer(req) {
   catch { return null; }
 }
 
+// ---------------------------------------------------------------- resources: one address per kind of books
+// Claude allows one connector per URL per organization, and one of our connections opens one
+// space. So each kind of books gets an address of its own, and any single space can have one
+// too. The path decides what consent may offer; the token is still bound to one space.
+const KINDS = { invoices: 'solo', hunt: 'hunt', books: null };
+const RESOURCE_RE = /^\/mcp(?:\/(invoices|hunt|books)|\/s\/([a-z0-9][a-z0-9-]{3,40}))?\/?$/;
+/** Parse a resource path (or full URL) into a filter: { kind } | { ws } | {} for the general door; null if not ours. */
+function resourceFilter(resource) {
+  if (!resource) return {};
+  let p = resource; try { p = new URL(resource).pathname; } catch { /* a bare path */ }
+  const m = RESOURCE_RE.exec(p); if (!m) return null;
+  if (m[1]) return { kind: KINDS[m[1]], label: m[1] };
+  if (m[2]) return { ws: m[2] };
+  return {};
+}
+const isResourcePath = (p) => RESOURCE_RE.test(p);
+const spaceMatches = (s, f) => !f ? true : f.ws ? s.ws === f.ws : ('kind' in f) ? ((s.kind || null) === f.kind) : true;
+
 // ---------------------------------------------------------------- consent page (ours)
 const PAGE = (title, body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} — Saybooks</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"><style>
@@ -176,16 +194,22 @@ button.primary{background:hsl(215 60% 22%);color:#fff;border-color:hsl(215 60% 2
 .who{background:#fff;border:1px solid hsl(215 25% 88%);border-radius:8px;padding:12px 14px;font-size:14.5px;margin-bottom:6px} .who b{display:block;font-size:16px}
 </style></head><body><div class="wrap"><div class="mark">SAYBOOKS</div>${body}</div></body></html>`;
 
-function consentGet(req, res, url, user) {
+async function consentGet(req, res, url, user) {
   const pend = db().prepare('SELECT * FROM oauth_pending WHERE id = ?').get(url.searchParams.get('pend') || '');
   if (!pend || pend.expires_at < now()) return res.writeHead(400, { 'content-type': 'text/html; charset=utf-8' }).end(PAGE('Expired', '<h1>This sign-in request expired.</h1><p>Go back to the app that sent you here and connect again.</p>'));
-  const client = clientsStore.getClient(pend.client_id) || {};
-  const spaces = users.spacesFor(user.id).map(s => ({ ...s, kind: (users.spaceOf(s.ws) || {}).kind || null }));
-  if (!spaces.length) return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(PAGE('No space yet', `<h1>You have no books yet.</h1><p>Open <a href="/app">saybooks.io/app</a> once to create your space, then connect again.</p>`));
+  const p = JSON.parse(pend.json);
+  const filter = resourceFilter(p.resource) || {};
+  const client = (await clientsStore.getClient(pend.client_id).catch(() => null)) || {};
+  const spaces = users.spacesFor(user.id).map(s => ({ ...s, kind: (users.spaceOf(s.ws) || {}).kind || null })).filter(s => spaceMatches(s, filter));
+  if (!spaces.length) {
+    const door = filter.kind === 'solo' ? '<a href="/solo">saybooks.io/solo</a>' : filter.kind === 'hunt' ? '<a href="/hunt">saybooks.io/hunt</a>' : '<a href="/app">saybooks.io/app</a>';
+    const what = filter.ws ? 'that space' : filter.label ? `${filter.label === 'books' ? 'full' : filter.label} books` : 'books';
+    return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(PAGE('No matching space', `<h1>You have no ${esc(what)} yet.</h1><p>${filter.ws ? 'You are not a member of the space this connector points at. Ask its owner for an invitation, or connect to one of your own spaces through ' + '<a href="/docs#connect">another address</a>.' : 'Open ' + door + ' once to create it, then connect again.'}</p>`));
+  }
   const opts = spaces.map(s => `<option value="${esc(s.ws)}">${esc(s.display_name)}${s.kind ? ` · ${esc(s.kind)}` : ''} (${esc(s.role)})</option>`).join('');
   const body = `<h1>Let ${esc(client.client_name || 'this app')} into your books?</h1>
   <div class="who"><b>${esc(client.client_name || pend.client_id)}</b>${client.client_uri ? `<span>${esc(client.client_uri)}</span>` : ''}</div>
-  <p>It will act as your delegate through a key minted for it, under the role you pick, and every action it takes lands in that space's audit trail under its own name. You can revoke the key at any time from <b>Share this space…</b>.</p>
+  <p>It will act as your delegate through a key minted for it, under the role you pick, and every action it takes lands in that space's audit trail under its own name. You can revoke the key at any time from <b>Share this space…</b>.${filter.label ? ` This connector is the <b>${esc(filter.label)}</b> door, so only ${esc(filter.label)} spaces are offered.` : filter.ws ? ' This connector points at one specific space.' : ''}</p>
   <form method="post" action="/oauth/consent">
     <input type="hidden" name="pend" value="${esc(pend.id)}">
     <label for="ws">Which books</label><select id="ws" name="ws">${opts}</select>
@@ -211,6 +235,8 @@ function consentPost(req, res, form, user) {
   const ws = String(form.ws || ''); const role = String(form.role || 'controller');
   const myRole = users.roleFor(user.id, ws);
   if (!myRole) return back({ error: 'access_denied', error_description: 'Not a member of that space.' });
+  const filter = resourceFilter(p.resource) || {};
+  if (!spaceMatches({ ws, kind: (users.spaceOf(ws) || {}).kind || null }, filter)) return back({ error: 'access_denied', error_description: 'That space does not match this connector.' });
   if (!['controller', 'clerk', 'viewer'].includes(role)) return back({ error: 'invalid_request', error_description: 'bad role' });
   // Delegate ceiling: a clerk cannot mint a controller; a viewer mints nothing.
   const rank = { owner: 3, controller: 2, clerk: 1, viewer: 0 };
@@ -236,6 +262,12 @@ function build(publicUrl) {
   // Advertise metadata-document client ids (the router's own metadata handler does not know the flag).
   const meta = { ...createOAuthMetadata({ provider, issuerUrl: issuer, scopesSupported: ['books'], serviceDocumentationUrl: new URL('/docs', issuer) }), client_id_metadata_document_supported: true };
   app.get('/.well-known/oauth-authorization-server', (_req, res) => res.json(meta));
+  // Protected-resource metadata for every door: the general /mcp, the kind doors, and per-space ones.
+  app.get(/^\/\.well-known\/oauth-protected-resource(\/mcp(?:\/(?:invoices|hunt|books)|\/s\/[a-z0-9-]+)?)$/, (req, res) => {
+    const rp = req.params[0] || '/mcp';
+    if (!isResourcePath(rp)) return res.status(404).end();
+    res.json({ resource: new URL(rp, issuer).href, authorization_servers: [issuer.href], scopes_supported: ['books'], resource_documentation: new URL('/docs', issuer).href, bearer_methods_supported: ['header'] });
+  });
   app.use(mcpAuthRouter({
     provider, issuerUrl: issuer, resourceServerUrl: new URL('/mcp', issuer), scopesSupported: ['books'],
     serviceDocumentationUrl: new URL('/docs', issuer),
@@ -250,4 +282,4 @@ function handle(req, res, publicUrl) { if (!app) build(publicUrl); return app(re
 
 function sweep() { const t = now(); db().prepare('DELETE FROM oauth_pending WHERE expires_at < ?').run(t); db().prepare('DELETE FROM oauth_code WHERE expires_at < ?').run(t); db().prepare('DELETE FROM oauth_token WHERE expires_at < ?').run(t); }
 
-module.exports = { provider, clientsStore, handles, handle, memberForBearer, consentGet, consentPost, sweep };
+module.exports = { provider, clientsStore, handles, handle, memberForBearer, consentGet, consentPost, sweep, isResourcePath, resourceFilter };
