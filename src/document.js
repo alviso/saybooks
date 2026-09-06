@@ -34,8 +34,32 @@ const paperFor = (country) => (['US', 'CA', 'MX'].includes(country || 'US') ? 'L
 // A line's description: the first line is the title, anything after it prints smaller beneath.
 const splitDesc = (d) => { const parts = String(d || '').split(/\r?\n/); return { title: parts[0], detail: parts.slice(1).join('\n').trim() }; };
 
+// pdfkit draws PNG and JPEG only. Any other logo (WebP, SVG, GIF) is rasterized to PNG once
+// through the same canvas the page images use, and remembered by content so it costs once.
+const LOGO_CACHE = new Map();
+async function logoForPdf(logo) {
+  const m = logo ? /^data:image\/([a-z+.-]+);base64,(.+)$/s.exec(logo) : null;
+  if (!m) return null;
+  if (m[1] === 'png' || m[1] === 'jpeg' || m[1] === 'jpg') return logo;
+  const key = require('crypto').createHash('sha1').update(logo).digest('hex');
+  if (LOGO_CACHE.has(key)) return LOGO_CACHE.get(key);
+  let out = null;
+  try {
+    const { createCanvas, loadImage } = require('@napi-rs/canvas');
+    const img = await loadImage(Buffer.from(m[2], 'base64'));
+    const scale = Math.min(1, 600 / Math.max(img.width, img.height, 1));   // plenty for a 150pt-wide logo
+    const cv = createCanvas(Math.max(1, Math.round(img.width * scale)), Math.max(1, Math.round(img.height * scale)));
+    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+    out = 'data:image/png;base64,' + cv.toBuffer('image/png').toString('base64');
+  } catch { out = null; }   // a logo that will not decode is not a reason to fail the invoice
+  if (LOGO_CACHE.size > 20) LOGO_CACHE.delete(LOGO_CACHE.keys().next().value);
+  LOGO_CACHE.set(key, out);
+  return out;
+}
+
 /** The document as a PDF. Drafts render stamped DRAFT, void invoices stamped VOID. Resolves to a Buffer. */
-function renderInvoicePdf(inv, logo) {
+async function renderInvoicePdf(inv, logoIn) {
+  const logo = await logoForPdf(logoIn);
   return new Promise((resolve, reject) => {
     const s = inv.seller, c = inv.customer || {};
     const money = moneyFor(inv), longDate = dateFor(inv);
@@ -52,7 +76,7 @@ function renderInvoicePdf(inv, logo) {
 
     // Head: logo + seller left, INVOICE + number right
     let y = doc.page.margins.top;
-    const m = logo ? /^data:image\/(png|jpeg);base64,(.+)$/s.exec(logo) : null;   // pdfkit draws PNG/JPEG; SVG/WebP logos print on the HTML only
+    const m = logo ? /^data:image\/(png|jpeg|jpg);base64,(.+)$/s.exec(logo) : null;
     if (m) { try { doc.image(Buffer.from(m[2], 'base64'), L, y, { fit: [150, 42] }); y += 50; } catch { /* a logo that will not decode is not a reason to fail the invoice */ } }
     doc.fillColor(NAVY).font(FONT_B).fontSize(24).text(inv.tax_invoice ? 'TAX INVOICE' : 'INVOICE', L, doc.page.margins.top, { width: W, align: 'right', characterSpacing: 1.5 });
     doc.fillColor(MUTED).font(FONT).fontSize(11).text(inv.id, L, doc.page.margins.top + 30, { width: W, align: 'right' });
