@@ -53,8 +53,9 @@ authority), currency conversion, recurring invoices, sending anything anywhere.
 ## 4. The acts
 
 Writes (6): draft_invoice, update_draft, issue_invoice, void_invoice, record_payment,
-apply_payment. Reads (4): invoice, document, outstanding, statement. Environment (core, existing):
-create_customer, update_customer, set_company_profile.
+apply_payment. Reads (5): invoice, document, outstanding, statement, setup (0.2: what the company profile
+still needs and the next question, in order). Environment (core, existing): create_customer,
+update_customer, set_company_profile.
 
 ## 5. Invariants
 
@@ -108,7 +109,9 @@ refused; issue without profile refused with the guide sentence; void with reason
 burned; paid-invoice void refused · 03 New Zealand: GST registered at 15%, NZD from the
 profile, default tax on every line with one zero-rated line, TAX INVOICE at issue, paid in
 NZD · 04 unregistered business with USD and CZK: taxed line refused, unknown currency refused,
-F-{NNN} numbering, a USD payment refused against the CZK invoice, the CZK one applied.
+F-{NNN} numbering, a USD payment refused against the CZK invoice, the CZK one applied ·
+05 guided setup: a fresh space, setup names each next question in order, tax must be answered,
+ready after the six required facts, first invoice issued.
 
 ## 9. Deferred — with reasons
 

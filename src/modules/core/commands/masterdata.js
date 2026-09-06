@@ -210,7 +210,7 @@ only the first time.`,
     currencies: f.text('Every currency this business bills in, comma-separated (e.g. "USD, CZK"). An invoice may carry any of these and no other.', { label: 'Currencies' }),
     tax_label: f.text('What the tax is called on documents: GST, VAT, Sales tax, ÁFA, DPH.', { label: 'Tax name' }),
     tax_rate_bp: f.int('Default tax rate in basis points (1500 = 15%). Applied to every line unless the line says otherwise. Only meaningful when registered.', { label: 'Default tax rate (bp)' }),
-    tax_registered: f.bool('Registered for the tax (GST/VAT). Unregistered businesses cannot put tax on a line; registered ones print TAX INVOICE and their tax id.', { label: 'Tax registered' }),
+    tax_registered: f.bool('Registered for the tax (GST/VAT)? Pass it explicitly either way — false is an answer, the setup checklist stays open until one is given. Unregistered businesses cannot put tax on a line; registered ones print TAX INVOICE and their tax id.', { label: 'Tax registered' }),
     tax_id_label: f.text('How the tax id is captioned on documents: GST No., IRD number, VAT ID, EIN. Defaults to "Tax ID".', { label: 'Tax id caption' }),
     number_format: f.text('Invoice numbering. Tokens: {NNNN} the sequence (width = number of Ns), {YYYY} or {YY} the year of issue. Default INV-{NNNN}; INV-{YYYY}-{NNN} restarts each year.', { label: 'Invoice number format' }),
   },
@@ -223,7 +223,7 @@ only the first time.`,
       if (a[k] !== undefined) next[k] = a[k] === '' ? null : (typeof a[k] === 'string' ? a[k].trim() : a[k]);
     }
     if (a.tax_rate_bp !== undefined) next.tax_rate_bp = a.tax_rate_bp;
-    if (a.tax_registered !== undefined) next.tax_registered = a.tax_registered ? 1 : 0;
+    if (a.tax_registered !== undefined) { next.tax_registered = a.tax_registered ? 1 : 0; next.tax_decided = 1; }
     // Country and currency codes: short, upper-case, and the currency set must contain the default.
     if (next.country) { next.country = next.country.toUpperCase(); if (!/^[A-Z]{2}$/.test(next.country)) throw new Rejected('country is a two-letter ISO 3166 code, e.g. NZ.'); }
     if (next.currency) { next.currency = next.currency.toUpperCase(); if (!H.CUR_RE.test(next.currency)) throw new Rejected('currency is a three-letter ISO 4217 code, e.g. NZD.'); }
@@ -241,18 +241,18 @@ only the first time.`,
       const fmtRe = /^[A-Za-z0-9._/\-]*(\{YYYY\}|\{YY\})?[A-Za-z0-9._/\-]*\{N+\}[A-Za-z0-9._/\-]*$/;
       if (!fmtRe.test(next.number_format)) throw new Rejected('number_format needs exactly one {N…} sequence token, optionally one {YYYY} or {YY}, and letters, digits, - . / around them. Example: INV-{YYYY}-{NNN}.');
     }
-    db.prepare(`INSERT INTO company_profile (id,name,address,tax_id,payment_instructions,footer_note,country,currency,currencies,tax_label,tax_rate_bp,tax_registered,tax_id_label,number_format,updated_at)
-                VALUES (1,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    db.prepare(`INSERT INTO company_profile (id,name,address,tax_id,payment_instructions,footer_note,country,currency,currencies,tax_label,tax_rate_bp,tax_registered,tax_id_label,number_format,tax_decided,updated_at)
+                VALUES (1,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 ON CONFLICT(id) DO UPDATE SET name=excluded.name, address=excluded.address, tax_id=excluded.tax_id,
                   payment_instructions=excluded.payment_instructions, footer_note=excluded.footer_note,
                   country=excluded.country, currency=excluded.currency, currencies=excluded.currencies, tax_label=excluded.tax_label,
                   tax_rate_bp=excluded.tax_rate_bp, tax_registered=excluded.tax_registered, tax_id_label=excluded.tax_id_label,
-                  number_format=excluded.number_format, updated_at=excluded.updated_at`)
+                  number_format=excluded.number_format, tax_decided=excluded.tax_decided, updated_at=excluded.updated_at`)
       .run(next.name, next.address ?? null, next.tax_id ?? null, next.payment_instructions ?? null, next.footer_note ?? null,
            next.country ?? null, next.currency ?? null, next.currencies ?? null, next.tax_label ?? null, next.tax_rate_bp ?? 0, next.tax_registered ? 1 : 0,
-           next.tax_id_label ?? null, next.number_format ?? null, at);
+           next.tax_id_label ?? null, next.number_format ?? null, next.tax_decided ? 1 : 0, at);
     const { logo, ...profile } = db.prepare('SELECT * FROM company_profile WHERE id = 1').get();
-    return { ...profile, tax_registered: !!profile.tax_registered, currencies: H.locale().currencies, has_logo: !!logo };
+    return { ...profile, tax_registered: !!profile.tax_registered, tax_decided: !!profile.tax_decided, currencies: H.locale().currencies, has_logo: !!logo };
   },
 });
 

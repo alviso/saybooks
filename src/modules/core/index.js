@@ -19,7 +19,9 @@ const mod = R.defineModule({
   env_argmap: { item: 'item_id', customer: 'customer_id' },
   doctrine: `Master data is slow-moving and load-bearing. A credit limit of 0 means prepay only —
 a real position, not a missing value. Set stocked=false for services; they never deplete and
-never block a shipment. Never invent a customer to make another command work.`,
+never block a shipment. Never invent a customer to make another command work. A fresh space
+is set up by conversation: core_setup_status lists what the company profile still needs and
+the next question to ask; one question at a time, written as it is answered.`,
   api: {
     needCustomer: (id) => H.need('customer', id, 'customer'),
     /**

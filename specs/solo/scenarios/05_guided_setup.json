@@ -1,0 +1,187 @@
+{
+  "name": "guided setup: a fresh space becomes ready to invoice one question at a time",
+  "spec": "solo@0.2",
+  "notes": "The guide's contract. setup names the next question in order; each answer is written as it comes; tax must be answered, a default is not an answer; the space is ready when the required six exist, and the first invoice follows.",
+  "env": [],
+  "steps": [
+    {
+      "act": "setup",
+      "args": {},
+      "expect": {
+        "ok": true,
+        "include": {
+          "ready_to_invoice": false,
+          "next": "name"
+        }
+      },
+      "notes": "nothing set: the first question is the name"
+    },
+    {
+      "act": "set_company_profile",
+      "args": {
+        "name": "Kereru Design"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "setup",
+      "args": {},
+      "expect": {
+        "ok": true,
+        "include": {
+          "next": "country"
+        }
+      }
+    },
+    {
+      "act": "set_company_profile",
+      "args": {
+        "country": "NZ"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "setup",
+      "args": {},
+      "expect": {
+        "ok": true,
+        "include": {
+          "next": "currency"
+        }
+      }
+    },
+    {
+      "act": "set_company_profile",
+      "args": {
+        "currency": "NZD"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "setup",
+      "args": {},
+      "expect": {
+        "ok": true,
+        "include": {
+          "next": "tax"
+        }
+      },
+      "notes": "tax is open until answered — the unregistered default does not count"
+    },
+    {
+      "act": "set_company_profile",
+      "args": {
+        "tax_registered": false
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "tax_decided": true
+        }
+      }
+    },
+    {
+      "act": "setup",
+      "args": {},
+      "expect": {
+        "ok": true,
+        "include": {
+          "next": "address"
+        }
+      }
+    },
+    {
+      "act": "set_company_profile",
+      "args": {
+        "address": "14 Tui Lane\nNelson 7010\nNew Zealand"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "setup",
+      "args": {},
+      "expect": {
+        "ok": true,
+        "include": {
+          "next": "payment_instructions",
+          "ready_to_invoice": false
+        }
+      }
+    },
+    {
+      "act": "set_company_profile",
+      "args": {
+        "payment_instructions": "Kiwibank 38-9000-0123456-00. Reference the invoice number."
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "setup",
+      "args": {},
+      "expect": {
+        "ok": true,
+        "include": {
+          "ready_to_invoice": true,
+          "next": "tax_id"
+        }
+      },
+      "notes": "ready; what remains is optional"
+    },
+    {
+      "act": "create_customer",
+      "args": {
+        "name": "Abel Tasman Tours",
+        "address": "1 Wharf Road\nMotueka 7120\nNew Zealand",
+        "terms": "net15"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "draft_invoice",
+      "args": {
+        "customer": "C-0001",
+        "due_in_days": 15,
+        "lines": [
+          {
+            "description": "Brand refresh — logo and stationery",
+            "qty": 1,
+            "rate": 180000
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "currency": "NZD",
+          "total": 180000
+        }
+      }
+    },
+    {
+      "act": "issue_invoice",
+      "args": {
+        "invoice": "INV-0001"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "issued",
+          "tax_invoice": false
+        }
+      },
+      "notes": "an unregistered business issues a plain INVOICE"
+    }
+  ]
+}

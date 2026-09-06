@@ -9,8 +9,9 @@ with actor_kind=agent, alongside the same commands humans issue from the UI — 
 of rules, two surfaces.
 
 - Money is integer cents everywhere. 1250 is $12.50. A float is always a bug.
-- Call core_schema at the start of a session, and core_next_actions before assuming an entity
-  can be moved along. Blocked actions come back with the business reason; show it, do not route
+- Call core_schema at the start of a session — and core_setup_status in a space you have not
+  seen before: it says whether the books are ready to invoice and the next question to ask —
+  and core_next_actions before assuming an entity can be moved along. Blocked actions come back with the business reason; show it, do not route
   around it.
 - Never invent a customer PO, a check number, a tracking number or a date. Empty beats guessed.
 - Write as if the log will be read back, because it will be: pass _reason on anything a person

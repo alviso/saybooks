@@ -327,6 +327,50 @@ read({
 });
 
 read({
+  name: 'core_setup_status',
+  title: 'Setup checklist', summary: 'Is this space ready to invoice, and if not, the next question to ask — in order.',
+  doctrine: `Call this FIRST in a space you have not seen before, before core_schema's details
+matter. It lists what the company profile still needs, in the order to ask: name, country,
+currency, tax scheme, address, payment instructions; then the optional numbering format and
+logo; then a first client. Ask ONE question at a time, in that order, as a person would —
+"What's the business called, as it should print on invoices?" — and write each answer with
+core_set_company_profile as you get it. 'next' is the key to ask about now; 'ask' is a
+question you may use verbatim. Country comes first because it decides how dates and amounts
+print; tax must be ANSWERED (registered yes or no) — the default is not an answer. Nothing here
+is needed for a job-hunt space.`,
+  args: {},
+  handler: () => {
+    const has = (n) => MODULES.some(m => m.name === n);
+    const billing = has('solo') || has('o2c');
+    const p = H.db().prepare('SELECT * FROM company_profile WHERE id = 1').get() || {};
+    const loc = H.locale();
+    const customers = H.db().prepare('SELECT COUNT(*) n FROM customer').get().n;
+    const steps = [
+      { key: 'name', done: !!p.name, ask: "What is the business called, as it should print on an invoice? (A personal trading name is fine.)", set_with: 'core_set_company_profile { name }' },
+      { key: 'country', done: !!p.country, ask: 'Which country is the business in? Two letters is enough (NZ, US, CZ). It decides how dates and amounts print.', set_with: 'core_set_company_profile { country }' },
+      { key: 'currency', done: !!p.currency, ask: 'Which currency do you bill in most? And are there others you sometimes invoice in?', set_with: 'core_set_company_profile { currency, currencies }' },
+      { key: 'tax', done: !!p.tax_decided, ask: loc.country === 'NZ' ? 'Are you registered for GST? If yes, the rate is 15% unless you tell me otherwise.' : 'Are you registered for a sales tax or VAT (GST, VAT, ÁFA, DPH)? If yes: what is it called and what is the default rate?', set_with: 'core_set_company_profile { tax_registered, tax_label, tax_rate_bp, tax_id_label }' },
+      { key: 'address', done: !!p.address, ask: 'What is the address as it should print under the business name?', set_with: 'core_set_company_profile { address }' },
+      { key: 'payment_instructions', done: !!p.payment_instructions, ask: 'How do clients pay you? Bank name, account number, and any reference they should quote — this prints on every invoice.', set_with: 'core_set_company_profile { payment_instructions }' },
+      { key: 'tax_id', done: !!p.tax_id, optional: true, ask: 'Do you want a tax id printed (IRD number, VAT ID, EIN)? If so, what is it and how should it be captioned?', set_with: 'core_set_company_profile { tax_id, tax_id_label }' },
+      { key: 'number_format', done: !!p.number_format, optional: true, ask: `Invoice numbers are ${loc.number_format || 'INV-0001, INV-0002'} by default. Keep that, or restart each year as INV-2026-001?`, set_with: 'core_set_company_profile { number_format }' },
+      { key: 'logo', done: !!p.logo, optional: true, ask: 'Do you have a logo at a public URL? I can put it on the documents. Skip is fine.', set_with: 'core_set_company_logo { logo_url }' },
+      { key: 'first_client', done: customers > 0, optional: true, ask: 'Who is the first client to invoice? Name, billing address, and the payment terms you agreed.', set_with: 'core_create_customer' },
+    ];
+    const required = steps.filter(s => !s.optional);
+    const next = steps.find(s => !s.done) || null;
+    return {
+      applies: billing, ready_to_invoice: billing ? required.every(s => s.done) : null,
+      next: next ? next.key : null, ask: next ? next.ask : null, set_with: next ? next.set_with : null,
+      missing: required.filter(s => !s.done).map(s => s.key), optional_open: steps.filter(s => s.optional && !s.done).map(s => s.key),
+      steps: steps.map(s => ({ key: s.key, done: s.done, optional: !!s.optional })),
+      note: !billing ? 'This space has no invoicing or order-to-cash module mounted; no company profile is needed.'
+          : next && !next.optional ? `Not ready to invoice yet: ask about ${next.key}.` : next ? `Ready to invoice. Optional: ${next.key}.` : 'Ready to invoice; nothing left to set up.',
+    };
+  },
+});
+
+read({
   name: 'core_company_profile',
   title: 'Company profile', summary: "The business's own identity as it prints on documents: seller block, tax id, payment instructions.",
   args: {},
@@ -336,7 +380,7 @@ read({
     const loc = H.locale();
     if (!p) return { name: null, address: null, tax_id: null, payment_instructions: null, footer_note: null, country: null, currency: loc.currency, currencies: loc.currencies, tax_label: null, tax_rate_bp: 0, tax_registered: false, tax_id_label: null, number_format: null, has_logo: false, set: false };
     const { logo, ...p2 } = p;
-    const rest = { ...p2, currency: loc.currency, currencies: loc.currencies, tax_registered: !!p2.tax_registered };
+    const rest = { ...p2, currency: loc.currency, currencies: loc.currencies, tax_registered: !!p2.tax_registered, tax_decided: !!p2.tax_decided };
     const m = logo ? /^data:([^;]+);base64,([\s\S]*)$/.exec(logo) : null;
     return { ...rest, has_logo: !!logo, logo_type: m ? m[1] : null, logo_bytes: m ? Math.floor(m[2].length * 3 / 4) : 0, ...(a.with_logo && logo ? { logo } : {}) };
   },

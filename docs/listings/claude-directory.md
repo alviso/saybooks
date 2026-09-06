@@ -43,7 +43,7 @@ Enterprise org, submitted by an Owner). Character limits are the portal's. Paste
     and a PDF at the same address. Your company profile and logo print on every one.
 
     Connecting takes a minute: add the connector, sign in with Google, pick which books to
-    open and what the agent may do (controller by default), and name it for the audit log.
+    open and what the agent may do (owner by default), and name it for the audit log.
     The key it receives can be revoked from the workbench at any time.
 
     Open source under AGPL-3.0 at github.com/alviso/saybooks. The rules are written as

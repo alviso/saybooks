@@ -64,6 +64,10 @@
       "required": [
         "customer"
       ]
+    },
+    "setup": {
+      "kind": "read",
+      "required": []
     }
   },
   "env_acts": {

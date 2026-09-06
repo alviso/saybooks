@@ -220,12 +220,13 @@ async function consentGet(req, res, url, user) {
   const opts = spaces.map(s => `<option value="${esc(s.ws)}">${esc(s.display_name)}${s.kind ? ` · ${esc(s.kind)}` : ''} (${esc(s.role)})</option>`).join('');
   const body = `<h1>Let ${esc(client.client_name || 'this app')} into your books?</h1>
   <div class="who"><b>${esc(client.client_name || pend.client_id)}</b>${client.client_uri ? `<span>${esc(client.client_uri)}</span>` : ''}</div>
-  <p>It will act as your delegate through a key minted for it, under the role you pick, and every action it takes lands in that space's audit trail under its own name. You can revoke the key at any time from <b>Share this space…</b>.${filter.label ? ` This connector is the <b>${esc(filter.label)}</b> door, so only ${esc(filter.label)} spaces are offered.` : filter.ws ? ' This connector points at one specific space.' : ''}</p>
+  <p>It will act as your delegate through a key minted for it, under the role you pick — owner by default, so it can also set up the company profile with you — and every action it takes lands in that space's audit trail under its own name. You can revoke the key at any time from <b>Share this space…</b>.${filter.label ? ` This connector is the <b>${esc(filter.label)}</b> door, so only ${esc(filter.label)} spaces are offered.` : filter.ws ? ' This connector points at one specific space.' : ''}</p>
   <form method="post" action="/oauth/consent">
     <input type="hidden" name="pend" value="${esc(pend.id)}">
     <label for="ws">Which books</label><select id="ws" name="ws">${opts}</select>
     <label for="role">What it may do</label><select id="role" name="role">
-      <option value="controller">controller — every business act, no invitations or deletions</option>
+      <option value="owner" selected>owner — everything you can do, company profile included (your delegate)</option>
+      <option value="controller">controller — every business act, no invitations, deletions or company profile</option>
       <option value="clerk">clerk — day-to-day writes, no credit authority</option>
       <option value="viewer">viewer — read only</option>
     </select>
@@ -243,12 +244,12 @@ function consentPost(req, res, form, user) {
   const p = JSON.parse(pend.json);
   const back = (extra) => { const u = new URL(p.redirectUri); for (const [k, v] of Object.entries(extra)) u.searchParams.set(k, v); if (p.state) u.searchParams.set('state', p.state); res.writeHead(302, { location: u.href }).end(); };
   if (form.decision !== 'allow') return back({ error: 'access_denied', error_description: 'The person declined.' });
-  const ws = String(form.ws || ''); const role = String(form.role || 'controller');
+  const ws = String(form.ws || ''); const role = String(form.role || 'owner');
   const myRole = users.roleFor(user.id, ws);
   if (!myRole) return back({ error: 'access_denied', error_description: 'Not a member of that space.' });
   const filter = resourceFilter(p.resource) || {};
   if (!spaceMatches({ ws, kind: (users.spaceOf(ws) || {}).kind || null }, filter)) return back({ error: 'access_denied', error_description: 'That space does not match this connector.' });
-  if (!['controller', 'clerk', 'viewer'].includes(role)) return back({ error: 'invalid_request', error_description: 'bad role' });
+  if (!['owner', 'controller', 'clerk', 'viewer'].includes(role)) return back({ error: 'invalid_request', error_description: 'bad role' });
   // Delegate ceiling: a clerk cannot mint a controller; a viewer mints nothing.
   const rank = { owner: 3, controller: 2, clerk: 1, viewer: 0 };
   if (rank[role] > rank[myRole] || rank[myRole] === 0) return back({ error: 'access_denied', error_description: `Your role in that space (${myRole}) cannot delegate ${role}.` });

@@ -20,7 +20,7 @@ const CUR_RE = /^[A-Z]{3}$/;
 /** The space's money settings, defaults filled in. Safe before the profile exists or the column migration ran. */
 function locale() {
   let p = null;
-  try { p = db().prepare('SELECT country, currency, currencies, tax_label, tax_rate_bp, tax_registered, tax_id_label, number_format FROM company_profile WHERE id = 1').get() || null; } catch { p = null; }
+  try { p = db().prepare('SELECT country, currency, currencies, tax_label, tax_rate_bp, tax_registered, tax_decided, tax_id_label, number_format FROM company_profile WHERE id = 1').get() || null; } catch { p = null; }
   const currency = (p && p.currency) || 'USD';
   let currencies = null;
   try { currencies = p && p.currencies ? JSON.parse(p.currencies) : null; } catch { currencies = null; }
@@ -28,7 +28,7 @@ function locale() {
   if (!currencies.includes(currency)) currencies.unshift(currency);
   const country = (p && p.country) || null;
   return { country, locale: LOCALES[country] || 'en-US', currency, currencies,
-           tax_label: (p && p.tax_label) || null, tax_rate_bp: (p && p.tax_rate_bp) || 0, tax_registered: !!(p && p.tax_registered),
+           tax_label: (p && p.tax_label) || null, tax_rate_bp: (p && p.tax_rate_bp) || 0, tax_registered: !!(p && p.tax_registered), tax_decided: !!(p && p.tax_decided),
            tax_id_label: (p && p.tax_id_label) || null, number_format: (p && p.number_format) || null };
 }
 const fmtCache = new Map();
