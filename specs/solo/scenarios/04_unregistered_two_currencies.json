@@ -1,0 +1,190 @@
+{
+  "name": "unregistered business, two currencies, custom numbering",
+  "spec": "solo@0.2",
+  "notes": "S-11: not registered -> a taxed line is refused with the sentence naming who can change that. S-10: an invoice carries one currency from the company's set, a payment too, and cash never crosses currencies. S-12: the number format is the company's; F-{NNN} yields F-001.",
+  "env": [
+    [
+      "set_company_profile",
+      {
+        "name": "Varga Consulting",
+        "address": "1200 SW Elm Street, Suite 4\nPortland, OR 97205",
+        "country": "US",
+        "currency": "USD",
+        "currencies": "USD, CZK",
+        "number_format": "F-{NNN}",
+        "payment_instructions": "Wire: see the invoice."
+      }
+    ],
+    [
+      "create_customer",
+      {
+        "name": "Praha Systems s.r.o.",
+        "email": "ap@praha.example",
+        "terms": "net30",
+        "address": "Vodičkova 12\n110 00 Praha 1\nCzechia"
+      }
+    ]
+  ],
+  "steps": [
+    {
+      "act": "draft_invoice",
+      "args": {
+        "customer": "C-0001",
+        "lines": [
+          {
+            "description": "Consulting",
+            "qty": 10,
+            "rate": 150000,
+            "tax_rate_bp": 2100
+          }
+        ]
+      },
+      "expect": {
+        "refused": "not registered"
+      },
+      "notes": "S-11: the business is not registered; the write is refused and says the owner sets tax_registered if that changed"
+    },
+    {
+      "act": "draft_invoice",
+      "args": {
+        "customer": "C-0001",
+        "currency": "EUR",
+        "lines": [
+          {
+            "description": "Consulting",
+            "qty": 10,
+            "rate": 150000
+          }
+        ]
+      },
+      "expect": {
+        "refused": "not one of this business's currencies"
+      },
+      "notes": "S-10: EUR is not in the set (USD, CZK)"
+    },
+    {
+      "act": "draft_invoice",
+      "args": {
+        "customer": "C-0001",
+        "currency": "CZK",
+        "lines": [
+          {
+            "description": "Consulting — October",
+            "qty": 10,
+            "rate": 150000
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "id": "F-001",
+          "currency": "CZK",
+          "total": 1500000,
+          "tax_total": 0
+        }
+      },
+      "notes": "S-12: numbered by the company's format"
+    },
+    {
+      "act": "issue_invoice",
+      "args": {
+        "invoice": "F-001"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "issued",
+          "tax_invoice": false
+        }
+      }
+    },
+    {
+      "act": "record_payment",
+      "args": {
+        "customer": "C-0001",
+        "amount": 1500000,
+        "method": "bank",
+        "reference": "USD wire"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "currency": "USD"
+        }
+      },
+      "notes": "currency omitted -> the company default, USD"
+    },
+    {
+      "act": "apply_payment",
+      "args": {
+        "payment": "P-0001",
+        "invoice": "F-001"
+      },
+      "expect": {
+        "refused": "cannot cross currencies"
+      },
+      "notes": "S-10: a USD payment does not settle a CZK invoice, whatever the numbers say"
+    },
+    {
+      "act": "record_payment",
+      "args": {
+        "customer": "C-0001",
+        "amount": 1500000,
+        "currency": "CZK",
+        "method": "bank",
+        "reference": "CZK transfer"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "currency": "CZK"
+        }
+      }
+    },
+    {
+      "act": "apply_payment",
+      "args": {
+        "payment": "P-0002",
+        "invoice": "F-001"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "invoice",
+      "args": {
+        "invoice": "F-001"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "paid",
+          "open": 0
+        }
+      }
+    },
+    {
+      "act": "draft_invoice",
+      "args": {
+        "customer": "C-0001",
+        "lines": [
+          {
+            "description": "Consulting — November",
+            "qty": 1,
+            "rate": 100000
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "id": "F-002",
+          "currency": "USD"
+        }
+      },
+      "notes": "the sequence continues in the company's format; currency omitted -> USD"
+    }
+  ]
+}

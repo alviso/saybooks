@@ -10,7 +10,7 @@
     { "act": "create_order", "args": { "customer": "C-0001", "lines": [ { "item": "WIDGET-A", "qty": 20 } ] },
       "expect": { "ok": true, "include": { "total": 250000 } } },
     { "act": "confirm_order", "args": { "order": "SO-0001" },
-      "expect": { "refused": "Short by $1500.00" },
+      "expect": { "refused": "Short by $1,500.00" },
       "notes": "INV-5: the gate said no and named the numbers. What happens next is a human decision, not an agent maneuver" },
     { "act": "set_credit_limit", "args": { "customer": "C-0001", "credit_limit": 300000, "reason": "controller approved after reviewing 12 months of on-time payment history" },
       "expect": { "ok": true, "include": { "credit_limit": 300000, "previous_limit": 100000 } },

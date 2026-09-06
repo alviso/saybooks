@@ -1,0 +1,154 @@
+{
+  "name": "New Zealand: GST registered, NZD, tax invoice",
+  "spec": "solo@0.2",
+  "notes": "S-11: the company's tax scheme decides. Registered at 15% -> every line defaults to GST, the document prints TAX INVOICE and the GST number. S-10: the invoice carries NZD from the profile without being asked. S-1: 15% of $2,500.00 is 37500 cents, integer.",
+  "env": [
+    [
+      "set_company_profile",
+      {
+        "name": "Kauri Web Ltd",
+        "address": "8 Serene Place\nGulf Harbour, Whangaparaoa 0930\nNew Zealand",
+        "country": "NZ",
+        "currency": "NZD",
+        "tax_label": "GST",
+        "tax_rate_bp": 1500,
+        "tax_registered": true,
+        "tax_id_label": "GST No.",
+        "tax_id": "123-456-789",
+        "payment_instructions": "ANZ 06-0273-0410320-00. Reference the invoice number."
+      }
+    ],
+    [
+      "create_customer",
+      {
+        "name": "Harbour Council",
+        "email": "accounts@harbour.example",
+        "terms": "net30",
+        "address": "13 Ngapuhi Road\nRemuera, Auckland 1050\nNew Zealand"
+      }
+    ]
+  ],
+  "steps": [
+    {
+      "act": "draft_invoice",
+      "args": {
+        "customer": "C-0001",
+        "due_in_days": 30,
+        "subject": "Initial marketing phase · 21 April – 9 May 2026",
+        "lines": [
+          {
+            "description": "Infrastructure provisioning",
+            "qty": 4,
+            "rate": 10000,
+            "ref": "HC-9"
+          },
+          {
+            "description": "Marketing site — design, content, build",
+            "qty": 21,
+            "rate": 10000,
+            "ref": "HC-15"
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "draft",
+          "currency": "NZD",
+          "subtotal": 250000,
+          "tax_total": 37500,
+          "total": 287500,
+          "tax_invoice": true,
+          "tax_label": "GST"
+        }
+      },
+      "notes": "no tax_rate_bp on the lines: the registered default (15%) applies; the currency came from the profile"
+    },
+    {
+      "act": "update_draft",
+      "args": {
+        "invoice": "INV-0001",
+        "lines": [
+          {
+            "description": "Infrastructure provisioning",
+            "qty": 4,
+            "rate": 10000,
+            "ref": "HC-9"
+          },
+          {
+            "description": "Marketing site — design, content, build",
+            "qty": 21,
+            "rate": 10000,
+            "ref": "HC-15"
+          },
+          {
+            "description": "Zero-rated export consultation",
+            "qty": 1,
+            "rate": 50000,
+            "tax_rate_bp": 0
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "subtotal": 300000,
+          "tax_total": 37500,
+          "total": 337500
+        }
+      },
+      "notes": "a line may opt out (tax_rate_bp 0) — zero-rated work exists; the default is a default, not a mandate"
+    },
+    {
+      "act": "issue_invoice",
+      "args": {
+        "invoice": "INV-0001"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "issued",
+          "tax_invoice": true,
+          "tax_id_label": "GST No.",
+          "seller_as_issued": true
+        }
+      },
+      "notes": "S-3: the tax scheme froze with the seller block — flipping registration later never reprints this document"
+    },
+    {
+      "act": "record_payment",
+      "args": {
+        "customer": "C-0001",
+        "amount": 337500,
+        "method": "bank",
+        "reference": "HC-2026-05"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "currency": "NZD"
+        }
+      }
+    },
+    {
+      "act": "apply_payment",
+      "args": {
+        "payment": "P-0001",
+        "invoice": "INV-0001"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "outstanding",
+      "args": {},
+      "expect": {
+        "ok": true,
+        "include": {
+          "count": 0
+        }
+      }
+    }
+  ]
+}

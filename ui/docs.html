@@ -90,11 +90,12 @@ table.plain{border-collapse:collapse;width:100%;font-size:14px;margin:0 0 1em} t
     <li>Issuing freezes the seller block from your company profile and the bill-to block from the client. Changing either later never reprints history.</li>
     <li>A voided invoice stays readable and printable, stamped <b>VOID</b>, with the reason at the foot. The number is never reused.</li>
     <li>Your logo prints on every document. Set it under <b>Company</b>, from a file or a public image URL.</li>
+    <li><b>Currency, tax and numbering come from the company profile.</b> Name the country (dates and amounts print the way people there write them), the currencies you bill in with a default, and your tax scheme: the tax's name, the default rate, and whether you are registered. Each invoice carries one currency from that set; a payment settles only invoices in its own currency. Not registered: no line can carry tax. Registered: every line gets the default rate unless you set a line to 0, the document says <b>TAX INVOICE</b> and prints your tax id under its own caption (GST No., VAT ID). The number format is yours too: <code>INV-{NNNN}</code> by default, <code>INV-{YYYY}-{NNN}</code> to restart each year.</li>
   </ul>
 
   <h2 id="refusals">Refusals</h2>
   <p>Every rule in your books applies to Claude exactly as it applies to you. When a command is not allowed, the answer is one sentence with the reason, shown identically on the button's tooltip, in the thrown error and in the agent's reply, and written to the audit log. A real one:</p>
-  <div class="refusal">Credit check failed for Contoso Ltd. Order $2500.00; available $1000.00 (limit $1000.00 less open AR $0.00 and committed $0.00). Short by $1500.00.</div>
+  <div class="refusal">Credit check failed for Contoso Ltd. Order $2,500.00; available $1,000.00 (limit $1,000.00 less open AR $0.00 and committed $0.00). Short by $1,500.00.</div>
   <p>Claude relays it and asks a person what to do. It does not split the order or quietly raise the limit; raising a limit is its own logged act by someone with the authority.</p>
 
   <h2 id="data">Export and delete</h2>

@@ -194,7 +194,7 @@ defineCommand({
   name: 'core_set_company_profile',
   permission: 'workspace.admin',
   title: 'Company profile', group: 'Master data', subject: 'company_profile', scope: 'collection',
-  summary: "The business's own identity: seller block, tax id, payment instructions. One per workspace.",
+  summary: "The business's own identity: seller block, tax id, payment instructions, country, currencies, tax scheme, numbering. One per workspace.",
   doctrine: `The invoice document's seller comes from here — a document without it is incomplete,
 not wrong (INV-22). Patch semantics: only the fields you pass change; the name is required
 only the first time.`,
@@ -205,22 +205,54 @@ only the first time.`,
     tax_id: f.text('EIN / VAT id — printed on documents where present.'),
     payment_instructions: f.note('How customers pay: bank details, reference format. Printed on every invoice.'),
     footer_note: f.note('One line at the document foot (returns policy, thanks, registration no).'),
+    country: f.text('Where the business is, ISO 3166 two letters (US, NZ, CZ, HU). Sets how dates and amounts print.', { label: 'Country' }),
+    currency: f.text('Default billing currency, ISO 4217 (USD, NZD, CZK, EUR). Every invoice carries one; this is the one proposed.', { label: 'Default currency' }),
+    currencies: f.text('Every currency this business bills in, comma-separated (e.g. "USD, CZK"). An invoice may carry any of these and no other.', { label: 'Currencies' }),
+    tax_label: f.text('What the tax is called on documents: GST, VAT, Sales tax, ÁFA, DPH.', { label: 'Tax name' }),
+    tax_rate_bp: f.int('Default tax rate in basis points (1500 = 15%). Applied to every line unless the line says otherwise. Only meaningful when registered.', { label: 'Default tax rate (bp)' }),
+    tax_registered: f.bool('Registered for the tax (GST/VAT). Unregistered businesses cannot put tax on a line; registered ones print TAX INVOICE and their tax id.', { label: 'Tax registered' }),
+    tax_id_label: f.text('How the tax id is captioned on documents: GST No., IRD number, VAT ID, EIN. Defaults to "Tax ID".', { label: 'Tax id caption' }),
+    number_format: f.text('Invoice numbering. Tokens: {NNNN} the sequence (width = number of Ns), {YYYY} or {YY} the year of issue. Default INV-{NNNN}; INV-{YYYY}-{NNN} restarts each year.', { label: 'Invoice number format' }),
   },
   handler(a, { db, at }) {
     const cur = db.prepare('SELECT * FROM company_profile WHERE id = 1').get();
     if (!cur && !a.name) throw new Rejected('The first write must carry the company name.');
     if (a.name === '') throw new Rejected('The company keeps a name.');
     const next = { ...cur };
-    for (const k of ['name', 'address', 'tax_id', 'payment_instructions', 'footer_note']) {
-      if (a[k] !== undefined) next[k] = a[k] === '' ? null : a[k];
+    for (const k of ['name', 'address', 'tax_id', 'payment_instructions', 'footer_note', 'country', 'currency', 'currencies', 'tax_label', 'tax_id_label', 'number_format']) {
+      if (a[k] !== undefined) next[k] = a[k] === '' ? null : (typeof a[k] === 'string' ? a[k].trim() : a[k]);
     }
-    db.prepare(`INSERT INTO company_profile (id,name,address,tax_id,payment_instructions,footer_note,updated_at)
-                VALUES (1,?,?,?,?,?,?)
+    if (a.tax_rate_bp !== undefined) next.tax_rate_bp = a.tax_rate_bp;
+    if (a.tax_registered !== undefined) next.tax_registered = a.tax_registered ? 1 : 0;
+    // Country and currency codes: short, upper-case, and the currency set must contain the default.
+    if (next.country) { next.country = next.country.toUpperCase(); if (!/^[A-Z]{2}$/.test(next.country)) throw new Rejected('country is a two-letter ISO 3166 code, e.g. NZ.'); }
+    if (next.currency) { next.currency = next.currency.toUpperCase(); if (!H.CUR_RE.test(next.currency)) throw new Rejected('currency is a three-letter ISO 4217 code, e.g. NZD.'); }
+    if (next.currencies) {
+      const set = [...new Set(String(next.currencies).toUpperCase().split(/[\s,;]+/).filter(Boolean))];
+      for (const c of set) if (!H.CUR_RE.test(c)) throw new Rejected(`${c} is not a three-letter ISO 4217 currency code.`);
+      if (!set.length) throw new Rejected('currencies needs at least one code.');
+      const def = next.currency || 'USD';
+      if (!set.includes(def)) set.unshift(def);
+      next.currencies = JSON.stringify(set);
+    } else if (a.currencies === '') next.currencies = null;
+    if (next.tax_rate_bp != null && (!Number.isInteger(next.tax_rate_bp) || next.tax_rate_bp < 0 || next.tax_rate_bp > 10000)) throw new Rejected('tax_rate_bp is a whole number of basis points between 0 and 10000.');
+    if (next.tax_registered && !next.tax_rate_bp) throw new Rejected('A registered business needs a default tax rate: pass tax_rate_bp (1500 = 15%) with tax_registered.');
+    if (next.number_format) {
+      const fmtRe = /^[A-Za-z0-9._/\-]*(\{YYYY\}|\{YY\})?[A-Za-z0-9._/\-]*\{N+\}[A-Za-z0-9._/\-]*$/;
+      if (!fmtRe.test(next.number_format)) throw new Rejected('number_format needs exactly one {N…} sequence token, optionally one {YYYY} or {YY}, and letters, digits, - . / around them. Example: INV-{YYYY}-{NNN}.');
+    }
+    db.prepare(`INSERT INTO company_profile (id,name,address,tax_id,payment_instructions,footer_note,country,currency,currencies,tax_label,tax_rate_bp,tax_registered,tax_id_label,number_format,updated_at)
+                VALUES (1,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 ON CONFLICT(id) DO UPDATE SET name=excluded.name, address=excluded.address, tax_id=excluded.tax_id,
-                  payment_instructions=excluded.payment_instructions, footer_note=excluded.footer_note, updated_at=excluded.updated_at`)
-      .run(next.name, next.address ?? null, next.tax_id ?? null, next.payment_instructions ?? null, next.footer_note ?? null, at);
+                  payment_instructions=excluded.payment_instructions, footer_note=excluded.footer_note,
+                  country=excluded.country, currency=excluded.currency, currencies=excluded.currencies, tax_label=excluded.tax_label,
+                  tax_rate_bp=excluded.tax_rate_bp, tax_registered=excluded.tax_registered, tax_id_label=excluded.tax_id_label,
+                  number_format=excluded.number_format, updated_at=excluded.updated_at`)
+      .run(next.name, next.address ?? null, next.tax_id ?? null, next.payment_instructions ?? null, next.footer_note ?? null,
+           next.country ?? null, next.currency ?? null, next.currencies ?? null, next.tax_label ?? null, next.tax_rate_bp ?? 0, next.tax_registered ? 1 : 0,
+           next.tax_id_label ?? null, next.number_format ?? null, at);
     const { logo, ...profile } = db.prepare('SELECT * FROM company_profile WHERE id = 1').get();
-    return { ...profile, has_logo: !!logo };
+    return { ...profile, tax_registered: !!profile.tax_registered, currencies: H.locale().currencies, has_logo: !!logo };
   },
 });
 

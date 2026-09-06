@@ -33,7 +33,7 @@
       "expect": { "ok": true },
       "notes": "no remittance advice yet — INV-8, sits unapplied" },
     { "act": "apply_payment", "args": { "payment": "P-0001", "invoice": "INV-0001", "amount": 500000 },
-      "expect": { "refused": "only $2000.00 left" } },
+      "expect": { "refused": "only $2,000.00 left" } },
     { "act": "apply_payment", "args": { "payment": "P-0001", "invoice": "INV-0001" },
       "expect": { "ok": true },
       "notes": "invoice remains open for the 140000 difference — short-pay stays visible" }

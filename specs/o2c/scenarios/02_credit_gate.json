@@ -11,7 +11,7 @@
       "expect": { "ok": true, "include": { "status": "draft", "total": 250000 } },
       "notes": "creating a draft consumes nothing — the gate is at confirmation only" },
     { "act": "confirm_order", "args": { "order": "SO-0001" },
-      "expect": { "refused": "Short by $1500.00" } },
+      "expect": { "refused": "Short by $1,500.00" } },
 
     { "act": "create_order", "args": { "customer": "C-0001", "lines": [ { "item": "WIDGET-A", "qty": 4 } ] },
       "expect": { "ok": true } },

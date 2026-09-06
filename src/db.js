@@ -10,7 +10,42 @@ const db = wsp.db;
 const today = () => new Date().toISOString().slice(0, 10);
 const addDays = (iso, n) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * 864e5).toISOString().slice(0, 10);
 const TERMS = { immediate: 0, net15: 15, net30: 30, net60: 60 };
-const money = (cents) => `$${(cents / 100).toFixed(2)}`;
+// ---------------------------------------------------------------- money and dates, per space
+// The company profile says where the business is (country -> locale) and what it bills in
+// (a default currency and an allowed set). money() formats minor units in a currency, in the
+// space's locale: a New Zealand space prints NZD as "$2,700.00", a US space prints CZK as
+// "CZK 2,700.00". Amounts are integers everywhere; formatting is the only place a decimal appears.
+const LOCALES = { US: 'en-US', NZ: 'en-NZ', AU: 'en-AU', GB: 'en-GB', IE: 'en-IE', CA: 'en-CA', CZ: 'cs-CZ', HU: 'hu-HU', DE: 'de-DE', AT: 'de-AT', CH: 'de-CH', NL: 'nl-NL', FR: 'fr-FR', ES: 'es-ES', IT: 'it-IT', PL: 'pl-PL', SK: 'sk-SK', SE: 'sv-SE', DK: 'da-DK', NO: 'nb-NO', FI: 'fi-FI', PT: 'pt-PT', SG: 'en-SG', IN: 'en-IN', ZA: 'en-ZA', JP: 'ja-JP' };
+const CUR_RE = /^[A-Z]{3}$/;
+/** The space's money settings, defaults filled in. Safe before the profile exists or the column migration ran. */
+function locale() {
+  let p = null;
+  try { p = db().prepare('SELECT country, currency, currencies, tax_label, tax_rate_bp, tax_registered, tax_id_label, number_format FROM company_profile WHERE id = 1').get() || null; } catch { p = null; }
+  const currency = (p && p.currency) || 'USD';
+  let currencies = null;
+  try { currencies = p && p.currencies ? JSON.parse(p.currencies) : null; } catch { currencies = null; }
+  if (!Array.isArray(currencies) || !currencies.length) currencies = [currency];
+  if (!currencies.includes(currency)) currencies.unshift(currency);
+  const country = (p && p.country) || null;
+  return { country, locale: LOCALES[country] || 'en-US', currency, currencies,
+           tax_label: (p && p.tax_label) || null, tax_rate_bp: (p && p.tax_rate_bp) || 0, tax_registered: !!(p && p.tax_registered),
+           tax_id_label: (p && p.tax_id_label) || null, number_format: (p && p.number_format) || null };
+}
+const fmtCache = new Map();
+function money(cents, currency, loc) {
+  const l = (currency && loc) ? { currency, locale: loc } : locale();
+  const cur = CUR_RE.test(currency || '') ? currency : l.currency;
+  const key = `${l.locale}|${cur}`;
+  let f = fmtCache.get(key);
+  if (!f) { try { f = new Intl.NumberFormat(l.locale, { style: 'currency', currency: cur }); } catch { f = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }); } fmtCache.set(key, f); }
+  return f.format((cents || 0) / 100);
+}
+/** A date as people in the space write it: "May 10, 2026" in the US, "10 May 2026" in New Zealand. */
+function fmtDate(iso, loc) {
+  if (!iso) return '';
+  const l = loc || locale().locale;
+  return new Date(`${String(iso).slice(0, 10)}T00:00:00Z`).toLocaleDateString(l, { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+}
 
 /** Human-legible sequential ids. An operator reading SO-0007 in an email can find it. */
 function nextId(prefix, table) {
@@ -31,4 +66,4 @@ const auditTrail = (limit = 50, subjectId = null) => db().prepare(`
   SELECT * FROM command_log ${subjectId ? 'WHERE subject_id = ?' : ''} ORDER BY id DESC LIMIT ?`)
   .all(...(subjectId ? [subjectId, limit] : [limit]));
 
-module.exports = { db, today, addDays, TERMS, money, nextId, get, need, auditTrail };
+module.exports = { db, today, addDays, TERMS, money, fmtDate, locale, CUR_RE, nextId, get, need, auditTrail };

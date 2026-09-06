@@ -403,9 +403,10 @@ const server = http.createServer(async (req, res) => {
             (SELECT COALESCE(SUM(qty*unit_price),0) FROM order_line WHERE order_id = o.id) AS total
           FROM "order" o JOIN customer c ON c.id = o.customer_id ORDER BY o.id DESC`).all(),
         items: H.db().prepare('SELECT * FROM item ORDER BY id').all(),
-        solo_invoices: H.db().prepare(`SELECT i.id, i.status, i.total, i.issued_at, i.due_at, c.name AS customer_name,
+        solo_invoices: H.db().prepare(`SELECT i.id, i.status, i.total, i.currency, i.issued_at, i.due_at, c.name AS customer_name,
             i.total - COALESCE((SELECT SUM(amount) FROM solo_payment_application WHERE invoice_id = i.id), 0) AS open
-          FROM solo_invoice i JOIN customer c ON c.id = i.customer_id ORDER BY i.id DESC`).all(),
+          FROM solo_invoice i JOIN customer c ON c.id = i.customer_id ORDER BY i.id DESC`).all()
+          .map(r => ({ ...r, total_display: H.money(r.total, r.currency), open_display: H.money(r.open, r.currency) })),
         lookups: {
           customer: H.db().prepare('SELECT id, name AS label FROM customer ORDER BY name').all(),
           item:     H.db().prepare('SELECT id, name AS label FROM item ORDER BY id').all(),

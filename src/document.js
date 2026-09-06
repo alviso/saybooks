@@ -9,20 +9,34 @@
  */
 const path = require('path');
 const PDFDocument = require('pdfkit');
+const H = require('./db.js');
 
-const money = (c) => (c < 0 ? '-$' : '$') + (Math.abs(c) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// Money and dates print in the invoice's currency and the space's locale (0.2): a New Zealand
+// space shows "$2,700.00" and "10 May 2026"; a US space billing in CZK shows "CZK 2,700.00".
+// The PDF embeds Liberation Sans (metric-compatible with Helvetica, full Latin coverage) so
+// Czech, Hungarian or Māori names print as typed; the 14 built-in fonts cannot draw them.
+// pdf.js ships the files, so they are already on every install. Falls back to Helvetica if not.
+const FONT_DIR = (() => { try { return path.dirname(require.resolve('pdfjs-dist/standard_fonts/LiberationSans-Regular.ttf')); } catch { return null; } })();
+const FONT = FONT_DIR ? path.join(FONT_DIR, 'LiberationSans-Regular.ttf') : FONT;
+const FONT_B = FONT_DIR ? path.join(FONT_DIR, 'LiberationSans-Bold.ttf') : FONT_B;
+const moneyFor = (inv) => (c) => H.money(c, inv.currency || 'USD', inv.locale || 'en-US');
+const dateFor = (inv) => (iso) => H.fmtDate(iso, inv.locale || 'en-US');
+const taxRowLabel = (inv) => `${inv.tax_label || 'Tax'}${inv.tax_rate_display ? ' ' + inv.tax_rate_display : ''}`;
+const dueLabel = (inv, base) => `${base}${inv.show_currency ? ` (${inv.currency || 'USD'})` : ''}`;
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 const nl = (s) => esc(s).replace(/\n/g, '<br>');
 const termsOf = (inv) => inv.due_in_days === 0 ? 'Due on receipt' : `Net ${inv.due_in_days ?? 30}`;
 const reasonOf = (inv) => inv.void_reason ? String(inv.void_reason).trim().replace(/[.\s]+$/, '') : '';
-const longDate = (iso) => iso ? new Date(iso + 'T00:00:00Z').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }) : '';
 
 function renderInvoiceHtml(inv, logo) {
   const s = inv.seller, c = inv.customer || {};
+  const money = moneyFor(inv), longDate = dateFor(inv);
   const draft = inv.status === 'draft', voided = inv.status === 'void';
   const stamp = draft ? 'DRAFT' : voided ? 'VOID' : null;
-  const rows = inv.lines.map((l, i) => `<tr><td class="n muted">${i + 1}</td><td>${esc(l.description)}</td><td class="n">${l.qty}</td><td class="n">${money(l.rate)}</td>
-    <td class="n">${l.tax_rate_bp ? (l.tax_rate_bp / 100).toFixed(2) + '%' : '—'}</td><td class="n">${money(l.amount)}</td></tr>`).join('');
+  const showRef = inv.lines.some(l => l.ref), showTax = inv.tax_registered || inv.tax_total > 0;
+  const taxIdLabel = inv.tax_id_label || 'Tax ID';
+  const rows = inv.lines.map((l, i) => `<tr><td class="n muted">${i + 1}</td>${showRef ? `<td class="muted">${esc(l.ref || '')}</td>` : ''}<td>${esc(l.description)}</td><td class="n">${l.qty}</td><td class="n">${money(l.rate)}</td>
+    ${showTax ? `<td class="n">${l.tax_rate_bp ? (l.tax_rate_bp / 100).toFixed(2).replace(/\.?0+$/, '') + '%' : '—'}</td>` : ''}<td class="n">${money(l.amount)}</td></tr>`).join('');
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${draft ? 'DRAFT ' : ''}${esc(inv.id)} — ${esc(s ? s.name : 'Invoice')}</title><style>
     body{margin:0;background:#eef0f3;font:14px/1.5 -apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:hsl(215 40% 16%)}
     .page{max-width:800px;margin:32px auto;background:#fff;padding:56px 64px;box-shadow:0 2px 12px rgba(0,0,0,.08);position:relative}
@@ -36,7 +50,7 @@ function renderInvoiceHtml(inv, logo) {
     .status{display:inline-block;margin-top:8px;padding:3px 10px;border-radius:12px;background:#fff3cd;color:#7a5a00;font-size:12px;font-weight:600}
     .meta{display:flex;justify-content:space-between;margin-top:40px;font-size:14px;line-height:1.55;gap:2em}
     h4{margin:0 0 4px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#888;font-weight:600}
-    .meta .r{text-align:right}
+    .meta .r{text-align:right} .subject{margin-top:28px;font-size:14px}
     table{width:100%;border-collapse:collapse;margin-top:36px}
     th{text-align:left;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#888;padding:8px 6px;border-bottom:2px solid hsl(215 60% 22%)}
     td{padding:10px 6px;border-bottom:1px solid #e6e6e6} .n{text-align:right} .muted{color:#888}
@@ -50,20 +64,21 @@ function renderInvoiceHtml(inv, logo) {
     <div class="page">
       ${stamp ? `<div class="stamp${voided ? ' void' : ''}">${stamp}</div>` : ''}
       <div class="head">
-        <div class="seller">${logo ? `<img src="${esc(logo)}" alt="">` : ''}${s ? `<b>${esc(s.name)}</b>${nl(s.address || '')}${s.tax_id ? `<br>Tax ID ${esc(s.tax_id)}` : ''}` : ''}</div>
-        <div class="title"><h1>INVOICE</h1><div class="no">${esc(inv.id)}</div>${draft ? '<span class="status">DRAFT — not yet issued</span>' : voided ? '<span class="status void">VOID — not payable</span>' : ''}</div>
+        <div class="seller">${logo ? `<img src="${esc(logo)}" alt="">` : ''}${s ? `<b>${esc(s.name)}</b>${nl(s.address || '')}${s.tax_id ? `<br>${esc(taxIdLabel)} ${esc(s.tax_id)}` : ''}` : ''}</div>
+        <div class="title"><h1>${inv.tax_invoice ? 'TAX INVOICE' : 'INVOICE'}</h1><div class="no">${esc(inv.id)}</div>${draft ? '<span class="status">DRAFT — not yet issued</span>' : voided ? '<span class="status void">VOID — not payable</span>' : ''}</div>
       </div>
       <div class="meta">
-        <div><h4>Bill to</h4><b>${esc(c.name || inv.customer_name)}</b>${c.address ? `<br>${nl(c.address)}` : ''}${c.tax_id ? `<br>Tax ID ${esc(c.tax_id)}` : ''}${c.email ? `<br>${esc(c.email)}` : ''}</div>
+        <div><h4>Bill to</h4><b>${esc(c.name || inv.customer_name)}</b>${c.address ? `<br>${nl(c.address)}` : ''}${c.tax_id ? `<br>${esc(taxIdLabel)} ${esc(c.tax_id)}` : ''}${c.email ? `<br>${esc(c.email)}` : ''}</div>
         <div class="r"><h4>Details</h4>${draft ? `Issue date: <i>set at issue</i><br>Terms: ${esc(termsOf(inv))}<br>Due: ${esc(inv.due_in_days ?? 30)} days from issue` : `Issue date: ${esc(longDate(inv.issued_at))}<br>Terms: ${esc(termsOf(inv))}<br>Due date: ${esc(longDate(inv.due_at))}`}</div>
       </div>
-      <table><thead><tr><th class="n">#</th><th>Description</th><th class="n">Qty</th><th class="n">Rate</th><th class="n">Tax</th><th class="n">Amount</th></tr></thead><tbody>${rows}</tbody></table>
+      ${inv.subject ? `<div class="subject"><h4>Subject</h4>${esc(inv.subject)}</div>` : ''}
+      <table><thead><tr><th class="n">#</th>${showRef ? '<th>Ref</th>' : ''}<th>Description</th><th class="n">Qty</th><th class="n">Rate</th>${showTax ? `<th class="n">${esc(inv.tax_label || 'Tax')}</th>` : ''}<th class="n">Amount</th></tr></thead><tbody>${rows}</tbody></table>
       <table class="totals">
         <tr><td>Subtotal</td><td class="n">${money(inv.subtotal)}</td></tr>
-        <tr><td>Tax</td><td class="n">${money(inv.tax_total || 0)}</td></tr>
+        ${showTax ? `<tr><td>${esc(taxRowLabel(inv))}</td><td class="n">${money(inv.tax_total || 0)}</td></tr>` : ''}
         ${inv.applied ? `<tr><td>Paid</td><td class="n">−${money(inv.applied)}</td></tr>` : ''}
-        ${voided ? `<tr><td>Total (void)</td><td class="n">${money(inv.total)}</td></tr><tr class="due"><td>Amount payable</td><td class="n">${money(0)}</td></tr>`
-                 : `<tr class="due"><td>${inv.applied ? 'Balance due' : 'Total due'}</td><td class="n">${money(inv.open)}</td></tr>`}
+        ${voided ? `<tr><td>Total (void)</td><td class="n">${money(inv.total)}</td></tr><tr class="due"><td>${esc(dueLabel(inv, 'Amount payable'))}</td><td class="n">${money(0)}</td></tr>`
+                 : `<tr class="due"><td>${esc(dueLabel(inv, inv.applied ? 'Balance due' : 'Total due'))}</td><td class="n">${money(inv.open)}</td></tr>`}
       </table>
       <div class="foot">
         ${inv.payment_instructions ? `<div><h4>Payment instructions</h4>${nl(inv.payment_instructions)}</div>` : ''}
@@ -80,7 +95,10 @@ function renderInvoiceHtml(inv, logo) {
 function renderInvoicePdf(inv, logo) {
   return new Promise((resolve, reject) => {
     const s = inv.seller, c = inv.customer || {};
+    const money = moneyFor(inv), longDate = dateFor(inv);
     const draft = inv.status === 'draft', voided = inv.status === 'void';
+    const showRef = inv.lines.some(l => l.ref), showTax = inv.tax_registered || inv.tax_total > 0;
+    const taxIdLabel = inv.tax_id_label || 'Tax ID';
     const NAVY = '#16304f', INK = '#182a44', MUTED = '#777777', RULE = '#e6e6e6';
     const doc = new PDFDocument({ size: 'LETTER', margins: { top: 56, bottom: 56, left: 56, right: 56 }, info: { Title: `${inv.id} — ${s ? s.name : 'Invoice'}`, Author: s ? s.name : 'Saybooks' } });
     const chunks = [];
@@ -91,46 +109,48 @@ function renderInvoicePdf(inv, logo) {
     let y = doc.page.margins.top;
     const m = logo ? /^data:image\/(png|jpeg);base64,(.+)$/s.exec(logo) : null;   // pdfkit draws PNG/JPEG; SVG/WebP logos print on the HTML only
     if (m) { try { doc.image(Buffer.from(m[2], 'base64'), L, y, { fit: [160, 44] }); y += 54; } catch { /* a logo that will not decode is not a reason to fail the invoice */ } }
-    doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(26).text('INVOICE', L, doc.page.margins.top, { width: W, align: 'right', characterSpacing: 1.5 });
-    doc.fillColor(MUTED).font('Helvetica').fontSize(11).text(inv.id, L, doc.page.margins.top + 32, { width: W, align: 'right' });
+    doc.fillColor(NAVY).font(FONT_B).fontSize(26).text(inv.tax_invoice ? 'TAX INVOICE' : 'INVOICE', L, doc.page.margins.top, { width: W, align: 'right', characterSpacing: 1.5 });
+    doc.fillColor(MUTED).font(FONT).fontSize(11).text(inv.id, L, doc.page.margins.top + 32, { width: W, align: 'right' });
     if (draft || voided) {
       const label = draft ? 'DRAFT — NOT YET ISSUED' : 'VOID — NOT PAYABLE';
-      doc.fillColor(draft ? '#7a5a00' : '#8a1c1c').font('Helvetica-Bold').fontSize(9).text(label, L, doc.page.margins.top + 50, { width: W, align: 'right', characterSpacing: 0.8 });
+      doc.fillColor(draft ? '#7a5a00' : '#8a1c1c').font(FONT_B).fontSize(9).text(label, L, doc.page.margins.top + 50, { width: W, align: 'right', characterSpacing: 0.8 });
       const word = draft ? 'DRAFT' : 'VOID';
-      doc.save().rotate(-28, { origin: [doc.page.width / 2, doc.page.height * 0.42] }).fillColor(draft ? '#b45309' : '#b41e1e').opacity(draft ? 0.08 : 0.10).font('Helvetica-Bold').fontSize(120);
+      doc.save().rotate(-28, { origin: [doc.page.width / 2, doc.page.height * 0.42] }).fillColor(draft ? '#b45309' : '#b41e1e').opacity(draft ? 0.08 : 0.10).font(FONT_B).fontSize(120);
       const sw = doc.widthOfString(word, { characterSpacing: 10 });
       doc.text(word, doc.page.width / 2 - sw / 2, doc.page.height * 0.42 - 70, { lineBreak: false, characterSpacing: 10 }).restore().opacity(1);
     }
     if (s) {
-      doc.fillColor(INK).font('Helvetica-Bold').fontSize(13).text(s.name, L, y, { width: W * 0.55 });
-      doc.font('Helvetica').fontSize(10).fillColor(INK);
+      doc.fillColor(INK).font(FONT_B).fontSize(13).text(s.name, L, y, { width: W * 0.55 });
+      doc.font(FONT).fontSize(10).fillColor(INK);
       if (s.address) doc.text(s.address, { width: W * 0.55 });
-      if (s.tax_id) doc.text(`Tax ID ${s.tax_id}`, { width: W * 0.55 });
+      if (s.tax_id) doc.text(`${taxIdLabel} ${s.tax_id}`, { width: W * 0.55 });
     }
     y = Math.max(doc.y, doc.page.margins.top + 60) + 28;
 
     // Bill to / details
-    const label = (t, x, w, align) => { doc.fillColor(MUTED).font('Helvetica-Bold').fontSize(8).text(t.toUpperCase(), x, y, { width: w, align, characterSpacing: 1.2 }); };
+    const label = (t, x, w, align) => { doc.fillColor(MUTED).font(FONT_B).fontSize(8).text(t.toUpperCase(), x, y, { width: w, align, characterSpacing: 1.2 }); };
     label('Bill to', L, W / 2, 'left'); label('Details', L + W / 2, W / 2, 'right');
     const topY = y + 14;
-    doc.fillColor(INK).font('Helvetica-Bold').fontSize(10.5).text(c.name || inv.customer_name || '', L, topY, { width: W / 2 });
-    doc.font('Helvetica').fontSize(10);
+    doc.fillColor(INK).font(FONT_B).fontSize(10.5).text(c.name || inv.customer_name || '', L, topY, { width: W / 2 });
+    doc.font(FONT).fontSize(10);
     if (c.address) doc.text(c.address, { width: W / 2 });
-    if (c.tax_id) doc.text(`Tax ID ${c.tax_id}`, { width: W / 2 });
+    if (c.tax_id) doc.text(`${taxIdLabel} ${c.tax_id}`, { width: W / 2 });
     if (c.email) doc.text(c.email, { width: W / 2 });
     const leftEnd = doc.y;
-    doc.font('Helvetica').fontSize(10).fillColor(INK)
+    doc.font(FONT).fontSize(10).fillColor(INK)
       .text(draft ? 'Issue date: set at issue' : `Issue date: ${longDate(inv.issued_at)}`, L + W / 2, topY, { width: W / 2, align: 'right' })
       .text(`Terms: ${termsOf(inv)}`, { width: W / 2, align: 'right' })
       .text(draft ? `Due: ${inv.due_in_days ?? 30} days from issue` : `Due date: ${longDate(inv.due_at)}`, { width: W / 2, align: 'right' });
     y = Math.max(leftEnd, doc.y) + 30;
+    if (inv.subject) { label('Subject', L, W, 'left'); doc.fillColor(INK).font(FONT).fontSize(10).text(inv.subject, L, y + 14, { width: W }); y = doc.y + 18; }
 
-    // Lines
-    const cols = [{ w: 22, a: 'right' }, { w: W - 22 - 50 - 80 - 55 - 85, a: 'left' }, { w: 50, a: 'right' }, { w: 80, a: 'right' }, { w: 55, a: 'right' }, { w: 85, a: 'right' }];
-    const heads = ['#', 'Description', 'Qty', 'Rate', 'Tax', 'Amount'];
+    // Lines: the ref column appears only when a line carries one, the tax column only when the scheme has tax.
+    const refW = showRef ? 70 : 0, taxW = showTax ? 55 : 0;
+    const cols = [{ w: 22, a: 'right' }, ...(showRef ? [{ w: refW, a: 'left' }] : []), { w: W - 22 - refW - 50 - 80 - taxW - 85, a: 'left' }, { w: 50, a: 'right' }, { w: 80, a: 'right' }, ...(showTax ? [{ w: taxW, a: 'right' }] : []), { w: 85, a: 'right' }];
+    const heads = ['#', ...(showRef ? ['Ref'] : []), 'Description', 'Qty', 'Rate', ...(showTax ? [inv.tax_label || 'Tax'] : []), 'Amount'];
     const row = (cells, opts = {}) => {
       let x = L; const startY = y; let maxH = 0;
-      doc.font(opts.bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(opts.size || 10).fillColor(opts.color || INK);
+      doc.font(opts.bold ? FONT_B : FONT).fontSize(opts.size || 10).fillColor(opts.color || INK);
       cells.forEach((t, i) => { const h = doc.heightOfString(String(t), { width: cols[i].w - 6 }); maxH = Math.max(maxH, h); });
       cells.forEach((t, i) => { doc.text(String(t), x + 3, startY, { width: cols[i].w - 6, align: cols[i].a }); x += cols[i].w; });
       y = startY + maxH + 8;
@@ -139,26 +159,26 @@ function renderInvoicePdf(inv, logo) {
     doc.moveTo(L, y - 3).lineTo(R, y - 3).lineWidth(1.5).strokeColor(NAVY).stroke(); y += 6;
     inv.lines.forEach((l, i) => {
       if (y > doc.page.height - 160) { doc.addPage(); y = doc.page.margins.top; }
-      row([i + 1, l.description, l.qty, money(l.rate), l.tax_rate_bp ? (l.tax_rate_bp / 100).toFixed(2) + '%' : '—', money(l.amount)]);
+      row([i + 1, ...(showRef ? [l.ref || ''] : []), l.description, l.qty, money(l.rate), ...(showTax ? [l.tax_rate_bp ? (l.tax_rate_bp / 100).toFixed(2).replace(/\.?0+$/, '') + '%' : '-'] : []), money(l.amount)]);
       doc.moveTo(L, y - 4).lineTo(R, y - 4).lineWidth(0.5).strokeColor(RULE).stroke();
     });
 
     // Totals
-    y += 8; const tx = R - 200;
-    const tot = (k, v, bold) => { doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(bold ? 12 : 10).fillColor(INK).text(k, tx, y, { width: 100 }).text(v, tx + 100, y, { width: 100, align: 'right' }); y += bold ? 18 : 15; };
-    tot('Subtotal', money(inv.subtotal)); tot('Tax', money(inv.tax_total || 0));
+    y += 8; const tx = R - 240;
+    const tot = (k, v, bold) => { doc.font(bold ? FONT_B : FONT).fontSize(bold ? 12 : 10).fillColor(INK).text(k, tx, y, { width: 130 }).text(v, tx + 130, y, { width: 110, align: 'right' }); y += bold ? 18 : 15; };
+    tot('Subtotal', money(inv.subtotal)); if (showTax) tot(taxRowLabel(inv), money(inv.tax_total || 0));
     if (inv.applied) tot('Paid', '-' + money(inv.applied));
     doc.moveTo(tx, y + 1).lineTo(R, y + 1).lineWidth(1.5).strokeColor(INK).stroke(); y += 8;
-    if (voided) { tot('Total (void)', money(inv.total)); tot('Amount payable', money(0), true); }
-    else tot(inv.applied ? 'Balance due' : 'Total due', money(inv.open), true);
+    if (voided) { tot('Total (void)', money(inv.total)); tot(dueLabel(inv, 'Amount payable'), money(0), true); }
+    else tot(dueLabel(inv, inv.applied ? 'Balance due' : 'Total due'), money(inv.open), true);
 
     // Foot: payment instructions + notes
     y += 26; if (y > doc.page.height - 140) { doc.addPage(); y = doc.page.margins.top; }
     const colW = (W - 30) / 2; let footEnd = y;
-    if (inv.payment_instructions) { label('Payment instructions', L, colW, 'left'); doc.fillColor(INK).font('Helvetica').fontSize(9.5).text(inv.payment_instructions, L, y + 14, { width: colW }); footEnd = Math.max(footEnd, doc.y); }
-    if (inv.notes) { label('Notes', L + colW + 30, colW, 'left'); doc.fillColor(INK).font('Helvetica').fontSize(9.5).text(inv.notes, L + colW + 30, y + 14, { width: colW }); footEnd = Math.max(footEnd, doc.y); }
-    if (s && s.footer_note) { doc.fillColor(MUTED).font('Helvetica').fontSize(8.5).text(s.footer_note, L, footEnd + 30, { width: W, align: 'center' }); footEnd = doc.y; }
-    if (voided) { doc.fillColor('#8a1c1c').font('Helvetica').fontSize(8.5).text(`Voided${reasonOf(inv) ? ': ' + reasonOf(inv) : ''}. Kept for the record; nothing on it is payable and the number is not reused.`, L, footEnd + 16, { width: W, align: 'center' }); }
+    if (inv.payment_instructions) { label('Payment instructions', L, colW, 'left'); doc.fillColor(INK).font(FONT).fontSize(9.5).text(inv.payment_instructions, L, y + 14, { width: colW }); footEnd = Math.max(footEnd, doc.y); }
+    if (inv.notes) { label('Notes', L + colW + 30, colW, 'left'); doc.fillColor(INK).font(FONT).fontSize(9.5).text(inv.notes, L + colW + 30, y + 14, { width: colW }); footEnd = Math.max(footEnd, doc.y); }
+    if (s && s.footer_note) { doc.fillColor(MUTED).font(FONT).fontSize(8.5).text(s.footer_note, L, footEnd + 30, { width: W, align: 'center' }); footEnd = doc.y; }
+    if (voided) { doc.fillColor('#8a1c1c').font(FONT).fontSize(8.5).text(`Voided${reasonOf(inv) ? ': ' + reasonOf(inv) : ''}. Kept for the record; nothing on it is payable and the number is not reused.`, L, footEnd + 16, { width: W, align: 'center' }); }
     doc.end();
   });
 }

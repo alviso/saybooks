@@ -333,8 +333,10 @@ read({
   args: { with_logo: f.bool('Include the logo itself as a data URL — large. Otherwise only its type and size come back.') },
   handler: (a) => {
     const p = H.db().prepare('SELECT * FROM company_profile WHERE id = 1').get();
-    if (!p) return { name: null, address: null, tax_id: null, payment_instructions: null, footer_note: null, has_logo: false, set: false };
-    const { logo, ...rest } = p;
+    const loc = H.locale();
+    if (!p) return { name: null, address: null, tax_id: null, payment_instructions: null, footer_note: null, country: null, currency: loc.currency, currencies: loc.currencies, tax_label: null, tax_rate_bp: 0, tax_registered: false, tax_id_label: null, number_format: null, has_logo: false, set: false };
+    const { logo, ...p2 } = p;
+    const rest = { ...p2, currency: loc.currency, currencies: loc.currencies, tax_registered: !!p2.tax_registered };
     const m = logo ? /^data:([^;]+);base64,([\s\S]*)$/.exec(logo) : null;
     return { ...rest, has_logo: !!logo, logo_type: m ? m[1] : null, logo_bytes: m ? Math.floor(m[2].length * 3 / 4) : 0, ...(a.with_logo && logo ? { logo } : {}) };
   },

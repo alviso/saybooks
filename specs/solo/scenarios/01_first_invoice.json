@@ -1,6 +1,6 @@
 {
   "name": "the first invoice: profile, client, draft, issue, partial payment",
-  "spec": "solo@0.1",
+  "spec": "solo@0.2",
   "notes": "The whole product in one sitting. S-1 cents, S-3 seller frozen at issue, S-5 the terms are the agreement, S-7 the doc link is produced not sent.",
   "env": [
     [

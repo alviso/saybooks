@@ -1,6 +1,6 @@
 {
   "area": "solo",
-  "spec": "0.1",
+  "spec": "0.2",
   "doc": "spec.md",
   "acts": {
     "draft_invoice": {

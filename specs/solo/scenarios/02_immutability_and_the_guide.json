@@ -1,6 +1,6 @@
 {
   "name": "immutability, burned numbers, and the refusal that teaches",
-  "spec": "solo@0.1",
+  "spec": "solo@0.2",
   "notes": "S-2 issued is immutable, S-3 the no-profile refusal IS the interactive guide, S-4 void burns the number, S-8 refusals are logged.",
   "env": [
     [

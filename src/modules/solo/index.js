@@ -25,6 +25,8 @@ const mod = R.defineModule({
     'Issued invoices are immutable; mistakes are void-and-reissue on the record.',
     'The seller block freezes at issuance; no profile means issuing is refused with the guide sentence.',
     'Documents are produced, never sent; payments are recorded, never moved.',
+    'An invoice carries one currency from the company\'s set; cash never crosses currencies.',
+    'Tax follows the company\'s scheme: unregistered businesses cannot tax a line; registered ones default every line to their rate and print TAX INVOICE.',
   ],
   doctrine: `Freelancer invoicing: no orders, no fulfilment, no credit gate — the client
 agreement IS the policy (S-5). Invoice ahead of the work, partially along the way, or after;
@@ -44,9 +46,13 @@ ONE question at a time:
   only after they confirm — solo_get_document shows you the real render first. Then call
   solo_get_document again and hand over pdf_url, the direct download of the finished PDF;
   they send it themselves (S-7). The link is the deliverable; never relay the bytes.
+- Currency and tax come from the company profile, not from guesswork. Ask which currency
+  only when the company bills in several; ask about tax only to confirm the company's
+  scheme (registered? default rate?) the first time — the owner sets it once under Company.
+  Never put tax on a line for an unregistered business; the write is refused anyway.
 Never invent an amount, a rate, a date, or terms (S-6).`,
   implements: {
-    area: 'solo', spec: '0.1',
+    area: 'solo', spec: '0.2',
     argmap: { customer: 'customer_id', invoice: 'invoice_id', payment: 'payment_id' },
     acts: {
       draft_invoice: 'solo_draft_invoice', update_draft: 'solo_update_draft',

@@ -317,7 +317,7 @@ async function detail(type, id) {
     : type === 'posting'
     ? { Via: entity.company_name, 'End client': entity.end_client_name ?? '—', Req: entity.req_id ?? '—', Fit: entity.fit_score ?? '—', Resume: entity.resume_version_label ?? '—', 'Applied': entity.application ? (entity.application.applied_at || 'yes') : 'no', 'App status': entity.application ? entity.application.status : '—' }
     : type === 'solo_invoice'
-    ? { Client: entity.customer_name, Total: entity.total_display, Applied: entity.applied_display, Open: entity.open_display, Issued: entity.issued_at ?? '— (draft)', Due: entity.due_at ?? `${entity.due_in_days ?? 30} days from issue`, ...(entity.void_reason && { Voided: entity.void_reason }) }
+    ? { Client: entity.customer_name, Currency: entity.currency || 'USD', Total: entity.total_display, Applied: entity.applied_display, Open: entity.open_display, Issued: entity.issued_at ?? '— (draft)', Due: entity.due_at ?? `${entity.due_in_days ?? 30} days from issue`, ...(entity.void_reason && { Voided: entity.void_reason }) }
     : type === 'contact'
     ? { Company: entity.company_name ?? '—', Role: entity.role ?? '—', Email: entity.email ?? '—', Phone: entity.phone ?? '—', LinkedIn: entity.linkedin_url ? `<a href="${entity.linkedin_url}" target="_blank" rel="noopener">profile</a>` : '—', Source: entity.source, 'Last touch': entity.last_touch ? entity.last_touch.slice(0,10) : '—' }
     : type === 'resume'
@@ -514,9 +514,11 @@ async function detail(type, id) {
       if (entity.pdf_path) { const pb = $('<button>Download PDF</button>'); pb.onclick = () => window.open(entity.pdf_path, '_blank'); bar2.append(pb); }
     }
     wrap.append(bar2);
-    const lt = $('<table><thead><tr><th>Description</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Tax</th><th class="num">Amount</th></tr></thead><tbody></tbody></table>');
+    const showRef = entity.lines.some(l => l.ref), showTax = entity.tax_registered || entity.tax_total > 0;
+    const lt = $(`<table><thead><tr>${showRef ? '<th>Ref</th>' : ''}<th>Description</th><th class="num">Qty</th><th class="num">Rate</th>${showTax ? `<th class="num">${entity.tax_label || 'Tax'}</th>` : ''}<th class="num">Amount</th></tr></thead><tbody></tbody></table>`);
     for (const l of entity.lines) lt.querySelector('tbody').append($(
-      `<tr><td>${l.description}</td><td class="num">${l.qty}</td><td class="num">${cents(l.rate)}</td><td class="num">${l.tax_rate_bp ? (l.tax_rate_bp / 100).toFixed(2) + '%' : '—'}</td><td class="num">${cents(l.amount)}</td></tr>`));
+      `<tr>${showRef ? `<td style="color:var(--dim)">${l.ref || ''}</td>` : ''}<td>${l.description}</td><td class="num">${l.qty}</td><td class="num">${l.rate_display || cents(l.rate)}</td>${showTax ? `<td class="num">${l.tax_display || '—'}</td>` : ''}<td class="num">${l.amount_display || cents(l.amount)}</td></tr>`));
+    if (entity.subject) wrap.prepend($(`<div class="sub" style="margin:0 0 8px">${entity.subject}</div>`));
     wrap.append(lt);
     if (entity.notes) wrap.append($(`<div class="card doc" style="margin-top:10px">${entity.notes}</div>`));
   }
@@ -977,7 +979,7 @@ async function render() {
     if (!rows.length) { main.append(soloOnboarding()); return; }
     const t = $('<table><thead><tr><th>Invoice</th><th>Client</th><th>Status</th><th class="num">Total</th><th class="num">Open</th><th>Issued</th><th>Due</th></tr></thead><tbody></tbody></table>');
     rowsInto(t, rows, r => `<td>${r.id}</td><td>${r.customer_name}</td><td><span class="pill ${r.status}">${r.status}</span></td>
-      <td class="num">${cents(r.total)}</td><td class="num">${r.status === 'void' ? '—' : cents(r.open)}</td>
+      <td class="num">${r.total_display || cents(r.total)}</td><td class="num">${r.status === 'void' ? '—' : (r.open_display || cents(r.open))}</td>
       <td style="font-size:12px;color:var(--dim)">${r.issued_at || '—'}</td><td style="font-size:12px;color:var(--dim)">${r.due_at || '—'}</td>`, 'solo_invoice');
   }
   if (view === 'soloout') {
@@ -1063,7 +1065,11 @@ async function render() {
         <h2 style="margin-bottom:4px">${nl2(p.name)}</h2>
         <div class="kv">
           ${p.address ? `<div><span>Address</span>${nl2(p.address)}</div>` : ''}
-          ${p.tax_id ? `<div><span>Tax id</span>${nl2(p.tax_id)}</div>` : ''}
+          ${p.tax_id ? `<div><span>${nl2(p.tax_id_label || 'Tax id')}</span>${nl2(p.tax_id)}</div>` : ''}
+          <div><span>Country</span>${p.country ? nl2(p.country) : '— (dates and amounts print US-style)'}</div>
+          <div><span>Currencies</span>${(p.currencies || ['USD']).map(c => c === p.currency ? `<b>${c}</b>` : c).join(', ')}${(p.currencies || []).length > 1 ? ' <span style="color:var(--dim)">(default in bold; each invoice picks one)</span>' : ''}</div>
+          <div><span>Tax</span>${p.tax_registered ? `registered for ${nl2(p.tax_label || 'tax')}, default ${(p.tax_rate_bp / 100).toFixed(2).replace(/\.?0+$/, '')}% — documents print TAX INVOICE` : `not registered${p.tax_label ? ' for ' + nl2(p.tax_label) : ''} — lines cannot carry tax`}</div>
+          <div><span>Numbering</span>${nl2(p.number_format || 'INV-{NNNN}')}</div>
         </div>
         ${p.payment_instructions ? `<div style="margin-top:12px"><b>Payment instructions — printed on every invoice</b><div class="doc" style="margin-top:4px">${nl2(p.payment_instructions)}</div></div>` : ''}
         ${p.footer_note ? `<div style="margin-top:12px"><b>Document footer</b><div class="doc" style="margin-top:4px">${nl2(p.footer_note)}</div></div>` : ''}
