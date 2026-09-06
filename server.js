@@ -154,7 +154,21 @@ const walks = new Map();          // walkthrough ordering: workspace -> next exp
 
 /** The printable invoice, rendered server-side for /doc links — same look as the workbench's
  *  print view. The esc() matters: everything here is user-entered text on a public-ish URL. */
-const { renderInvoiceHtml, renderInvoicePdf } = require('./src/document.js');
+const { renderInvoicePdf, renderDocumentPage, rasterizePdf } = require('./src/document.js');
+// Rendered documents, keyed by workspace/token/updated_at: the PDF once, its page images on demand.
+const DOC_CACHE = new Map(); const DOC_CACHE_MAX = 40;
+async function renderedDoc(dws, v, logo) {
+  const key = `${dws}/${v.doc_token}/${v.status}/${v.updated_at}/${v.applied}`;
+  let e = DOC_CACHE.get(key);
+  if (!e) {
+    const pdf = await renderInvoicePdf(v, logo);
+    const first = await rasterizePdf(pdf, 1, 2);
+    e = { pdf, pages: first.pages, png: new Map([[1, first.png]]) };
+    if (DOC_CACHE.size >= DOC_CACHE_MAX) DOC_CACHE.delete(DOC_CACHE.keys().next().value);
+    DOC_CACHE.set(key, e);
+  }
+  return e;
+}
 
 /**
  * Demo abuse guard — deliberately light: a token bucket per IP for requests, and a separate
@@ -292,9 +306,10 @@ const server = http.createServer(async (req, res) => {
 
   // The document link (S-7): a capability to view ONE issued invoice, nothing else. No
   // cookie, no session — the URL is workspace + per-invoice token, both required.
-  const docMatch = /^\/doc\/([a-z0-9-]{4,40})\/([a-f0-9]{24})(\.pdf)?$/.exec(p);
+  const docMatch = /^\/doc\/([a-z0-9-]{4,40})\/([a-f0-9]{24})(\.pdf|\/p(\d{1,2})\.png)?$/.exec(p);
   if (docMatch && req.method === 'GET') {
-    const [, dws, dtok, wantPdf] = docMatch;
+    const [, dws, dtok, ext, pageNo] = docMatch;
+    const wantPdf = ext === '.pdf', wantPng = !!pageNo;
     if (!sandboxExists(dws)) return send(res, 404, 'Not found', 'text/plain');
     try {
       // Drafts render too, marked DRAFT — the preview a person sees before the point of no return (S-7).
@@ -305,10 +320,15 @@ const server = http.createServer(async (req, res) => {
         return { v: require('./src/modules/solo/views.js').invoiceView(inv.id), logo: (H.db().prepare('SELECT logo FROM company_profile WHERE id = 1').get() || {}).logo || null };
       });
       if (!v) return send(res, 404, 'Not found', 'text/plain');
-      if (!wantPdf) return send(res, 200, renderInvoiceHtml(v, logo), 'text/html; charset=utf-8');
-      if (v.status === 'draft') return send(res, 409, 'A draft has no final numbers — issue it first, then the PDF exists.', 'text/plain');
-      const pdf = await renderInvoicePdf(v, logo);
-      return send(res, 200, pdf, 'application/pdf', { 'content-disposition': `inline; filename="${v.id}.pdf"` });
+      // One renderer: the page shows the PDF's own pages, the .pdf is the file (a draft's is stamped DRAFT).
+      const e = await renderedDoc(dws, v, logo);
+      if (wantPng) {
+        const n = Number(pageNo); if (n < 1 || n > e.pages) return send(res, 404, 'No such page', 'text/plain');
+        if (!e.png.has(n)) e.png.set(n, (await rasterizePdf(e.pdf, n, 2)).png);
+        return send(res, 200, e.png.get(n), 'image/png', { 'cache-control': 'private, max-age=60' });
+      }
+      if (wantPdf) return send(res, 200, e.pdf, 'application/pdf', { 'content-disposition': `inline; filename="${v.id}${v.status === 'draft' ? '-draft' : ''}.pdf"` });
+      return send(res, 200, renderDocumentPage(v, e.pages), 'text/html; charset=utf-8');
     } catch (e) { console.error('[doc]', e.message); return send(res, 404, 'Not found', 'text/plain'); }
   }
 

@@ -1,97 +1,40 @@
 'use strict';
 /**
- * The invoice document — one layout, two formats.
+ * The invoice document — one renderer, the PDF.
  *
- * HTML is what the /doc link renders (drafts stamped DRAFT, issued as the invoice). PDF is
- * the same document for issued invoices only: the file the freelancer attaches and sends
- * themselves (S-7). Both read the same invoiceView so they cannot disagree on a number.
+ * The PDF is the document: what the freelancer downloads and sends themselves (S-7), stamped
+ * DRAFT before issue and VOID after a void. The /doc link shows the PDF's own pages as
+ * pictures, so the preview and the file cannot disagree — same pagination, same fonts, same
+ * numbers — and an agent looking through solo_get_document sees the same pages again.
  * The logo is branding, not a fact: read live, never from the frozen blocks.
  */
 const path = require('path');
 const PDFDocument = require('pdfkit');
 const H = require('./db.js');
 
-// Money and dates print in the invoice's currency and the space's locale (0.2): a New Zealand
-// space shows "$2,700.00" and "10 May 2026"; a US space billing in CZK shows "CZK 2,700.00".
 // The PDF embeds Liberation Sans (metric-compatible with Helvetica, full Latin coverage) so
 // Czech, Hungarian or Māori names print as typed; the 14 built-in fonts cannot draw them.
 // pdf.js ships the files, so they are already on every install. Falls back to Helvetica if not.
 const FONT_DIR = (() => { try { return path.dirname(require.resolve('pdfjs-dist/standard_fonts/LiberationSans-Regular.ttf')); } catch { return null; } })();
-const FONT = FONT_DIR ? path.join(FONT_DIR, 'LiberationSans-Regular.ttf') : FONT;
-const FONT_B = FONT_DIR ? path.join(FONT_DIR, 'LiberationSans-Bold.ttf') : FONT_B;
+const FONT = FONT_DIR ? path.join(FONT_DIR, 'LiberationSans-Regular.ttf') : 'Helvetica';
+const FONT_B = FONT_DIR ? path.join(FONT_DIR, 'LiberationSans-Bold.ttf') : 'Helvetica-Bold';
+
+// Money and dates print in the invoice's currency and the space's locale (0.2): a New Zealand
+// space shows "$2,700.00" and "10 May 2026"; a US space billing in CZK shows "CZK 2,700.00".
 const moneyFor = (inv) => (c) => H.money(c, inv.currency || 'USD', inv.locale || 'en-US');
 const dateFor = (inv) => (iso) => H.fmtDate(iso, inv.locale || 'en-US');
 const taxRowLabel = (inv) => `${inv.tax_label || 'Tax'}${inv.tax_rate_display ? ' ' + inv.tax_rate_display : ''}`;
 const dueLabel = (inv, base) => `${base}${inv.show_currency ? ` (${inv.currency || 'USD'})` : ''}`;
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-const nl = (s) => esc(s).replace(/\n/g, '<br>');
-const termsOf = (inv) => inv.due_in_days === 0 ? 'Due on receipt' : `Net ${inv.due_in_days ?? 30}`;
 const reasonOf = (inv) => inv.void_reason ? String(inv.void_reason).trim().replace(/[.\s]+$/, '') : '';
+// "Net 30" is a term people recognise; "Net 41" is not — then only the due date speaks.
+const STD_TERMS = { 0: 'Due on receipt', 7: 'Net 7', 10: 'Net 10', 14: 'Net 14', 15: 'Net 15', 21: 'Net 21', 30: 'Net 30', 45: 'Net 45', 60: 'Net 60', 90: 'Net 90' };
+// Letter is a North American habit; everyone else prints on A4.
+const paperFor = (country) => (['US', 'CA', 'MX'].includes(country || 'US') ? 'LETTER' : 'A4');
+// A line's description: the first line is the title, anything after it prints smaller beneath.
+const splitDesc = (d) => { const parts = String(d || '').split(/\r?\n/); return { title: parts[0], detail: parts.slice(1).join('\n').trim() }; };
 
-function renderInvoiceHtml(inv, logo) {
-  const s = inv.seller, c = inv.customer || {};
-  const money = moneyFor(inv), longDate = dateFor(inv);
-  const draft = inv.status === 'draft', voided = inv.status === 'void';
-  const stamp = draft ? 'DRAFT' : voided ? 'VOID' : null;
-  const showRef = inv.lines.some(l => l.ref), showTax = inv.tax_registered || inv.tax_total > 0;
-  const taxIdLabel = inv.tax_id_label || 'Tax ID';
-  const rows = inv.lines.map((l, i) => `<tr><td class="n muted">${i + 1}</td>${showRef ? `<td class="muted">${esc(l.ref || '')}</td>` : ''}<td>${esc(l.description)}</td><td class="n">${l.qty}</td><td class="n">${money(l.rate)}</td>
-    ${showTax ? `<td class="n">${l.tax_rate_bp ? (l.tax_rate_bp / 100).toFixed(2).replace(/\.?0+$/, '') + '%' : '—'}</td>` : ''}<td class="n">${money(l.amount)}</td></tr>`).join('');
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${draft ? 'DRAFT ' : ''}${esc(inv.id)} — ${esc(s ? s.name : 'Invoice')}</title><style>
-    body{margin:0;background:#eef0f3;font:14px/1.5 -apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:hsl(215 40% 16%)}
-    .page{max-width:800px;margin:32px auto;background:#fff;padding:56px 64px;box-shadow:0 2px 12px rgba(0,0,0,.08);position:relative}
-    .stamp{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%) rotate(-28deg);font-size:110px;font-weight:800;color:rgba(180,83,9,.08);letter-spacing:.1em;pointer-events:none}
-    .stamp.void{color:rgba(180,30,30,.10)} .status.void{background:#fde2e2;color:#8a1c1c}
-    .head{display:flex;justify-content:space-between;align-items:flex-start;gap:2em}
-    .head img{height:56px;display:block;margin-bottom:12px}
-    .seller{font-size:14px;line-height:1.5} .seller b{font-size:17px;display:block}
-    .title{text-align:right} .title h1{margin:0;font-size:34px;letter-spacing:.06em;color:hsl(215 60% 22%)}
-    .title .no{font-size:15px;color:#555;margin-top:6px}
-    .status{display:inline-block;margin-top:8px;padding:3px 10px;border-radius:12px;background:#fff3cd;color:#7a5a00;font-size:12px;font-weight:600}
-    .meta{display:flex;justify-content:space-between;margin-top:40px;font-size:14px;line-height:1.55;gap:2em}
-    h4{margin:0 0 4px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#888;font-weight:600}
-    .meta .r{text-align:right} .subject{margin-top:28px;font-size:14px}
-    table{width:100%;border-collapse:collapse;margin-top:36px}
-    th{text-align:left;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#888;padding:8px 6px;border-bottom:2px solid hsl(215 60% 22%)}
-    td{padding:10px 6px;border-bottom:1px solid #e6e6e6} .n{text-align:right} .muted{color:#888}
-    .totals{margin:12px 0 0 auto;width:20em} .totals td{border:none;padding:4px 6px} .totals .due td{border-top:2px solid hsl(215 40% 16%);font-weight:700;font-size:16px;padding-top:8px}
-    .foot{display:flex;gap:3em;margin-top:44px;font-size:13.5px;line-height:1.55} .foot>div{flex:1}
-    .fine{margin-top:44px;text-align:center;font-size:12px;color:#888}
-    .bar{max-width:800px;margin:20px auto -20px;text-align:right} .bar button{font:600 13px -apple-system,'Segoe UI',sans-serif;padding:8px 14px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer}
-    @media print{body{background:#fff}.page{margin:0;max-width:none;box-shadow:none;padding:24px 8px}.bar{display:none}}
-  </style></head><body>
-    <div class="bar">${!draft && inv.pdf_path ? `<a href="${esc(inv.pdf_path)}" style="margin-right:8px;font-size:13px">Download PDF</a>` : ''}<button onclick="window.print()">Print</button></div>
-    <div class="page">
-      ${stamp ? `<div class="stamp${voided ? ' void' : ''}">${stamp}</div>` : ''}
-      <div class="head">
-        <div class="seller">${logo ? `<img src="${esc(logo)}" alt="">` : ''}${s ? `<b>${esc(s.name)}</b>${nl(s.address || '')}${s.tax_id ? `<br>${esc(taxIdLabel)} ${esc(s.tax_id)}` : ''}` : ''}</div>
-        <div class="title"><h1>${inv.tax_invoice ? 'TAX INVOICE' : 'INVOICE'}</h1><div class="no">${esc(inv.id)}</div>${draft ? '<span class="status">DRAFT — not yet issued</span>' : voided ? '<span class="status void">VOID — not payable</span>' : ''}</div>
-      </div>
-      <div class="meta">
-        <div><h4>Bill to</h4><b>${esc(c.name || inv.customer_name)}</b>${c.address ? `<br>${nl(c.address)}` : ''}${c.tax_id ? `<br>${esc(taxIdLabel)} ${esc(c.tax_id)}` : ''}${c.email ? `<br>${esc(c.email)}` : ''}</div>
-        <div class="r"><h4>Details</h4>${draft ? `Issue date: <i>set at issue</i><br>Terms: ${esc(termsOf(inv))}<br>Due: ${esc(inv.due_in_days ?? 30)} days from issue` : `Issue date: ${esc(longDate(inv.issued_at))}<br>Terms: ${esc(termsOf(inv))}<br>Due date: ${esc(longDate(inv.due_at))}`}</div>
-      </div>
-      ${inv.subject ? `<div class="subject"><h4>Subject</h4>${esc(inv.subject)}</div>` : ''}
-      <table><thead><tr><th class="n">#</th>${showRef ? '<th>Ref</th>' : ''}<th>Description</th><th class="n">Qty</th><th class="n">Rate</th>${showTax ? `<th class="n">${esc(inv.tax_label || 'Tax')}</th>` : ''}<th class="n">Amount</th></tr></thead><tbody>${rows}</tbody></table>
-      <table class="totals">
-        <tr><td>Subtotal</td><td class="n">${money(inv.subtotal)}</td></tr>
-        ${showTax ? `<tr><td>${esc(taxRowLabel(inv))}</td><td class="n">${money(inv.tax_total || 0)}</td></tr>` : ''}
-        ${inv.applied ? `<tr><td>Paid</td><td class="n">−${money(inv.applied)}</td></tr>` : ''}
-        ${voided ? `<tr><td>Total (void)</td><td class="n">${money(inv.total)}</td></tr><tr class="due"><td>${esc(dueLabel(inv, 'Amount payable'))}</td><td class="n">${money(0)}</td></tr>`
-                 : `<tr class="due"><td>${esc(dueLabel(inv, inv.applied ? 'Balance due' : 'Total due'))}</td><td class="n">${money(inv.open)}</td></tr>`}
-      </table>
-      <div class="foot">
-        ${inv.payment_instructions ? `<div><h4>Payment instructions</h4>${nl(inv.payment_instructions)}</div>` : ''}
-        ${inv.notes ? `<div><h4>Notes</h4>${nl(inv.notes)}</div>` : ''}
-      </div>
-      ${s && s.footer_note ? `<div class="fine">${nl(s.footer_note)}</div>` : ''}
-      ${draft ? '<div class="fine">Preview of the draft as recorded. Numbers can still change; this link becomes the invoice when it is issued.</div>' : ''}
-      ${voided ? `<div class="fine">Voided${reasonOf(inv) ? `: ${esc(reasonOf(inv))}` : ''}. Kept for the record; nothing on it is payable and the number is not reused.</div>` : ''}
-    </div>
-  </body></html>`;
-}
-
-/** Same document as a PDF. Issued invoices only — a draft has no final numbers. Resolves to a Buffer. */
+/** The document as a PDF. Drafts render stamped DRAFT, void invoices stamped VOID. Resolves to a Buffer. */
 function renderInvoicePdf(inv, logo) {
   return new Promise((resolve, reject) => {
     const s = inv.seller, c = inv.customer || {};
@@ -100,87 +43,138 @@ function renderInvoicePdf(inv, logo) {
     const showRef = inv.lines.some(l => l.ref), showTax = inv.tax_registered || inv.tax_total > 0;
     const taxIdLabel = inv.tax_id_label || 'Tax ID';
     const NAVY = '#16304f', INK = '#182a44', MUTED = '#777777', RULE = '#e6e6e6';
-    const doc = new PDFDocument({ size: 'LETTER', margins: { top: 56, bottom: 56, left: 56, right: 56 }, info: { Title: `${inv.id} — ${s ? s.name : 'Invoice'}`, Author: s ? s.name : 'Saybooks' } });
+    const doc = new PDFDocument({ size: paperFor(s && s.country), margins: { top: 50, bottom: 50, left: 52, right: 52 },
+      info: { Title: `${inv.id} — ${s ? s.name : 'Invoice'}`, Author: s ? s.name : 'Saybooks' } });
     const chunks = [];
     doc.on('data', (d) => chunks.push(d)); doc.on('end', () => resolve(Buffer.concat(chunks))); doc.on('error', reject);
     const L = doc.page.margins.left, R = doc.page.width - doc.page.margins.right, W = R - L;
+    const bottom = () => doc.page.height - doc.page.margins.bottom;
 
     // Head: logo + seller left, INVOICE + number right
     let y = doc.page.margins.top;
     const m = logo ? /^data:image\/(png|jpeg);base64,(.+)$/s.exec(logo) : null;   // pdfkit draws PNG/JPEG; SVG/WebP logos print on the HTML only
-    if (m) { try { doc.image(Buffer.from(m[2], 'base64'), L, y, { fit: [160, 44] }); y += 54; } catch { /* a logo that will not decode is not a reason to fail the invoice */ } }
-    doc.fillColor(NAVY).font(FONT_B).fontSize(26).text(inv.tax_invoice ? 'TAX INVOICE' : 'INVOICE', L, doc.page.margins.top, { width: W, align: 'right', characterSpacing: 1.5 });
-    doc.fillColor(MUTED).font(FONT).fontSize(11).text(inv.id, L, doc.page.margins.top + 32, { width: W, align: 'right' });
+    if (m) { try { doc.image(Buffer.from(m[2], 'base64'), L, y, { fit: [150, 42] }); y += 50; } catch { /* a logo that will not decode is not a reason to fail the invoice */ } }
+    doc.fillColor(NAVY).font(FONT_B).fontSize(24).text(inv.tax_invoice ? 'TAX INVOICE' : 'INVOICE', L, doc.page.margins.top, { width: W, align: 'right', characterSpacing: 1.5 });
+    doc.fillColor(MUTED).font(FONT).fontSize(11).text(inv.id, L, doc.page.margins.top + 30, { width: W, align: 'right' });
     if (draft || voided) {
       const label = draft ? 'DRAFT — NOT YET ISSUED' : 'VOID — NOT PAYABLE';
-      doc.fillColor(draft ? '#7a5a00' : '#8a1c1c').font(FONT_B).fontSize(9).text(label, L, doc.page.margins.top + 50, { width: W, align: 'right', characterSpacing: 0.8 });
+      doc.fillColor(draft ? '#7a5a00' : '#8a1c1c').font(FONT_B).fontSize(8.5).text(label, L, doc.page.margins.top + 47, { width: W, align: 'right', characterSpacing: 0.8 });
       const word = draft ? 'DRAFT' : 'VOID';
       doc.save().rotate(-28, { origin: [doc.page.width / 2, doc.page.height * 0.42] }).fillColor(draft ? '#b45309' : '#b41e1e').opacity(draft ? 0.08 : 0.10).font(FONT_B).fontSize(120);
       const sw = doc.widthOfString(word, { characterSpacing: 10 });
       doc.text(word, doc.page.width / 2 - sw / 2, doc.page.height * 0.42 - 70, { lineBreak: false, characterSpacing: 10 }).restore().opacity(1);
     }
     if (s) {
-      doc.fillColor(INK).font(FONT_B).fontSize(13).text(s.name, L, y, { width: W * 0.55 });
-      doc.font(FONT).fontSize(10).fillColor(INK);
+      doc.fillColor(INK).font(FONT_B).fontSize(12.5).text(s.name, L, y, { width: W * 0.55 });
+      doc.font(FONT).fontSize(9.5).fillColor(INK);
       if (s.address) doc.text(s.address, { width: W * 0.55 });
       if (s.tax_id) doc.text(`${taxIdLabel} ${s.tax_id}`, { width: W * 0.55 });
     }
-    y = Math.max(doc.y, doc.page.margins.top + 60) + 28;
+    y = Math.max(doc.y, doc.page.margins.top + 58) + 22;
 
     // Bill to / details
-    const label = (t, x, w, align) => { doc.fillColor(MUTED).font(FONT_B).fontSize(8).text(t.toUpperCase(), x, y, { width: w, align, characterSpacing: 1.2 }); };
+    const label = (t, x, w, align) => { doc.fillColor(MUTED).font(FONT_B).fontSize(7.5).text(t.toUpperCase(), x, y, { width: w, align, characterSpacing: 1.2 }); };
     label('Bill to', L, W / 2, 'left'); label('Details', L + W / 2, W / 2, 'right');
-    const topY = y + 14;
-    doc.fillColor(INK).font(FONT_B).fontSize(10.5).text(c.name || inv.customer_name || '', L, topY, { width: W / 2 });
-    doc.font(FONT).fontSize(10);
+    const topY = y + 13;
+    doc.fillColor(INK).font(FONT_B).fontSize(10).text(c.name || inv.customer_name || '', L, topY, { width: W / 2 });
+    doc.font(FONT).fontSize(9.5);
     if (c.address) doc.text(c.address, { width: W / 2 });
     if (c.tax_id) doc.text(`${taxIdLabel} ${c.tax_id}`, { width: W / 2 });
     if (c.email) doc.text(c.email, { width: W / 2 });
     const leftEnd = doc.y;
-    doc.font(FONT).fontSize(10).fillColor(INK)
-      .text(draft ? 'Issue date: set at issue' : `Issue date: ${longDate(inv.issued_at)}`, L + W / 2, topY, { width: W / 2, align: 'right' })
-      .text(`Terms: ${termsOf(inv)}`, { width: W / 2, align: 'right' })
-      .text(draft ? `Due: ${inv.due_in_days ?? 30} days from issue` : `Due date: ${longDate(inv.due_at)}`, { width: W / 2, align: 'right' });
-    y = Math.max(leftEnd, doc.y) + 30;
-    if (inv.subject) { label('Subject', L, W, 'left'); doc.fillColor(INK).font(FONT).fontSize(10).text(inv.subject, L, y + 14, { width: W }); y = doc.y + 18; }
+    const days = inv.due_in_days ?? 30;
+    doc.font(FONT).fontSize(9.5).fillColor(INK).text(draft ? 'Issue date: set at issue' : `Issue date: ${longDate(inv.issued_at)}`, L + W / 2, topY, { width: W / 2, align: 'right' });
+    if (STD_TERMS[days]) doc.text(`Terms: ${STD_TERMS[days]}`, { width: W / 2, align: 'right' });
+    doc.text(draft ? `Payment due: ${days === 0 ? 'on receipt' : `${days} days from issue`}` : `Payment due: ${longDate(inv.due_at)}`, { width: W / 2, align: 'right' });
+    y = Math.max(leftEnd, doc.y) + 22;
+    if (inv.subject) { label('Subject', L, W, 'left'); doc.fillColor(INK).font(FONT).fontSize(9.5).text(inv.subject, L, y + 13, { width: W }); y = doc.y + 14; }
 
     // Lines: the ref column appears only when a line carries one, the tax column only when the scheme has tax.
-    const refW = showRef ? 70 : 0, taxW = showTax ? 55 : 0;
-    const cols = [{ w: 22, a: 'right' }, ...(showRef ? [{ w: refW, a: 'left' }] : []), { w: W - 22 - refW - 50 - 80 - taxW - 85, a: 'left' }, { w: 50, a: 'right' }, { w: 80, a: 'right' }, ...(showTax ? [{ w: taxW, a: 'right' }] : []), { w: 85, a: 'right' }];
+    const refW = showRef ? 66 : 0, taxW = showTax ? 46 : 0;
+    const cols = [{ w: 18, a: 'right' }, ...(showRef ? [{ w: refW, a: 'left' }] : []), { w: W - 18 - refW - 40 - 72 - taxW - 82, a: 'left' }, { w: 40, a: 'right' }, { w: 72, a: 'right' }, ...(showTax ? [{ w: taxW, a: 'right' }] : []), { w: 82, a: 'right' }];
     const heads = ['#', ...(showRef ? ['Ref'] : []), 'Description', 'Qty', 'Rate', ...(showTax ? [inv.tax_label || 'Tax'] : []), 'Amount'];
-    const row = (cells, opts = {}) => {
-      let x = L; const startY = y; let maxH = 0;
-      doc.font(opts.bold ? FONT_B : FONT).fontSize(opts.size || 10).fillColor(opts.color || INK);
-      cells.forEach((t, i) => { const h = doc.heightOfString(String(t), { width: cols[i].w - 6 }); maxH = Math.max(maxH, h); });
-      cells.forEach((t, i) => { doc.text(String(t), x + 3, startY, { width: cols[i].w - 6, align: cols[i].a }); x += cols[i].w; });
-      y = startY + maxH + 8;
+    const cellH = (t, w) => {
+      if (t && typeof t === 'object') { let h = doc.font(FONT).fontSize(9.5).heightOfString(t.title, { width: w }); if (t.detail) h += 2 + doc.fontSize(8).heightOfString(t.detail, { width: w }); return h; }
+      return doc.heightOfString(String(t), { width: w });
     };
-    doc.fillColor(MUTED); row(heads, { bold: true, size: 8, color: MUTED });
-    doc.moveTo(L, y - 3).lineTo(R, y - 3).lineWidth(1.5).strokeColor(NAVY).stroke(); y += 6;
+    const drawCell = (t, x, w, align) => {
+      if (t && typeof t === 'object') {
+        doc.font(FONT).fontSize(9.5).fillColor(INK).text(t.title, x, y, { width: w, align });
+        if (t.detail) doc.fontSize(8).fillColor(MUTED).text(t.detail, x, doc.y + 2, { width: w, align });
+      } else doc.text(String(t), x, y, { width: w, align });
+    };
+    const rowHeight = (cells, opts = {}) => { doc.font(opts.bold ? FONT_B : FONT).fontSize(opts.size || 9.5); return Math.max(...cells.map((t, i) => cellH(t, cols[i].w - 6))); };
+    const row = (cells, opts = {}) => {
+      let x = L; const startY = y; const h = rowHeight(cells, opts);
+      doc.font(opts.bold ? FONT_B : FONT).fontSize(opts.size || 9.5).fillColor(opts.color || INK);
+      cells.forEach((t, i) => { doc.font(opts.bold ? FONT_B : FONT).fontSize(opts.size || 9.5).fillColor(opts.color || INK); drawCell(t, x + 3, cols[i].w - 6, cols[i].a); x += cols[i].w; });
+      y = startY + h + 7;
+    };
+    const header = () => { row(heads, { bold: true, size: 7.5, color: MUTED }); doc.moveTo(L, y - 3).lineTo(R, y - 3).lineWidth(1.5).strokeColor(NAVY).stroke(); y += 5; };
+    header();
     inv.lines.forEach((l, i) => {
-      if (y > doc.page.height - 160) { doc.addPage(); y = doc.page.margins.top; }
-      row([i + 1, ...(showRef ? [l.ref || ''] : []), l.description, l.qty, money(l.rate), ...(showTax ? [l.tax_rate_bp ? (l.tax_rate_bp / 100).toFixed(2).replace(/\.?0+$/, '') + '%' : '-'] : []), money(l.amount)]);
+      const cells = [i + 1, ...(showRef ? [l.ref || ''] : []), splitDesc(l.description), l.qty, money(l.rate), ...(showTax ? [l.tax_rate_bp ? (l.tax_rate_bp / 100).toFixed(2).replace(/\.?0+$/, '') + '%' : '-'] : []), money(l.amount)];
+      if (y + rowHeight(cells) > bottom() - 20) { doc.addPage(); y = doc.page.margins.top; header(); }
+      row(cells);
       doc.moveTo(L, y - 4).lineTo(R, y - 4).lineWidth(0.5).strokeColor(RULE).stroke();
     });
 
-    // Totals
-    y += 8; const tx = R - 240;
-    const tot = (k, v, bold) => { doc.font(bold ? FONT_B : FONT).fontSize(bold ? 12 : 10).fillColor(INK).text(k, tx, y, { width: 130 }).text(v, tx + 130, y, { width: 110, align: 'right' }); y += bold ? 18 : 15; };
+    // Totals — kept together with the foot when there is room, else on a fresh page.
+    const totalsRows = 2 + (showTax ? 1 : 0) + (inv.applied ? 1 : 0) + (voided ? 1 : 0);
+    if (y + totalsRows * 15 + 40 > bottom()) { doc.addPage(); y = doc.page.margins.top; }
+    y += 6; const tx = R - 240;
+    const tot = (k, v, bold) => { doc.font(bold ? FONT_B : FONT).fontSize(bold ? 11.5 : 9.5).fillColor(INK).text(k, tx, y, { width: 130 }).text(v, tx + 130, y, { width: 110, align: 'right' }); y += bold ? 18 : 14; };
     tot('Subtotal', money(inv.subtotal)); if (showTax) tot(taxRowLabel(inv), money(inv.tax_total || 0));
     if (inv.applied) tot('Paid', '-' + money(inv.applied));
     doc.moveTo(tx, y + 1).lineTo(R, y + 1).lineWidth(1.5).strokeColor(INK).stroke(); y += 8;
     if (voided) { tot('Total (void)', money(inv.total)); tot(dueLabel(inv, 'Amount payable'), money(0), true); }
     else tot(dueLabel(inv, inv.applied ? 'Balance due' : 'Total due'), money(inv.open), true);
 
-    // Foot: payment instructions + notes
-    y += 26; if (y > doc.page.height - 140) { doc.addPage(); y = doc.page.margins.top; }
+    // Foot: payment instructions + notes, then the footer line and the void reason.
+    const footNeeded = (inv.payment_instructions || inv.notes) ? 70 : 0;
+    y += 22; if (y + footNeeded > bottom()) { doc.addPage(); y = doc.page.margins.top; }
     const colW = (W - 30) / 2; let footEnd = y;
-    if (inv.payment_instructions) { label('Payment instructions', L, colW, 'left'); doc.fillColor(INK).font(FONT).fontSize(9.5).text(inv.payment_instructions, L, y + 14, { width: colW }); footEnd = Math.max(footEnd, doc.y); }
-    if (inv.notes) { label('Notes', L + colW + 30, colW, 'left'); doc.fillColor(INK).font(FONT).fontSize(9.5).text(inv.notes, L + colW + 30, y + 14, { width: colW }); footEnd = Math.max(footEnd, doc.y); }
-    if (s && s.footer_note) { doc.fillColor(MUTED).font(FONT).fontSize(8.5).text(s.footer_note, L, footEnd + 30, { width: W, align: 'center' }); footEnd = doc.y; }
-    if (voided) { doc.fillColor('#8a1c1c').font(FONT).fontSize(8.5).text(`Voided${reasonOf(inv) ? ': ' + reasonOf(inv) : ''}. Kept for the record; nothing on it is payable and the number is not reused.`, L, footEnd + 16, { width: W, align: 'center' }); }
+    if (inv.payment_instructions) { label('Payment instructions', L, colW, 'left'); doc.fillColor(INK).font(FONT).fontSize(9).text(inv.payment_instructions, L, y + 13, { width: colW }); footEnd = Math.max(footEnd, doc.y); }
+    if (inv.notes) { label('Notes', L + colW + 30, colW, 'left'); doc.fillColor(INK).font(FONT).fontSize(9).text(inv.notes, L + colW + 30, y + 13, { width: colW }); footEnd = Math.max(footEnd, doc.y); }
+    const fine = [];
+    if (s && s.footer_note) fine.push({ t: s.footer_note, color: MUTED });
+    if (draft) fine.push({ t: 'Preview of the draft as recorded. Numbers can still change; this link becomes the invoice when it is issued.', color: MUTED });
+    if (voided) fine.push({ t: `Voided${reasonOf(inv) ? ': ' + reasonOf(inv) : ''}. Kept for the record; nothing on it is payable and the number is not reused.`, color: '#8a1c1c' });
+    let fy = footEnd + 26;
+    for (const f of fine) {
+      doc.font(FONT).fontSize(8.5);
+      const h = doc.heightOfString(f.t, { width: W, align: 'center' });
+      if (fy + h > bottom()) { doc.addPage(); fy = doc.page.margins.top; }
+      doc.fillColor(f.color).text(f.t, L, fy, { width: W, align: 'center' }); fy = doc.y + 6;
+    }
     doc.end();
   });
+}
+
+/**
+ * The /doc page: the PDF's pages as pictures, so the preview is the file. `pages` is the
+ * page count; each image is served by the same route at /p<N>.png. Print goes through the
+ * PDF itself, which is what a browser prints faithfully.
+ */
+function renderDocumentPage(inv, pages) {
+  const s = inv.seller;
+  const draft = inv.status === 'draft', voided = inv.status === 'void';
+  const base = inv.doc_path;
+  const imgs = Array.from({ length: Math.max(1, pages | 0) }, (_, i) => `<img class="pg" src="${esc(base)}/p${i + 1}.png" alt="${esc(inv.id)} page ${i + 1}" width="1240" height="${paperFor(s && s.country) === 'A4' ? 1754 : 1605}">`).join('');
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${draft ? 'DRAFT ' : ''}${esc(inv.id)} — ${esc(s ? s.name : 'Invoice')}</title><style>
+    body{margin:0;background:#eef0f3;font:14px/1.5 -apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:hsl(215 40% 16%)}
+    .bar{max-width:820px;margin:18px auto 0;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:0 10px}
+    .bar .st{font-size:13px;color:#555} .bar .st b{color:hsl(215 40% 16%)} .bar .st .v{color:#8a1c1c;font-weight:600} .bar .st .d{color:#7a5a00;font-weight:600}
+    .bar a,.bar button{font:600 13px -apple-system,'Segoe UI',sans-serif;padding:8px 14px;border:1px solid #ccc;border-radius:6px;background:#fff;color:hsl(215 40% 16%);text-decoration:none;cursor:pointer}
+    .pages{max-width:820px;margin:14px auto 40px;padding:0 10px} .pg{display:block;width:100%;height:auto;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.08);margin-bottom:18px}
+    .fine{max-width:820px;margin:0 auto 30px;text-align:center;font-size:12px;color:#888}
+  </style></head><body>
+    <div class="bar"><div class="st"><b>${esc(inv.id)}</b> · ${esc(inv.customer_name || '')} · ${esc(inv.total_display)}${draft ? ' · <span class="d">DRAFT</span>' : voided ? ' · <span class="v">VOID</span>' : inv.status === 'paid' ? ' · paid' : ''}${pages > 1 ? ` · ${pages} pages` : ''}</div>
+      <div><a href="${esc(base)}.pdf" target="_blank" rel="noopener">${draft ? 'Draft PDF' : 'Download PDF'}</a> <button onclick="window.open('${esc(base)}.pdf','_blank')">Print</button></div></div>
+    <div class="pages">${imgs}</div>
+    ${draft ? '<div class="fine">Preview of the draft as recorded — the very pages the PDF will have. Numbers can still change; this link becomes the invoice when it is issued.</div>' : ''}
+    ${voided ? `<div class="fine">Voided${reasonOf(inv) ? `: ${esc(reasonOf(inv))}` : ''}. Kept for the record; nothing on it is payable and the number is not reused.</div>` : ''}
+  </body></html>`;
 }
 
 /**
@@ -207,4 +201,4 @@ async function rasterizePdf(pdfBuf, pageNo = 1, scale = 1.6) {
   return { png, page: n, pages: doc.numPages, width: canvas.width, height: canvas.height };
 }
 
-module.exports = { renderInvoiceHtml, renderInvoicePdf, rasterizePdf };
+module.exports = { renderInvoicePdf, renderDocumentPage, rasterizePdf, paperFor };

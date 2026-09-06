@@ -5,7 +5,7 @@ const H = require('../../../db.js');
 const V = require('../views.js');
 
 const LINE = {
-  description: { ...f.text('What the work was, in your words.'), required: true },
+  description: { ...f.text('What the work was, in your words. The first line prints as the title; further lines print smaller beneath it.'), required: true },
   qty: { type: 'number', description: 'Quantity or hours — 7.5 is fine. Defaults to 1.', ui: { widget: 'number', label: 'Qty' } },
   rate: { ...f.money('Rate per unit/hour.'), required: true },
   tax_rate_bp: f.int('Tax rate in basis points (1500 = 15%). Omit to use the company default when it is tax registered; 0 makes the line tax-free. An unregistered business cannot tax a line. Determining the rate is your job; capturing it is ours.'),
