@@ -80,7 +80,8 @@ function transactions({ from, to, status, source_id, vendor, category, limit } =
   const where = []; const args = [];
   if (from) { where.push('t.date >= ?'); args.push(from); }
   if (to) { where.push('t.date <= ?'); args.push(to); }
-  if (status) { where.push('t.status = ?'); args.push(status); }
+  if (status === 'spending') where.push("t.status IN ('purchase','recurring')");
+  else if (status) { where.push('t.status = ?'); args.push(status); }
   if (source_id) { where.push('t.source_id = ?'); args.push(source_id); }
   if (category) { where.push('t.category = ? COLLATE NOCASE'); args.push(category); }
   if (vendor) { where.push('v.name = ? COLLATE NOCASE'); args.push(vendor); }
@@ -88,11 +89,11 @@ function transactions({ from, to, status, source_id, vendor, category, limit } =
     ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY t.date DESC, t.id DESC LIMIT ?`).all(...args, limit || 500);
   const items = rows.map(r => ({ ...r, amount_display: money(r.amount, r.currency), has_receipt: !!r.receipt_id }));
   const unreviewed = items.filter(i => i.status === 'unreviewed').length;
-  return { count: items.length, unreviewed, items, spend_by_currency: spendOf(items.filter(i => i.status === 'purchase' || (i.status === 'unreviewed' && i.amount < 0))) };
+  return { count: items.length, unreviewed, items, spend_by_currency: spendOf(items.filter(i => i.status === 'purchase' || i.status === 'recurring' || (i.status === 'unreviewed' && i.amount < 0))) };
 }
 
 function purchases(opts = {}) {
-  const t = transactions({ ...opts, status: 'purchase', limit: 5000 });
+  const t = transactions({ ...opts, status: 'spending', limit: 5000 });
   const byCat = {}, byMonth = {}, byVendor = {};
   for (const i of t.items) {
     const c = i.currency, sp = -i.amount;
@@ -131,4 +132,23 @@ function receiptCandidates(r) {
     .map(t => ({ ...t, amount_display: money(t.amount, t.currency) }));
 }
 
-module.exports = { transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };
+/** The words in use: statuses with meaning, the person's categories and vendors — what an agent proposes from. */
+function vocabulary() {
+  const statuses = [
+    { status: 'purchase', means: 'one-off spending — counted in spend' },
+    { status: 'recurring', means: 'spending that repeats (rent, streaming, insurance) — counted in spend; with a vendor it declares the subscription' },
+    { status: 'transfer', means: "the person's own money moving: card payoffs, brokerage, loans, own accounts — not spend" },
+    { status: 'income', means: 'money in: salary, refunds, payments received' },
+    { status: 'fee', means: "the bank's charge" },
+    { status: 'ignored', means: 'not theirs to track' },
+  ];
+  const categories = db().prepare("SELECT category, COUNT(*) n, SUM(CASE WHEN amount < 0 THEN -amount ELSE 0 END) spend FROM purch_transaction WHERE category IS NOT NULL GROUP BY category COLLATE NOCASE ORDER BY n DESC").all();
+  const vendors = db().prepare('SELECT v.id, v.name, COUNT(t.id) rows FROM purch_vendor v LEFT JOIN purch_transaction t ON t.vendor_id = v.id GROUP BY v.id ORDER BY v.name COLLATE NOCASE').all()
+    .map(v => ({ ...v, aliases: db().prepare('SELECT alias FROM purch_vendor_alias WHERE vendor_id = ?').all(v.id).map(a => a.alias) }));
+  const subs = db().prepare("SELECT s.id, v.name AS vendor, s.cadence, s.amount, s.currency, s.status FROM purch_subscription s JOIN purch_vendor v ON v.id = s.vendor_id ORDER BY v.name").all();
+  const unreviewed = db().prepare("SELECT COUNT(*) n FROM purch_transaction WHERE status = 'unreviewed'").get().n;
+  return { statuses, cadences: ['weekly', 'monthly', 'yearly'], categories, vendors, subscriptions: subs, unreviewed,
+    note: categories.length ? 'Propose from these categories and vendors first; a new word is fine when nothing fits, but say it is new.' : 'No categories yet — propose plain words and let the person rename them before writing.' };
+}
+
+module.exports = { vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };

@@ -29,8 +29,9 @@ forecasts, advice, tax treatment of purchases, paying anything.
   accepted twice.
 - **transaction** — one row of a source: date, signed amount in minor units, description as
   printed, counterparty if the row names one, source and row index, the raw line as read.
-  Status: unreviewed → purchase | transfer | income | fee | ignored, set by review with a
-  reason. Never edited in amount or date: a wrong row is a wrong source, re-imported after
+  Status: unreviewed → purchase | recurring | transfer | income | fee | ignored, set by review
+  with a reason; recurring is spending that repeats, and naming its vendor declares the
+  subscription. Never edited in amount or date: a wrong row is a wrong source, re-imported after
   the agent re-reads it.
 - **purchase** — a transaction reviewed as spending: vendor, category, note, optional
   receipt. Category empty until someone sets it; empty beats guessed.
@@ -47,7 +48,8 @@ forecasts, advice, tax treatment of purchases, paying anything.
 
 Writes (9): import_statement, review_transaction, review_batch (many rows, one reasoned
 act, validated whole), set_vendor, add_receipt, match_receipt, declare_subscription,
-cancel_subscription, unmatch_receipt. Reads (7): sources, transactions,
+cancel_subscription, unmatch_receipt. Reads (8): vocabulary (the statuses with their meaning,
+the person's categories and vendors — what an agent proposes from), sources, transactions,
 purchases, subscriptions, receipts, spend, source.
 
 ## 5. Invariants

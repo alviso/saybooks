@@ -106,6 +106,10 @@
       "required": [
         "rows"
       ]
+    },
+    "vocabulary": {
+      "kind": "read",
+      "required": []
     }
   },
   "invariants": [

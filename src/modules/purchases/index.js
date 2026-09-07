@@ -15,7 +15,7 @@ const mod = R.defineModule({
   ids: { source: 'SRC-0001', transaction: 'T-0001', vendor: 'V-0001', receipt: 'R-0001', subscription: 'SUB-0001' },
   lifecycles: {
     source: 'imported whole (reconciled to its control totals) — immutable; the same hash never twice',
-    transaction: 'unreviewed -> purchase | transfer | income | fee | ignored (a reasoned act; amount and date never change)',
+    transaction: 'unreviewed -> purchase | recurring | transfer | income | fee | ignored (a reasoned act; amount and date never change)',
     subscription: 'active (declared) -> cancelled (reasoned); lapsed is DERIVED from two missed periods, never stored',
     receipt: 'unmatched -> matched to exactly one transaction (reasoned) -> unmatched again (reasoned)',
   },
@@ -42,11 +42,13 @@ Importing a statement (purch_import_statement):
 - Rows already on record (same date, amount, description) are skipped and listed back; say
   so to the person.
 
-Reviewing: propose statuses and categories for the whole statement, show the person, and
-once they have said their words write them all with purch_review_batch (status, category,
-vendor per row, one reason). purch_review_transaction is the single-row form. Statuses:
-purchase / transfer / income / fee / ignored. Ask when unsure; never guess a category — a
-row you cannot name stays unreviewed. purch_set_vendor names
+Reviewing: FIRST read purch_vocabulary — the statuses and what they mean, and the person's
+own categories and vendors. Propose a status, category and vendor for every row of the
+statement from those words, show the person, and once they have answered write it all with
+purch_review_batch (one reason). purch_review_transaction is the single-row form. Statuses:
+purchase (one-off) / recurring (repeats — rent, streaming, insurance; naming the vendor
+declares the subscription) / transfer (their own money moving) / income / fee / ignored. Ask
+when unsure; never guess a category — a row you cannot name stays unreviewed. purch_set_vendor names
 the shop once and its statement spelling becomes an alias for every later row.
 
 Receipts: purch_add_receipt with what the receipt says (vendor, date, total, currency) and the
@@ -60,7 +62,7 @@ Money is integer minor units; sums are per currency and never cross.`,
     area: 'purchases', spec: '0.1',
     argmap: { transaction: 'transaction_id', receipt: 'receipt_id', subscription: 'subscription_id', source: 'source_id' },
     acts: {
-      import_statement: 'purch_import_statement', review_transaction: 'purch_review_transaction', review_batch: 'purch_review_batch', set_vendor: 'purch_set_vendor',
+      import_statement: 'purch_import_statement', review_transaction: 'purch_review_transaction', review_batch: 'purch_review_batch', set_vendor: 'purch_set_vendor', vocabulary: 'purch_vocabulary',
       add_receipt: 'purch_add_receipt', match_receipt: 'purch_match_receipt', unmatch_receipt: 'purch_unmatch_receipt',
       declare_subscription: 'purch_declare_subscription', cancel_subscription: 'purch_cancel_subscription',
       sources: 'purch_sources', source: 'purch_source', transactions: 'purch_transactions', purchases: 'purch_purchases',

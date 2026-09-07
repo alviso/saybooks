@@ -4,6 +4,7 @@ const H = require('../../../db.js');
 const V = require('../views.js');
 const read = (def) => defineCommand({ intent: 'read', scope: 'collection', group: 'Purchases read', ...def });
 
+read({ name: 'purch_vocabulary', title: 'Words in use', summary: 'Statuses with their meaning, the person\'s categories and vendors with aliases, cadences, subscriptions — read this before proposing a review.', args: {}, handler: () => V.vocabulary() });
 read({ name: 'purch_sources', title: 'Statements', summary: 'Every statement imported: period, account, balances, rows in and skipped, who imported it.', args: {}, handler: () => V.sources() });
 read({ name: 'purch_source', title: 'Statement', summary: 'One statement with its rows and reconciliation.', args: { source_id: { ...f.text('e.g. SRC-0001.'), required: true } }, handler: (a) => V.sourceView(a.source_id) });
 read({ name: 'purch_transactions', title: 'Transactions', summary: 'Rows on record, newest first, with filters. unreviewed says how many still need a word.',

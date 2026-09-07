@@ -53,46 +53,47 @@
       }
     },
     {
+      "act": "vocabulary",
+      "args": {},
+      "expect": {
+        "ok": true,
+        "include": {
+          "unreviewed": 4
+        }
+      },
+      "notes": "the agent reads the words in use before proposing"
+    },
+    {
       "act": "review_transaction",
       "args": {
         "transaction": "T-0001",
-        "status": "purchase",
+        "status": "recurring",
         "category": "entertainment",
-        "reason": "streaming"
-      },
-      "expect": {
-        "ok": true
-      }
-    },
-    {
-      "act": "set_vendor",
-      "args": {
-        "transaction": "T-0001",
         "vendor": "Netflix",
-        "alias": "NETFLIX.COM"
+        "reason": "streaming, monthly"
       },
       "expect": {
         "ok": true,
         "include": {
-          "vendor": "Netflix"
+          "status": "recurring",
+          "vendor": "Netflix",
+          "subscription": "SUB-0001",
+          "subscription_declared": true
         }
-      }
+      },
+      "notes": "P-6: recurring with a vendor declares the subscription"
     },
     {
-      "act": "declare_subscription",
+      "act": "subscriptions",
       "args": {
-        "vendor": "Netflix",
-        "cadence": "monthly",
-        "amount": 1299,
-        "currency": "NZD",
-        "start": "2026-08-02",
-        "reason": "monthly plan since August"
+        "as_of": "2026-08-20"
       },
       "expect": {
         "ok": true,
         "include": {
-          "status": "active",
-          "matched_periods": 1
+          "count": 1,
+          "active_total": 1,
+          "missed_total": 0
         }
       }
     },
