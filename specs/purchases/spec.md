@@ -45,8 +45,9 @@ forecasts, advice, tax treatment of purchases, paying anything.
 
 ## 4. The acts
 
-Writes (8): import_statement, review_transaction, set_vendor, add_receipt, match_receipt,
-declare_subscription, cancel_subscription, unmatch_receipt. Reads (7): sources, transactions,
+Writes (9): import_statement, review_transaction, review_batch (many rows, one reasoned
+act, validated whole), set_vendor, add_receipt, match_receipt, declare_subscription,
+cancel_subscription, unmatch_receipt. Reads (7): sources, transactions,
 purchases, subscriptions, receipts, spend, source.
 
 ## 5. Invariants

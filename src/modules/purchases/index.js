@@ -42,8 +42,11 @@ Importing a statement (purch_import_statement):
 - Rows already on record (same date, amount, description) are skipped and listed back; say
   so to the person.
 
-Reviewing: purch_review_transaction sets purchase / transfer / income / fee / ignored with a
-reason — the person's words. Ask when unsure; never guess a category. purch_set_vendor names
+Reviewing: propose statuses and categories for the whole statement, show the person, and
+once they have said their words write them all with purch_review_batch (status, category,
+vendor per row, one reason). purch_review_transaction is the single-row form. Statuses:
+purchase / transfer / income / fee / ignored. Ask when unsure; never guess a category — a
+row you cannot name stays unreviewed. purch_set_vendor names
 the shop once and its statement spelling becomes an alias for every later row.
 
 Receipts: purch_add_receipt with what the receipt says (vendor, date, total, currency) and the
@@ -57,7 +60,7 @@ Money is integer minor units; sums are per currency and never cross.`,
     area: 'purchases', spec: '0.1',
     argmap: { transaction: 'transaction_id', receipt: 'receipt_id', subscription: 'subscription_id', source: 'source_id' },
     acts: {
-      import_statement: 'purch_import_statement', review_transaction: 'purch_review_transaction', set_vendor: 'purch_set_vendor',
+      import_statement: 'purch_import_statement', review_transaction: 'purch_review_transaction', review_batch: 'purch_review_batch', set_vendor: 'purch_set_vendor',
       add_receipt: 'purch_add_receipt', match_receipt: 'purch_match_receipt', unmatch_receipt: 'purch_unmatch_receipt',
       declare_subscription: 'purch_declare_subscription', cancel_subscription: 'purch_cancel_subscription',
       sources: 'purch_sources', source: 'purch_source', transactions: 'purch_transactions', purchases: 'purch_purchases',

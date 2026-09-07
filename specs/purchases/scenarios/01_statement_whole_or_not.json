@@ -204,6 +204,52 @@
           "count": 1
         }
       }
+    },
+    {
+      "act": "review_batch",
+      "args": {
+        "rows": [
+          {
+            "transaction_id": "T-0001",
+            "status": "purchase",
+            "category": "entertainment",
+            "vendor": "Netflix"
+          },
+          {
+            "transaction_id": "T-0003",
+            "status": "purchase",
+            "category": "electronics",
+            "vendor": "Noel Leeming"
+          }
+        ],
+        "reason": "confirmed by the person"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "reviewed": 2,
+          "vendors_named": 2,
+          "still_unreviewed": 0
+        }
+      },
+      "notes": "P-5: many rows, one reasoned act, validated whole"
+    },
+    {
+      "act": "review_batch",
+      "args": {
+        "rows": [
+          {
+            "transaction_id": "T-0004",
+            "status": "purchase",
+            "category": "oops"
+          }
+        ],
+        "reason": "x"
+      },
+      "expect": {
+        "refused": "money in"
+      },
+      "notes": "a batch with one bad row is refused whole"
     }
   ]
 }
