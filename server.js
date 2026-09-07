@@ -236,6 +236,47 @@ const server = http.createServer(async (req, res) => {
         pages.map(([u, d, f, pr]) => `  <url><loc>${origin}${u}</loc><lastmod>${d}</lastmod><changefreq>${f}</changefreq><priority>${pr}</priority></url>`).join('\n') + `\n</urlset>\n`;
       return send(res, 200, xml, 'application/xml; charset=utf-8');
     }
+    // The home view: every space the person belongs to, with what is going on in each.
+    // Numbers are computed per space inside its own database; nothing crosses spaces.
+    if (req.method === 'GET' && p === '/api/spaces') {
+      const u = DEMO && auth.enabled() && auth.sessionUser(req);
+      if (!u) return send(res, 401, { error: 'sign in first' });
+      const count = (sql, ...args) => { try { return H.db().prepare(sql).get(...args).n; } catch { return null; } };
+      const spaces = users.spacesFor(u.id).map(s => {
+        const kind = (users.spaceOf(s.ws) || {}).kind || null;
+        const mounts = (mountsFor(s.ws) || R.MODULES.map(m => m.name)).filter(m => m !== 'core');
+        if (!sandboxExists(s.ws)) return { ws: s.ws, name: s.display_name, role: s.role, kind, modules: mounts.map(m => ({ name: m, used: false, writes: 0 })), summary: {}, last: null };
+        return wsp.use(s.ws, () => {
+          const prefix = { solo: 'solo_', o2c: 'o2c_', crm: 'crm_', jobhunt: 'hunt_' };
+          const modules = mounts.map(m => {
+            const writes = prefix[m] ? (count(`SELECT COUNT(*) n FROM command_log WHERE ok = 1 AND command LIKE ?`, prefix[m] + '%') || 0) : 0;
+            return { name: m, used: writes > 0, writes };
+          });
+          const summary = {};
+          if (mounts.includes('solo')) {
+            const o = require('./src/modules/solo/views.js').outstanding();
+            summary.invoices = count('SELECT COUNT(*) n FROM solo_invoice'); summary.drafts = count("SELECT COUNT(*) n FROM solo_invoice WHERE status = 'draft'");
+            summary.open_count = o.count; summary.open_display = o.count ? o.total_open_display : null; summary.overdue = o.invoices.filter(i => i.days_overdue > 0).length;
+          }
+          if (mounts.includes('o2c')) {
+            summary.orders_open = count(`SELECT COUNT(*) n FROM "order" WHERE status IN ('draft','confirmed')`); summary.orders_shipped = count(`SELECT COUNT(*) n FROM "order" WHERE status = 'shipped'`);
+            const ar = count(`SELECT COALESCE(SUM(total - COALESCE((SELECT SUM(amount) FROM payment_application pa WHERE pa.invoice_id = i.id), 0)), 0) n FROM invoice i WHERE status = 'open'`);
+            summary.ar_display = ar != null ? H.money(ar) : null;
+          }
+          if (mounts.includes('crm')) { summary.accounts = count('SELECT COUNT(*) n FROM account'); summary.crm_contacts = count('SELECT COUNT(*) n FROM contact'); }
+          if (mounts.includes('jobhunt')) {
+            summary.applications_active = count(`SELECT COUNT(*) n FROM hunt_application WHERE status IN ('submitted','screening','interviewing','offer')`);
+            summary.postings = count('SELECT COUNT(*) n FROM hunt_posting');
+            summary.due = count(`SELECT COUNT(*) n FROM hunt_interaction WHERE next_action_state = 'open' AND next_action_due <= date('now')`);
+          }
+          summary.customers = count('SELECT COUNT(*) n FROM customer');
+          let last = null; try { last = H.db().prepare('SELECT at, actor, actor_kind, command FROM command_log WHERE ok = 1 ORDER BY id DESC LIMIT 1').get() || null; } catch { last = null; }
+          const agent7 = count(`SELECT COUNT(*) n FROM command_log WHERE ok = 1 AND actor_kind = 'agent' AND at >= datetime('now', '-7 days')`) || 0;
+          return { ws: s.ws, name: s.display_name, role: s.role, kind, modules, summary, last, agent_writes_7d: agent7 };
+        });
+      });
+      return send(res, 200, { spaces }, 'application/json; charset=utf-8', { 'cache-control': 'no-store' });
+    }
     if (req.method === 'GET' && p === '/api/whoami') {
       const u = DEMO && auth.enabled() && auth.sessionUser(req);
       if (!u) return send(res, 200, { user: null }, 'application/json; charset=utf-8', { 'cache-control': 'no-store' });

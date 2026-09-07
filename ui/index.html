@@ -1032,6 +1032,46 @@ async function render() {
     }
     main.append(j.entries.length ? t : $('<div class="card doc">Nothing in range.</div>'));
   }
+  if (view === 'home') {
+    head('Your spaces', 'Each space is one set of books with its own rules, members and audit trail. Open one, or start another.');
+    const { spaces } = await fetch('/api/spaces', { cache: 'no-store' }).then(r => r.json());
+    const KIND = { solo: 'Invoicing', hunt: 'Job hunt' };
+    const MOD = { solo: 'invoicing', o2c: 'order to cash', crm: 'CRM', jobhunt: 'job hunt' };
+    const ago = (iso) => { if (!iso) return 'no activity yet'; const d = (Date.now() - Date.parse(iso)) / 864e5; return d < 1 ? 'today' : d < 2 ? 'yesterday' : `${Math.floor(d)} days ago`; };
+    const grid = $('<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;max-width:1100px"></div>');
+    for (const sp of spaces) {
+      const s = sp.summary || {};
+      const used = new Set((sp.modules || []).filter(m => m.used).map(m => m.name));
+      const facts = [];
+      if (s.invoices != null && (used.has('solo') || s.invoices)) facts.push(`${s.invoices} invoice${s.invoices === 1 ? '' : 's'}${s.drafts ? `, ${s.drafts} draft` : ''}`);
+      if (s.open_count) facts.push(`<b>${s.open_display}</b> open on ${s.open_count}${s.overdue ? `, <span style="color:var(--warn)">${s.overdue} overdue</span>` : ''}`);
+      if (s.orders_open != null && (used.has('o2c') || s.orders_open)) facts.push(`${s.orders_open} open order${s.orders_open === 1 ? '' : 's'}${s.orders_shipped ? `, ${s.orders_shipped} shipped` : ''}`);
+      if (s.ar_display && s.ar_display !== '$0.00') facts.push(`<b>${s.ar_display}</b> receivable`);
+      if (s.accounts != null && (used.has('crm') || s.accounts)) facts.push(`${s.accounts} account${s.accounts === 1 ? '' : 's'}, ${s.crm_contacts || 0} contacts`);
+      if (s.applications_active != null && (used.has('jobhunt') || s.postings)) facts.push(`${s.applications_active} active application${s.applications_active === 1 ? '' : 's'} of ${s.postings || 0} postings${s.due ? `, <span style="color:var(--warn)">${s.due} due</span>` : ''}`);
+      if (s.customers && sp.kind !== 'hunt') facts.push(`${s.customers} client${s.customers === 1 ? '' : 's'}`);
+      const mods = (sp.modules || []).map(m => `<span class="pill" style="${m.used ? '' : 'opacity:.45'}" title="${m.used ? m.writes + ' writes on the record' : 'mounted, nothing recorded yet'}">${MOD[m.name] || m.name}${m.used ? '' : ' · unused'}</span>`).join(' ');
+      const card = $(`<div class="card" style="margin:0;cursor:pointer;display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><h2 style="margin:0;font-size:17px">${sp.name}</h2><span class="pill">${sp.role}</span></div>
+        <div style="font-size:12px;color:var(--dim)">${KIND[sp.kind] || 'Full books'} · ${sp.ws}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${mods}</div>
+        <div style="font-size:13px;line-height:1.6">${facts.length ? facts.join('<br>') : '<span style="color:var(--dim)">Empty — nothing recorded yet.</span>'}</div>
+        <div style="font-size:12px;color:var(--dim);margin-top:auto;padding-top:6px;border-top:1px solid var(--line)">Last activity ${ago(sp.last && sp.last.at)}${sp.last ? ` · ${sp.last.actor} (${sp.last.actor_kind})` : ''}${sp.agent_writes_7d ? ` · ${sp.agent_writes_7d} agent writes this week` : ''}</div>
+      </div>`);
+      card.onclick = () => { location.href = '/app?ws=' + sp.ws; };
+      grid.append(card);
+    }
+    const add = $(`<div class="card" style="margin:0;cursor:pointer;display:flex;align-items:center;justify-content:center;min-height:120px;border-style:dashed;color:var(--mid);font-weight:600">+ New space</div>`);
+    add.onclick = async () => {
+      const name = prompt('Name the new space (its books start empty):');
+      if (!name) return;
+      const r = await fetch(wsUrl('/api/space/create'), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name }) }).then(x => x.json());
+      if (r.ws) location.href = '/app?ws=' + r.ws; else toast('✗ ' + (r.error || 'could not create'));
+    };
+    grid.append(add);
+    main.append(grid);
+    main.append($('<p class="sub" style="margin-top:14px;max-width:1100px">Invoicing and job-hunt spaces come from their own doors: <a href="/solo">saybooks.io/solo</a> and <a href="/hunt">saybooks.io/hunt</a>. A new space here is full books.</p>'));
+  }
   if (view === 'company') {
     head('Company', "Your business's own facts — the seller on every document. More business-level records will live here.");
     const p = await api('core_company_profile', { with_logo: true });
@@ -1387,6 +1427,14 @@ const boot = async () => {
   // Rebuild the whole workspace block from a stable container — boot() runs on every render
   // now (fresh lookups while agents write), so it must be idempotent.
   const box = document.getElementById('wsBox');
+  if (REG.user && !document.querySelector('[data-v="home"]')) {
+    const a = document.createElement('a'); a.dataset.v = 'home'; a.textContent = 'Spaces'; a.style.cssText = 'font-weight:600';
+    const nav = document.querySelector('nav'); const first = nav.querySelector('.grp'); nav.insertBefore(a, first);
+    a.onclick = () => { selected = null; view = 'home'; render(); };
+    // First open with several spaces and no space named in the URL: start at the cards, not at whichever cookie remembers.
+    if (!window.__landed && REG.spaces.length > 1 && !new URLSearchParams(location.search).has('ws') && !location.hash) view = 'home';
+    window.__landed = true;
+  }
   if (REG.user) {
     const opts = REG.spaces.map(sp => `<option value="${sp.ws}" ${sp.ws === REG.workspace ? 'selected' : ''}>${sp.name} (${sp.role})</option>`).join('');
     box.innerHTML = `<div style="font-size:11px;color:var(--dim);line-height:1.6;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 12px;box-shadow:var(--shadow)">
