@@ -106,6 +106,30 @@
           "count": 5
         }
       }
+    },
+    {
+      "act": "discard_source",
+      "args": {
+        "source": "SRC-0002",
+        "reason": "re-reading the second file"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "rows_removed": 1
+        }
+      },
+      "notes": "P-2: a wrong read is discarded whole and imported again; nothing is edited in place"
+    },
+    {
+      "act": "transactions",
+      "args": {},
+      "expect": {
+        "ok": true,
+        "include": {
+          "count": 4
+        }
+      }
     }
   ]
 }

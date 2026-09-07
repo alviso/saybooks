@@ -79,3 +79,27 @@ categorised here — review follows, one act at a time.`,
       note: `Accepted whole: ${rows.length} rows reconcile to ${H.money(a.opening_balance, cur)} → ${H.money(a.closing_balance, cur)}.${skipped.length ? ` ${skipped.length} already on record, skipped (listed).` : ''} Review follows: purch_review_transaction, one row at a time, or purch_transactions to see them.` };
   },
 });
+
+defineCommand({
+  name: 'purch_discard_source',
+  permission: 'workspace.admin',
+  title: 'Discard statement', group: 'Purchases', subject: 'purch_source',
+  summary: 'Throw out one imported statement and every row that came from it, with a reason, so it can be re-read and imported again.',
+  doctrine: `A wrong row means a wrong source (P-2): rows are never edited, the statement is
+discarded and imported again from a fresh read. Receipts matched to its rows go back to
+unmatched and are listed; vendors, aliases and subscriptions stay — they are the person's
+words, not the statement's. The hash is free again afterwards. Owner's act, on the record.`,
+  effects: ['source and its transactions deleted', 'matched receipts unmatched', 'hash free to import again'],
+  guards: [ () => true ],
+  args: { source_id: { ...f.text('The statement, e.g. SRC-0001.'), required: true }, reason: { ...f.text('Why — a misread column, the wrong file, a re-read.'), required: true } },
+  handler(a, { db, at }) {
+    const s = H.need('purch_source', a.source_id, 'source');
+    const rows = db.prepare('SELECT id FROM purch_transaction WHERE source_id = ?').all(s.id).map(r => r.id);
+    const unmatched = rows.length ? db.prepare(`SELECT id, transaction_id FROM purch_receipt WHERE transaction_id IN (${rows.map(() => '?').join(',')})`).all(...rows) : [];
+    for (const r of unmatched) db.prepare('UPDATE purch_receipt SET transaction_id = NULL, updated_at = ? WHERE id = ?').run(at, r.id);
+    db.prepare('DELETE FROM purch_transaction WHERE source_id = ?').run(s.id);
+    db.prepare('DELETE FROM purch_source WHERE id = ?').run(s.id);
+    return { discarded: s.id, name: s.name, hash: s.hash, rows_removed: rows.length, receipts_unmatched: unmatched.map(r => r.id),
+      note: `${s.name} discarded with ${rows.length} rows. Import it again from a fresh read; the hash ${s.hash} is free.` };
+  },
+});

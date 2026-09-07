@@ -110,6 +110,13 @@
     "vocabulary": {
       "kind": "read",
       "required": []
+    },
+    "discard_source": {
+      "kind": "write",
+      "required": [
+        "source",
+        "reason"
+      ]
     }
   },
   "invariants": [

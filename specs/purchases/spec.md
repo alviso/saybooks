@@ -46,7 +46,8 @@ forecasts, advice, tax treatment of purchases, paying anything.
 
 ## 4. The acts
 
-Writes (9): import_statement, review_transaction, review_batch (many rows, one reasoned
+Writes (10): import_statement, discard_source (a wrong read thrown out whole, with a
+reason, its hash freed), review_transaction, review_batch (many rows, one reasoned
 act, validated whole), set_vendor, add_receipt, match_receipt, declare_subscription,
 cancel_subscription, unmatch_receipt. Reads (8): vocabulary (the statuses with their meaning,
 the person's categories and vendors — what an agent proposes from), sources, transactions,
