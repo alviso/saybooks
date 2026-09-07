@@ -34,9 +34,16 @@ const GRACE_DAYS = 5;   // a charge a few days late is not a missed period
 const WINDOW_DAYS = { weekly: 3, monthly: 7, yearly: 20 };
 
 /** One subscription as of a date: every expected period so far, matched or missed; lapsed derived from the last two. */
+/** The last date a statement in this currency covers: nothing after it can be judged missed. */
+const coverageEnd = (currency) => (db().prepare('SELECT MAX(period_end) d FROM purch_source WHERE currency = ?').get(currency) || {}).d || null;
+
 function subscriptionView(id, asOf) {
   const s = need('purch_subscription', id, 'subscription');
   const as = asOf || today();
+  const covered = coverageEnd(s.currency);
+  // A period counts as missed only when a statement covering its grace window has been read (P-6):
+  // judged as of the earlier of the asked date and the coverage end.
+  const judge = covered && covered < as ? covered : as;
   const vendor = vendorName(s.vendor_id);
   const tol = Math.round(s.amount * (s.tolerance_bp || 0) / 10000);
   const w = WINDOW_DAYS[s.cadence] || 7;
@@ -50,13 +57,13 @@ function subscriptionView(id, asOf) {
     const lo = H.addDays(expected, -w), hi = H.addDays(expected, w);
     const hit = cands.find(t => !used.has(t.id) && t.date >= lo && t.date <= hi);
     if (hit) { used.add(hit.id); periods.push({ expected, matched: true, transaction_id: hit.id, date: hit.date, amount: -hit.amount, amount_display: money(-hit.amount, s.currency) }); }
-    else periods.push({ expected, matched: false, missed: H.addDays(expected, GRACE_DAYS) <= as, pending: H.addDays(expected, GRACE_DAYS) > as });
+    else { const due = H.addDays(expected, GRACE_DAYS); periods.push({ expected, matched: false, missed: due <= judge, pending: due > judge, no_statement_yet: due > judge && due <= as }); }
   }
   const missed = periods.filter(p => p.missed);
   const tail = periods.slice(-2);
   const lapsed = s.status === 'active' && tail.length === 2 && tail.every(p => p.missed);
   const nextExpected = addPeriod(s.start, s.cadence, periods.length);
-  return { ...s, vendor, amount_display: money(s.amount, s.currency), as_of: as,
+  return { ...s, vendor, amount_display: money(s.amount, s.currency), as_of: as, covered_through: covered,
     derived_status: s.status === 'cancelled' ? 'cancelled' : lapsed ? 'lapsed' : 'active',
     periods, matched_periods: periods.filter(p => p.matched).length, missed_periods: missed.length,
     last_charge: [...periods].reverse().find(p => p.matched) || null,
@@ -99,10 +106,11 @@ function purchases(opts = {}) {
     const c = i.currency, sp = -i.amount;
     const k1 = `${i.category || '(uncategorised)'}|${c}`; byCat[k1] = byCat[k1] || { category: i.category || null, currency: c, amount: 0, count: 0 }; byCat[k1].amount += sp; byCat[k1].count++;
     const k2 = `${i.date.slice(0, 7)}|${c}`; byMonth[k2] = byMonth[k2] || { month: i.date.slice(0, 7), currency: c, amount: 0, count: 0 }; byMonth[k2].amount += sp; byMonth[k2].count++;
-    const k3 = `${i.vendor || i.description}|${c}`; byVendor[k3] = byVendor[k3] || { vendor: i.vendor || i.description, currency: c, amount: 0, count: 0 }; byVendor[k3].amount += sp; byVendor[k3].count++;
+    const k3 = `${i.vendor || '(no vendor)'}|${c}`; byVendor[k3] = byVendor[k3] || { vendor: i.vendor || '(no vendor)', named: !!i.vendor, currency: c, amount: 0, count: 0 }; byVendor[k3].amount += sp; byVendor[k3].count++;
   }
   const fin = (o) => Object.values(o).map(x => ({ ...x, amount_display: money(x.amount, x.currency) }));
-  return { count: t.count, items: t.items, spend_by_currency: spendOf(t.items),
+  const latest = (db().prepare('SELECT MAX(period_end) d FROM purch_source').get() || {}).d || null;
+  return { count: t.count, items: t.items, spend_by_currency: spendOf(t.items), covered_through: latest,
     by_category: fin(byCat).sort((a, b) => b.amount - a.amount), by_month: fin(byMonth).sort((a, b) => a.month < b.month ? -1 : 1),
     by_vendor: fin(byVendor).sort((a, b) => b.amount - a.amount).slice(0, 25) };
 }

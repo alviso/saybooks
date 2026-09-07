@@ -46,7 +46,8 @@ forecasts, advice, tax treatment of purchases, paying anything.
 
 ## 4. The acts
 
-Writes (10): import_statement, discard_source (a wrong read thrown out whole, with a
+Writes (11): import_statement, rename_category (one word changed on every row that
+carries it), discard_source (a wrong read thrown out whole, with a
 reason, its hash freed), review_transaction, review_batch (many rows, one reasoned
 act, validated whole), set_vendor, add_receipt, match_receipt, declare_subscription,
 cancel_subscription, unmatch_receipt. Reads (8): vocabulary (the statuses with their meaning,
@@ -69,8 +70,10 @@ purchases, subscriptions, receipts, spend, source.
 - **P-5** Nothing is invented: category, vendor and status are empty or unreviewed until an
   act with a reason sets them. Review is an act, and the reason is part of the record.
 - **P-6** A subscription is declared, then confirmed by the record: a period with no
-  matching purchase is shown as missed; two missed periods make it lapsed. The module never
-  assumes a charge happened.
+  matching purchase is shown as missed — but only once a statement covering that period has
+  been read; before that it is "no statement yet". Two missed periods make it lapsed. A vendor
+  may carry several subscriptions (different cadence or amount). The module never assumes a
+  charge happened.
 - **P-7** A receipt matches at most one transaction and a transaction at most one receipt;
   matching is an act with a reason, refused when amounts differ beyond the receipt's stated
   total or dates differ by more than seven days, unless the reason says why.

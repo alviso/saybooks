@@ -540,7 +540,7 @@ async function detail(type, id) {
   }
   if (type === 'purch_subscription' && entity.periods) {
     const t = $('<table><thead><tr><th>Expected</th><th>Result</th><th>Charged on</th><th class="num">Amount</th></tr></thead><tbody></tbody></table>');
-    for (const p of [...entity.periods].reverse()) t.querySelector('tbody').append($(`<tr><td>${p.expected}</td><td><span class="pill ${p.matched ? 'matched' : p.missed ? 'missed' : ''}">${p.matched ? 'charged' : p.missed ? 'missed' : 'pending'}</span></td><td>${p.date || '—'}</td><td class="num">${p.amount_display || ''}</td></tr>`));
+    for (const p of [...entity.periods].reverse()) t.querySelector('tbody').append($(`<tr><td>${p.expected}</td><td><span class="pill ${p.matched ? 'matched' : p.missed ? 'missed' : ''}">${p.matched ? 'charged' : p.missed ? 'missed' : p.no_statement_yet ? 'no statement yet' : 'pending'}</span></td><td>${p.date || '—'}</td><td class="num">${p.amount_display || ''}</td></tr>`));
     wrap.append($('<div class="sub" style="margin-top:14px">Periods, as of ' + entity.as_of + '</div>'), t);
   }
   if (type === 'purch_receipt' && entity.candidates && entity.candidates.length) {
@@ -1145,8 +1145,7 @@ async function render() {
     const sp = await api('purch_spend', {});
     const curs = Object.keys(sp.spend_by_currency || {});
     const tiles = $('<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;max-width:1100px;margin-bottom:16px"></div>');
-    const thisMonth = new Date().toISOString().slice(0, 7);
-    for (const c of curs) { const m = (sp.by_month || []).find(x => x.currency === c && x.month === thisMonth); tiles.append($(`<div class="tile"><div class="k">Spend this month · ${c}</div><div class="v">${m ? m.amount_display : sp.spend_by_currency[c].amount_display.replace(/[\d.,]+/, '0.00')}</div><div class="s">${sp.spend_by_currency[c].amount_display} on record, ${sp.spend_by_currency[c].count} purchases</div></div>`)); }
+    for (const c of curs) { const ms = (sp.by_month || []).filter(x => x.currency === c); const m = ms[ms.length - 1]; tiles.append($(`<div class="tile"><div class="k">Latest month on record · ${c}</div><div class="v">${m ? m.amount_display : '—'}</div><div class="s">${m ? m.month + ' · ' : ''}${sp.spend_by_currency[c].amount_display} on record, ${sp.spend_by_currency[c].count} purchases${sp.covered_through ? ` · statements through ${sp.covered_through}` : ''}</div></div>`)); }
     const subs = sp.subscriptions || {}; const me = Object.entries(subs.monthly_equivalent || {}).map(([c, v]) => v.amount_display).join(' · ') || '—';
     tiles.append($(`<div class="tile"><div class="k">Subscriptions</div><div class="v">${subs.active_total || 0} active</div><div class="s">${me} a month${subs.lapsed_total ? ` · <span style="color:var(--warn)">${subs.lapsed_total} lapsed</span>` : ''}${subs.missed_total ? ` · ${subs.missed_total} missed period${subs.missed_total > 1 ? 's' : ''}` : ''}</div></div>`));
     tiles.append($(`<div class="tile"><div class="k">To review</div><div class="v">${sp.unreviewed || 0}</div><div class="s">of ${sp.transactions || 0} rows on record</div></div>`));

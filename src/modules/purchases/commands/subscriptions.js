@@ -25,9 +25,10 @@ defineCommand({
     const cur = String(a.currency).toUpperCase(); if (!H.CUR_RE.test(cur)) throw new Rejected('currency is a three-letter ISO 4217 code.');
     let v = db.prepare('SELECT * FROM purch_vendor WHERE name = ? COLLATE NOCASE').get(name);
     if (!v) { const id = H.nextId('V', 'purch_vendor'); db.prepare('INSERT INTO purch_vendor (id,name,created_at) VALUES (?,?,?)').run(id, name, at); v = { id, name }; }
-    const dup = db.prepare("SELECT id FROM purch_subscription WHERE vendor_id = ? AND currency = ? AND status = 'active'").get(v.id, cur);
-    if (dup) throw new Rejected(`${v.name} already has an active subscription on record (${dup.id}). Cancel it with a reason before declaring another.`);
-    const first = db.prepare("SELECT MIN(date) d FROM purch_transaction WHERE vendor_id = ? AND currency = ? AND amount < 0").get(v.id, cur).d;
+    const tol = Math.round(a.amount * (a.tolerance_bp ?? 1000) / 10000);
+    const dup = db.prepare("SELECT id, amount FROM purch_subscription WHERE vendor_id = ? AND currency = ? AND cadence = ? AND status = 'active'").all(v.id, cur, a.cadence).find(s => Math.abs(s.amount - a.amount) <= tol);
+    if (dup) throw new Rejected(`${v.name} already has an active ${a.cadence} subscription at about this amount (${dup.id}). Cancel it with a reason before declaring another; a different plan (other cadence or amount) is a separate subscription.`);
+    const first = db.prepare("SELECT MIN(date) d FROM purch_transaction WHERE vendor_id = ? AND currency = ? AND amount < 0 AND ABS(-amount - ?) <= ?").get(v.id, cur, a.amount, tol).d;
     const start = a.start || first || at.slice(0, 10);
     const id = H.nextId('SUB', 'purch_subscription');
     db.prepare('INSERT INTO purch_subscription (id,vendor_id,cadence,amount,currency,tolerance_bp,start,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)')

@@ -18,9 +18,13 @@ function nameVendor(db, at, t, name) {
 }
 /** A row reviewed as recurring declares the vendor's subscription when none is active (P-6: the person said it recurs). */
 function ensureSubscription(db, at, t, vendorId, cadence) {
-  const have = db.prepare("SELECT id FROM purch_subscription WHERE vendor_id = ? AND currency = ? AND status = 'active'").get(vendorId, t.currency);
+  // One vendor may carry several plans (a monthly fee and a yearly one): a subscription is the
+  // vendor + currency + cadence + an amount within tolerance, not the vendor alone.
+  const cad = cadence || 'monthly';
+  const have = db.prepare("SELECT id, amount, tolerance_bp FROM purch_subscription WHERE vendor_id = ? AND currency = ? AND cadence = ? AND status = 'active'").all(vendorId, t.currency, cad)
+    .find(s => Math.abs(-t.amount - s.amount) <= Math.round(s.amount * (s.tolerance_bp || 0) / 10000));
   if (have) return { id: have.id, declared: false };
-  const first = db.prepare('SELECT MIN(date) d FROM purch_transaction WHERE vendor_id = ? AND currency = ? AND amount < 0').get(vendorId, t.currency).d || t.date;
+  const first = db.prepare('SELECT MIN(date) d FROM purch_transaction WHERE vendor_id = ? AND currency = ? AND amount < 0 AND ABS(-amount - ?) <= ?').get(vendorId, t.currency, -t.amount, Math.round(-t.amount * 0.1)).d || t.date;
   const id = H.nextId('SUB', 'purch_subscription');
   db.prepare('INSERT INTO purch_subscription (id,vendor_id,cadence,amount,currency,tolerance_bp,start,status,created_at,updated_at) VALUES (?,?,?,?,?,1000,?,?,?,?)')
     .run(id, vendorId, cadence || 'monthly', -t.amount, t.currency, first, 'active', at, at);
@@ -91,6 +95,22 @@ defineCommand({
     const applied = db.prepare('UPDATE purch_transaction SET vendor_id = ? WHERE vendor_id IS NULL AND lower(description) = lower(?)').run(v.id, alias).changes;
     db.prepare('UPDATE purch_transaction SET vendor_id = ? WHERE id = ?').run(v.id, t.id);
     return { ...V.transactionView(t.id), vendor_id: v.id, alias, applied_to: applied };
+  },
+});
+
+defineCommand({
+  name: 'purch_rename_category',
+  permission: 'cash.write',
+  title: 'Rename category', group: 'Purchases', subject: 'purch_transaction', scope: 'collection',
+  summary: 'Change a category word on every row that carries it, in one act.',
+  doctrine: 'Categories are the person\'s words; when the word changes, every row follows in one reasoned act rather than a re-review. Renaming onto an existing word merges the two.',
+  effects: ['category replaced on every row that carried it'],
+  args: { from: { ...f.text('The word as it is now.'), required: true }, to: { ...f.text('The word it becomes.'), required: true }, reason: f.text('Why.') },
+  handler(a, { db }) {
+    const to = a.to.trim(); if (!to) throw new Rejected('The new word cannot be empty.');
+    const n = db.prepare('UPDATE purch_transaction SET category = ? WHERE category = ? COLLATE NOCASE').run(to, a.from.trim()).changes;
+    if (!n) throw new Rejected(`No row carries the category "${a.from}".`);
+    return { from: a.from, to, rows: n };
   },
 });
 

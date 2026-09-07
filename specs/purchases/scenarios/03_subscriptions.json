@@ -105,10 +105,79 @@
       "expect": {
         "ok": true,
         "include": {
+          "missed_total": 0
+        }
+      },
+      "notes": "P-6 coverage: no statement covers September yet, so the September period is 'no statement yet', not missed"
+    },
+    {
+      "act": "import_statement",
+      "args": {
+        "name": "card-2026-09.csv",
+        "hash": "sep-2026-visa-4421-0000000000",
+        "kind": "card",
+        "account": "Visa ending 4421",
+        "currency": "NZD",
+        "period_start": "2026-09-01",
+        "period_end": "2026-09-30",
+        "opening_balance": 55251,
+        "closing_balance": 50701,
+        "row_count": 1,
+        "rows": [
+          {
+            "date": "2026-09-05",
+            "amount": -4550,
+            "description": "COUNTDOWN AUCKLAND",
+            "row_index": 1,
+            "raw": "05/09/2026,COUNTDOWN AUCKLAND,-45.50"
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      },
+      "notes": "September's statement arrives without a Netflix charge"
+    },
+    {
+      "act": "subscriptions",
+      "args": {
+        "as_of": "2026-09-10"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
           "missed_total": 1
         }
       },
       "notes": "September has not charged yet as of the 10th: one missed period, still active"
+    },
+    {
+      "act": "import_statement",
+      "args": {
+        "name": "card-2026-10.csv",
+        "hash": "oct-2026-visa-4421-0000000000",
+        "kind": "card",
+        "account": "Visa ending 4421",
+        "currency": "NZD",
+        "period_start": "2026-10-01",
+        "period_end": "2026-10-31",
+        "opening_balance": 50701,
+        "closing_balance": 46151,
+        "row_count": 1,
+        "rows": [
+          {
+            "date": "2026-10-05",
+            "amount": -4550,
+            "description": "COUNTDOWN AUCKLAND",
+            "row_index": 1,
+            "raw": "05/10/2026,COUNTDOWN AUCKLAND,-45.50"
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      },
+      "notes": "October's statement, again without Netflix"
     },
     {
       "act": "subscriptions",

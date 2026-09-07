@@ -271,7 +271,10 @@ function execute(name, args = {}, ctx = {}) {
   const cmd = byName[name];
   if (!cmd) throw new Rejected(`unknown command ${name}`);
   if (!ctx.workspace) throw new Error(`execute(${name}): ctx.workspace is required`);
-  const who = { actor: ctx.actor || 'unknown', actor_kind: ctx.actor_kind || 'human', session: ctx.session || null, reason: ctx.reason || null, modules: ctx.modules || null };
+  // The audit reason: _reason from the caller, else a command's own `reason` argument (void,
+  // review, match — where the reason is part of the record, it is the audit reason too).
+  const argReason = args && typeof args.reason === 'string' && args.reason.trim() ? args.reason.trim() : null;
+  const who = { actor: ctx.actor || 'unknown', actor_kind: ctx.actor_kind || 'human', session: ctx.session || null, reason: ctx.reason || argReason || null, modules: ctx.modules || null };
   const role = ctx.role || 'owner';
   const at = new Date().toISOString();
 
