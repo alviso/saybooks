@@ -5,7 +5,7 @@
    "name": "Sam's Supply Co.",
    "address": "410 Harbor Way, Oakland, CA",
    "payment_instructions": "ACH to Pacific Trust 121000358 / 4471002. Reference the invoice number.",
-   "footer_note": "Thank you \u2014 Sam's Supply Co. \u00b7 books kept on Saybooks"
+   "footer_note": "Thank you — Sam's Supply Co. · books kept on Saybooks"
   },
   "so our invoices print with a seller block",
   "sam",
@@ -67,7 +67,7 @@
    "stocked": false,
    "tax_rate_bp": 0
   },
-  "service item \u2014 never blocks a shipment",
+  "service item — never blocks a shipment",
   "sam",
   "human"
  ],
@@ -143,7 +143,7 @@
     }
    ]
   },
-  "B is short 5 \u2014 shipping what we have, remainder stays open",
+  "B is short 5 — shipping what we have, remainder stays open",
   "claude",
   "agent"
  ],
@@ -164,7 +164,7 @@
    "method": "ach",
    "reference": "ACH-55120"
   },
-  "bank feed \u2014 no remittance advice yet",
+  "bank feed — no remittance advice yet",
   "sam",
   "human"
  ],
@@ -189,7 +189,7 @@
     }
    ]
   },
-  "left in draft on purpose: confirming it trips the credit gate \u2014 try it",
+  "left in draft on purpose: confirming it trips the credit gate — try it",
   "sam",
   "human"
  ],
@@ -197,7 +197,7 @@
   "crm_create_campaign",
   {
    "name": "Logistics visibility pilots",
-   "goal": "Mid-size US fleets whose leadership publicly committed to workforce-visibility spend \u2014 win = 3 paid pilots. Every why_them argues THIS."
+   "goal": "Mid-size US fleets whose leadership publicly committed to workforce-visibility spend — win = 3 paid pilots. Every why_them argues THIS."
   },
   "the goal is the brief the research agent reads",
   "sam",
@@ -211,7 +211,7 @@
    "vertical": "logistics",
    "why_them": "300-driver fleet; announced a workforce-visibility RFP for 2027 in their Q2 call",
    "trigger_event": "new COO launched a cost program",
-   "hook": "You said in Q2 you can't see where driver hours go \u2014 that is literally what we sell.",
+   "hook": "You said in Q2 you can't see where driver hours go — that is literally what we sell.",
    "source_url": "https://example.com/meridian-q2",
    "campaign_id": "CAM-0001"
   },
@@ -248,7 +248,7 @@
   {
    "account_id": "A-0001",
    "role_type": "SECURITY GATE",
-   "gap_note": "no public CISO; likely under VP Eng \u2014 a finding, not a blank"
+   "gap_note": "no public CISO; likely under VP Eng — a finding, not a blank"
   },
   "recorded what we verifiably don't know",
   "claude",
@@ -277,7 +277,7 @@
    "on_hand": 200,
    "tax_rate_bp": 875
   },
-  "taxable line \u2014 the rate is snapshotted onto each invoice line at billing",
+  "taxable line — the rate is snapshotted onto each invoice line at billing",
   "sam",
   "human"
  ],
@@ -289,7 +289,7 @@
    "terms": "net15",
    "credit_limit": 800000
   },
-  "the roastery chain \u2014 quick payers",
+  "the roastery chain — quick payers",
   "sam",
   "human"
  ],
@@ -334,7 +334,7 @@
     }
    ]
   },
-  "B is out of stock \u2014 gaskets go now, the 8 B stay open",
+  "B is out of stock — gaskets go now, the 8 B stay open",
   "claude",
   "agent"
  ],
@@ -353,7 +353,7 @@
    "item_id": "WIDGET-B",
    "qty": 10
   },
-  "container landed \u2014 10 more B",
+  "container landed — 10 more B",
   "sam",
   "human"
  ],
@@ -391,7 +391,7 @@
    "method": "wire",
    "reference": "FAB-2201"
   },
-  "they rounded up \u2014 wire came in over the invoice",
+  "they rounded up — wire came in over the invoice",
   "sam",
   "human"
  ],
@@ -426,7 +426,7 @@
    "method": "check",
    "reference": "CHK-1108"
   },
-  "prepayment on account \u2014 they want headroom before the credit gate",
+  "prepayment on account — they want headroom before the credit gate",
   "sam",
   "human"
  ],
@@ -434,7 +434,7 @@
   "o2c_record_return",
   {
    "order_id": "SO-0001",
-   "reason": "2 units of A arrived dented \u2014 not sellable",
+   "reason": "2 units of A arrived dented — not sellable",
    "lines": [
     {
      "order_line_id": 1,
@@ -522,7 +522,7 @@
    "invoice_id": "INV-0004",
    "reason": "cafe closed in July; collections letter came back undeliverable"
   },
-  "small enough to let go \u2014 the write-off keeps the loss visible",
+  "small enough to let go — the write-off keeps the loss visible",
   "sam",
   "human"
  ],
@@ -531,7 +531,7 @@
   {
    "order_id": "SO-0002"
   },
-  "Contoso asked to release the spring order \u2014 trying; if the gate refuses, it goes to Sam",
+  "Contoso asked to release the spring order — trying; if the gate refuses, it goes to Sam",
   "claude",
   "agent",
   "refused"
@@ -570,7 +570,7 @@
    "name": "Marcus Webb",
    "title": "CFO",
    "source": "https://example.com/cascade-leadership",
-   "confidence_note": "high \u2014 announced hire"
+   "confidence_note": "high — announced hire"
   },
   null,
   "claude",
@@ -624,7 +624,7 @@
    "credit_limit": 1500000,
    "email": "ap@harborline.example"
   },
-  "the pursuit becomes a customer \u2014 one act, both books agree",
+  "the pursuit becomes a customer — one act, both books agree",
   "sam",
   "human"
  ],
@@ -685,5 +685,176 @@
   "goods, service and tax on one document",
   "sam",
   "human"
+ ],
+ [
+  "purch_import_statement",
+  {
+   "name": "visa-2026-08.csv",
+   "hash": "visa-8827-2026-08-demo",
+   "kind": "card",
+   "account": "Business Visa ending 8827",
+   "currency": "USD",
+   "period_start": "2026-08-01",
+   "period_end": "2026-08-31",
+   "opening_balance": -210000,
+   "closing_balance": -11790,
+   "row_count": 9,
+   "rows": [
+    {
+     "date": "2026-08-02",
+     "amount": -1499,
+     "description": "NETFLIX.COM",
+     "row_index": 1,
+     "raw": "2026-08-02,NETFLIX.COM,-14.99"
+    },
+    {
+     "date": "2026-08-04",
+     "amount": -8632,
+     "description": "COSTCO WHSE #1045",
+     "row_index": 2,
+     "raw": "2026-08-04,COSTCO WHSE #1045,-86.32"
+    },
+    {
+     "date": "2026-08-06",
+     "amount": -1200,
+     "description": "SPOTIFY USA",
+     "row_index": 3,
+     "raw": "2026-08-06,SPOTIFY USA,-12.00"
+    },
+    {
+     "date": "2026-08-09",
+     "amount": -4520,
+     "description": "CHEVRON 0091 OAKLAND",
+     "row_index": 4,
+     "raw": "2026-08-09,CHEVRON 0091 OAKLAND,-45.20"
+    },
+    {
+     "date": "2026-08-12",
+     "amount": -22900,
+     "description": "SOUTHWEST AIR",
+     "row_index": 5,
+     "raw": "2026-08-12,SOUTHWEST AIR,-229.00"
+    },
+    {
+     "date": "2026-08-15",
+     "amount": -3890,
+     "description": "WHOLE FOODS OAKLAND",
+     "row_index": 6,
+     "raw": "2026-08-15,WHOLE FOODS OAKLAND,-38.90"
+    },
+    {
+     "date": "2026-08-18",
+     "amount": 250000,
+     "description": "PAYMENT - THANK YOU",
+     "row_index": 7,
+     "raw": "2026-08-18,PAYMENT - THANK YOU,2500.00"
+    },
+    {
+     "date": "2026-08-22",
+     "amount": -2999,
+     "description": "ADOBE *CREATIVE CLOUD",
+     "row_index": 8,
+     "raw": "2026-08-22,ADOBE *CREATIVE CLOUD,-29.99"
+    },
+    {
+     "date": "2026-08-25",
+     "amount": -6150,
+     "description": "COSTCO WHSE #1045",
+     "row_index": 9,
+     "raw": "2026-08-25,COSTCO WHSE #1045,-61.50"
+    }
+   ]
+  },
+  "August card statement — Sam's photo, read row by row, balances as printed",
+  "claude",
+  "agent"
+ ],
+ [
+  "purch_review_batch",
+  {
+   "rows": [
+    {
+     "transaction_id": "T-0001",
+     "status": "recurring",
+     "category": "streaming",
+     "vendor": "Netflix"
+    },
+    {
+     "transaction_id": "T-0002",
+     "status": "purchase",
+     "category": "supplies",
+     "vendor": "Costco"
+    },
+    {
+     "transaction_id": "T-0003",
+     "status": "recurring",
+     "category": "streaming",
+     "vendor": "Spotify"
+    },
+    {
+     "transaction_id": "T-0004",
+     "status": "purchase",
+     "category": "fuel",
+     "vendor": "Chevron"
+    },
+    {
+     "transaction_id": "T-0005",
+     "status": "purchase",
+     "category": "travel",
+     "vendor": "Southwest"
+    },
+    {
+     "transaction_id": "T-0006",
+     "status": "purchase",
+     "category": "groceries",
+     "vendor": "Whole Foods"
+    },
+    {
+     "transaction_id": "T-0007",
+     "status": "transfer"
+    },
+    {
+     "transaction_id": "T-0008",
+     "status": "recurring",
+     "category": "software",
+     "vendor": "Adobe"
+    },
+    {
+     "transaction_id": "T-0009",
+     "status": "purchase",
+     "category": "supplies",
+     "vendor": "Costco"
+    }
+   ],
+   "reason": "Sam confirmed the words"
+  },
+  "reviewed with Sam, one act",
+  "claude",
+  "agent"
+ ],
+ [
+  "purch_add_receipt",
+  {
+   "name": "costco-2026-08-04.jpg",
+   "hash": "receipt-costco-0804-demo",
+   "vendor": "Costco",
+   "date": "2026-08-04",
+   "total": 8632,
+   "currency": "USD"
+  },
+  "receipt photo from Sam",
+  "claude",
+  "agent"
+ ],
+ [
+  "purch_match_receipt",
+  {
+   "receipt_id": "R-0001",
+   "transaction_id": "T-0002",
+   "reason": "same store, same day, same total"
+  },
+  "matched to the card row",
+  "claude",
+  "agent"
  ]
 ]

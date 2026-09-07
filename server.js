@@ -49,7 +49,7 @@ const seedSandbox = (name) => {
 
 // Anonymous demo sandboxes mount the business modules only — jobhunt is a personal area
 // and belongs to owned spaces (where it mounts in full, data or no data).
-const DEMO_MOUNTS = ['core', 'o2c', 'crm'];
+const DEMO_MOUNTS = ['core', 'o2c', 'crm', 'purchases'];
 const HUNT_MOUNTS = ['core', 'jobhunt'];   // the free job-hunt offering: one module + the platform
 const SOLO_MOUNTS = ['core', 'solo'];      // the freelancer invoice generator
 const KIND_MOUNTS = { hunt: HUNT_MOUNTS, solo: SOLO_MOUNTS };
