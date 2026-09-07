@@ -1,0 +1,105 @@
+{
+  "area": "purchases",
+  "spec": "0.1",
+  "doc": "spec.md",
+  "acts": {
+    "import_statement": {
+      "kind": "write",
+      "required": [
+        "name",
+        "hash",
+        "kind",
+        "currency",
+        "period_start",
+        "period_end",
+        "opening_balance",
+        "closing_balance",
+        "row_count",
+        "rows"
+      ]
+    },
+    "review_transaction": {
+      "kind": "write",
+      "required": [
+        "transaction",
+        "status"
+      ]
+    },
+    "set_vendor": {
+      "kind": "write",
+      "required": [
+        "transaction",
+        "vendor"
+      ]
+    },
+    "add_receipt": {
+      "kind": "write",
+      "required": [
+        "name",
+        "hash",
+        "total",
+        "currency",
+        "date"
+      ]
+    },
+    "match_receipt": {
+      "kind": "write",
+      "required": [
+        "receipt",
+        "transaction"
+      ]
+    },
+    "unmatch_receipt": {
+      "kind": "write",
+      "required": [
+        "receipt"
+      ]
+    },
+    "declare_subscription": {
+      "kind": "write",
+      "required": [
+        "vendor",
+        "cadence",
+        "amount",
+        "currency"
+      ]
+    },
+    "cancel_subscription": {
+      "kind": "write",
+      "required": [
+        "subscription",
+        "reason"
+      ]
+    },
+    "sources": {
+      "kind": "read",
+      "required": []
+    },
+    "source": {
+      "kind": "read",
+      "required": [
+        "source"
+      ]
+    },
+    "transactions": {
+      "kind": "read",
+      "required": []
+    },
+    "purchases": {
+      "kind": "read",
+      "required": []
+    },
+    "subscriptions": {
+      "kind": "read",
+      "required": []
+    },
+    "receipts": {
+      "kind": "read",
+      "required": []
+    },
+    "spend": {
+      "kind": "read",
+      "required": []
+    }
+  }
+}

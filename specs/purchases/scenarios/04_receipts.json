@@ -1,0 +1,138 @@
+{
+  "name": "receipts: added, matched with a reason, mismatch refused, unmatched shown",
+  "spec": "purchases@0.1",
+  "notes": "P-7: one receipt, one transaction, a reasoned act; P-9 the file stays with the person.",
+  "env": [],
+  "steps": [
+    {
+      "act": "import_statement",
+      "args": {
+        "name": "card-2026-08.csv",
+        "hash": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+        "kind": "card",
+        "account": "Visa ending 4421",
+        "currency": "NZD",
+        "period_start": "2026-08-01",
+        "period_end": "2026-08-31",
+        "opening_balance": -180000,
+        "closing_balance": 55251,
+        "row_count": 4,
+        "rows": [
+          {
+            "date": "2026-08-02",
+            "amount": -1299,
+            "description": "NETFLIX.COM",
+            "row_index": 1,
+            "raw": "02/08/2026,NETFLIX.COM,-12.99"
+          },
+          {
+            "date": "2026-08-05",
+            "amount": -4550,
+            "description": "COUNTDOWN AUCKLAND",
+            "row_index": 2,
+            "raw": "05/08/2026,COUNTDOWN AUCKLAND,-45.50"
+          },
+          {
+            "date": "2026-08-11",
+            "amount": -8900,
+            "description": "NOEL LEEMING",
+            "row_index": 3,
+            "raw": "11/08/2026,NOEL LEEMING,-89.00"
+          },
+          {
+            "date": "2026-08-20",
+            "amount": 250000,
+            "description": "PAYMENT RECEIVED THANK YOU",
+            "row_index": 4,
+            "raw": "20/08/2026,PAYMENT RECEIVED THANK YOU,2500.00"
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "add_receipt",
+      "args": {
+        "name": "noel-leeming-2026-08-11.pdf",
+        "hash": "9999999999999999999999999999999999999999",
+        "vendor": "Noel Leeming",
+        "date": "2026-08-11",
+        "total": 8900,
+        "currency": "NZD"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "matched": false
+        }
+      }
+    },
+    {
+      "act": "add_receipt",
+      "args": {
+        "name": "cafe.jpg",
+        "hash": "8888888888888888888888888888888888888888",
+        "vendor": "Corner Cafe",
+        "date": "2026-08-12",
+        "total": 1250,
+        "currency": "NZD"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "match_receipt",
+      "args": {
+        "receipt": "R-0002",
+        "transaction": "T-0003",
+        "reason": "looks close"
+      },
+      "expect": {
+        "refused": "total"
+      },
+      "notes": "P-7: 12.50 is not 89.00"
+    },
+    {
+      "act": "match_receipt",
+      "args": {
+        "receipt": "R-0001",
+        "transaction": "T-0003",
+        "reason": "same shop, same day, same amount"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "matched": true
+        }
+      }
+    },
+    {
+      "act": "receipts",
+      "args": {
+        "unmatched": true
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "count": 1
+        }
+      }
+    },
+    {
+      "act": "unmatch_receipt",
+      "args": {
+        "receipt": "R-0001",
+        "reason": "wrong card"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "matched": false
+        }
+      }
+    }
+  ]
+}
