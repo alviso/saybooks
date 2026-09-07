@@ -93,6 +93,14 @@ table.plain{border-collapse:collapse;width:100%;font-size:14px;margin:0 0 1em} t
     <li><b>Currency, tax and numbering come from the company profile.</b> Name the country (dates and amounts print the way people there write them), the currencies you bill in with a default, and your tax scheme: the tax's name, the default rate, and whether you are registered. Each invoice carries one currency from that set; a payment settles only invoices in its own currency. Not registered: no line can carry tax. Registered: every line gets the default rate unless you set a line to 0, the document says <b>TAX INVOICE</b> and prints your tax id under its own caption (GST No., VAT ID). The number format is yours too: <code>INV-{NNNN}</code> by default, <code>INV-{YYYY}-{NNN}</code> to restart each year.</li>
   </ul>
 
+  <h2 id="purchases">Purchases</h2>
+  <p>Full-books spaces carry a Purchases area: what you buy, from bank and card statements and receipts <b>your agent reads</b>. Nothing in Saybooks parses a file. The agent hands over the rows and the balances the statement prints; the statement is accepted whole when the rows reconcile to those balances, or refused with the gap named. Every row remembers its statement, its row number and the line as read. The same file is never imported twice; rows already on record are skipped and listed back.</p>
+  <ul>
+    <li><b>Review</b> is an act with a reason: purchase, transfer, income, fee or ignored, with a category in your own words. Amounts and dates never change; a wrong row means re-reading the statement.</li>
+    <li><b>Subscriptions</b> are declared by you and confirmed by the record. A period with no charge shows as missed; two in a row make it lapsed. Cancelled is something you say.</li>
+    <li><b>Receipts</b> are what the receipt says plus the file's hash; the file stays with you. Matching to a row is a reasoned act, refused when the total does not fit.</li>
+    <li><b>Charts</b> count reviewed purchases only, per currency, with no conversion.</li>
+  </ul>
   <h2 id="refusals">Refusals</h2>
   <p>Every rule in your books applies to Claude exactly as it applies to you. When a command is not allowed, the answer is one sentence with the reason, shown identically on the button's tooltip, in the thrown error and in the agent's reply, and written to the audit log. A real one:</p>
   <div class="refusal">Credit check failed for Contoso Ltd. Order $2,500.00; available $1,000.00 (limit $1,000.00 less open AR $0.00 and committed $0.00). Short by $1,500.00.</div>

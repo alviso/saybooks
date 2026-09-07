@@ -101,5 +101,43 @@
       "kind": "read",
       "required": []
     }
-  }
+  },
+  "invariants": [
+    {
+      "id": "P-1",
+      "title": "Money is integer minor units, signed; every source and transaction carries a currency; sums are per currency and never cross."
+    },
+    {
+      "id": "P-2",
+      "title": "Every transaction traces to a source: source id, row index, and the raw line as read."
+    },
+    {
+      "id": "P-3",
+      "title": "A statement is accepted whole or not at all: the rows must reconcile to the printed opening balance, closing balance and row count, or the batch is refused with the gap named."
+    },
+    {
+      "id": "P-4",
+      "title": "The same source hash is refused a second time; rows already present are skipped and listed, never silently merged or duplicated."
+    },
+    {
+      "id": "P-5",
+      "title": "Nothing is invented: category, vendor and status are empty or unreviewed until an act with a reason sets them."
+    },
+    {
+      "id": "P-6",
+      "title": "A subscription is declared, then confirmed by the record: a period with no matching charge is missed, two make it lapsed; a charge is never assumed."
+    },
+    {
+      "id": "P-7",
+      "title": "A receipt matches at most one transaction and vice versa; matching is a reasoned act, refused when the total or date does not fit unless overridden with a reason."
+    },
+    {
+      "id": "P-8",
+      "title": "Every write is a logged act with an actor; refusals are logged too."
+    },
+    {
+      "id": "P-9",
+      "title": "Files never live here: a source or a receipt is its hash, its metadata and what was read."
+    }
+  ]
 }

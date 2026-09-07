@@ -123,6 +123,18 @@
     {
       "id": "S-9",
       "title": "Journal derivation balances: issue to AR/Revenue, receipt to Cash/Deposits, application to Deposits/AR."
+    },
+    {
+      "id": "S-10",
+      "title": "An invoice carries exactly one currency from the company's set, a payment too; cash never crosses currencies; sums are per currency."
+    },
+    {
+      "id": "S-11",
+      "title": "Tax follows the company's scheme, frozen at issue: unregistered lines cannot carry tax; registered lines default to the rate and the document prints TAX INVOICE."
+    },
+    {
+      "id": "S-12",
+      "title": "Numbers follow the company's format (sequence token, optional year token) and stay sequential and never reused within it."
     }
   ]
 }

@@ -1,0 +1,83 @@
+'use strict';
+/**
+ * purchases — what you buy, from statements and receipts the AGENT read. The second
+ * deliberately PERSONAL area after jobhunt. No parser lives here: the agent hands over rows
+ * and the control totals the statement printed; the module keeps the record, checks that it
+ * adds up, refuses what does not reconcile, and remembers where every number came from.
+ */
+const R = require('../../registry.js');
+const V = require('./views.js');
+const H = require('../../db.js');
+
+const mod = R.defineModule({
+  name: 'purchases', prefix: 'purch',
+  tables: ['purch_source', 'purch_vendor', 'purch_vendor_alias', 'purch_transaction', 'purch_receipt', 'purch_subscription'],
+  ids: { source: 'SRC-0001', transaction: 'T-0001', vendor: 'V-0001', receipt: 'R-0001', subscription: 'SUB-0001' },
+  lifecycles: {
+    source: 'imported whole (reconciled to its control totals) — immutable; the same hash never twice',
+    transaction: 'unreviewed -> purchase | transfer | income | fee | ignored (a reasoned act; amount and date never change)',
+    subscription: 'active (declared) -> cancelled (reasoned); lapsed is DERIVED from two missed periods, never stored',
+    receipt: 'unmatched -> matched to exactly one transaction (reasoned) -> unmatched again (reasoned)',
+  },
+  rules: [
+    'A statement is accepted whole or not at all: rows must reconcile to the printed opening balance, closing balance and row count.',
+    'Every transaction traces to a source row and the raw line as read; nothing is edited in place.',
+    'The same source hash is never imported twice; rows already present are skipped and listed.',
+    'Category, vendor and status are empty until an act with a reason sets them.',
+    'A subscription is declared, then confirmed by the record; a missing charge shows as missed, never assumed.',
+    'Files never live here — a source or a receipt is its hash and its facts.',
+  ],
+  doctrine: `AGENT FIRST. You read the file — bank statement, card statement, receipt photo —
+and hand over what it says. The module checks it and keeps it. Nothing here parses.
+
+Importing a statement (purch_import_statement):
+- Read every row: date (ISO), signed amount in minor units (spending NEGATIVE, money in
+  POSITIVE), the description exactly as printed, and the raw line. Keep the statement's
+  own order; row_index is its position.
+- State the control totals the statement prints: opening balance, closing balance, number
+  of rows. The import is refused when the rows do not add up to them — then re-read; a
+  refusal names the gap. Never "fix" a row to make it reconcile.
+- hash: a content hash of the file if you can compute one; otherwise a stable id the
+  statement itself carries (statement number + period). The same hash is refused twice.
+- Rows already on record (same date, amount, description) are skipped and listed back; say
+  so to the person.
+
+Reviewing: purch_review_transaction sets purchase / transfer / income / fee / ignored with a
+reason — the person's words. Ask when unsure; never guess a category. purch_set_vendor names
+the shop once and its statement spelling becomes an alias for every later row.
+
+Receipts: purch_add_receipt with what the receipt says (vendor, date, total, currency) and the
+file's name and hash; candidates come back. purch_match_receipt is a reasoned act and is
+refused when the total does not fit — say why if it truly does (override).
+
+Subscriptions: purch_declare_subscription from a charge you have seen; the record then
+confirms it month by month. A missed period is shown, never assumed; two make it lapsed.
+Money is integer minor units; sums are per currency and never cross.`,
+  implements: {
+    area: 'purchases', spec: '0.1',
+    argmap: { transaction: 'transaction_id', receipt: 'receipt_id', subscription: 'subscription_id', source: 'source_id' },
+    acts: {
+      import_statement: 'purch_import_statement', review_transaction: 'purch_review_transaction', set_vendor: 'purch_set_vendor',
+      add_receipt: 'purch_add_receipt', match_receipt: 'purch_match_receipt', unmatch_receipt: 'purch_unmatch_receipt',
+      declare_subscription: 'purch_declare_subscription', cancel_subscription: 'purch_cancel_subscription',
+      sources: 'purch_sources', source: 'purch_source', transactions: 'purch_transactions', purchases: 'purch_purchases',
+      subscriptions: 'purch_subscriptions', receipts: 'purch_receipts', spend: 'purch_spend',
+    },
+  },
+  api: { views: V },
+});
+
+R.defineSubject('purch_transaction', { load: (id) => V.transactionView(id) });
+R.defineSubject('purch_receipt', { load: (id) => V.receiptView(id) });
+R.defineSubject('purch_subscription', { load: (id) => V.subscriptionView(id) });
+R.defineSubject('purch_source', { load: (id) => H.need('purch_source', id, 'source') });
+
+R.inModule(mod, () => {
+  require('./commands/import.js');
+  require('./commands/review.js');
+  require('./commands/receipts.js');
+  require('./commands/subscriptions.js');
+  require('./commands/reads.js');
+});
+
+module.exports = mod;

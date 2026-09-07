@@ -27,7 +27,11 @@
   .num { text-align:right; font-variant-numeric:tabular-nums }
   .pill { font:700 11px var(--display); padding:3px 9px; border-radius:4px; background:var(--tint2); color:var(--mid) }
   .pill.confirmed,.pill.sent,.pill.issued,.pill.submitted { background:#E3ECF7; color:#2C5282 } .pill.shipped { background:#E8F0E2; color:#3E6B2B }
-  .pill.closed,.pill.paid,.pill.accepted { background:var(--tint); color:var(--accent) } .pill.cancelled,.pill.void,.pill.rejected,.pill.ghosted { background:var(--alert); color:var(--warn) }
+  .pill.closed,.pill.paid,.pill.accepted,.pill.active,.pill.purchase,.pill.matched { background:var(--tint); color:var(--accent) } .pill.lapsed,.pill.missed,.pill.unreviewed { background:#FFF3CD; color:#7a5a00 }
+  .chart { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px 16px; box-shadow:var(--shadow) } .chart h3 { margin:0 0 8px; font-size:13px; color:var(--mid); font-weight:600 }
+  .chart svg text { font: 11px var(--display); fill: var(--dim) } .chart .bar { fill:hsl(215 60% 22%); opacity:.85 } .chart .bar:hover { opacity:1 } .chart .grid { stroke:var(--line); stroke-width:1 }
+  .tile { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px 16px; box-shadow:var(--shadow) } .tile .k { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); font-weight:600 } .tile .v { font-size:22px; font-weight:700; margin-top:2px } .tile .s { font-size:12px; color:var(--dim) }
+  #tip { position:fixed; pointer-events:none; background:var(--ink); color:#fff; font-size:12px; padding:5px 8px; border-radius:6px; display:none; z-index:50 } .pill.cancelled,.pill.void,.pill.rejected,.pill.ghosted { background:var(--alert); color:var(--warn) }
   .card { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:20px 22px; margin-bottom:16px; box-shadow:var(--shadow) }
   .kv { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px 22px }
   .kv div span { display:block; font:600 12px var(--display); color:var(--dim); margin-bottom:2px }
@@ -102,6 +106,10 @@
   <div class="grp" data-g="solo">Invoicing <span class="tog">−</span></div>
   <div class="grp-items" data-gi="solo">
     <a data-v="soloinv">Invoices</a><a data-v="soloout">Outstanding</a><a data-v="soloclients">Clients</a>
+  </div>
+  <div class="grp" data-g="purch">Purchases <span class="tog">−</span></div>
+  <div class="grp-items" data-gi="purch">
+    <a data-v="purchover">Overview</a><a data-v="purchtx">Transactions</a><a data-v="purchsubs">Subscriptions</a><a data-v="purchrec">Receipts</a><a data-v="purchsrc">Statements</a>
   </div>
   <div class="grp" data-g="sys">System <span class="tog">−</span></div>
   <div class="grp-items" data-gi="sys">
@@ -297,9 +305,9 @@ const newButtons = (subject) => REG.commands.filter(c => c.subject === subject &
 
 async function detail(type, id) {
   const wrap = $('<div></div>');
-  const idArg = type === 'solo_invoice' ? 'invoice_id' : type + '_id';
+  const idArg = type === 'solo_invoice' ? 'invoice_id' : type.startsWith('purch_') ? type.slice(6) + '_id' : type + '_id';
   const [entity, na] = await Promise.all([
-    api({ order:'o2c_get_order', customer: cmd('o2c_get_customer') ? 'o2c_get_customer' : 'core_get_customer', invoice:'o2c_get_invoice', account:'crm_get_account', campaign:'crm_get_campaign', posting:'hunt_get_posting', contact:'hunt_get_contact', resume:'hunt_get_resume', solo_invoice:'solo_get_invoice' }[type],
+    api({ order:'o2c_get_order', customer: cmd('o2c_get_customer') ? 'o2c_get_customer' : 'core_get_customer', invoice:'o2c_get_invoice', account:'crm_get_account', campaign:'crm_get_campaign', posting:'hunt_get_posting', contact:'hunt_get_contact', resume:'hunt_get_resume', solo_invoice:'solo_get_invoice', purch_transaction:'purch_get_transaction', purch_receipt:'purch_get_receipt', purch_subscription:'purch_get_subscription', purch_source:'purch_source' }[type],
         { [idArg]: id }),
     fetch(wsUrl(`/api/next-actions?type=${type}&id=${id}`)).then(r => r.json()),
   ]);
@@ -318,6 +326,14 @@ async function detail(type, id) {
     ? { Via: entity.company_name, 'End client': entity.end_client_name ?? '—', Req: entity.req_id ?? '—', Fit: entity.fit_score ?? '—', Resume: entity.resume_version_label ?? '—', 'Applied': entity.application ? (entity.application.applied_at || 'yes') : 'no', 'App status': entity.application ? entity.application.status : '—' }
     : type === 'solo_invoice'
     ? { Client: entity.customer_name, Currency: entity.currency || 'USD', Total: entity.total_display, Applied: entity.applied_display, Open: entity.open_display, Issued: entity.issued_at ?? '— (draft)', Due: entity.due_at ?? `${entity.due_in_days ?? 30} days from issue`, ...(entity.void_reason && { Voided: entity.void_reason }) }
+    : type === 'purch_transaction'
+    ? { Date: entity.date, Amount: entity.amount_display, Description: entity.description, Vendor: entity.vendor ?? '—', Category: entity.category ?? '—', Statement: `${entity.source_name ?? entity.source_id} · row ${entity.row_index}`, Receipt: entity.receipt ? entity.receipt.id : '—', ...(entity.raw ? { 'As read': `<code style="font-size:11px">${String(entity.raw).replace(/</g,'&lt;')}</code>` } : {}) }
+    : type === 'purch_receipt'
+    ? { Vendor: entity.vendor ?? '—', Date: entity.date, Total: entity.total_display, File: entity.name, Matched: entity.transaction_id ?? 'no', ...(entity.note ? { Note: entity.note } : {}) }
+    : type === 'purch_subscription'
+    ? { Vendor: entity.vendor, Cadence: entity.cadence, Expected: entity.amount_display, Status: entity.derived_status, 'Matched periods': entity.matched_periods, 'Missed periods': entity.missed_periods, 'Next expected': entity.next_expected ?? '—', 'Last charge': entity.last_charge ? `${entity.last_charge.date} (${entity.last_charge.transaction_id})` : '—', ...(entity.cancel_reason ? { Cancelled: entity.cancel_reason } : {}) }
+    : type === 'purch_source'
+    ? { Account: entity.account ?? '—', Kind: entity.kind, Period: `${entity.period_start} – ${entity.period_end}`, Opening: entity.opening_display, Closing: entity.closing_display, Rows: `${entity.rows_in} in${entity.rows_skipped ? `, ${entity.rows_skipped} skipped` : ''}`, Unreviewed: entity.unreviewed, 'Imported by': entity.imported_by, Hash: `<code style="font-size:11px">${entity.hash}</code>` }
     : type === 'contact'
     ? { Company: entity.company_name ?? '—', Role: entity.role ?? '—', Email: entity.email ?? '—', Phone: entity.phone ?? '—', LinkedIn: entity.linkedin_url ? `<a href="${entity.linkedin_url}" target="_blank" rel="noopener">profile</a>` : '—', Source: entity.source, 'Last touch': entity.last_touch ? entity.last_touch.slice(0,10) : '—' }
     : type === 'resume'
@@ -522,6 +538,21 @@ async function detail(type, id) {
     wrap.append(lt);
     if (entity.notes) wrap.append($(`<div class="card doc" style="margin-top:10px">${entity.notes}</div>`));
   }
+  if (type === 'purch_subscription' && entity.periods) {
+    const t = $('<table><thead><tr><th>Expected</th><th>Result</th><th>Charged on</th><th class="num">Amount</th></tr></thead><tbody></tbody></table>');
+    for (const p of [...entity.periods].reverse()) t.querySelector('tbody').append($(`<tr><td>${p.expected}</td><td><span class="pill ${p.matched ? 'matched' : p.missed ? 'missed' : ''}">${p.matched ? 'charged' : p.missed ? 'missed' : 'pending'}</span></td><td>${p.date || '—'}</td><td class="num">${p.amount_display || ''}</td></tr>`));
+    wrap.append($('<div class="sub" style="margin-top:14px">Periods, as of ' + entity.as_of + '</div>'), t);
+  }
+  if (type === 'purch_receipt' && entity.candidates && entity.candidates.length) {
+    const t = $('<table><thead><tr><th>Row</th><th>Date</th><th>Description</th><th class="num">Amount</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, entity.candidates, r => `<td>${r.id}</td><td>${r.date}</td><td>${r.description}</td><td class="num">${r.amount_display}</td>`, 'purch_transaction');
+    wrap.append($('<div class="sub" style="margin-top:14px">Candidate rows — match one with a reason</div>'), t);
+  }
+  if (type === 'purch_source' && entity.rows) {
+    const t = $('<table><thead><tr><th>#</th><th>Row</th><th>Date</th><th>Description</th><th>Vendor</th><th>Status</th><th class="num">Amount</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, entity.rows, r => `<td>${r.row_index}</td><td>${r.id}</td><td>${r.date}</td><td>${r.description}</td><td>${r.vendor || ''}</td><td><span class="pill ${r.status}">${r.status}</span></td><td class="num">${r.amount_display}</td>`, 'purch_transaction');
+    wrap.append($('<div class="sub" style="margin-top:14px">Rows, in the statement\'s order</div>'), t);
+  }
   if (entity.lines && type !== 'solo_invoice') {
     const t = $('<table><thead><tr><th>#</th><th>Item</th><th class="num">Qty</th><th class="num">Shipped</th><th class="num">Invoiced</th><th class="num">Price</th><th class="num">Amount</th></tr></thead><tbody></tbody></table>');
     for (const l of entity.lines) t.querySelector('tbody').append($(
@@ -711,6 +742,43 @@ const auditTable = (rows) => {
      <td style="color:${r.ok?'var(--dim)':'var(--warn)'}">${why(r)}</td></tr>`));
   return t;
 };
+
+/* One-hue bar charts, hover tooltips, direct labels on the ends only. Values are minor units; labels come pre-formatted from the server. */
+function barChart(title, rows, opts = {}) {
+  const box = $(`<div class="chart"><h3>${title}</h3></div>`);
+  if (!rows.length) { box.append($('<div class="sub" style="margin:0">Nothing yet.</div>')); return box; }
+  const max = Math.max(...rows.map(r => r.value), 1);
+  let tip = document.getElementById('tip'); if (!tip) { tip = document.createElement('div'); tip.id = 'tip'; document.body.append(tip); }
+  const show = (e, r) => { tip.style.display = 'block'; tip.innerHTML = `<b>${r.label}</b> · ${r.display}${r.sub ? `<br><span style="opacity:.8">${r.sub}</span>` : ''}`; tip.style.left = (e.clientX + 12) + 'px'; tip.style.top = (e.clientY + 12) + 'px'; };
+  const hide = () => { tip.style.display = 'none'; };
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, a) => { const x = document.createElementNS(NS, n); for (const [k, v] of Object.entries(a)) x.setAttribute(k, v); return x; };
+  if (opts.vertical) {
+    const W = 520, H = 200, L = 8, B = 28, T = 18, bw = Math.max(6, Math.min(36, (W - L * 2) / rows.length - 6));
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', height: H, preserveAspectRatio: 'none' });
+    for (let g = 1; g <= 3; g++) { const y = T + (H - T - B) * (1 - g / 3); svg.append(el('line', { x1: L, x2: W - L, y1: y, y2: y, class: 'grid', 'stroke-dasharray': '2 3' })); }
+    svg.append(el('line', { x1: L, x2: W - L, y1: H - B, y2: H - B, class: 'grid' }));
+    const step = (W - L * 2) / rows.length;
+    rows.forEach((r, i) => {
+      const h = Math.max(2, (H - T - B) * r.value / max), x = L + i * step + (step - bw) / 2, y = H - B - h;
+      const rect = el('rect', { x, y, width: bw, height: h, rx: 3, class: 'bar' }); rect.onmousemove = (e) => show(e, r); rect.onmouseleave = hide; svg.append(rect);
+      if (rows.length <= 14 || i % Math.ceil(rows.length / 12) === 0) { const t = el('text', { x: x + bw / 2, y: H - B + 14, 'text-anchor': 'middle' }); t.textContent = r.label.length > 7 ? r.label.slice(2) : r.label; svg.append(t); }
+      if (r.value === max || i === rows.length - 1) { const t = el('text', { x: x + bw / 2, y: y - 4, 'text-anchor': 'middle', style: 'fill:var(--ink);font-weight:600' }); t.textContent = r.display; svg.append(t); }
+    });
+    box.append(svg);
+  } else {
+    const rowH = 22, LW = 150, W = 520, H = rows.length * rowH + 6;
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', height: H, preserveAspectRatio: 'none' });
+    rows.forEach((r, i) => {
+      const y = i * rowH + 3, w = Math.max(2, (W - LW - 90) * r.value / max);
+      const t = el('text', { x: LW - 8, y: y + 14, 'text-anchor': 'end', style: 'fill:var(--ink)' }); t.textContent = r.label.length > 22 ? r.label.slice(0, 21) + '…' : r.label; svg.append(t);
+      const rect = el('rect', { x: LW, y: y + 3, width: w, height: rowH - 8, rx: 3, class: 'bar' }); rect.onmousemove = (e) => show(e, r); rect.onmouseleave = hide; svg.append(rect);
+      const v = el('text', { x: LW + w + 6, y: y + 14, style: i === 0 ? 'fill:var(--ink);font-weight:600' : '' }); v.textContent = r.display; svg.append(v);
+    });
+    box.append(svg);
+  }
+  return box;
+}
 
 async function render() {
   await boot();          // lookups and member state go stale while agents write; refresh per view
@@ -1072,6 +1140,69 @@ async function render() {
     main.append(grid);
     main.append($('<p class="sub" style="margin-top:14px;max-width:1100px">Invoicing and job-hunt spaces come from their own doors: <a href="/solo">saybooks.io/solo</a> and <a href="/hunt">saybooks.io/hunt</a>. A new space here is full books.</p>'));
   }
+  if (view === 'purchover') {
+    head('Purchases', 'What you buy, from statements and receipts your agent read. Sums stay per currency.');
+    const sp = await api('purch_spend', {});
+    const curs = Object.keys(sp.spend_by_currency || {});
+    const tiles = $('<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;max-width:1100px;margin-bottom:16px"></div>');
+    const thisMonth = new Date().toISOString().slice(0, 7);
+    for (const c of curs) { const m = (sp.by_month || []).find(x => x.currency === c && x.month === thisMonth); tiles.append($(`<div class="tile"><div class="k">Spend this month · ${c}</div><div class="v">${m ? m.amount_display : sp.spend_by_currency[c].amount_display.replace(/[\d.,]+/, '0.00')}</div><div class="s">${sp.spend_by_currency[c].amount_display} on record, ${sp.spend_by_currency[c].count} purchases</div></div>`)); }
+    const subs = sp.subscriptions || {}; const me = Object.entries(subs.monthly_equivalent || {}).map(([c, v]) => v.amount_display).join(' · ') || '—';
+    tiles.append($(`<div class="tile"><div class="k">Subscriptions</div><div class="v">${subs.active_total || 0} active</div><div class="s">${me} a month${subs.lapsed_total ? ` · <span style="color:var(--warn)">${subs.lapsed_total} lapsed</span>` : ''}${subs.missed_total ? ` · ${subs.missed_total} missed period${subs.missed_total > 1 ? 's' : ''}` : ''}</div></div>`));
+    tiles.append($(`<div class="tile"><div class="k">To review</div><div class="v">${sp.unreviewed || 0}</div><div class="s">of ${sp.transactions || 0} rows on record</div></div>`));
+    main.append(tiles);
+    if (!sp.transactions) { main.append($(`<div class="card doc" style="max-width:640px">Nothing imported yet. Give your agent a bank or card statement and say <i>"import this"</i> — it reads the rows and the printed balances, and the statement lands here whole or not at all. Or press <b>Import statement</b> under Transactions and type the rows yourself.</div>`)); return; }
+    const charts = $('<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;max-width:1100px"></div>');
+    for (const c of curs) {
+      const months = (sp.by_month || []).filter(x => x.currency === c);
+      charts.append(barChart(`Spend by month · ${c}`, months.map(x => ({ label: x.month, value: x.amount, display: x.amount_display, sub: `${x.count} purchases` })), { vertical: true }));
+      const cats = (sp.by_category || []).filter(x => x.currency === c).slice(0, 10);
+      charts.append(barChart(`By category · ${c}`, cats.map(x => ({ label: x.category || '(uncategorised)', value: x.amount, display: x.amount_display, sub: `${x.count} purchases` }))));
+      const vend = (sp.by_vendor || []).filter(x => x.currency === c).slice(0, 10);
+      charts.append(barChart(`Top vendors · ${c}`, vend.map(x => ({ label: x.vendor, value: x.amount, display: x.amount_display, sub: `${x.count} purchases` }))));
+    }
+    main.append(charts);
+    main.append($('<p class="sub" style="margin-top:14px;max-width:1100px">Charts count reviewed purchases only. Rows still unreviewed are under Transactions; a category is the word you give it, never a guess.</p>'));
+  }
+  if (view === 'purchtx') {
+    head('Transactions', 'Every row on record with where it came from. Review is a reasoned act; amount and date never change.');
+    const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('purch_source').forEach(b => bar.append(b)); main.append(bar);
+    const tx = await api('purch_transactions', { limit: 500 });
+    if (!tx.count) { main.append($('<div class="card doc" style="max-width:560px">No rows yet — import a statement.</div>')); return; }
+    main.append($(`<div class="sub" style="margin:0 0 10px">${tx.count} rows · ${tx.unreviewed} unreviewed · spending ${Object.values(tx.spend_by_currency).map(x => x.amount_display).join(' · ') || '—'}</div>`));
+    const t = $('<table><thead><tr><th>Row</th><th>Date</th><th>Description</th><th>Vendor</th><th>Category</th><th>Status</th><th class="num">Amount</th><th>Receipt</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, tx.items, r => `<td>${r.id}</td><td style="font-size:12px">${r.date}</td><td>${r.description}</td><td>${r.vendor || ''}</td><td>${r.category || ''}</td><td><span class="pill ${r.status}">${r.status}</span></td><td class="num" style="${r.amount > 0 ? 'color:var(--ok, #3E6B2B)' : ''}">${r.amount_display}</td><td>${r.has_receipt ? '✓' : ''}</td>`, 'purch_transaction');
+    main.append(t);
+  }
+  if (view === 'purchsubs') {
+    head('Subscriptions', 'Declared by you, confirmed by the record. A missing charge shows as missed; two make it lapsed.');
+    const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('purch_subscription').forEach(b => bar.append(b)); main.append(bar);
+    const s = await api('purch_subscriptions', {});
+    if (!s.count) { main.append($('<div class="card doc" style="max-width:560px">None declared. Tell your agent about one you see charging every month, or press Declare subscription.</div>')); return; }
+    main.append($(`<div class="sub" style="margin:0 0 10px">${s.active_total} active · ${Object.values(s.monthly_equivalent).map(x => x.amount_display).join(' · ') || '—'} a month${s.lapsed_total ? ` · ${s.lapsed_total} lapsed` : ''}</div>`));
+    const t = $('<table><thead><tr><th>Id</th><th>Vendor</th><th>Cadence</th><th class="num">Expected</th><th>Status</th><th>Last charge</th><th>Next expected</th><th class="num">Missed</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, s.items, r => `<td>${r.id}</td><td>${r.vendor}</td><td>${r.cadence}</td><td class="num">${r.amount_display}</td><td><span class="pill ${r.derived_status}">${r.derived_status}</span></td><td style="font-size:12px">${r.last_charge ? r.last_charge.date : '—'}</td><td style="font-size:12px">${r.next_expected || '—'}</td><td class="num">${r.missed_periods || ''}</td>`, 'purch_subscription');
+    main.append(t);
+  }
+  if (view === 'purchrec') {
+    head('Receipts', 'What each receipt says, matched to one row or waiting. The file stays with you.');
+    const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('purch_receipt').forEach(b => bar.append(b)); main.append(bar);
+    const r = await api('purch_receipts', {});
+    if (!r.count) { main.append($('<div class="card doc" style="max-width:560px">No receipts yet. Hand one to your agent, or press Add receipt.</div>')); return; }
+    main.append($(`<div class="sub" style="margin:0 0 10px">${r.count} receipts · ${r.unmatched} unmatched</div>`));
+    const t = $('<table><thead><tr><th>Id</th><th>Date</th><th>Vendor</th><th class="num">Total</th><th>File</th><th>Matched to</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, r.items, x => `<td>${x.id}</td><td style="font-size:12px">${x.date}</td><td>${x.vendor || ''}</td><td class="num">${x.total_display}</td><td style="font-size:12px;color:var(--dim)">${x.name}</td><td>${x.transaction_id ? `<span class="pill matched">${x.transaction_id}</span>` : '<span class="pill unreviewed">unmatched</span>'}</td>`, 'purch_receipt');
+    main.append(t);
+  }
+  if (view === 'purchsrc') {
+    head('Statements', 'Every file your agent read, accepted whole against its printed balances. The same file never goes in twice.');
+    const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('purch_source').forEach(b => bar.append(b)); main.append(bar);
+    const s = await api('purch_sources', {});
+    if (!s.count) { main.append($('<div class="card doc" style="max-width:560px">Nothing imported yet.</div>')); return; }
+    const t = $('<table><thead><tr><th>Id</th><th>File</th><th>Account</th><th>Period</th><th class="num">Opening</th><th class="num">Closing</th><th class="num">Rows</th><th>Imported by</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, s.items, x => `<td>${x.id}</td><td>${x.name}</td><td>${x.account || ''}</td><td style="font-size:12px">${x.period_start} – ${x.period_end}</td><td class="num">${x.opening_display}</td><td class="num">${x.closing_display}</td><td class="num">${x.rows_in}${x.rows_skipped ? ` <span style="color:var(--dim)">(+${x.rows_skipped} skipped)</span>` : ''}</td><td style="font-size:12px">${x.imported_by}</td>`, 'purch_source');
+    main.append(t);
+  }
   if (view === 'company') {
     head('Company', "Your business's own facts — the seller on every document. More business-level records will live here.");
     const p = await api('core_company_profile', { with_logo: true });
@@ -1405,7 +1536,7 @@ const boot = async () => {
   REG = await fetch(wsUrl('/api/registry')).then(r => r.json());
   /* Nav groups follow the mounted modules — an unmounted module has no pages here. */
   const has = (prefix) => REG.commands.some(c => c.name.startsWith(prefix));
-  for (const [g, prefix] of [['hunt', 'hunt_'], ['crm', 'crm_'], ['books', 'o2c_'], ['solo', 'solo_']]) {
+  for (const [g, prefix] of [['hunt', 'hunt_'], ['crm', 'crm_'], ['books', 'o2c_'], ['solo', 'solo_'], ['purch', 'purch_']]) {
     if (!has(prefix)) {
       const h = document.querySelector(`[data-g="${g}"]`);
       if (h) { if (h.nextElementSibling && h.nextElementSibling.classList.contains('grp-items')) h.nextElementSibling.remove(); h.remove(); }
