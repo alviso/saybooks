@@ -39,7 +39,7 @@
   <div id="err"><p>Admin sign-in required.</p><p style="margin-top:8px"><a href="/auth/google">Sign in with Google</a> with the admin account, then reload.</p></div>
   <div id="main" style="display:none">
     <div class="cards" id="funnel"></div>
-    <h2>Live sandboxes, last 4 days</h2>
+    <h2>Live sandboxes, last 7 days</h2>
     <svg id="chart" height="160" preserveAspectRatio="none"></svg>
     <h2>Sign-ups</h2>
     <table><thead><tr><th>When</th><th>Who</th><th>Spaces</th></tr></thead><tbody id="users"></tbody></table>
@@ -69,7 +69,9 @@
   ];
   document.getElementById('funnel').innerHTML = cards.map(([n, l]) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`).join('');
 
-  const M = d.metrics;
+  // The chart shows the last seven days only: the early testing days are on the record but off the picture.
+  const cutoff = Date.now() - 7 * 864e5;
+  const M = (d.metrics || []).filter(m => Date.parse(m[0]) >= cutoff);
   if (M.length > 1) {
     const svg = document.getElementById('chart');
     const W = svg.clientWidth - 24, H = 130;
