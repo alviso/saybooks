@@ -3,20 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Saybooks — tell Claude what happened. Your books stay right.</title>
-<meta name="description" content="A place Claude can keep your records — invoices, clients, orders, a job hunt — with rules it can't break and a log of everything it did. Free to try, no signup.">
+<title>Saybooks — records Claude keeps, rules it can't break</title>
+<meta name="description" content="Open-source books Claude can keep over an MCP connector: invoicing, orders and CRM, a job hunt, personal finances from statements. Rules it can't break, nothing invented, every action on the record. Free to try, no signup.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<link rel="canonical" href="https://saybooks.io/">
+<link rel="canonical" href="https://saybooks.io/"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Saybooks","url":"https://saybooks.io/","logo":"https://saybooks.io/icon-512.png","sameAs":["https://github.com/alviso/saybooks"],"email":"hello@saybooks.io"}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Saybooks","url":"https://saybooks.io/","applicationCategory":"BusinessApplication","operatingSystem":"Web","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Open-source books an AI agent can keep: invoicing, order to cash, CRM, job hunt and personal finances, connected to Claude over MCP, with rules the agent cannot break and one audit trail for people and agents.","license":"https://www.gnu.org/licenses/agpl-3.0.html","isAccessibleForFree":true,"creator":{"@type":"Organization","name":"Saybooks","url":"https://saybooks.io/"}}</script>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Saybooks">
-<meta property="og:title" content="Saybooks — tell Claude what happened. Your books stay right.">
-<meta property="og:description" content="A place Claude can keep your records — with rules it can't break and a log of everything it did. Free to try, no signup.">
+<meta property="og:title" content="Saybooks — records Claude keeps, rules it can't break">
+<meta property="og:description" content="Invoicing, orders and CRM, a job hunt, personal finances — books Claude keeps under rules it can't break, every action on the record. Open source. Free to try, no signup.">
 <meta property="og:url" content="https://saybooks.io/">
 <meta property="og:image" content="https://saybooks.io/card.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Saybooks — tell Claude what happened. Your books stay right.">
+<meta name="twitter:title" content="Saybooks — records Claude keeps, rules it can't break">
 <meta name="twitter:description" content="A place Claude can keep your records — with rules it can't break and a log of everything it did.">
 <meta name="twitter:image" content="https://saybooks.io/card.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -188,7 +188,7 @@ h1{font-size:64px}
         <h1>Your books stay right.</h1>
       </div>
       <div>
-        <p class="lede">Tell Claude what happened, and Saybooks keeps the record — invoices, clients, orders, even a job hunt. It follows rules it can't break, it never makes things up, and every action it takes is written down where you can check it.</p>
+        <p class="lede">Tell Claude what happened, and Saybooks keeps the record — invoices, clients, orders, a job hunt, even your own spending. It follows rules it can't break, it never makes things up, and every action it takes is written down where you can check it.</p>
         <div class="ctas">
           <a class="btn solid" href="/app?demo=1">Try it now — no signup</a>
           <a class="btn line" href="/auth/google">Sign in with Google</a>
@@ -241,7 +241,7 @@ h1{font-size:64px}
         <div class="kicker">How it works</div>
         <h2>Three steps, then you just talk</h2>
         <ol class="steps" style="margin-top:22px">
-          <li><span class="n">01</span><div><h3>Sign in with Google</h3><p>You get your own private space. Nothing to install.</p></div></li>
+          <li><span class="n">01</span><div><h3>Sign in with Google</h3><p>You keep the demo books to poke at, and set up your own: name them, tick the modules they carry. Nothing to install.</p></div></li>
           <li><span class="n">02</span><div><h3>Connect Claude</h3><p>Add <b>saybooks.io/mcp</b> as a connector in Claude (Customize → Connectors → Add). Claude sends you to sign in and asks which books to open. A minute, once.</p></div></li>
           <li><span class="n">03</span><div><h3>Talk</h3><p>Tell Claude what happened. It asks for what it needs, shows you the numbers, and records it. Everything also appears in your browser, as normal pages.</p></div></li>
         </ol>
@@ -268,7 +268,7 @@ h1{font-size:64px}
       <div><b>Open source</b>AGPL-3.0 · run it yourself</div>
       <div><b>124 commands</b>6 modules, one definition each</div>
       <div><b>18-gate contract</b>tested on every build</div>
-      <div><b>In daily use</b>the founder's own books and job hunt</div>
+      <div><b>In daily use</b>the founder's own invoices, job hunt and finances</div>
     </div>
   </section>
 
@@ -309,8 +309,8 @@ h1{font-size:64px}
     <div class="limits" style="margin-top:22px">
       <div><b>Not accounting software</b>It keeps your operational records. Your accountant's ledger stays where it is — Saybooks exports a clean journal for QuickBooks or Xero.</div>
       <div><b>It never sends or pays</b>It produces invoices for you to send and records payments you received. It never emails anyone or moves money.</div>
-      <div><b>USD, one company</b>Single currency, single entity today. If that's you, it works; if not, not yet.</div>
-      <div><b>Shipping weekly</b>This week: the invoice PDF, DRAFT previews, client addresses, voids that stay readable. The <a href="https://github.com/alviso/saybooks/commits/main">commit log</a> is the changelog. Your data is yours to export or delete at any moment.</div>
+      <div><b>One company per space</b>Any currency, each invoice its own; your tax scheme and numbering. Several companies means several spaces — which you can have.</div>
+      <div><b>Shipping weekly</b>This week: personal finances from statements and receipts, a module chooser for new spaces, a new workbench. The <a href="https://github.com/alviso/saybooks/commits/main">commit log</a> is the changelog. Your data is yours to export or delete at any moment.</div>
     </div>
   </section>
 
@@ -319,14 +319,14 @@ h1{font-size:64px}
       <div>
         <div class="kicker">For builders</div>
         <h2>Under the hood: one definition, both surfaces</h2>
-        <p>Every business act is declared once. From that one declaration Saybooks derives the tool Claude sees (over MCP), the form a person sees, the rule that can refuse either, and the audit entry — so the two surfaces can't drift; a contract test fails the build if they do. Each area is governed by a written spec with executable scenarios, and modules are held to a 16-gate contributor contract.</p>
+        <p>Every business act is declared once. From that one declaration Saybooks derives the tool Claude sees (over MCP), the form a person sees, the rule that can refuse either, and the audit entry — so the two surfaces can't drift; a contract test fails the build if they do. Each area is governed by a written spec with executable scenarios, and modules are held to an 18-gate contributor contract.</p>
         <div class="ctas">
           <a class="btn solid" href="https://github.com/alviso/saybooks">GitHub · AGPL-3.0</a>
           <a class="btn line" href="/specs">Read the specs</a>
         </div>
       </div>
       <ul>
-        <li>Six modules today: order-to-cash, CRM, jobhunt, solo invoicing, purchases, and the core — every one spec-first, with replayable conformance scenarios.</li>
+        <li>Six modules today: order-to-cash, CRM, job hunt, invoicing, personal finances, and the core — every one spec-first, with replayable conformance scenarios.</li>
         <li>Open source under AGPL-3.0. Run it, fork it, write a competing module; scenario files speak in acts, so competing implementations run the same tests.</li>
         <li>Refusals are one sentence, written once in the rule, shown identically to the button and the agent.</li>
       </ul>

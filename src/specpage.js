@@ -77,7 +77,7 @@ function areaInfo(area) {
 
 const SHELL = (title, body, sub) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)} — Saybooks specs</title><link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<meta name="description" content="${esc(sub || 'The Saybooks specifications: acts, invariants, executable scenarios, and the last conformance run.')}">
+<meta name="description" content="${esc(sub || 'The Saybooks specifications: acts, invariants, executable scenarios, and the last conformance run.')}"><meta property="og:title" content="${esc(title)} — Saybooks specs"><meta property="og:image" content="https://saybooks.io/card.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"><style>
 :root{--bg:hsl(210 20% 98%);--ink:hsl(215 40% 16%);--navy:hsl(215 60% 22%);--mid:hsl(215 20% 36%);--muted:hsl(215 15% 46%);--line:hsl(215 25% 88%);--tint:hsl(210 20% 94%);--ok:hsl(152 60% 34%);--refuse:hsl(0 72% 42%);--agent:hsl(248 52% 52%)}
 *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif} body::before{content:"";display:block;height:4px;background:var(--navy)}

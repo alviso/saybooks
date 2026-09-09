@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Docs — Saybooks</title>
+<title>Saybooks docs — connect Claude, keys and roles, documents, export</title><link rel="canonical" href="https://saybooks.io/docs"><meta property="og:title" content="Saybooks docs"><meta property="og:url" content="https://saybooks.io/docs"><meta property="og:image" content="https://saybooks.io/card.png">
 <meta name="description" content="How to connect Claude to your Saybooks books, what keys and roles mean, how documents, export and delete work, and how to run it yourself.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -31,12 +31,12 @@ table.plain{border-collapse:collapse;width:100%;font-size:14px;margin:0 0 1em} t
 
   <div class="kicker">Documentation</div>
   <h1>Using Saybooks</h1>
-  <p>Saybooks is a place Claude can keep your records, under rules it cannot break, with everything it does written down where you can check it. This page covers what a person needs: connecting Claude, what keys and roles mean, documents, getting your data out, and running it yourself. The rules themselves are in the <a href="/specs">specs</a>.</p>
+  <p>Saybooks is a place Claude can keep your records, under rules it cannot break, with everything it does written down where you can check it. This page covers what a person needs: connecting Claude, what keys and roles mean, spaces and their modules, documents, personal finances, getting your data out, and running it yourself. The rules themselves are in the <a href="/specs">specs</a>.</p>
   <div class="toc"><a href="#connect">Connect Claude</a><a href="#talk">Talking to it</a><a href="#keys">Keys and roles</a><a href="#spaces">Spaces</a><a href="#documents">Documents</a><a href="#refusals">Refusals</a><a href="#data">Export and delete</a><a href="#selfhost">Run it yourself</a><a href="#faq">Questions</a></div>
 
   <h2 id="connect">Connect Claude</h2>
   <ol>
-    <li><b>Sign in with Google</b> at <a href="/app">saybooks.io/app</a>. You get your own private space. Nothing to install.</li>
+    <li><b>Sign in with Google</b> at <a href="/app">saybooks.io/app</a>. The demo books you tried stay yours, and a chooser sets up your own space: name it, tick the modules it carries, empty or with sample data. Nothing to install.</li>
     <li><b>Add Saybooks to Claude.</b> In the Claude app: <b>Customize → Connectors → Add</b> (<a href="https://claude.ai/customize/connectors">claude.ai/customize/connectors</a>). Name it, paste the address, Continue.
       <div class="mock"><div class="mocktabs"><span>Which books?</span><button type="button" class="on" data-name="invoices" data-url="https://saybooks.io/mcp/invoices">Invoicing</button><button type="button" data-name="hunt" data-url="https://saybooks.io/mcp/hunt">Job hunt</button><button type="button" data-name="books" data-url="https://saybooks.io/mcp/books">Order to cash</button><button type="button" data-name="books" data-url="https://saybooks.io/mcp">Any</button></div>
         <div class="mocklabel">Name</div><div class="mockfield" id="mockName">invoices</div><div class="mocklabel" style="margin-top:8px">Remote MCP server URL</div><div class="mockfield" id="mockUrl">https://saybooks.io/mcp/invoices</div></div>
@@ -80,7 +80,7 @@ table.plain{border-collapse:collapse;width:100%;font-size:14px;margin:0 0 1em} t
   <p>A key is minted for a role. An agent holding a controller key is a controller; a command outside its role is refused with a sentence naming who to ask, and the attempt is logged. People are invited by email and sign in with Google; agents get keys. Both show up in the audit log by name.</p>
 
   <h2 id="spaces">Spaces</h2>
-  <p>A space is one set of books with its own rules, its own members and its own audit log. Sign-in gives you a full space ("My books"). The free doors give you a kind-matched space: <a href="/solo">invoicing</a> for freelancers, <a href="/hunt">a job hunt</a> for people open to work. You can have more than one, and each key opens exactly one.</p>
+  <p>A space is one set of books with its own rules, its own members and its own audit log. Every space chooses its modules when it is made: invoicing, order to cash, CRM, job hunt, personal finances, any mix. The free doors, <a href="/solo">invoicing</a> and <a href="/hunt">a job hunt</a>, are that chooser with one box ticked. Your first sign-in keeps the demo books as a space called Demo books and opens the chooser for your real one. You can have as many spaces as you like, and each key opens exactly one. Signing in again lands you in the space you used last.</p>
   <p>Anonymous demo sandboxes at <a href="/app?demo=1">/app?demo=1</a> are private to your browser, seeded with example books, and deleted after 24 hours. Sign in while one is open and you keep it.</p>
 
   <h2 id="documents">Documents</h2>

@@ -210,8 +210,12 @@ for (const tag of R.PERMISSIONS) {
   const vm = require('vm');
   for (const f of fs.readdirSync(path.join(__dirname, '..', 'ui')).filter(n => n.endsWith('.html'))) {
     const html = fs.readFileSync(path.join(__dirname, '..', 'ui', f), 'utf8');
-    const blocks = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m => m[1]);
-    blocks.forEach((src, i) => { try { new vm.Script(src, { filename: `${f}#${i}` }); } catch (e) { assert.fail(`${f}: inline script ${i} does not parse — ${e.message}`); } });
+    // JSON-LD blocks (type="application/ld+json") are data for search engines, not scripts: they must parse as JSON instead.
+    const blocks = [...html.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/g)].map(m => ({ attrs: m[1], src: m[2] }));
+    blocks.forEach(({ attrs, src }, i) => {
+      if (/type=["']application\/ld\+json["']/.test(attrs)) { try { JSON.parse(src); } catch (e) { assert.fail(`${f}: JSON-LD block ${i} is not valid JSON — ${e.message}`); } return; }
+      try { new vm.Script(src, { filename: `${f}#${i}` }); } catch (e) { assert.fail(`${f}: inline script ${i} does not parse — ${e.message}`); }
+    });
   }
   ok('ui scripts: every inline script in ui/*.html parses');
 }
