@@ -29,6 +29,7 @@
   .tabs { display:flex; gap:2px; border-bottom:1px solid var(--line); margin:0 0 18px; flex-wrap:wrap; align-items:flex-end }
   .tabs a { padding:8px 13px; color:var(--mid); text-decoration:none; font:500 13.5px var(--display); border-bottom:2px solid transparent; margin-bottom:-1px; cursor:pointer } .tabs a:hover { color:var(--ink) }
   .tabs a.on { color:var(--accent); border-color:var(--accent); font-weight:600 }
+  .tabs .tabacts { margin:0 0 6px auto !important; display:flex; gap:8px; flex-wrap:wrap }
   .connect { background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--agent); border-radius:8px; padding:12px 16px; display:flex; gap:16px; align-items:center; margin:0 0 18px; font-size:13.5px } .connect .t { display:block; font-weight:700 } .connect code { font-family:var(--mono); font-size:12px; background:var(--tint); padding:2px 6px; border-radius:4px; user-select:all } .connect .x { margin-left:auto; background:none; border:none; color:var(--dim); cursor:pointer; font-size:16px }
   @media (max-width:900px) { nav.rail { width:56px; padding:10px 6px } nav.rail a span, nav.rail .foot { display:none } nav.rail a { justify-content:center; padding:10px 0 } .gsearch { display:none } .sw > button small { display:none } }
   main { flex:1; overflow:auto; padding:28px 34px }
@@ -815,6 +816,20 @@ const auditTable = (rows) => {
   return t;
 };
 
+/* First open of an empty module: what it is for and the first thing to say. Written for a person, not a checklist. */
+function emptyCard(module) {
+  const T = {
+    o2c: { title: 'No orders yet', say: '"New customer Northwind Traders, net 30, credit limit $5,000. Then an order: 20 Widget B at $45."', note: 'Quotes, orders, shipments, invoices and payments follow one another, and the credit limit is a rule Claude cannot talk past. Or press New order and fill the form yourself.' },
+    crm: { title: 'No accounts yet', say: '"Start a campaign for Q4: mid-size logistics firms in the Pacific Northwest. Add Harborline Distribution: why them, the trigger, and a source."', note: 'A campaign is a goal; every account argues why it belongs; every contact has a source. Gaps stay visible until someone closes them.' },
+    purchases: { title: 'Nothing imported yet', say: '"Here is my August card statement — import it and tell me what I am subscribed to."', note: 'Claude reads the file and hands over the rows with the printed balances; the statement lands here whole or not at all. Review is your words; the charts follow.' },
+  };
+  const t = T[module]; if (!t) return null;
+  return $(`<div class="card" style="max-width:720px"><h2 style="margin-bottom:6px">${t.title}</h2>
+    <div style="display:flex;gap:12px;margin-top:12px"><div style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;text-align:center;line-height:26px;font-weight:700">1</div><div><b>Say this to Claude</b><div class="doc" style="margin-top:2px;font-style:italic">${t.say}</div></div></div>
+    <div style="display:flex;gap:12px;margin-top:14px"><div style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;text-align:center;line-height:26px;font-weight:700">2</div><div><b>Watch it land here</b><div class="doc" style="margin-top:2px">${t.note}</div></div></div>
+    ${!REG.user ? '' : '<div class="doc" style="margin-top:14px;color:var(--dim)">Not connected yet? The connector address is on Home.</div>'}</div>`);
+}
+
 /* One-hue bar charts, hover tooltips, direct labels on the ends only. Values are minor units; labels come pre-formatted from the server. */
 function barChart(title, rows, opts = {}) {
   const box = $(`<div class="chart"><h3>${title}</h3></div>`);
@@ -853,6 +868,14 @@ function barChart(title, rows, opts = {}) {
 }
 
 async function render() {
+  await renderPage();
+  // Page actions (the buttons a page puts at its top) sit at the right of the tab row, like any ERP.
+  const main = document.getElementById('main');
+  const tabs = main.querySelector('.tabs');
+  const acts = tabs && [...main.children].find(el => el.classList && el.classList.contains('acts') && el.querySelector('button'));
+  if (tabs && acts && acts.querySelectorAll('button').length <= 4 && !acts.querySelector('select')) { acts.classList.add('tabacts'); tabs.append(acts); }
+}
+async function renderPage() {
   await boot();          // lookups and member state go stale while agents write; refresh per view
   const main = document.getElementById('main'); main.innerHTML = '';
   markRail();
@@ -896,6 +919,7 @@ async function render() {
     head('Orders', 'Quote to cash. Click an order to see what can be done to it and why.');
     const bar = $('<div class="acts" style="margin-bottom:14px"></div>');
     newButtons('order').concat(newButtons('quote')).forEach(b => bar.append(b)); main.append(bar);
+    if (!REG.orders.length) { main.append(emptyCard('o2c')); return; }
     const t = $('<table><thead><tr><th>Order</th><th>Customer</th><th>PO</th><th>Status</th><th class="num">Total</th></tr></thead><tbody></tbody></table>');
     rowsInto(t, REG.orders, r => `<td>${r.id}</td><td>${r.customer_name}</td><td>${r.po_ref||''}</td><td><span class="pill ${r.status}">${r.status}</span></td><td class="num">${cents(r.total)}</td>`, 'order');
   }
@@ -943,6 +967,7 @@ async function render() {
   if (view === 'today') {
     head('Today', 'What deserves attention: gaps are research work, stale accounts are follow-up work, recent activity is context.');
     const t = await api('crm_today');
+    if (!t.open_gaps.length && !(t.stale_accounts || []).length && !((REG.lookups || {}).account || []).length) { main.append(emptyCard('crm')); return; }
     main.append($(`<div class="sub">Open gaps — what we verifiably don't know (${t.open_gaps.length})</div>`));
     if (t.open_gaps.length) {
       const g = $('<table><thead><tr><th>Contact</th><th>Account</th><th>Role</th><th>What is missing</th><th class="num">Age (d)</th></tr></thead><tbody></tbody></table>');
@@ -1278,7 +1303,7 @@ async function render() {
     tiles.append($(`<div class="tile"><div class="k">Subscriptions</div><div class="v">${subs.active_total || 0} active</div><div class="s">${me} a month${subs.lapsed_total ? ` · <span style="color:var(--warn)">${subs.lapsed_total} lapsed</span>` : ''}${subs.missed_total ? ` · ${subs.missed_total} missed period${subs.missed_total > 1 ? 's' : ''}` : ''}</div></div>`));
     tiles.append($(`<div class="tile"><div class="k">To review</div><div class="v">${sp.unreviewed || 0}</div><div class="s">of ${sp.transactions || 0} rows on record</div></div>`));
     main.append(tiles);
-    if (!sp.transactions) { main.append($(`<div class="card doc" style="max-width:640px">Nothing imported yet. Give your agent a bank or card statement and say <i>"import this"</i> — it reads the rows and the printed balances, and the statement lands here whole or not at all. Or press <b>Import statement</b> under Transactions and type the rows yourself.</div>`)); return; }
+    if (!sp.transactions) { main.append(emptyCard('purchases')); return; }
     const charts = $('<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;max-width:1100px"></div>');
     for (const c of curs) {
       const months = (sp.by_month || []).filter(x => x.currency === c);
