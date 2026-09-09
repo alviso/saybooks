@@ -451,7 +451,7 @@ const server = http.createServer(async (req, res) => {
         auth_enabled: DEMO && auth.enabled(),
         user: entry.user ? { name: entry.user.name, email: entry.user.email, picture: entry.user.picture } : null,
         space: entry.user ? (users.spaceOf(ws) ? users.spaceOf(ws).display_name : ws) : null,
-        spaces: entry.user ? entry.spaces.map(sp => ({ ws: sp.ws, name: sp.display_name, role: sp.role })) : undefined,
+        spaces: entry.user ? entry.spaces.map(sp => ({ ws: sp.ws, name: sp.display_name, role: sp.role, kind: (users.spaceOf(sp.ws) || {}).kind || null })) : undefined,
         member: { name: member.name, role: member.role },
         grants: [...(R.ROLE_GRANTS[member.role] || R.ROLE_GRANTS.viewer)],
         workspaces: DEMO ? [ws] : [...new Set([ws, ...wsp.list()])].filter(w => w === ws || !/^(spec-|test-|try-)/.test(w)).sort(),
