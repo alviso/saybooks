@@ -84,7 +84,7 @@ scenario files — the spec speaks in acts, not commands, so any conforming modu
 
 ```bash
 npm install
-npm test          # the 12 gates
+npm test          # the 18 gates
 npm run demo      # a full quote-to-cash run, human and agent interleaved
 npm start         # workbench on http://127.0.0.1:8140
 npm run mcp       # stdio MCP server (OTC_WORKSPACE=you)
