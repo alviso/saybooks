@@ -54,6 +54,11 @@ function db() {
   // mounts: the modules a space carries, chosen when it was made (JSON array, core implied).
   // null = decide by kind (the free doors) or everything (full books).
   if (!cols.includes('mounts')) _db.exec('ALTER TABLE space ADD COLUMN mounts TEXT');
+  // demo: example books (a claimed sandbox, or the seeded Demo books) — never the place to land by default.
+  if (!cols.includes('demo')) _db.exec('ALTER TABLE space ADD COLUMN demo INTEGER NOT NULL DEFAULT 0');
+  const ucols = _db.prepare('PRAGMA table_info(user)').all().map(c => c.name);
+  // last_ws: the space the person opened last, so signing in again lands where they left off.
+  if (!ucols.includes('last_ws')) _db.exec('ALTER TABLE user ADD COLUMN last_ws TEXT');
   // Where a workspace came from: the first-touch cookie the public pages set (referrer host,
   // landing path, utm tags). One row per workspace; the only way to know which channel pays.
   _db.exec(`CREATE TABLE IF NOT EXISTS acquisition (
@@ -90,13 +95,16 @@ function userForSession(token) {
 }
 const dropSession = (token) => db().prepare('DELETE FROM session WHERE token = ?').run(token);
 
-function createSpace(userId, displayName, ws, kind, mounts) {
+function createSpace(userId, displayName, ws, kind, mounts, demo) {
   ws = ws || rid('sp', 5).replace(/-/g, '').slice(0, 20);
-  db().prepare('INSERT INTO space (ws, owner_user_id, display_name, created_at, kind, mounts) VALUES (?,?,?,?,?,?)')
-    .run(ws, userId, displayName, now(), kind || null, Array.isArray(mounts) && mounts.length ? JSON.stringify(mounts) : null);
+  db().prepare('INSERT INTO space (ws, owner_user_id, display_name, created_at, kind, mounts, demo) VALUES (?,?,?,?,?,?,?)')
+    .run(ws, userId, displayName, now(), kind || null, Array.isArray(mounts) && mounts.length ? JSON.stringify(mounts) : null, demo ? 1 : 0);
   return db().prepare('SELECT * FROM space WHERE ws = ?').get(ws);
 }
-const claimSpace = (userId, ws, displayName, kind, mounts) => createSpace(userId, displayName, ws, kind, mounts);
+const claimSpace = (userId, ws, displayName, kind, mounts, demo) => createSpace(userId, displayName, ws, kind, mounts, demo);
+/** Remember where a person is, so the next sign-in lands there. */
+function touchLastWs(userId, ws) { db().prepare('UPDATE user SET last_ws = ? WHERE id = ? AND (last_ws IS NULL OR last_ws <> ?)').run(ws, userId, ws); }
+const lastWsOf = (userId) => (db().prepare('SELECT last_ws FROM user WHERE id = ?').get(userId) || {}).last_ws || null;
 /** The modules a space chose, or null when it goes by kind. */
 function mountsOf(ws) {
   const sp = db().prepare('SELECT mounts FROM space WHERE ws = ?').get(ws);
@@ -116,7 +124,7 @@ function deleteSpace(ws, userId) {
 
 function spacesFor(userId) {
   const u = db().prepare('SELECT * FROM user WHERE id = ?').get(userId);
-  const owned = db().prepare('SELECT ws, display_name, ? AS role FROM space WHERE owner_user_id = ?').all('owner', userId);
+  const owned = db().prepare('SELECT ws, display_name, ? AS role, demo FROM space WHERE owner_user_id = ?').all('owner', userId);
   const member = db().prepare(`SELECT sm.ws, sp.display_name, sm.role FROM space_member sm JOIN space sp ON sp.ws = sm.ws
     WHERE sm.user_id = ? AND sm.revoked_at IS NULL AND (? IS NULL OR lower(sm.email) = lower(?))`).all(userId, u && u.email, u && u.email);
   return [...owned, ...member];
@@ -169,6 +177,6 @@ function acquisitionSummary() {
   return Object.values(by).sort((x, y) => (y.spaces * 10 + y.sandboxes) - (x.spaces * 10 + x.sandboxes));
 }
 
-module.exports = { db, upsertUser, createSession, userForSession, dropSession, createSpace, claimSpace, mountsOf, deleteSpace,
+module.exports = { db, upsertUser, createSession, userForSession, dropSession, createSpace, claimSpace, mountsOf, touchLastWs, lastWsOf, deleteSpace,
   parseSrcCookie, recordAcquisition, acquisitionOf, channelOf, acquisitionSummary,
   spacesFor, roleFor, spaceOf, isOwnedSpace, spaceIdentity, inviteEmail, emailMembers, revokeEmail };

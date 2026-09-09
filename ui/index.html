@@ -1278,7 +1278,7 @@ async function renderPage() {
       if (s.customers && sp.kind !== 'hunt') facts.push(`${s.customers} client${s.customers === 1 ? '' : 's'}`);
       const mods = (sp.modules || []).map(m => `<span class="pill" style="${m.used ? '' : 'opacity:.45'}" title="${m.used ? m.writes + ' writes on the record' : 'mounted, nothing recorded yet'}">${MOD[m.name] || m.name}${m.used ? '' : ' · unused'}</span>`).join(' ');
       const card = $(`<div class="card" style="margin:0;cursor:pointer;display:flex;flex-direction:column;gap:8px">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><h2 style="margin:0;font-size:17px">${sp.name}</h2><span class="pill">${sp.role}</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><h2 style="margin:0;font-size:17px">${sp.name}</h2><span>${sp.demo ? '<span class="pill unreviewed" style="margin-right:4px">demo</span>' : ''}<span class="pill">${sp.role}</span></span></div>
         <div style="font-size:12px;color:var(--dim)">${spaceLabel(sp)} · ${sp.ws}</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px">${mods}</div>
         <div style="font-size:13px;line-height:1.6">${facts.length ? facts.join('<br>') : '<span style="color:var(--dim)">Empty — nothing recorded yet.</span>'}</div>

@@ -76,14 +76,14 @@ async function callback(req, res, url) {
       else {
         // The demo they poked at stays, sample data and all, as its own space; their real books
         // start empty from the chooser, which is where the workbench lands them next.
-        users.claimSpace(user.id, cur, 'Demo books', null, ['o2c', 'crm', 'solo', 'purchases']);
+        users.claimSpace(user.id, cur, 'Demo books', null, ['o2c', 'crm', 'solo', 'purchases'], true);
         landing = '/app?ws=' + cur + '#newspace';
       }
       // A claimed sandbox keeps the source it was minted with; mark that it became a space.
       users.recordAcquisition(cur, 'space', users.parseSrcCookie(req.headers.cookie));
     }
     else {
-      const sp = users.createSpace(user.id, 'Demo books', undefined, null, ['o2c', 'crm', 'solo', 'purchases']);
+      const sp = users.createSpace(user.id, 'Demo books', undefined, null, ['o2c', 'crm', 'solo', 'purchases'], true);
       require('./fixtures.js').load('try', sp.ws);
       users.recordAcquisition(sp.ws, 'space', users.parseSrcCookie(req.headers.cookie));
       landing = '/app?ws=' + sp.ws + '#newspace';

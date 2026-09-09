@@ -62,7 +62,8 @@ const mountsFor = (w) => { try {
 /** What is in one space, by module: used or not, the numbers that matter for its kind, last activity. Computed inside its own database. */
 function spaceSummary(s) {
   const count = (sql, ...args) => { try { return H.db().prepare(sql).get(...args).n; } catch { return null; } };
-  const kind = (users.spaceOf(s.ws) || {}).kind || null;
+  const spRow = users.spaceOf(s.ws) || {};
+  const kind = spRow.kind || null; const demo = !!spRow.demo;
   const mounts = (mountsFor(s.ws) || R.MODULES.map(m => m.name)).filter(m => m !== 'core');
   if (!sandboxExists(s.ws)) return { ws: s.ws, name: s.display_name, role: s.role, kind, modules: mounts.map(m => ({ name: m, used: false, writes: 0 })), summary: {}, last: null };
   return wsp.use(s.ws, () => {
@@ -92,7 +93,7 @@ function spaceSummary(s) {
     summary.customers = count('SELECT COUNT(*) n FROM customer');
     let last = null; try { last = H.db().prepare('SELECT at, actor, actor_kind, command FROM command_log WHERE ok = 1 ORDER BY id DESC LIMIT 1').get() || null; } catch { last = null; }
     const agent7 = count(`SELECT COUNT(*) n FROM command_log WHERE ok = 1 AND actor_kind = 'agent' AND at >= datetime('now', '-7 days')`) || 0;
-    return { ws: s.ws, name: s.display_name, role: s.role, kind, modules, summary, last, agent_writes_7d: agent7 };
+    return { ws: s.ws, name: s.display_name, role: s.role, kind, demo, modules, summary, last, agent_writes_7d: agent7 };
   });
 }
 const FLAVOR_PREFIX = { hunt: 'h', solo: 's' };   // both non-hex, so random names never collide
@@ -151,15 +152,21 @@ const entryOf = (req, url, allowMint = false) => {
   const user = auth.enabled() && auth.sessionUser(req);
   if (user) {
     const spaces = users.spacesFor(user.id);
-    const pick = url.searchParams.get('ws') || (/(?:^|;\s*)sb_space=([a-z0-9-]+)/.exec(req.headers.cookie || '') || [])[1];
+    // Where to land: the URL, else this browser's last space, else the person's last space on
+    // any browser, else their first real (non-demo) space, else whatever exists. Demo books are
+    // never the default once a real space exists.
+    const candidates = [url.searchParams.get('ws'), (/(?:^|;\s*)sb_space=([a-z0-9-]+)/.exec(req.headers.cookie || '') || [])[1], users.lastWsOf(user.id)].filter(Boolean);
     let ws = null, role = null;
-    if (pick && /^try-[a-z0-9]{6,24}$/.test(pick)) { if (!sandboxExists(pick)) seedSandbox(pick); ws = pick; role = 'owner'; }
-    else if (pick) { role = users.roleFor(user.id, pick); if (role && sandboxExists(pick)) ws = pick; }
-    if (!ws) {
-      const first = spaces[0];
-      if (first) { ws = first.ws; role = first.role; if (!sandboxExists(ws)) wsp.dbFor(ws); }
-      else { const sp = users.createSpace(user.id, 'Demo books', undefined, null, ['o2c', 'crm', 'solo', 'purchases']); seedSandbox(sp.ws); ws = sp.ws; role = 'owner'; }
+    for (const pick of candidates) {
+      if (/^try-[a-z0-9]{6,24}$/.test(pick)) { if (!sandboxExists(pick)) seedSandbox(pick); ws = pick; role = 'owner'; break; }
+      const r = users.roleFor(user.id, pick); if (r && sandboxExists(pick)) { ws = pick; role = r; break; }
     }
+    if (!ws) {
+      const first = spaces.find(s => !s.demo) || spaces[0];
+      if (first) { ws = first.ws; role = first.role; if (!sandboxExists(ws)) wsp.dbFor(ws); }
+      else { const sp = users.createSpace(user.id, 'Demo books', undefined, null, ['o2c', 'crm', 'solo', 'purchases'], true); seedSandbox(sp.ws); ws = sp.ws; role = 'owner'; }
+    }
+    if (!/^try-/.test(ws)) users.touchLastWs(user.id, ws);
     return { ws, member: { name: user.name || user.email.split('@')[0], role, email: user.email }, user, spaces, spaceCookie: ws };
   }
   const q = url.searchParams.get('ws');
