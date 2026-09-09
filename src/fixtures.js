@@ -11,14 +11,17 @@ const path = require('path');
 
 const DIR = path.join(__dirname, '..', 'fixtures');
 
-function load(name, workspace) {
+function load(name, workspace, opts = {}) {
   if (!/^[a-z0-9_-]+$/.test(name)) throw new Error(`invalid fixture name ${name}`);
   const file = path.join(DIR, `${name}.json`);
   if (!fs.existsSync(file)) throw new Error(`no fixture ${name} — available: ${fs.readdirSync(DIR).filter(f => f.endsWith('.json')).map(f => f.slice(0, -5)).join(', ') || 'none'}`);
   const steps = JSON.parse(fs.readFileSync(file, 'utf8'));
-  const { execute } = require('./registry.js');
+  const { execute, byName } = require('./registry.js');
+  // A space that carries only some modules replays only their steps (core always).
+  const allow = opts.mounts ? new Set(['core', ...opts.mounts]) : null;
   let n = 0;
   for (const [command, args, reason, actor, actor_kind, expect] of steps) {
+    if (allow && byName[command] && !allow.has(byName[command].module)) continue;
     try {
       execute(command, args || {}, { workspace, actor: actor || 'fixture', actor_kind: actor_kind || 'human',
         session: `fixture:${name}`, reason: reason || `fixture ${name}` });

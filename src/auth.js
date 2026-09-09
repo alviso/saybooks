@@ -73,14 +73,20 @@ async function callback(req, res, url) {
       // A flavored demo sandbox claims as a matching-kind space — the visitor keeps the flavor too.
       if (cur.startsWith('try-h')) users.claimSpace(user.id, cur, 'My job hunt', 'hunt');
       else if (cur.startsWith('try-s')) users.claimSpace(user.id, cur, 'My invoices', 'solo');
-      else users.claimSpace(user.id, cur, 'My books');
+      else {
+        // The demo they poked at stays, sample data and all, as its own space; their real books
+        // start empty from the chooser, which is where the workbench lands them next.
+        users.claimSpace(user.id, cur, 'Demo books', null, ['o2c', 'crm', 'solo', 'purchases']);
+        landing = '/app?ws=' + cur + '#newspace';
+      }
       // A claimed sandbox keeps the source it was minted with; mark that it became a space.
       users.recordAcquisition(cur, 'space', users.parseSrcCookie(req.headers.cookie));
     }
     else {
-      const sp = users.createSpace(user.id, 'My books');
+      const sp = users.createSpace(user.id, 'Demo books', undefined, null, ['o2c', 'crm', 'solo', 'purchases']);
       require('./fixtures.js').load('try', sp.ws);
       users.recordAcquisition(sp.ws, 'space', users.parseSrcCookie(req.headers.cookie));
+      landing = '/app?ws=' + sp.ws + '#newspace';
     }
   }
 

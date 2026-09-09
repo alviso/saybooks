@@ -51,6 +51,9 @@ function db() {
   // kind: what a space mounts — null = full books, 'hunt' = the free job-hunt offering.
   const cols = _db.prepare('PRAGMA table_info(space)').all().map(c => c.name);
   if (!cols.includes('kind')) _db.exec('ALTER TABLE space ADD COLUMN kind TEXT');
+  // mounts: the modules a space carries, chosen when it was made (JSON array, core implied).
+  // null = decide by kind (the free doors) or everything (full books).
+  if (!cols.includes('mounts')) _db.exec('ALTER TABLE space ADD COLUMN mounts TEXT');
   // Where a workspace came from: the first-touch cookie the public pages set (referrer host,
   // landing path, utm tags). One row per workspace; the only way to know which channel pays.
   _db.exec(`CREATE TABLE IF NOT EXISTS acquisition (
@@ -87,12 +90,19 @@ function userForSession(token) {
 }
 const dropSession = (token) => db().prepare('DELETE FROM session WHERE token = ?').run(token);
 
-function createSpace(userId, displayName, ws, kind) {
+function createSpace(userId, displayName, ws, kind, mounts) {
   ws = ws || rid('sp', 5).replace(/-/g, '').slice(0, 20);
-  db().prepare('INSERT INTO space (ws, owner_user_id, display_name, created_at, kind) VALUES (?,?,?,?,?)').run(ws, userId, displayName, now(), kind || null);
+  db().prepare('INSERT INTO space (ws, owner_user_id, display_name, created_at, kind, mounts) VALUES (?,?,?,?,?,?)')
+    .run(ws, userId, displayName, now(), kind || null, Array.isArray(mounts) && mounts.length ? JSON.stringify(mounts) : null);
   return db().prepare('SELECT * FROM space WHERE ws = ?').get(ws);
 }
-const claimSpace = (userId, ws, displayName, kind) => createSpace(userId, displayName, ws, kind);
+const claimSpace = (userId, ws, displayName, kind, mounts) => createSpace(userId, displayName, ws, kind, mounts);
+/** The modules a space chose, or null when it goes by kind. */
+function mountsOf(ws) {
+  const sp = db().prepare('SELECT mounts FROM space WHERE ws = ?').get(ws);
+  if (!sp || !sp.mounts) return null;
+  try { const m = JSON.parse(sp.mounts); return Array.isArray(m) && m.length ? m : null; } catch { return null; }
+}
 
 /** Permanent, owner-only. The caller destroys the workspace database and purges tokens;
  *  this removes the rows that make it a space. */
@@ -159,6 +169,6 @@ function acquisitionSummary() {
   return Object.values(by).sort((x, y) => (y.spaces * 10 + y.sandboxes) - (x.spaces * 10 + x.sandboxes));
 }
 
-module.exports = { db, upsertUser, createSession, userForSession, dropSession, createSpace, claimSpace, deleteSpace,
+module.exports = { db, upsertUser, createSession, userForSession, dropSession, createSpace, claimSpace, mountsOf, deleteSpace,
   parseSrcCookie, recordAcquisition, acquisitionOf, channelOf, acquisitionSummary,
   spacesFor, roleFor, spaceOf, isOwnedSpace, spaceIdentity, inviteEmail, emailMembers, revokeEmail };

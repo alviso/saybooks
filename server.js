@@ -49,16 +49,52 @@ const seedSandbox = (name) => {
 
 // Anonymous demo sandboxes mount the business modules only — jobhunt is a personal area
 // and belongs to owned spaces (where it mounts in full, data or no data).
-const DEMO_MOUNTS = ['core', 'o2c', 'crm', 'purchases'];
+const DEMO_MOUNTS = ['core', 'o2c', 'crm', 'solo', 'purchases'];   // the demo shows everything but the job hunt
 const HUNT_MOUNTS = ['core', 'jobhunt'];   // the free job-hunt offering: one module + the platform
 const SOLO_MOUNTS = ['core', 'solo'];      // the freelancer invoice generator
 const KIND_MOUNTS = { hunt: HUNT_MOUNTS, solo: SOLO_MOUNTS };
 const mountsFor = (w) => { try {
   const sp = users.spaceOf(w);
-  if (sp) return KIND_MOUNTS[sp.kind] || null;
+  if (sp) { const chosen = users.mountsOf(w); if (chosen) return [...new Set(['core', ...chosen])]; return KIND_MOUNTS[sp.kind] || null; }
   if (!DEMO) return null;
   return w.startsWith('try-h') ? HUNT_MOUNTS : w.startsWith('try-s') ? SOLO_MOUNTS : DEMO_MOUNTS;
 } catch { return null; } };
+/** What is in one space, by module: used or not, the numbers that matter for its kind, last activity. Computed inside its own database. */
+function spaceSummary(s) {
+  const count = (sql, ...args) => { try { return H.db().prepare(sql).get(...args).n; } catch { return null; } };
+  const kind = (users.spaceOf(s.ws) || {}).kind || null;
+  const mounts = (mountsFor(s.ws) || R.MODULES.map(m => m.name)).filter(m => m !== 'core');
+  if (!sandboxExists(s.ws)) return { ws: s.ws, name: s.display_name, role: s.role, kind, modules: mounts.map(m => ({ name: m, used: false, writes: 0 })), summary: {}, last: null };
+  return wsp.use(s.ws, () => {
+    const prefix = { solo: 'solo_', o2c: 'o2c_', crm: 'crm_', jobhunt: 'hunt_' };
+    const modules = mounts.map(m => {
+      const writes = prefix[m] ? (count(`SELECT COUNT(*) n FROM command_log WHERE ok = 1 AND command LIKE ?`, prefix[m] + '%') || 0) : 0;
+      return { name: m, used: writes > 0, writes };
+    });
+    const summary = {};
+    if (mounts.includes('solo')) {
+      const o = require('./src/modules/solo/views.js').outstanding();
+      summary.invoices = count('SELECT COUNT(*) n FROM solo_invoice'); summary.drafts = count("SELECT COUNT(*) n FROM solo_invoice WHERE status = 'draft'");
+      summary.open_count = o.count; summary.open_display = o.count ? o.total_open_display : null; summary.overdue = o.invoices.filter(i => i.days_overdue > 0).length;
+    }
+    if (mounts.includes('o2c')) {
+      summary.orders_open = count(`SELECT COUNT(*) n FROM "order" WHERE status IN ('draft','confirmed')`); summary.orders_shipped = count(`SELECT COUNT(*) n FROM "order" WHERE status = 'shipped'`);
+      const ar = count(`SELECT COALESCE(SUM(total - COALESCE((SELECT SUM(amount) FROM payment_application pa WHERE pa.invoice_id = i.id), 0)), 0) n FROM invoice i WHERE status = 'open'`);
+      summary.ar_display = ar != null ? H.money(ar) : null;
+    }
+    if (mounts.includes('crm')) { summary.accounts = count('SELECT COUNT(*) n FROM account'); summary.crm_contacts = count('SELECT COUNT(*) n FROM contact'); }
+    if (mounts.includes('jobhunt')) {
+      summary.applications_active = count(`SELECT COUNT(*) n FROM hunt_application WHERE status IN ('submitted','screening','interviewing','offer')`);
+      summary.postings = count('SELECT COUNT(*) n FROM hunt_posting');
+      summary.due = count(`SELECT COUNT(*) n FROM hunt_interaction WHERE next_action_state = 'open' AND next_action_due <= date('now')`);
+    }
+    if (mounts.includes('purchases')) { summary.transactions = count('SELECT COUNT(*) n FROM purch_transaction'); summary.unreviewed = count("SELECT COUNT(*) n FROM purch_transaction WHERE status = 'unreviewed'"); summary.subs_active = count("SELECT COUNT(*) n FROM purch_subscription WHERE status = 'active'"); }
+    summary.customers = count('SELECT COUNT(*) n FROM customer');
+    let last = null; try { last = H.db().prepare('SELECT at, actor, actor_kind, command FROM command_log WHERE ok = 1 ORDER BY id DESC LIMIT 1').get() || null; } catch { last = null; }
+    const agent7 = count(`SELECT COUNT(*) n FROM command_log WHERE ok = 1 AND actor_kind = 'agent' AND at >= datetime('now', '-7 days')`) || 0;
+    return { ws: s.ws, name: s.display_name, role: s.role, kind, modules, summary, last, agent_writes_7d: agent7 };
+  });
+}
 const FLAVOR_PREFIX = { hunt: 'h', solo: 's' };   // both non-hex, so random names never collide
 const newVisitorWs = (flavor) => seedSandbox(`try-${FLAVOR_PREFIX[flavor] || ''}${crypto.randomBytes(5).toString('hex')}`);
 
@@ -122,7 +158,7 @@ const entryOf = (req, url, allowMint = false) => {
     if (!ws) {
       const first = spaces[0];
       if (first) { ws = first.ws; role = first.role; if (!sandboxExists(ws)) wsp.dbFor(ws); }
-      else { const sp = users.createSpace(user.id, 'My books'); seedSandbox(sp.ws); ws = sp.ws; role = 'owner'; }
+      else { const sp = users.createSpace(user.id, 'Demo books', undefined, null, ['o2c', 'crm', 'solo', 'purchases']); seedSandbox(sp.ws); ws = sp.ws; role = 'owner'; }
     }
     return { ws, member: { name: user.name || user.email.split('@')[0], role, email: user.email }, user, spaces, spaceCookie: ws };
   }
@@ -241,41 +277,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && p === '/api/spaces') {
       const u = DEMO && auth.enabled() && auth.sessionUser(req);
       if (!u) return send(res, 401, { error: 'sign in first' });
-      const count = (sql, ...args) => { try { return H.db().prepare(sql).get(...args).n; } catch { return null; } };
-      const spaces = users.spacesFor(u.id).map(s => {
-        const kind = (users.spaceOf(s.ws) || {}).kind || null;
-        const mounts = (mountsFor(s.ws) || R.MODULES.map(m => m.name)).filter(m => m !== 'core');
-        if (!sandboxExists(s.ws)) return { ws: s.ws, name: s.display_name, role: s.role, kind, modules: mounts.map(m => ({ name: m, used: false, writes: 0 })), summary: {}, last: null };
-        return wsp.use(s.ws, () => {
-          const prefix = { solo: 'solo_', o2c: 'o2c_', crm: 'crm_', jobhunt: 'hunt_' };
-          const modules = mounts.map(m => {
-            const writes = prefix[m] ? (count(`SELECT COUNT(*) n FROM command_log WHERE ok = 1 AND command LIKE ?`, prefix[m] + '%') || 0) : 0;
-            return { name: m, used: writes > 0, writes };
-          });
-          const summary = {};
-          if (mounts.includes('solo')) {
-            const o = require('./src/modules/solo/views.js').outstanding();
-            summary.invoices = count('SELECT COUNT(*) n FROM solo_invoice'); summary.drafts = count("SELECT COUNT(*) n FROM solo_invoice WHERE status = 'draft'");
-            summary.open_count = o.count; summary.open_display = o.count ? o.total_open_display : null; summary.overdue = o.invoices.filter(i => i.days_overdue > 0).length;
-          }
-          if (mounts.includes('o2c')) {
-            summary.orders_open = count(`SELECT COUNT(*) n FROM "order" WHERE status IN ('draft','confirmed')`); summary.orders_shipped = count(`SELECT COUNT(*) n FROM "order" WHERE status = 'shipped'`);
-            const ar = count(`SELECT COALESCE(SUM(total - COALESCE((SELECT SUM(amount) FROM payment_application pa WHERE pa.invoice_id = i.id), 0)), 0) n FROM invoice i WHERE status = 'open'`);
-            summary.ar_display = ar != null ? H.money(ar) : null;
-          }
-          if (mounts.includes('crm')) { summary.accounts = count('SELECT COUNT(*) n FROM account'); summary.crm_contacts = count('SELECT COUNT(*) n FROM contact'); }
-          if (mounts.includes('jobhunt')) {
-            summary.applications_active = count(`SELECT COUNT(*) n FROM hunt_application WHERE status IN ('submitted','screening','interviewing','offer')`);
-            summary.postings = count('SELECT COUNT(*) n FROM hunt_posting');
-            summary.due = count(`SELECT COUNT(*) n FROM hunt_interaction WHERE next_action_state = 'open' AND next_action_due <= date('now')`);
-          }
-          summary.customers = count('SELECT COUNT(*) n FROM customer');
-          let last = null; try { last = H.db().prepare('SELECT at, actor, actor_kind, command FROM command_log WHERE ok = 1 ORDER BY id DESC LIMIT 1').get() || null; } catch { last = null; }
-          const agent7 = count(`SELECT COUNT(*) n FROM command_log WHERE ok = 1 AND actor_kind = 'agent' AND at >= datetime('now', '-7 days')`) || 0;
-          return { ws: s.ws, name: s.display_name, role: s.role, kind, modules, summary, last, agent_writes_7d: agent7 };
-        });
-      });
-      return send(res, 200, { spaces }, 'application/json; charset=utf-8', { 'cache-control': 'no-store' });
+      return send(res, 200, { spaces: users.spacesFor(u.id).map(spaceSummary) }, 'application/json; charset=utf-8', { 'cache-control': 'no-store' });
     }
     if (req.method === 'GET' && p === '/api/whoami') {
       const u = DEMO && auth.enabled() && auth.sessionUser(req);
@@ -451,7 +453,7 @@ const server = http.createServer(async (req, res) => {
         auth_enabled: DEMO && auth.enabled(),
         user: entry.user ? { name: entry.user.name, email: entry.user.email, picture: entry.user.picture } : null,
         space: entry.user ? (users.spaceOf(ws) ? users.spaceOf(ws).display_name : ws) : null,
-        spaces: entry.user ? entry.spaces.map(sp => ({ ws: sp.ws, name: sp.display_name, role: sp.role, kind: (users.spaceOf(sp.ws) || {}).kind || null })) : undefined,
+        spaces: entry.user ? entry.spaces.map(sp => ({ ws: sp.ws, name: sp.display_name, role: sp.role, kind: (users.spaceOf(sp.ws) || {}).kind || null, mounts: users.mountsOf(sp.ws) })) : undefined,
         member: { name: member.name, role: member.role },
         grants: [...(R.ROLE_GRANTS[member.role] || R.ROLE_GRANTS.viewer)],
         workspaces: DEMO ? [ws] : [...new Set([ws, ...wsp.list()])].filter(w => w === ws || !/^(spec-|test-|try-)/.test(w)).sort(),
@@ -555,6 +557,11 @@ const server = http.createServer(async (req, res) => {
       });
       return undefined;
     }
+    if (req.method === 'GET' && p === '/api/space/summary') {
+      // What is in THIS space, by module — the sandbox's Home and the signed-in cards share it.
+      if (!entry.ws) return send(res, 401, { error: 'no space' });
+      return send(res, 200, spaceSummary({ ws: entry.ws, display_name: (entry.user && (entry.spaces.find(x => x.ws === entry.ws) || {}).display_name) || entry.ws, role: entry.member.role }), 'application/json; charset=utf-8', { 'cache-control': 'no-store' });
+    }
     if (req.method === 'POST' && p === '/api/space/create' && entry.user) {
       let raw = '';
       req.on('data', c => { raw += c; });
@@ -562,9 +569,20 @@ const server = http.createServer(async (req, res) => {
         let body; try { body = JSON.parse(raw || '{}'); } catch { return send(res, 400, { error: 'bad json' }); }
         const name = String(body.name || '').trim().slice(0, 60);
         if (!name) return send(res, 400, { error: 'a space needs a name' });
-        const sp = users.createSpace(entry.user.id, name);
-        wsp.dbFor(sp.ws);                       // empty books; Reset loads demo data if wanted
-        return send(res, 200, { ws: sp.ws, name: sp.display_name });
+        // Modules are chosen at birth. Kind follows: one of the free-door modules alone keeps its door.
+        const known = R.MODULES.map(m => m.name).filter(m => m !== 'core');
+        let mounts = Array.isArray(body.mounts) ? [...new Set(body.mounts.map(String).filter(m => known.includes(m)))] : null;
+        if (mounts && !mounts.length) return send(res, 400, { error: 'pick at least one module' });
+        const kind = mounts && mounts.length === 1 ? ({ solo: 'solo', jobhunt: 'hunt' }[mounts[0]] || null) : null;
+        const sp = users.createSpace(entry.user.id, name, undefined, kind, mounts);
+        wsp.dbFor(sp.ws);
+        if (body.sample) {
+          const set = mounts || known;
+          const story = set.length === 1 && set[0] === 'jobhunt' ? 'hunttry' : set.length === 1 && set[0] === 'solo' ? 'solotry' : 'try';
+          try { require('./src/fixtures.js').load(story, sp.ws, { mounts: set }); } catch (e) { console.error('[space/create] sample:', e.message); }
+        }
+        users.recordAcquisition(sp.ws, 'space', users.parseSrcCookie(req.headers.cookie));
+        return send(res, 200, { ws: sp.ws, name: sp.display_name, mounts: mounts || known, kind });
       });
       return undefined;
     }

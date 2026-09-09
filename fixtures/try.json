@@ -856,5 +856,87 @@
   "matched to the card row",
   "claude",
   "agent"
+ ],
+ [
+  "core_update_customer",
+  {
+   "customer_id": "C-0001",
+   "address": "1200 Market Street, Suite 400\nSan Francisco, CA 94102"
+  },
+  "billing address for the invoice",
+  "sam",
+  "human"
+ ],
+ [
+  "solo_draft_invoice",
+  {
+   "customer_id": "C-0001",
+   "due_in_days": 30,
+   "subject": "Warehouse racking install · August",
+   "lines": [
+    {
+     "description": "Racking installation\nTwo bays, anchored, load-tested",
+     "qty": 12,
+     "rate": 9500,
+     "ref": "JOB-118"
+    },
+    {
+     "description": "Site survey",
+     "qty": 1,
+     "rate": 25000
+    }
+   ]
+  },
+  "August install for Northwind",
+  "claude",
+  "agent"
+ ],
+ [
+  "solo_issue_invoice",
+  {
+   "invoice_id": "INV-0001"
+  },
+  "Sam confirmed the numbers",
+  "claude",
+  "agent"
+ ],
+ [
+  "solo_record_payment",
+  {
+   "customer_id": "C-0001",
+   "amount": 100000,
+   "method": "bank",
+   "reference": "NW-ACH-2210"
+  },
+  "partial payment arrived",
+  "sam",
+  "human"
+ ],
+ [
+  "solo_apply_payment",
+  {
+   "payment_id": "P-0001",
+   "invoice_id": "INV-0001"
+  },
+  "applied to the August invoice",
+  "sam",
+  "human"
+ ],
+ [
+  "solo_draft_invoice",
+  {
+   "customer_id": "C-0001",
+   "due_in_days": 30,
+   "lines": [
+    {
+     "description": "Racking maintenance visit",
+     "qty": 1,
+     "rate": 45000
+    }
+   ]
+  },
+  "September visit, not issued yet",
+  "claude",
+  "agent"
  ]
 ]
