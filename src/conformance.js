@@ -189,4 +189,7 @@ const lastReport = (area) => {
   return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null;
 };
 
-module.exports = { specOf, scenarioFiles, runScenario, runArea, lastReport, actTable, walkPlan, walkStep };
+const scenarioCount = (area) => scenarioFiles(area).length;
+const actCount = (area) => Object.keys(specOf(area).acts || {}).length;
+
+module.exports = { scenarioCount, actCount, specOf, scenarioFiles, runScenario, runArea, lastReport, actTable, walkPlan, walkStep };

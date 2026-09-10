@@ -70,7 +70,7 @@ their permissions. Every write carries a reason; reads are never logged.
 **Money** is integer minor units everywhere, with a currency; sums are per currency and never
 cross. Nothing is invented: a missing amount, date or name is asked for, never guessed.
 
-## The 19-gate contract
+## The 20-gate contract
 
 Every module — present and future — is held to: MCP/UI parity · namespace prefixes ·
 doctrine on every write · guards declared · table ownership (no cross-module writes) ·
@@ -85,7 +85,7 @@ scenario files — the spec speaks in acts, not commands, so any conforming modu
 
 ```bash
 npm install
-npm test          # the 19 gates
+npm test          # the 20 gates
 npm run demo      # a full quote-to-cash run, human and agent interleaved
 npm start         # workbench on http://127.0.0.1:8140
 npm run mcp       # stdio MCP server (OTC_WORKSPACE=you)

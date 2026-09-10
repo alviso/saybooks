@@ -737,7 +737,12 @@ const server = http.createServer(async (req, res) => {
 for (const m of R.MODULES.filter(m => m.implements)) {
   const area = m.implements.area;
   const prior = C.lastReport(area);
-  if (!prior || prior.spec !== m.implements.spec) {
+  // Rerun when anything moved: the version, the scenario set, or the acts. A Spec tab showing
+  // last month's run is worse than none — it is a claim that is no longer true.
+  const drifted = prior && (prior.spec !== m.implements.spec
+    || (prior.scenarios || []).length !== C.scenarioCount(area)
+    || (prior.acts || []).length !== C.actCount(area));
+  if (!prior || drifted) {
     try { C.runArea(area, { actor: 'startup' }); console.log(`conformance evidence generated for ${area}`); }
     catch (e) { console.error(`conformance ${area} failed at startup:`, e.message); }
   }

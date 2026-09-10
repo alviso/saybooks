@@ -205,6 +205,20 @@ for (const tag of R.PERMISSIONS) {
 // ---------------------------------------------------------------- ui scripts parse
 // Not a module gate — a build guard. The workbench is one HTML file whose only </body> lives
 // inside a JavaScript string; a careless insertion once split the script and served the
+// A module's declared spec version and its area's acts.json must agree, or the Spec tab
+// reports a run against a version nobody is implementing. (Bit once: purchases went to 0.2 in
+// the spec while the module still said 0.1, and the evidence never rebuilt.)
+{
+  for (const m of R.MODULES.filter(m => m.implements)) {
+    const acts = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'specs', m.implements.area, 'acts.json'), 'utf8'));
+    assert.equal(m.implements.spec, acts.spec, `${m.name}: module declares ${m.implements.area}@${m.implements.spec} but specs/${m.implements.area}/acts.json says ${acts.spec}`);
+    for (const act of Object.keys(acts.acts)) {
+      assert.ok(m.implements.acts[act], `${m.name}: spec act "${act}" is not mapped to a command in the implements map`);
+    }
+  }
+  ok('spec version: every module implements the version its acts.json declares, and every act it lists');
+}
+
 // source as text. Every inline script in every page must compile.
 {
   const vm = require('vm');

@@ -72,7 +72,7 @@ Money is integer minor units; sums are per currency and never cross.`,
   env_acts: { import_statement: 'purch_import_statement', review_batch: 'purch_review_batch', review_transaction: 'purch_review_transaction', set_vendor: 'purch_set_vendor' },
   env_argmap: { transaction: 'transaction_id' },
   implements: {
-    area: 'purchases', spec: '0.1',
+    area: 'purchases', spec: '0.2',
     argmap: { transaction: 'transaction_id', receipt: 'receipt_id', subscription: 'subscription_id', source: 'source_id' },
     acts: {
       import_statement: 'purch_import_statement', discard_source: 'purch_discard_source', review_transaction: 'purch_review_transaction', review_batch: 'purch_review_batch', split_transaction: 'purch_split_transaction', set_vendor: 'purch_set_vendor', vocabulary: 'purch_vocabulary', rename_category: 'purch_rename_category',
