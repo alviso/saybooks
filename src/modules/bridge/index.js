@@ -16,7 +16,7 @@ const H = require('../../db.js');
 
 const mod = R.defineModule({
   name: 'bridge', prefix: 'bridge',
-  tables: ['bridge_account_map', 'bridge_export'],
+  tables: ['bridge_map', 'bridge_export'],
   ids: { export: 'EXP-0001' },
   lifecycles: {
     account_map: 'unmapped -> mapped to their chart (code, name, tax rate) — config, changed by an act, logged',
@@ -45,7 +45,7 @@ format, so month-end is a diff rather than a re-key.
 Nothing here posts to the ledger. A correction after an export is a fresh export of the
 affected period; the record shows both, with what changed.`,
   implements: {
-    area: 'bridge', spec: '0.1',
+    area: 'bridge', spec: '0.2',
     argmap: { export: 'export_id' },
     acts: {
       map_account: 'bridge_map_account', export: 'bridge_export',

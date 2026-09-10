@@ -1,6 +1,6 @@
 # bridge — The Ledger Bridge · Area Specification
 
-**Status: 0.1.** The hand-over to the ledger of record.
+**Status: 0.2.** The hand-over to the ledger of record.
 
 Saybooks owns operational truth and derives balanced journal lines from it (`core_journal`).
 The LEDGER OF RECORD — QuickBooks Online, Xero, an accountant's own system — owns the chart
@@ -16,9 +16,14 @@ did the ledger already get?" from the record.
 
 ## 2. Scope
 
-In: mapping our fixed derivation accounts onto their chart; building the journal for a period
-in the shape the target imports (Xero manual journal CSV, QuickBooks Online journal entries
-CSV, plain CSV); recording every hand-over with its control totals and the exact file.
+In: mapping onto their chart — our fixed derivation accounts, and (0.2) the person's own
+spending categories and the bank or card each statement came from; building the journal for a
+period in the shape the target imports (Xero manual journal CSV, QuickBooks Online journal
+entries CSV, plain CSV); recording every hand-over with its control totals and the exact file.
+
+Both sides of the books reach the ledger: money in from invoicing and order to cash, and
+(0.2) money out from statements the agent read — spending, fees and receipts, each posting
+against the account it was paid from.
 
 Out (§9): posting into the ledger over an API, pulling anything back, the chart itself, manual
 journals, adjustments, the close, currency conversion, cost of goods and inventory.
@@ -57,9 +62,11 @@ we say out loud we have not crossed.
 
 ## 5. Entities and lifecycles
 
-- **account map** — one row per derivation account: their code (Xero matches on it), their
-  name (QuickBooks matches on it), the tax rate label their import expects, a note. Config,
-  changed by a logged act. Changing it never rewrites a hand-over that already went out.
+- **map** — one row per thing that needs a chart account, of three kinds: **derivation** (our
+  fixed accounts), **category** (a word the person reviewed spending under) and **source** (the
+  bank or card a statement came from). Each carries their code (Xero matches on it), their name
+  (QuickBooks matches on it), the tax rate label their import expects, a note. Config, changed
+  by a logged act. Changing it never rewrites a hand-over that already went out.
 - **export** — one hand-over: format, period, entry and line counts, control totals, a hash,
   and the file exactly as it went out, at a capability link. Immutable.
 
@@ -87,6 +94,12 @@ when). Environment: core's journal derivation, and whatever module produced the 
 - **B-7** Re-exporting a period that has already gone over is allowed and always visible: the
   result names the earlier hand-over and says whether the numbers have changed since.
 - **B-8** The chart is theirs. Codes and names come from the accountant; nothing is invented.
+- **B-10** Spending posts against the account it was paid from: a reviewed purchase debits its
+  category and credits the statement's account; a fee debits Bank Fees; money in debits that
+  account and credits its category. A transfer is the person's own money moving and posts
+  nothing, so a receipt already recorded elsewhere in these books is never counted twice.
+- **B-11** A row nobody has reviewed posts nothing, and that is said out loud: the preview and
+  the hand-over both report how many rows in the period were left out for want of a word.
 - **B-9** Every write is a logged act with an actor; refusals are logged too.
 
 ## 8. Conformance (scenarios)
@@ -95,7 +108,10 @@ when). Environment: core's journal derivation, and whatever module produced the 
 is in use and unmapped; the export is refused naming them; the accountant's codes are written;
 the preview is ready; the export records the hand-over and returns a link · 02 the month after:
 a second period continues from the last hand-over without a start date, a re-export of a period
-already sent is allowed and says so, and the plain CSV needs no chart at all.
+already sent is allowed and says so, and the plain CSV needs no chart at all · 03 the spending
+side: a card statement imported and reviewed; categories and the card account are mapped;
+a transfer posts nothing and an unreviewed row is reported as left out; the file carries the
+expense against the card.
 
 ## 9. Deferred — with reasons
 
@@ -105,11 +121,16 @@ already sent is allowed and says so, and the plain CSV needs no chart at all.
 | **Automatic correction entries** | A fact that changes after a period went over shows as a visible re-export today. Deriving a reversing entry pair instead needs the accountant's convention, not ours. |
 | **Their chart, pulled** | Reading the chart from the ledger would remove the typing, and it needs the same API connection as posting. |
 | **Cost of goods, inventory** | Items carry no cost; the ledger of record owns margin. |
+| **Grouping entries** | One entry per fact, so every posting traces to an invoice or a statement line. Summarising a month into one entry per account is a policy the accountant should choose. |
+| **A bank-transaction shape** | Some ledgers would rather import statement rows than journal entries. Journal entries are correct double entry and one shape; the other is a format, addable when someone's import asks for it. |
 | **Currency conversion** | Sums are per currency and never cross. A rate and a policy belong to the ledger. |
 
 ---
 
-*Change log: 0.0-sketch (2026-08) — a goal on the record. 0.1 (2026-09-10) — built: the account
+*Change log: 0.0-sketch (2026-08) — a goal on the record. 0.2 (2026-09-10) — the spending side:
+categories and statement accounts are mapped the same way, purchases contributes its own
+postings, transfers post nothing and unreviewed rows are reported rather than dropped in
+silence. 0.1 (2026-09-10) — built: the account
 map, three export shapes, hand-over tracking with control totals and the exact file. Prompted
 by an accounting firm asking whether it syncs with QuickBooks or Xero; the honest answer was
 "it derives the lines but cannot hand them over yet", so that was the thing to build. Layouts

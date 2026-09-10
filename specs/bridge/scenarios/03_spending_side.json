@@ -1,0 +1,251 @@
+{
+  "name": "the spending side: a card statement reaches the ledger",
+  "spec": "bridge@0.2",
+  "notes": "B-10 spending posts against the card it was paid from and a transfer posts nothing; B-11 an unreviewed row is reported, not dropped in silence; B-4 the categories and the card need their chart accounts first.",
+  "env": [
+    [
+      "set_company_profile",
+      {
+        "name": "Vega Consulting",
+        "address": "12 Oak Lane, Portland, OR 97205",
+        "country": "US",
+        "currency": "USD"
+      },
+      "the seller block"
+    ]
+  ],
+  "steps": [
+    {
+      "act": "import_statement",
+      "args": {
+        "name": "visa-2026-08.csv",
+        "hash": "bridge-visa-8827-2026-08",
+        "kind": "card",
+        "account": "Business Visa 8827",
+        "currency": "USD",
+        "period_start": "2026-08-01",
+        "period_end": "2026-08-31",
+        "opening_balance": -120000,
+        "closing_balance": 116520,
+        "row_count": 5,
+        "rows": [
+          {
+            "date": "2026-08-02",
+            "amount": -1499,
+            "description": "NETFLIX.COM",
+            "row_index": 1,
+            "raw": "2026-08-02,NETFLIX.COM,-14.99"
+          },
+          {
+            "date": "2026-08-04",
+            "amount": -8632,
+            "description": "COSTCO WHSE #1045",
+            "row_index": 2,
+            "raw": "2026-08-04,COSTCO WHSE #1045,-86.32"
+          },
+          {
+            "date": "2026-08-07",
+            "amount": -350,
+            "description": "FOREIGN TXN FEE",
+            "row_index": 3,
+            "raw": "2026-08-07,FOREIGN TXN FEE,-3.50"
+          },
+          {
+            "date": "2026-08-18",
+            "amount": 250000,
+            "description": "PAYMENT - THANK YOU",
+            "row_index": 4,
+            "raw": "2026-08-18,PAYMENT - THANK YOU,2500.00"
+          },
+          {
+            "date": "2026-08-22",
+            "amount": -2999,
+            "description": "ADOBE *CREATIVE CLOUD",
+            "row_index": 5,
+            "raw": "2026-08-22,ADOBE *CREATIVE CLOUD,-29.99"
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "rows_in": 5
+        }
+      },
+      "notes": "the agent read the statement; it reconciles to the printed balances"
+    },
+    {
+      "act": "review_batch",
+      "args": {
+        "rows": [
+          {
+            "transaction_id": "T-0001",
+            "status": "recurring",
+            "category": "streaming",
+            "vendor": "Netflix"
+          },
+          {
+            "transaction_id": "T-0002",
+            "status": "purchase",
+            "category": "supplies",
+            "vendor": "Costco"
+          },
+          {
+            "transaction_id": "T-0003",
+            "status": "fee"
+          },
+          {
+            "transaction_id": "T-0004",
+            "status": "transfer"
+          }
+        ],
+        "reason": "confirmed by the person"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "reviewed": 4,
+          "still_unreviewed": 1
+        }
+      },
+      "notes": "the Adobe row is left unreviewed on purpose"
+    },
+    {
+      "act": "preview",
+      "args": {
+        "format": "csv",
+        "to": "2026-12-31"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "entry_count": 3,
+          "unreviewed_in_period": 1
+        }
+      },
+      "notes": "B-10 the transfer posts nothing; B-11 the unreviewed row is reported"
+    },
+    {
+      "act": "export",
+      "args": {
+        "format": "qbo",
+        "to": "2026-12-31",
+        "reason": "August for their QuickBooks"
+      },
+      "expect": {
+        "refused": "account name"
+      },
+      "notes": "B-4: the categories and the card have no chart account yet"
+    },
+    {
+      "act": "map_account",
+      "args": {
+        "kind": "category",
+        "account": "streaming",
+        "name": "Software Subscriptions",
+        "reason": "their chart"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "kind": "category"
+        }
+      }
+    },
+    {
+      "act": "map_account",
+      "args": {
+        "kind": "category",
+        "account": "supplies",
+        "name": "Office Supplies",
+        "reason": "their chart"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "map_account",
+      "args": {
+        "kind": "source",
+        "account": "Business Visa 8827",
+        "name": "Business Visa 8827",
+        "reason": "their chart"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "kind": "source"
+        }
+      }
+    },
+    {
+      "act": "map_account",
+      "args": {
+        "account": "Bank Fees",
+        "name": "Bank Fees",
+        "reason": "their chart"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "kind": "derivation"
+        }
+      }
+    },
+    {
+      "act": "map_account",
+      "args": {
+        "kind": "category",
+        "account": "holidays",
+        "name": "Travel",
+        "reason": "a word nobody used"
+      },
+      "expect": {
+        "refused": "no category"
+      },
+      "notes": "B-8: only words the books actually carry"
+    },
+    {
+      "act": "preview",
+      "args": {
+        "format": "qbo",
+        "to": "2026-12-31"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "ready": true,
+          "entry_count": 3,
+          "line_count": 6
+        }
+      }
+    },
+    {
+      "act": "export",
+      "args": {
+        "format": "qbo",
+        "to": "2026-12-31",
+        "reason": "August for their QuickBooks"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "entry_count": 3,
+          "unreviewed_left_out": 1
+        }
+      },
+      "notes": "B-11: the hand-over says what it left out"
+    },
+    {
+      "act": "exports",
+      "args": {},
+      "expect": {
+        "ok": true,
+        "include": {
+          "count": 1
+        }
+      }
+    }
+  ]
+}

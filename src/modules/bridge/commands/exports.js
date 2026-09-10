@@ -57,6 +57,7 @@ ledger received has an answer.`,
       entry_count: journal.entry_count, line_count: rows.length, debits_display: journal.debits_display, credits_display: journal.credits_display, hash,
       csv_path: path, csv_url: CFG.absolute(path), continues_from: last || null,
       re_export_of: prior ? { export: prior.id, lines_then: prior.line_count, lines_now: rows.length, changed: prior.line_count !== rows.length || prior.debits !== journal.debits } : null,
-      note: `${journal.entry_count} entries, ${rows.length} lines, ${journal.debits_display} each side. Hand over this link: ${CFG.absolute(path) || path}${prior ? ` — note this period overlaps ${prior.id}, already handed over${prior.line_count !== rows.length || prior.debits !== journal.debits ? ' (and the numbers have changed since)' : ' (unchanged since)'}.` : ''}` };
+      unreviewed_left_out: V.pending(from, a.to),
+      note: `${journal.entry_count} entries, ${rows.length} lines, ${journal.debits_display} each side.${V.pending(from, a.to) ? ` ${V.pending(from, a.to)} imported rows in this period are still unreviewed and are NOT in the file.` : ''} Hand over this link: ${CFG.absolute(path) || path}${prior ? ` — note this period overlaps ${prior.id}, already handed over${prior.line_count !== rows.length || prior.debits !== journal.debits ? ' (and the numbers have changed since)' : ' (unchanged since)'}.` : ''}` };
   },
 });

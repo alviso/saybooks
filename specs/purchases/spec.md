@@ -110,7 +110,7 @@ two · 04 receipts: added, matched with a reason, a mismatched total refused, un
 | **Bank connections / feeds** | Files are the honest boundary: the person chooses what the agent sees, and every import is a deliberate act. A feed is a standing permission, which is a different product. |
 | **Currency conversion** | Same whole-area concern as everywhere; sums stay per currency. |
 | **Budgets, forecasts, advice** | Saybooks records; it does not counsel. A budget is policy the person owns. |
-| **Business expense treatment** | Tax deductibility varies by country and status; recording what was bought is our part. |
+| **Business expense treatment** | Tax deductibility varies by country and status; recording what was bought is our part. The postings themselves reach the accountant's ledger through the bridge area (0.2): a reviewed purchase debits its category and credits the account it was paid from. |
 | **Reading receipts (OCR)** | The agent reads; the module records what it says. No image pipeline here. |
 
 ---

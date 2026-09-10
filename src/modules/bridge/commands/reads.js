@@ -33,6 +33,7 @@ read({
     if (from && from > a.to) {
       return { format: a.format, label: V.FORMATS[a.format].label, continues_from: last, period_from: from, period_to: a.to,
         entry_count: 0, line_count: 0, ready: false, unmapped: [], currencies: [], columns: V.FORMATS[a.format].columns, sample_rows: [],
+        debits_display: H.money(0), credits_display: H.money(0),
         next: `Nothing left to hand over: ${a.format} is exported through ${last}, which is already past ${a.to}. Pick a later date, or set "from" to send a period again.` };
     }
     const { journal, missing, f: fmt, rows, content } = V.build(a.format, from, a.to, a.currency);
@@ -42,10 +43,12 @@ read({
       period_from: from || null, period_to: a.to, currencies: journal.currencies, currency: a.currency || null,
       entry_count: journal.entry_count, line_count: rows.length, balanced: journal.balanced,
       debits_display: journal.debits_display, credits_display: journal.credits_display,
-      unmapped: missing, ready: !missing.length && journal.entry_count > 0 && journal.currencies.length <= 1,
+      unmapped: missing, unreviewed_in_period: V.pending(from, a.to),
+      ready: !missing.length && journal.entry_count > 0 && journal.currencies.length <= 1,
       columns: fmt.columns, sample_rows: rows.slice(0, n), truncated: rows.length > n,
       bytes: Buffer.byteLength(content),
-      next: journal.currencies.length > 1 ? `This period holds ${journal.currencies.join(' and ')} — hand over one currency at a time (pass currency).`
+      next: V.pending(from, a.to) ? `${V.pending(from, a.to)} imported row${V.pending(from, a.to) > 1 ? 's are' : ' is'} still unreviewed in this period and would be left out of the file. Review ${V.pending(from, a.to) > 1 ? 'them' : 'it'} first, or hand over knowing they are missing.`
+        : journal.currencies.length > 1 ? `This period holds ${journal.currencies.join(' and ')} — hand over one currency at a time (pass currency).`
         : missing.length ? `Map ${missing.join(', ')} with bridge_map_account, then preview again.`
         : journal.entry_count ? 'Looks right? bridge_export records the hand-over and returns a download link.'
         : `Nothing happened in the books between ${from || 'the beginning'} and ${a.to}.`,

@@ -159,4 +159,63 @@ function vocabulary() {
     note: categories.length ? 'Propose from these categories and vendors first; a new word is fine when nothing fits, but say it is new.' : 'No categories yet — propose plain words and let the person rename them before writing.' };
 }
 
-module.exports = { vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };
+/**
+ * The spending side of the journal, contributed by this module (core stitches the areas
+ * together). One entry per reviewed row, so every posting traces to a statement line:
+ *   spending  → debit the category, credit the account it was paid from
+ *   fee       → debit Bank Fees, credit that account
+ *   income    → debit that account, credit the category
+ * A transfer is the person's own money moving between their own accounts, so it posts
+ * nothing; neither does an unreviewed or ignored row. Categories and statement accounts are
+ * the person's words: the ledger bridge maps each onto their chart, and refuses to export
+ * while one is unmapped.
+ */
+function journalLines({ from, to } = {}) {
+  const inRange = (d) => (!from || d >= from) && (!to || d <= to);
+  let rows = [];
+  try {
+    rows = db().prepare(`SELECT t.*, v.name AS vendor, s.account AS source_account, s.kind AS source_kind
+      FROM purch_transaction t LEFT JOIN purch_vendor v ON v.id = t.vendor_id JOIN purch_source s ON s.id = t.source_id
+      WHERE t.status IN ('purchase','recurring','fee','income') ORDER BY t.date, t.id`).all();
+  } catch { return []; }
+  const out = [];
+  for (const t of rows) {
+    if (!inRange(t.date)) continue;
+    const acct = (t.source_account || `${t.source_kind || 'account'} (unnamed)`).trim();
+    const paidFrom = { account: acct, map: { kind: 'source', key: acct } };
+    const amount = Math.abs(t.amount);
+    const who = t.vendor || t.description;
+    if (t.status === 'fee') {
+      out.push({ date: t.date, memo: `Fee · ${t.description}`, customer: null, currency: t.currency, source: t.id,
+        lines: [{ account: 'Bank Fees', debit: amount }, { ...paidFrom, credit: amount }] });
+    } else if (t.status === 'income') {
+      const cat = (t.category || '').trim();
+      out.push({ date: t.date, memo: `Received · ${who}`, customer: t.vendor || null, currency: t.currency, source: t.id,
+        lines: [{ ...paidFrom, debit: amount }, { account: cat || 'Uncategorised income', map: { kind: 'category', key: cat || '(uncategorised)' }, credit: amount }] });
+    } else {
+      const cat = (t.category || '').trim();
+      out.push({ date: t.date, memo: `${who}${t.ref ? ' · ' + t.ref : ''}`, customer: t.vendor || null, currency: t.currency, source: t.id,
+        lines: [{ account: cat || 'Uncategorised spending', map: { kind: 'category', key: cat || '(uncategorised)' }, debit: amount }, { ...paidFrom, credit: amount }] });
+    }
+  }
+  return out;
+}
+
+/** Rows in a period that post nothing because nobody has said what they are yet. */
+function journalPending({ from, to } = {}) {
+  try {
+    const w = []; const args = [];
+    if (from) { w.push('date >= ?'); args.push(from); }
+    if (to) { w.push('date <= ?'); args.push(to); }
+    return db().prepare(`SELECT COUNT(*) n FROM purch_transaction WHERE status = 'unreviewed'${w.length ? ' AND ' + w.join(' AND ') : ''}`).get(...args).n;
+  } catch { return 0; }
+}
+
+/** The words the ledger has to have a chart account for: every category and statement account in use. */
+function mappableKeys() {
+  const cats = (() => { try { return db().prepare("SELECT DISTINCT COALESCE(NULLIF(TRIM(category), ''), '(uncategorised)') k, status FROM purch_transaction WHERE status IN ('purchase','recurring','income')").all(); } catch { return []; } })();
+  const srcs = (() => { try { return db().prepare('SELECT DISTINCT account k, kind FROM purch_source').all(); } catch { return []; } })();
+  return { categories: [...new Set(cats.map(c => c.k))].sort(), sources: [...new Set(srcs.map(s => (s.k || `${s.kind} (unnamed)`).trim()))].sort() };
+}
+
+module.exports = { journalLines, journalPending, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };

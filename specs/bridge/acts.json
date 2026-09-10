@@ -1,6 +1,6 @@
 {
   "area": "bridge",
-  "spec": "0.1",
+  "spec": "0.2",
   "doc": "spec.md",
   "acts": {
     "map_account": {
@@ -68,6 +68,14 @@
     {
       "id": "B-9",
       "title": "Every write is a logged act with an actor; refusals are logged too."
+    },
+    {
+      "id": "B-10",
+      "title": "Spending posts against the account it was paid from; a transfer posts nothing, so money already recorded elsewhere is never counted twice."
+    },
+    {
+      "id": "B-11",
+      "title": "An unreviewed row posts nothing and is reported as left out, in the preview and on the hand-over."
     }
   ]
 }

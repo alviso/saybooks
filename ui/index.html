@@ -1359,16 +1359,23 @@ async function renderPage() {
   }
   if (view === 'bridgeaccounts') {
     head('Account map', "Our derivation accounts, and what each is called in the ledger of record. The codes and names come from the accountant, never from us.");
-    const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('bridge_account_map').forEach(b => bar.append(b)); main.append(bar);
+    const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('bridge_map').forEach(b => bar.append(b)); main.append(bar);
     const a = await api('bridge_accounts', {});
     const ready = Object.entries(a.ready).map(([k, v]) => `${k}: ${v ? '<b style="color:var(--ok,#3E6B2B)">ready</b>' : '<span style="color:var(--warn)">needs mapping</span>'}`).join(' · ');
     main.append($(`<div class="sub" style="margin:0 0 10px">${a.in_use} account${a.in_use === 1 ? '' : 's'} in use${a.unmapped_in_use.length ? `, ${a.unmapped_in_use.length} unmapped` : ''} · ${ready}</div>`));
-    const t = $('<table><thead><tr><th>Our account</th><th>Used</th><th>Their code</th><th>Their name</th><th>Tax rate</th><th>When it appears</th></tr></thead><tbody></tbody></table>');
-    rowsInto(t, a.accounts, r => `<td><b>${r.account}</b></td><td>${r.used ? '<span class="pill">in use</span>' : '<span style="color:var(--dim)">—</span>'}</td>
-      <td>${r.code || (r.used ? '<span style="color:var(--warn)">missing</span>' : '')}</td><td>${r.name || (r.used ? '<span style="color:var(--warn)">missing</span>' : '')}</td><td>${r.tax_rate || ''}</td>
-      <td style="font-size:12px;color:var(--dim)">${r.when}</td>`, 'nolink');
-    main.append(t);
-    main.append($(`<p class="sub" style="margin-top:12px;max-width:760px">Xero matches on the code, QuickBooks on the name. Ask your accountant for both and they are set once. Changing a mapping never rewrites a hand-over that already went out.</p>`));
+    const section = (title, blurb, rows, firstCol) => {
+      if (!rows.length) return;
+      main.append($(`<div class="sub" style="margin:18px 0 6px"><b style="color:var(--ink)">${title}</b> — ${blurb}</div>`));
+      const t = $(`<table><thead><tr><th>${firstCol}</th><th>Used</th><th>Their code</th><th>Their name</th><th>Tax rate</th><th>When it appears</th></tr></thead><tbody></tbody></table>`);
+      rowsInto(t, rows, r => `<td><b>${r.account}</b></td><td>${r.used ? '<span class="pill">in use</span>' : '<span style="color:var(--dim)">—</span>'}</td>
+        <td>${r.code || (r.used ? '<span style="color:var(--warn)">missing</span>' : '')}</td><td>${r.name || (r.used ? '<span style="color:var(--warn)">missing</span>' : '')}</td><td>${r.tax_rate || ''}</td>
+        <td style="font-size:12px;color:var(--dim)">${r.when}</td>`, 'nolink');
+      main.append(t);
+    };
+    section('Our accounts', 'fixed, derived from what happened in the books', a.accounts, 'Our account');
+    section('Your categories', 'the words you used when reviewing spending; each needs their expense or income account', a.categories, 'Category');
+    section('Your accounts', 'the bank or card each statement came from', a.sources, 'Statement account');
+    main.append($(`<p class="sub" style="margin-top:14px;max-width:760px">Xero matches on the code, QuickBooks on the name. Ask your accountant for both and they are set once. Changing a mapping never rewrites a hand-over that already went out.</p>`));
   }
   if (view === 'bridgeexport') {
     head('Export', 'Hand a period to the ledger of record: QuickBooks, Xero, or a plain CSV. Nothing is posted; you send the file.');
@@ -1389,7 +1396,7 @@ async function renderPage() {
       const p = await api('bridge_preview', { format: box.querySelector('#bfmt').value, to: box.querySelector('#bto').value, from: box.querySelector('#bfrom').value || undefined });
       out.innerHTML = '';
       out.append($(`<div class="sub" style="margin:0 0 8px">${p.entry_count} entries · ${p.line_count} lines · ${p.debits_display} each side${p.continues_from ? ` · continues from ${p.continues_from}` : ''}${p.currencies.length > 1 ? ` · <span style="color:var(--warn)">${p.currencies.join(' and ')}</span>` : ''}</div>`));
-      out.append($(`<div class="doc" style="margin-bottom:10px">${p.next}</div>`));
+      out.append($(`<div class="doc" style="margin-bottom:10px${p.unreviewed_in_period ? ';color:var(--warn)' : ''}">${p.next}</div>`));
       if (p.sample_rows.length) {
         const t = $(`<table><thead><tr>${p.columns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody></tbody></table>`);
         for (const r of p.sample_rows) t.querySelector('tbody').append($(`<tr>${r.map(c => `<td style="font-size:12.5px">${String(c).replace(/</g, '&lt;')}</td>`).join('')}</tr>`));

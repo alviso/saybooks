@@ -1,6 +1,6 @@
 {
   "name": "the month after: continue from the last hand-over, and re-send visibly",
-  "spec": "bridge@0.1",
+  "spec": "bridge@0.2",
   "notes": "B-6 the period continues by itself, B-7 a re-export says so, and the plain CSV needs no chart.",
   "env": [
     [

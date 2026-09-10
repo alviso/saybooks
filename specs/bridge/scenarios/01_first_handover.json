@@ -1,6 +1,6 @@
 {
   "name": "the first hand-over: map their chart, then send the period",
-  "spec": "bridge@0.1",
+  "spec": "bridge@0.2",
   "notes": "B-4 refused while unmapped, B-8 the chart is theirs, B-5 the hand-over is recorded with its totals, B-2 it balances.",
   "env": [
     [

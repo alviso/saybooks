@@ -133,6 +133,13 @@ the next question to ask; one question at a time, written as it is answered.`,
       ], ap.currency);
     }
 
+    // Areas contribute their own postings (purchases brings the spending side); core owns the
+    // stitching and the balance check, never another module's tables.
+    for (const m of R.MODULES) {
+      if (!m.api || typeof m.api.journalLines !== 'function') continue;
+      for (const e of m.api.journalLines({ from: a.from, to: a.to })) push(e.date, e.memo, e.customer, e.lines, e.currency);
+    }
+
     entries.sort((x, y) => x.date < y.date ? -1 : x.date > y.date ? 1 : 0);
     const kept = a.currency ? entries.filter(e => e.currency === String(a.currency).toUpperCase()) : entries;
     const debits = kept.reduce((s, e) => s + e.lines.reduce((s2, l) => s2 + (l.debit || 0), 0), 0);

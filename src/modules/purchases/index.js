@@ -58,6 +58,8 @@ refused when the total does not fit — say why if it truly does (override).
 Subscriptions: purch_declare_subscription from a charge you have seen; the record then
 confirms it month by month. A missed period is shown, never assumed; two make it lapsed.
 Money is integer minor units; sums are per currency and never cross.`,
+  env_acts: { import_statement: 'purch_import_statement', review_batch: 'purch_review_batch', review_transaction: 'purch_review_transaction', set_vendor: 'purch_set_vendor' },
+  env_argmap: { transaction: 'transaction_id' },
   implements: {
     area: 'purchases', spec: '0.1',
     argmap: { transaction: 'transaction_id', receipt: 'receipt_id', subscription: 'subscription_id', source: 'source_id' },
@@ -69,7 +71,7 @@ Money is integer minor units; sums are per currency and never cross.`,
       subscriptions: 'purch_subscriptions', receipts: 'purch_receipts', spend: 'purch_spend',
     },
   },
-  api: { views: V },
+  api: { views: V, journalLines: V.journalLines, journalPending: V.journalPending, mappableKeys: V.mappableKeys },
 });
 
 R.defineSubject('purch_transaction', { load: (id) => V.transactionView(id) });
