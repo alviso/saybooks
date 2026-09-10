@@ -1,0 +1,160 @@
+{
+  "name": "splitting: one line, several things",
+  "spec": "purchases@0.2",
+  "notes": "P-10 the legs add to the row exactly or the split is refused; the row itself never moves.",
+  "env": [],
+  "steps": [
+    {
+      "act": "import_statement",
+      "args": {
+        "name": "aug.csv",
+        "hash": "split-demo-2026-08",
+        "kind": "bank",
+        "account": "Business Checking 8827",
+        "currency": "USD",
+        "period_start": "2026-08-01",
+        "period_end": "2026-08-31",
+        "opening_balance": -100000,
+        "closing_balance": -850648,
+        "row_count": 2,
+        "rows": [
+          {
+            "date": "2026-08-14",
+            "amount": -742016,
+            "description": "PAYROLL GUSTO PR-08-14",
+            "row_index": 1,
+            "raw": "2026-08-14,PAYROLL GUSTO PR-08-14,-7420.16"
+          },
+          {
+            "date": "2026-08-04",
+            "amount": -8632,
+            "description": "COSTCO WHSE #1045",
+            "row_index": 2,
+            "raw": "2026-08-04,COSTCO WHSE #1045,-86.32"
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "rows_in": 2
+        }
+      }
+    },
+    {
+      "act": "split_transaction",
+      "args": {
+        "transaction": "T-0001",
+        "parts": [
+          {
+            "amount": 590000,
+            "category": "wages"
+          },
+          {
+            "amount": 140000,
+            "category": "employer taxes"
+          }
+        ],
+        "reason": "from the payroll report"
+      },
+      "expect": {
+        "refused": "not reviewed yet"
+      },
+      "notes": "only spending or income breaks down; the row has not been reviewed"
+    },
+    {
+      "act": "review_transaction",
+      "args": {
+        "transaction": "T-0001",
+        "status": "purchase",
+        "category": "payroll",
+        "reason": "the monthly run"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "split_transaction",
+      "args": {
+        "transaction": "T-0001",
+        "parts": [
+          {
+            "amount": 590000,
+            "category": "wages"
+          },
+          {
+            "amount": 140000,
+            "category": "employer taxes"
+          }
+        ],
+        "reason": "from the payroll report"
+      },
+      "expect": {
+        "refused": "gap of"
+      },
+      "notes": "P-10: $7,300 of a $7,420.16 run — the processor's fee is missing"
+    },
+    {
+      "act": "split_transaction",
+      "args": {
+        "transaction": "T-0001",
+        "parts": [
+          {
+            "amount": 590000,
+            "category": "wages"
+          },
+          {
+            "amount": 140000,
+            "category": "employer taxes"
+          },
+          {
+            "amount": 12016,
+            "category": "payroll fees",
+            "note": "Gusto"
+          }
+        ],
+        "reason": "from the payroll report"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "split_into": 3,
+          "amount": -742016
+        }
+      },
+      "notes": "the legs add up; the row's own amount is untouched"
+    },
+    {
+      "act": "split_transaction",
+      "args": {
+        "transaction": "T-0001",
+        "parts": [
+          {
+            "amount": 742016,
+            "category": "payroll"
+          }
+        ],
+        "reason": "one part"
+      },
+      "expect": {
+        "refused": "at least two parts"
+      },
+      "notes": "a split of one is just the row itself"
+    },
+    {
+      "act": "split_transaction",
+      "args": {
+        "transaction": "T-0001",
+        "remove": true,
+        "reason": "the report was for a different month"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "split_into": 0
+        }
+      }
+    }
+  ]
+}

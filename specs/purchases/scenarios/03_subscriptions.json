@@ -1,6 +1,6 @@
 {
   "name": "subscriptions: declared, confirmed, missed, lapsed",
-  "spec": "purchases@0.1",
+  "spec": "purchases@0.2",
   "notes": "P-6: the record confirms a subscription; the module never assumes a charge.",
   "env": [],
   "steps": [

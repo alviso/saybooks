@@ -1,6 +1,6 @@
 {
   "name": "overlapping statements: present rows skipped and listed, new rows in",
-  "spec": "purchases@0.1",
+  "spec": "purchases@0.2",
   "notes": "P-4: overlap is reported, never merged silently, never duplicated.",
   "env": [],
   "steps": [

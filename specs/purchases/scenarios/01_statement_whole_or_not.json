@@ -1,6 +1,6 @@
 {
   "name": "a card statement imported whole, reconciled, never twice",
-  "spec": "purchases@0.1",
+  "spec": "purchases@0.2",
   "notes": "P-2 provenance on every row, P-3 batch-or-nothing against control totals, P-4 the same hash refused.",
   "env": [],
   "steps": [

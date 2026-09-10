@@ -11,11 +11,11 @@ const H = require('../../db.js');
 
 const mod = R.defineModule({
   name: 'purchases', prefix: 'purch',
-  tables: ['purch_source', 'purch_vendor', 'purch_vendor_alias', 'purch_transaction', 'purch_receipt', 'purch_subscription'],
+  tables: ['purch_source', 'purch_vendor', 'purch_vendor_alias', 'purch_transaction', 'purch_split', 'purch_receipt', 'purch_subscription'],
   ids: { source: 'SRC-0001', transaction: 'T-0001', vendor: 'V-0001', receipt: 'R-0001', subscription: 'SUB-0001' },
   lifecycles: {
     source: 'imported whole (reconciled to its control totals) — immutable; the same hash never twice',
-    transaction: 'unreviewed -> purchase | recurring | transfer | income | fee | ignored (a reasoned act; amount and date never change)',
+    transaction: 'unreviewed -> purchase | recurring | transfer | income | fee | ignored (a reasoned act; amount and date never change) -> optionally split into legs that add to it exactly',
     subscription: 'active (declared) -> cancelled (reasoned); lapsed is DERIVED from two missed periods, never stored',
     receipt: 'unmatched -> matched to exactly one transaction (reasoned) -> unmatched again (reasoned)',
   },
@@ -57,6 +57,11 @@ payment against an invoice you already issued — which must not be counted twic
 are then listed, every time, as not posted. purch_set_vendor names
 the shop once and its statement spelling becomes an alias for every later row.
 
+Splitting: one line is often several things — a payroll run is wages, employer taxes and the
+processor's fee. purch_split_transaction takes the legs; they must add to the row exactly, and
+the row's own amount, date and provenance never move. The breakdown comes from the person or a
+document they have; never invent it.
+
 Receipts: purch_add_receipt with what the receipt says (vendor, date, total, currency) and the
 file's name and hash; candidates come back. purch_match_receipt is a reasoned act and is
 refused when the total does not fit — say why if it truly does (override).
@@ -70,7 +75,7 @@ Money is integer minor units; sums are per currency and never cross.`,
     area: 'purchases', spec: '0.1',
     argmap: { transaction: 'transaction_id', receipt: 'receipt_id', subscription: 'subscription_id', source: 'source_id' },
     acts: {
-      import_statement: 'purch_import_statement', discard_source: 'purch_discard_source', review_transaction: 'purch_review_transaction', review_batch: 'purch_review_batch', set_vendor: 'purch_set_vendor', vocabulary: 'purch_vocabulary', rename_category: 'purch_rename_category',
+      import_statement: 'purch_import_statement', discard_source: 'purch_discard_source', review_transaction: 'purch_review_transaction', review_batch: 'purch_review_batch', split_transaction: 'purch_split_transaction', set_vendor: 'purch_set_vendor', vocabulary: 'purch_vocabulary', rename_category: 'purch_rename_category',
       add_receipt: 'purch_add_receipt', match_receipt: 'purch_match_receipt', unmatch_receipt: 'purch_unmatch_receipt',
       declare_subscription: 'purch_declare_subscription', cancel_subscription: 'purch_cancel_subscription',
       sources: 'purch_sources', source: 'purch_source', transactions: 'purch_transactions', purchases: 'purch_purchases',
@@ -88,6 +93,7 @@ R.defineSubject('purch_source', { load: (id) => H.need('purch_source', id, 'sour
 R.inModule(mod, () => {
   require('./commands/import.js');
   require('./commands/review.js');
+  require('./commands/split.js');
   require('./commands/receipts.js');
   require('./commands/subscriptions.js');
   require('./commands/reads.js');

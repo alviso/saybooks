@@ -1,6 +1,6 @@
 {
   "area": "purchases",
-  "spec": "0.1",
+  "spec": "0.2",
   "doc": "spec.md",
   "acts": {
     "import_statement": {
@@ -123,6 +123,12 @@
       "required": [
         "from",
         "to"
+      ]
+    },
+    "split_transaction": {
+      "kind": "write",
+      "required": [
+        "transaction"
       ]
     }
   },

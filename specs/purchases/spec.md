@@ -1,6 +1,6 @@
 # purchases — What You Buy · Area Specification
 
-**Status: 0.1-draft.** A spec on the record before a line of module code, so the shape can be
+**Status: 0.2.** A spec on the record before a line of module code, so the shape can be
 argued with. No module implements it yet.
 
 ## 1. Calibration: who this is for
@@ -46,7 +46,8 @@ forecasts, advice, tax treatment of purchases, paying anything.
 
 ## 4. The acts
 
-Writes (11): import_statement, rename_category (one word changed on every row that
+Writes (12): import_statement, split_transaction (one row broken into legs that add to it
+exactly), rename_category (one word changed on every row that
 carries it), discard_source (a wrong read thrown out whole, with a
 reason, its hash freed), review_transaction, review_batch (many rows, one reasoned
 act, validated whole), set_vendor, add_receipt, match_receipt, declare_subscription,
@@ -69,6 +70,9 @@ purchases, subscriptions, receipts, spend, source.
   never silently merged and never silently duplicated.
 - **P-5** Nothing is invented: category, vendor and status are empty or unreviewed until an
   act with a reason sets them. Review is an act, and the reason is part of the record.
+- **P-10** One row may break into several categories, and the legs must add to the row exactly
+  or the split is refused with the gap named. The row's own amount, date and provenance never
+  move: the statement said what it said, and a breakdown is an annotation on top of it.
 - **P-6** A subscription is declared, then confirmed by the record: a period with no
   matching purchase is shown as missed — but only once a statement covering that period has
   been read; before that it is "no statement yet". Two missed periods make it lapsed. A vendor
@@ -101,7 +105,9 @@ agent reads a given bank's layout, which files count as receipts.
 hash refused; a transposed amount refused with the gap named · 02 overlapping statements:
 rows already present skipped and listed, new rows in · 03 subscriptions: declared from a
 purchase, confirmed by the next month's charge, missed when it does not come, lapsed after
-two · 04 receipts: added, matched with a reason, a mismatched total refused, unmatched shown.
+two · 04 receipts: added, matched with a reason, a mismatched total refused, unmatched shown ·
+05 splitting: a payroll line broken into wages, employer taxes and the processor's fee; legs
+that do not add up refused with the gap named; the row itself unchanged.
 
 ## 9. Deferred — with reasons
 
@@ -115,6 +121,8 @@ two · 04 receipts: added, matched with a reason, a mismatched total refused, un
 
 ---
 
-*Change log: 0.1-draft (2026-09-06) — drafted from Peter's and Pavan's "my purchases" idea,
+*Change log: 0.2 (2026-09-10) — splitting one row into legs that add to it exactly, for payroll
+runs and mixed receipts, prompted by a demo session pointing out that one lump to one account
+would annoy a bookkeeper. 0.1-draft (2026-09-06) — drafted from Peter's and Pavan's "my purchases" idea,
 with the agent-first import discipline agreed the same day: no parsers, batch-or-nothing,
 control totals, provenance, refusals.*

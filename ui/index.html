@@ -402,7 +402,7 @@ async function detail(type, id) {
     : type === 'solo_invoice'
     ? { Client: entity.customer_name, Currency: entity.currency || 'USD', Total: entity.total_display, Applied: entity.applied_display, Open: entity.open_display, Issued: entity.issued_at ?? '— (draft)', Due: entity.due_at ?? `${entity.due_in_days ?? 30} days from issue`, ...(entity.void_reason && { Voided: entity.void_reason }) }
     : type === 'purch_transaction'
-    ? { Date: entity.date, Amount: entity.amount_display, Description: entity.description, Vendor: entity.vendor ?? '—', Category: entity.category ?? '—', Statement: `${entity.source_name ?? entity.source_id} · row ${entity.row_index}`, Receipt: entity.receipt ? entity.receipt.id : '—', ...(entity.raw ? { 'As read': `<code style="font-size:11px">${String(entity.raw).replace(/</g,'&lt;')}</code>` } : {}) }
+    ? { Date: entity.date, Amount: entity.amount_display, Description: entity.description, Vendor: entity.vendor ?? '—', Category: entity.split_into ? `split into ${entity.split_into}` : (entity.category ?? '—'), Statement: `${entity.source_name ?? entity.source_id} · row ${entity.row_index}`, Receipt: entity.receipt ? entity.receipt.id : '—', ...(entity.raw ? { 'As read': `<code style="font-size:11px">${String(entity.raw).replace(/</g,'&lt;')}</code>` } : {}) }
     : type === 'purch_receipt'
     ? { Vendor: entity.vendor ?? '—', Date: entity.date, Total: entity.total_display, File: entity.name, Matched: entity.transaction_id ?? 'no', ...(entity.note ? { Note: entity.note } : {}) }
     : type === 'purch_subscription'
@@ -612,6 +612,11 @@ async function detail(type, id) {
     if (entity.subject) wrap.prepend($(`<div class="sub" style="margin:0 0 8px">${entity.subject}</div>`));
     wrap.append(lt);
     if (entity.notes) wrap.append($(`<div class="card doc" style="margin-top:10px">${entity.notes}</div>`));
+  }
+  if (type === 'purch_transaction' && entity.split && entity.split.length) {
+    const t = $('<table><thead><tr><th>Part</th><th>Category</th><th class="num">Amount</th><th>Note</th></tr></thead><tbody></tbody></table>');
+    entity.split.forEach((l, i) => t.querySelector('tbody').append($(`<tr><td>${i + 1}</td><td>${l.category}</td><td class="num">${l.amount_display}</td><td style="color:var(--dim)">${l.note || ''}</td></tr>`)));
+    wrap.append($('<div class="sub" style="margin-top:14px">Split into ' + entity.split.length + ' parts — the row itself is unchanged</div>'), t);
   }
   if (type === 'purch_subscription' && entity.periods) {
     const t = $('<table><thead><tr><th>Expected</th><th>Result</th><th>Charged on</th><th class="num">Amount</th></tr></thead><tbody></tbody></table>');

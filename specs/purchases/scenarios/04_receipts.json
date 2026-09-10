@@ -1,6 +1,6 @@
 {
   "name": "receipts: added, matched with a reason, mismatch refused, unmatched shown",
-  "spec": "purchases@0.1",
+  "spec": "purchases@0.2",
   "notes": "P-7: one receipt, one transaction, a reasoned act; P-9 the file stays with the person.",
   "env": [],
   "steps": [

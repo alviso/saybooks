@@ -15,7 +15,9 @@ const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 function transactionView(id) {
   const t = need('purch_transaction', id, 'transaction');
   const receipt = db().prepare('SELECT id, name, total, date FROM purch_receipt WHERE transaction_id = ?').get(id) || null;
-  return { ...t, vendor: vendorName(t.vendor_id), amount_display: money(t.amount, t.currency), spend: t.amount < 0 ? -t.amount : 0, receipt, source_name: (get('purch_source', t.source_id) || {}).name || null };
+  const split = splitsOf(id).map(l => ({ ...l, amount_display: money(l.amount, t.currency) }));
+  return { ...t, vendor: vendorName(t.vendor_id), amount_display: money(t.amount, t.currency), spend: t.amount < 0 ? -t.amount : 0, receipt,
+    split, split_into: split.length, source_name: (get('purch_source', t.source_id) || {}).name || null };
 }
 function receiptView(id) {
   const r = need('purch_receipt', id, 'receipt');
@@ -170,6 +172,8 @@ function vocabulary() {
  * the person's words: the ledger bridge maps each onto their chart, and refuses to export
  * while one is unmapped.
  */
+const splitsOf = (id) => { try { return db().prepare('SELECT amount, category, note FROM purch_split WHERE transaction_id = ? ORDER BY pos').all(id); } catch { return []; } };
+
 function journalLines({ from, to } = {}) {
   const inRange = (d) => (!from || d >= from) && (!to || d <= to);
   let rows = [];
@@ -201,12 +205,21 @@ function journalLines({ from, to } = {}) {
         lines: t.amount < 0 ? [{ ...other, debit: amount }, { ...paidFrom, credit: amount }] : [{ ...paidFrom, debit: amount }, { ...other, credit: amount }] });
     } else if (t.status === 'income') {
       const cat = (t.category || '').trim();
+      const legs = splitsOf(t.id);
+      const credits = legs.length
+        ? legs.map(l => ({ account: l.category, map: { kind: 'category', key: l.category }, credit: l.amount }))
+        : [{ account: cat || 'Uncategorised income', map: { kind: 'category', key: cat || '(uncategorised)' }, credit: amount }];
       out.push({ date: t.date, memo: `Received · ${who}`, customer: t.vendor || null, currency: t.currency, source: t.id,
-        lines: [{ ...paidFrom, debit: amount }, { account: cat || 'Uncategorised income', map: { kind: 'category', key: cat || '(uncategorised)' }, credit: amount }] });
+        lines: [{ ...paidFrom, debit: amount }, ...credits] });
     } else {
+      // A split row posts one leg per part, all against the one account the money moved on.
+      const legs = splitsOf(t.id);
       const cat = (t.category || '').trim();
+      const debits = legs.length
+        ? legs.map(l => ({ account: l.category, map: { kind: 'category', key: l.category }, debit: l.amount }))
+        : [{ account: cat || 'Uncategorised spending', map: { kind: 'category', key: cat || '(uncategorised)' }, debit: amount }];
       out.push({ date: t.date, memo: `${who}${t.ref ? ' · ' + t.ref : ''}`, customer: t.vendor || null, currency: t.currency, source: t.id,
-        lines: [{ account: cat || 'Uncategorised spending', map: { kind: 'category', key: cat || '(uncategorised)' }, debit: amount }, { ...paidFrom, credit: amount }] });
+        lines: [...debits, { ...paidFrom, credit: amount }] });
     }
   }
   return out;
@@ -239,9 +252,12 @@ function journalOmitted({ from, to } = {}) {
 
 /** The words the ledger has to have a chart account for: every category and statement account in use. */
 function mappableKeys() {
-  const cats = (() => { try { return db().prepare("SELECT DISTINCT COALESCE(NULLIF(TRIM(category), ''), '(uncategorised)') k, status FROM purch_transaction WHERE status IN ('purchase','recurring','income')").all(); } catch { return []; } })();
+  const cats = (() => { try { return db().prepare(`SELECT DISTINCT k FROM (
+      SELECT COALESCE(NULLIF(TRIM(category), ''), '(uncategorised)') k FROM purch_transaction WHERE status IN ('purchase','recurring','income')
+      UNION SELECT TRIM(category) k FROM purch_split
+      UNION SELECT TRIM(category) k FROM purch_transaction WHERE status = 'transfer' AND COALESCE(TRIM(category), '') <> '')`).all(); } catch { return []; } })();
   const srcs = (() => { try { return db().prepare('SELECT DISTINCT account k, kind FROM purch_source').all(); } catch { return []; } })();
   return { categories: [...new Set(cats.map(c => c.k))].sort(), sources: [...new Set(srcs.map(s => (s.k || `${s.kind} (unnamed)`).trim()))].sort() };
 }
 
-module.exports = { journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };
+module.exports = { splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };
