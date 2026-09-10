@@ -33,11 +33,13 @@ function actTable(area) {
   const impl = R.MODULES.find(m => m.implements && m.implements.area === area);
   if (!impl) throw new Error(`no mounted module implements area ${area}`);
   const table = Object.create(null);
-  for (const [act, command] of Object.entries(impl.implements.acts)) table[act] = { command, argmap: impl.implements.argmap || {} };
+  // Env acts fill gaps; they never shadow the area's own acts. (A module offering
+  // record_payment as an env act must not replace o2c's record_payment in o2c's scenarios.)
   for (const m of R.MODULES) {
     if (!m.env_acts) continue;
     for (const [act, command] of Object.entries(m.env_acts)) table[act] = { command, argmap: m.env_argmap || {}, env: true };
   }
+  for (const [act, command] of Object.entries(impl.implements.acts)) table[act] = { command, argmap: impl.implements.argmap || {} };
   return { impl, table };
 }
 

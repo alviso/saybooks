@@ -1,0 +1,200 @@
+{
+  "name": "the first hand-over: map their chart, then send the period",
+  "spec": "bridge@0.1",
+  "notes": "B-4 refused while unmapped, B-8 the chart is theirs, B-5 the hand-over is recorded with its totals, B-2 it balances.",
+  "env": [
+    [
+      "set_company_profile",
+      {
+        "name": "Vega Consulting",
+        "address": "12 Oak Lane, Portland, OR 97205",
+        "country": "US",
+        "currency": "USD",
+        "payment_instructions": "ACH to First Federal 026009593 / 5550123."
+      },
+      "the seller block"
+    ],
+    [
+      "create_customer",
+      {
+        "name": "Meridian Logistics",
+        "email": "ap@meridian.example",
+        "terms": "net30",
+        "address": "400 Harbor Blvd, Suite 210, Tacoma, WA 98402"
+      },
+      "the client"
+    ]
+  ],
+  "steps": [
+    {
+      "act": "draft_invoice",
+      "args": {
+        "customer": "C-0001",
+        "due_in_days": 30,
+        "lines": [
+          {
+            "description": "August consulting",
+            "qty": 12,
+            "rate": 25000
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "total": 300000
+        }
+      }
+    },
+    {
+      "act": "issue_invoice",
+      "args": {
+        "invoice": "INV-0001"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "issued"
+        }
+      }
+    },
+    {
+      "act": "record_payment",
+      "args": {
+        "customer": "C-0001",
+        "amount": 200000,
+        "method": "bank",
+        "reference": "MER-88"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "apply_payment",
+      "args": {
+        "payment": "P-0001",
+        "invoice": "INV-0001"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "accounts",
+      "args": {},
+      "expect": {
+        "ok": true,
+        "include": {
+          "in_use": 4
+        }
+      },
+      "notes": "receivable, service revenue, cash and deposits are in use; nothing is mapped yet"
+    },
+    {
+      "act": "export",
+      "args": {
+        "format": "xero",
+        "to": "2026-12-31",
+        "reason": "first hand-over"
+      },
+      "expect": {
+        "refused": "account code"
+      },
+      "notes": "B-4: Xero matches on the code and there is none"
+    },
+    {
+      "act": "map_account",
+      "args": {
+        "account": "Accounts Receivable",
+        "code": "610",
+        "name": "Accounts Receivable",
+        "reason": "from their chart"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "map_account",
+      "args": {
+        "account": "Service Revenue",
+        "code": "200",
+        "name": "Sales",
+        "reason": "from their chart"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "map_account",
+      "args": {
+        "account": "Cash",
+        "code": "090",
+        "name": "Business Bank Account",
+        "reason": "from their chart"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "map_account",
+      "args": {
+        "account": "Customer Deposits",
+        "code": "820",
+        "name": "Customer Deposits",
+        "reason": "from their chart"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "account": "Customer Deposits"
+        }
+      }
+    },
+    {
+      "act": "preview",
+      "args": {
+        "format": "xero",
+        "to": "2026-12-31"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "ready": true,
+          "entry_count": 3,
+          "line_count": 6
+        }
+      },
+      "notes": "three entries: the invoice, the receipt, the application"
+    },
+    {
+      "act": "export",
+      "args": {
+        "format": "xero",
+        "to": "2026-12-31",
+        "reason": "first hand-over"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "entry_count": 3,
+          "line_count": 6
+        }
+      },
+      "notes": "B-5: recorded with its control totals and the file kept"
+    },
+    {
+      "act": "exports",
+      "args": {},
+      "expect": {
+        "ok": true,
+        "include": {
+          "count": 1
+        }
+      }
+    }
+  ]
+}

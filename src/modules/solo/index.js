@@ -53,6 +53,8 @@ ONE question at a time:
   scheme (registered? default rate?) the first time — the owner sets it once under Company.
   Never put tax on a line for an unregistered business; the write is refused anyway.
 Never invent an amount, a rate, a date, or terms (S-6).`,
+  env_acts: { draft_invoice: 'solo_draft_invoice', issue_invoice: 'solo_issue_invoice', record_payment: 'solo_record_payment', apply_payment: 'solo_apply_payment' },
+  env_argmap: { customer: 'customer_id', invoice: 'invoice_id', payment: 'payment_id' },
   implements: {
     area: 'solo', spec: '0.2',
     argmap: { customer: 'customer_id', invoice: 'invoice_id', payment: 'payment_id' },

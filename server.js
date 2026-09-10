@@ -49,13 +49,14 @@ const seedSandbox = (name) => {
 
 // Anonymous demo sandboxes mount the business modules only — jobhunt is a personal area
 // and belongs to owned spaces (where it mounts in full, data or no data).
-const DEMO_MOUNTS = ['core', 'o2c', 'crm', 'solo', 'purchases'];   // the demo shows everything but the job hunt
+const DEMO_MOUNTS = ['core', 'o2c', 'crm', 'solo', 'purchases', 'bridge'];   // the demo shows everything but the job hunt
 const HUNT_MOUNTS = ['core', 'jobhunt'];   // the free job-hunt offering: one module + the platform
-const SOLO_MOUNTS = ['core', 'solo'];      // the freelancer invoice generator
+const SOLO_MOUNTS = ['core', 'solo', 'bridge'];   // the freelancer invoice generator, and the hand-over to their accountant
 const KIND_MOUNTS = { hunt: HUNT_MOUNTS, solo: SOLO_MOUNTS };
 const mountsFor = (w) => { try {
   const sp = users.spaceOf(w);
-  if (sp) { const chosen = users.mountsOf(w); if (chosen) return [...new Set(['core', ...chosen])]; return KIND_MOUNTS[sp.kind] || null; }
+  // bridge rides along wherever there is a journal to hand over: it exports what o2c and solo derive.
+  if (sp) { const chosen = users.mountsOf(w); if (chosen) return [...new Set(['core', ...chosen, ...(chosen.some(m => m === 'o2c' || m === 'solo') ? ['bridge'] : [])])]; return KIND_MOUNTS[sp.kind] || null; }
   if (!DEMO) return null;
   return w.startsWith('try-h') ? HUNT_MOUNTS : w.startsWith('try-s') ? SOLO_MOUNTS : DEMO_MOUNTS;
 } catch { return null; } };
@@ -262,7 +263,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && (p === '/sitemap.xml' || p === '/robots.txt')) {
       const origin = PUBLIC_FALLBACK();
       if (p === '/robots.txt') {
-        return send(res, 200, `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /doc/\nDisallow: /mcp\nDisallow: /oauth/\nDisallow: /authorize\nDisallow: /token\nDisallow: /register\nDisallow: /admin\n\nSitemap: ${origin}/sitemap.xml\n`, 'text/plain; charset=utf-8');
+        return send(res, 200, `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /doc/\nDisallow: /journal/\nDisallow: /mcp\nDisallow: /oauth/\nDisallow: /authorize\nDisallow: /token\nDisallow: /register\nDisallow: /admin\n\nSitemap: ${origin}/sitemap.xml\n`, 'text/plain; charset=utf-8');
       }
       const areas = fs.readdirSync(path.join(__dirname, 'specs')).filter(a => fs.existsSync(path.join(__dirname, 'specs', a, 'spec.md'))).sort();
       const mtime = (f) => { try { return fs.statSync(f).mtime.toISOString().slice(0, 10); } catch { return new Date().toISOString().slice(0, 10); } };
@@ -352,6 +353,18 @@ const server = http.createServer(async (req, res) => {
         .catch(e => { if (!res.headersSent) send(res, 500, { error: e.message }); });
     });
     return undefined;
+  }
+
+  // A journal hand-over: the exact file that went to the ledger, at a capability link.
+  const jMatch = /^\/journal\/([a-z0-9-]{4,40})\/([a-f0-9]{24})\.csv$/.exec(p);
+  if (jMatch && req.method === 'GET') {
+    const [, jws, jtok] = jMatch;
+    if (!sandboxExists(jws)) return send(res, 404, 'Not found', 'text/plain');
+    try {
+      const row = wsp.use(jws, () => { try { return H.db().prepare('SELECT id, format, content FROM bridge_export WHERE token = ?').get(jtok) || null; } catch { return null; } });
+      if (!row) return send(res, 404, 'Not found', 'text/plain');
+      return send(res, 200, row.content, 'text/csv; charset=utf-8', { 'content-disposition': `attachment; filename="saybooks-${row.format}-${row.id}.csv"` });
+    } catch (e) { console.error('[journal]', e.message); return send(res, 404, 'Not found', 'text/plain'); }
   }
 
   // The document link (S-7): a capability to view ONE issued invoice, nothing else. No

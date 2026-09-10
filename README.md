@@ -11,7 +11,7 @@ of who did what and why.
 and pick the modules your books carry. Connect Claude by adding `https://saybooks.io/mcp` as a
 connector (OAuth, no keys to paste); the same books are in the browser as ordinary pages.
 
-Six modules today, every one spec-first with executable conformance scenarios:
+Seven modules today, every one spec-first with executable conformance scenarios:
 
 | module | for | what it keeps |
 |---|---|---|
@@ -20,6 +20,7 @@ Six modules today, every one spec-first with executable conformance scenarios:
 | **crm** | small businesses | campaigns, accounts, contacts with sources, gaps, pipeline |
 | **jobhunt** | people open to work | postings, applications, interviews, recruiters, a duplicate guard, one next action |
 | **purchases** (Personal finances) | anyone | bank and card statements and receipts the agent reads: rows with provenance, review, subscriptions, spend |
+| **bridge** (Ledger) | anyone with an accountant | the hand-over to QuickBooks, Xero or a plain CSV: map their chart once, export a period, keep what went and through when |
 | **core** | every space | customers, items, the company profile, search, audit, setup |
 
 ## Why this exists
@@ -52,7 +53,7 @@ src/members.js             capability-token identity: named members with roles
 src/oauth.js               OAuth 2.0 front door for MCP clients (DCR, client-id metadata documents)
 src/mcp-http.js            MCP over streamable HTTP; one tool list per space's modules
 src/document.js            the invoice document: one PDF renderer, previewed as its own pages
-src/modules/core, o2c, crm, jobhunt, solo, purchases
+src/modules/core, o2c, crm, jobhunt, solo, purchases, bridge
 specs/<area>/spec.md       the area spec: calibration, entities, invariants, read models
 specs/<area>/scenarios/    executable conformance scenarios (refusals are contract)
 src/conformance.js         replays scenarios through the real registry; keeps evidence
@@ -69,7 +70,7 @@ their permissions. Every write carries a reason; reads are never logged.
 **Money** is integer minor units everywhere, with a currency; sums are per currency and never
 cross. Nothing is invented: a missing amount, date or name is asked for, never guessed.
 
-## The 18-gate contract
+## The 19-gate contract
 
 Every module — present and future — is held to: MCP/UI parity · namespace prefixes ·
 doctrine on every write · guards declared · table ownership (no cross-module writes) ·
@@ -84,7 +85,7 @@ scenario files — the spec speaks in acts, not commands, so any conforming modu
 
 ```bash
 npm install
-npm test          # the 18 gates
+npm test          # the 19 gates
 npm run demo      # a full quote-to-cash run, human and agent interleaved
 npm start         # workbench on http://127.0.0.1:8140
 npm run mcp       # stdio MCP server (OTC_WORKSPACE=you)

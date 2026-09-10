@@ -1,0 +1,142 @@
+{
+  "name": "the month after: continue from the last hand-over, and re-send visibly",
+  "spec": "bridge@0.1",
+  "notes": "B-6 the period continues by itself, B-7 a re-export says so, and the plain CSV needs no chart.",
+  "env": [
+    [
+      "set_company_profile",
+      {
+        "name": "Vega Consulting",
+        "address": "12 Oak Lane, Portland, OR 97205",
+        "country": "US",
+        "currency": "USD",
+        "payment_instructions": "ACH to First Federal 026009593 / 5550123."
+      },
+      "the seller block"
+    ],
+    [
+      "create_customer",
+      {
+        "name": "Meridian Logistics",
+        "email": "ap@meridian.example",
+        "terms": "net30",
+        "address": "400 Harbor Blvd, Suite 210, Tacoma, WA 98402"
+      },
+      "the client"
+    ]
+  ],
+  "steps": [
+    {
+      "act": "draft_invoice",
+      "args": {
+        "customer": "C-0001",
+        "due_in_days": 30,
+        "lines": [
+          {
+            "description": "August consulting",
+            "qty": 12,
+            "rate": 25000
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "issue_invoice",
+      "args": {
+        "invoice": "INV-0001"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "map_account",
+      "args": {
+        "account": "Accounts Receivable",
+        "code": "610",
+        "reason": "chart"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "map_account",
+      "args": {
+        "account": "Service Revenue",
+        "code": "200",
+        "reason": "chart"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "export",
+      "args": {
+        "format": "xero",
+        "to": "2026-09-30",
+        "reason": "September"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "entry_count": 1
+        }
+      }
+    },
+    {
+      "act": "export",
+      "args": {
+        "format": "xero",
+        "to": "2026-09-30",
+        "reason": "sent it twice by mistake"
+      },
+      "expect": {
+        "refused": "already exported through"
+      },
+      "notes": "B-6: nothing new after the last hand-over"
+    },
+    {
+      "act": "export",
+      "args": {
+        "format": "xero",
+        "from": "2026-01-01",
+        "to": "2026-09-30",
+        "reason": "their import failed, sending again"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "entry_count": 1
+        }
+      },
+      "notes": "B-7: allowed, and the result names the earlier hand-over"
+    },
+    {
+      "act": "export",
+      "args": {
+        "format": "csv",
+        "to": "2026-09-30",
+        "reason": "a copy for the workpapers"
+      },
+      "expect": {
+        "ok": true
+      },
+      "notes": "the plain CSV needs no chart at all"
+    },
+    {
+      "act": "exports",
+      "args": {},
+      "expect": {
+        "ok": true,
+        "include": {
+          "count": 3
+        }
+      }
+    }
+  ]
+}

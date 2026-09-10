@@ -1,0 +1,73 @@
+{
+  "area": "bridge",
+  "spec": "0.1",
+  "doc": "spec.md",
+  "acts": {
+    "map_account": {
+      "kind": "write",
+      "required": [
+        "account"
+      ]
+    },
+    "export": {
+      "kind": "write",
+      "required": [
+        "format",
+        "to"
+      ]
+    },
+    "accounts": {
+      "kind": "read",
+      "required": []
+    },
+    "preview": {
+      "kind": "read",
+      "required": [
+        "format",
+        "to"
+      ]
+    },
+    "exports": {
+      "kind": "read",
+      "required": []
+    }
+  },
+  "invariants": [
+    {
+      "id": "B-1",
+      "title": "The journal is a derivation, never a posting: an export reads it and changes nothing."
+    },
+    {
+      "id": "B-2",
+      "title": "Money is integer minor units; every export balances, per entry and in total."
+    },
+    {
+      "id": "B-3",
+      "title": "One currency per hand-over; a period holding more than one is refused until a currency is named."
+    },
+    {
+      "id": "B-4",
+      "title": "An export is refused while an account the period uses lacks the mapping the format needs, naming it."
+    },
+    {
+      "id": "B-5",
+      "title": "Every hand-over records format, period, counts, control totals, a hash and the actor, and keeps the exact file."
+    },
+    {
+      "id": "B-6",
+      "title": "Omitting the period start continues from the last hand-over in that format."
+    },
+    {
+      "id": "B-7",
+      "title": "Re-exporting a period already sent is allowed and always visible, naming the earlier hand-over."
+    },
+    {
+      "id": "B-8",
+      "title": "The chart is theirs: codes and names come from the accountant, never invented."
+    },
+    {
+      "id": "B-9",
+      "title": "Every write is a logged act with an actor; refusals are logged too."
+    }
+  ]
+}

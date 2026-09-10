@@ -145,6 +145,7 @@ const ICONS = {
   crm: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-5-6.3"/></svg>',
   hunt: '<svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18"/></svg>',
   purch: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg>',
+  bridge: '<svg viewBox="0 0 24 24"><path d="M3 9l9-5 9 5"/><path d="M5 9v9M10 9v9M14 9v9M19 9v9M3 20h18"/></svg>',
   company: '<svg viewBox="0 0 24 24"><path d="M4 21V8l8-5 8 5v13"/><path d="M9 21v-6h6v6"/></svg>',
   audit: '<svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h10"/></svg>',
   spec: '<svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M9 9h6M9 13h6M9 17h3"/></svg>',
@@ -154,10 +155,11 @@ const NAV = [
   { key: 'home', label: 'Home', tabs: [['home', 'Home']] },
   { key: 'newspace', label: 'New space', tabs: [['newspace', 'New space']], when: () => REG.user, hidden: true },
   { key: 'solo', label: 'Invoicing', prefix: 'solo_', tabs: [['soloinv', 'Invoices'], ['soloout', 'Outstanding'], ['soloclients', 'Clients']] },
-  { key: 'o2c', label: 'Orders', prefix: 'o2c_', tabs: [['orders', 'Orders'], ['customers', 'Customers'], ['items', 'Items'], ['ar', 'AR aging'], ['cash', 'Unapplied cash'], ['journal', 'Journal']] },
+  { key: 'o2c', label: 'Orders', prefix: 'o2c_', tabs: [['orders', 'Orders'], ['customers', 'Customers'], ['items', 'Items'], ['ar', 'AR aging'], ['cash', 'Unapplied cash']] },
   { key: 'crm', label: 'CRM', prefix: 'crm_', tabs: [['today', 'Today'], ['campaigns', 'Campaigns'], ['accounts', 'Accounts'], ['crmcontacts', 'Contacts'], ['crmpipeline', 'Pipeline'], ['network', 'Network'], ['crmactivity', 'Activity']] },
   { key: 'hunt', label: 'Job hunt', prefix: 'hunt_', tabs: [['huntdue', 'Due'], ['huntpipeline', 'Pipeline'], ['huntcontacts', 'Contacts'], ['huntresumes', 'Resumes']] },
   { key: 'purch', label: 'Personal finances', prefix: 'purch_', tabs: [['purchover', 'Overview'], ['purchtx', 'Transactions'], ['purchsubs', 'Subscriptions'], ['purchrec', 'Receipts'], ['purchsrc', 'Statements']] },
+  { key: 'bridge', label: 'Ledger', prefix: 'bridge_', tabs: [['journal', 'Journal'], ['bridgeexport', 'Export'], ['bridgeaccounts', 'Account map'], ['bridgeexports', 'Hand-overs']] },
   { sep: true },
   { key: 'company', label: 'Company', tabs: [['company', 'Company']], when: () => REG.commands.some(c => c.name.startsWith('o2c_') || c.name.startsWith('solo_')) },
   { key: 'audit', label: 'Audit trail', tabs: [['audit', 'Audit trail']] },
@@ -1353,6 +1355,60 @@ async function renderPage() {
     if (!s.count) { main.append($('<div class="card doc" style="max-width:560px">Nothing imported yet.</div>')); return; }
     const t = $('<table><thead><tr><th>Id</th><th>File</th><th>Account</th><th>Period</th><th class="num">Opening</th><th class="num">Closing</th><th class="num">Rows</th><th>Imported by</th></tr></thead><tbody></tbody></table>');
     rowsInto(t, s.items, x => `<td>${x.id}</td><td>${x.name}</td><td>${x.account || ''}</td><td style="font-size:12px">${x.period_start} – ${x.period_end}</td><td class="num">${x.opening_display}</td><td class="num">${x.closing_display}</td><td class="num">${x.rows_in}${x.rows_skipped ? ` <span style="color:var(--dim)">(+${x.rows_skipped} skipped)</span>` : ''}</td><td style="font-size:12px">${x.imported_by}</td>`, 'purch_source');
+    main.append(t);
+  }
+  if (view === 'bridgeaccounts') {
+    head('Account map', "Our derivation accounts, and what each is called in the ledger of record. The codes and names come from the accountant, never from us.");
+    const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('bridge_account_map').forEach(b => bar.append(b)); main.append(bar);
+    const a = await api('bridge_accounts', {});
+    const ready = Object.entries(a.ready).map(([k, v]) => `${k}: ${v ? '<b style="color:var(--ok,#3E6B2B)">ready</b>' : '<span style="color:var(--warn)">needs mapping</span>'}`).join(' · ');
+    main.append($(`<div class="sub" style="margin:0 0 10px">${a.in_use} account${a.in_use === 1 ? '' : 's'} in use${a.unmapped_in_use.length ? `, ${a.unmapped_in_use.length} unmapped` : ''} · ${ready}</div>`));
+    const t = $('<table><thead><tr><th>Our account</th><th>Used</th><th>Their code</th><th>Their name</th><th>Tax rate</th><th>When it appears</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, a.accounts, r => `<td><b>${r.account}</b></td><td>${r.used ? '<span class="pill">in use</span>' : '<span style="color:var(--dim)">—</span>'}</td>
+      <td>${r.code || (r.used ? '<span style="color:var(--warn)">missing</span>' : '')}</td><td>${r.name || (r.used ? '<span style="color:var(--warn)">missing</span>' : '')}</td><td>${r.tax_rate || ''}</td>
+      <td style="font-size:12px;color:var(--dim)">${r.when}</td>`, 'nolink');
+    main.append(t);
+    main.append($(`<p class="sub" style="margin-top:12px;max-width:760px">Xero matches on the code, QuickBooks on the name. Ask your accountant for both and they are set once. Changing a mapping never rewrites a hand-over that already went out.</p>`));
+  }
+  if (view === 'bridgeexport') {
+    head('Export', 'Hand a period to the ledger of record: QuickBooks, Xero, or a plain CSV. Nothing is posted; you send the file.');
+    const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('bridge_export').forEach(b => bar.append(b)); main.append(bar);
+    const a = await api('bridge_accounts', {});
+    const ex = await api('bridge_exports', {});
+    const box = $(`<div class="card" style="max-width:900px">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <label style="font-size:12px;color:var(--dim)">Shape<br><select id="bfmt" style="font-size:13px;padding:5px 8px">${a.formats.map(f => `<option value="${f.format}">${f.label}</option>`).join('')}</select></label>
+        <label style="font-size:12px;color:var(--dim)">From (blank = since the last hand-over)<br><input id="bfrom" type="date" style="font-size:13px;padding:5px 8px"></label>
+        <label style="font-size:12px;color:var(--dim)">To<br><input id="bto" type="date" value="${new Date().toISOString().slice(0, 10)}" style="font-size:13px;padding:5px 8px"></label>
+        <button class="primary" id="bprev">Preview</button>
+      </div>
+      <div id="bout" style="margin-top:14px"></div></div>`);
+    main.append(box);
+    const show = async () => {
+      const out = box.querySelector('#bout'); out.innerHTML = 'reading the books…';
+      const p = await api('bridge_preview', { format: box.querySelector('#bfmt').value, to: box.querySelector('#bto').value, from: box.querySelector('#bfrom').value || undefined });
+      out.innerHTML = '';
+      out.append($(`<div class="sub" style="margin:0 0 8px">${p.entry_count} entries · ${p.line_count} lines · ${p.debits_display} each side${p.continues_from ? ` · continues from ${p.continues_from}` : ''}${p.currencies.length > 1 ? ` · <span style="color:var(--warn)">${p.currencies.join(' and ')}</span>` : ''}</div>`));
+      out.append($(`<div class="doc" style="margin-bottom:10px">${p.next}</div>`));
+      if (p.sample_rows.length) {
+        const t = $(`<table><thead><tr>${p.columns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody></tbody></table>`);
+        for (const r of p.sample_rows) t.querySelector('tbody').append($(`<tr>${r.map(c => `<td style="font-size:12.5px">${String(c).replace(/</g, '&lt;')}</td>`).join('')}</tr>`));
+        out.append(t);
+        if (p.truncated) out.append($(`<p class="sub" style="margin-top:8px">First ${p.sample_rows.length} of ${p.line_count} lines.</p>`));
+      }
+    };
+    box.querySelector('#bprev').onclick = show; show();
+    if (Object.keys(ex.through).length) main.append($(`<p class="sub" style="margin-top:14px">Already handed over: ${Object.entries(ex.through).map(([f, d]) => `${f} through ${d}`).join(' · ')}.</p>`));
+  }
+  if (view === 'bridgeexports') {
+    head('Hand-overs', 'What went to the ledger, in which shape, through when. Each link re-downloads the exact file that went out.');
+    const ex = await api('bridge_exports', {});
+    if (!ex.count) { main.append($('<div class="card doc" style="max-width:640px">Nothing handed over yet. Map the accounts, then export a period.</div>')); return; }
+    const t = $('<table><thead><tr><th>Id</th><th>Shape</th><th>Period</th><th class="num">Entries</th><th class="num">Lines</th><th class="num">Debits</th><th>Who</th><th>File</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, ex.exports, r => `<td>${r.id}</td><td>${r.format}</td><td style="font-size:12px">${r.period_from || 'the beginning'} → ${r.period_to}</td>
+      <td class="num">${r.entry_count}</td><td class="num">${r.line_count}</td><td class="num">${r.debits_display}</td>
+      <td style="font-size:12px">${r.actor}<br><span style="color:var(--dim)">${(r.created_at || '').slice(0, 10)}</span></td>
+      <td><a href="/journal/${REG.workspace}/${r.token}.csv" onclick="event.stopPropagation()">download</a> <span style="color:var(--dim);font-size:11px">${r.hash}</span></td>`, 'nolink');
     main.append(t);
   }
   if (view === 'company') {

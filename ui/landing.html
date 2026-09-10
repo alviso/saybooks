@@ -266,8 +266,8 @@ h1{font-size:64px}
     <p class="caption">Straight from the demo books. Claude tried to confirm an order for a customer over their credit limit and got <b>refused</b> — in one sentence, with the numbers. The refusal is on the record next to everything else, and a person decided what happened next.</p>
     <div class="evidence">
       <div><b>Open source</b>AGPL-3.0 · run it yourself</div>
-      <div><b>124 commands</b>6 modules, one definition each</div>
-      <div><b>18-gate contract</b>tested on every build</div>
+      <div><b>129 commands</b>7 modules, one definition each</div>
+      <div><b>19-gate contract</b>tested on every build</div>
       <div><b>In daily use</b>the founder's own invoices, job hunt and finances</div>
     </div>
   </section>
@@ -307,7 +307,7 @@ h1{font-size:64px}
     <div class="kicker">What it isn't</div>
     <h2>Honest limits</h2>
     <div class="limits" style="margin-top:22px">
-      <div><b>Not accounting software</b>It keeps your operational records. Your accountant's ledger stays where it is — Saybooks exports a clean journal for QuickBooks or Xero.</div>
+      <div><b>Not accounting software</b>It keeps your operational records. Your accountant's ledger stays where it is: map your chart once, and Saybooks hands over balanced journal lines as a Xero or QuickBooks import file, recording what went and through when.</div>
       <div><b>It never sends or pays</b>It produces invoices for you to send and records payments you received. It never emails anyone or moves money.</div>
       <div><b>One company per space</b>Any currency, each invoice its own; your tax scheme and numbering. Several companies means several spaces — which you can have.</div>
       <div><b>Shipping weekly</b>This week: personal finances from statements and receipts, a module chooser for new spaces, a new workbench. The <a href="https://github.com/alviso/saybooks/commits/main">commit log</a> is the changelog. Your data is yours to export or delete at any moment.</div>
@@ -319,14 +319,14 @@ h1{font-size:64px}
       <div>
         <div class="kicker">For builders</div>
         <h2>Under the hood: one definition, both surfaces</h2>
-        <p>Every business act is declared once. From that one declaration Saybooks derives the tool Claude sees (over MCP), the form a person sees, the rule that can refuse either, and the audit entry — so the two surfaces can't drift; a contract test fails the build if they do. Each area is governed by a written spec with executable scenarios, and modules are held to an 18-gate contributor contract.</p>
+        <p>Every business act is declared once. From that one declaration Saybooks derives the tool Claude sees (over MCP), the form a person sees, the rule that can refuse either, and the audit entry — so the two surfaces can't drift; a contract test fails the build if they do. Each area is governed by a written spec with executable scenarios, and modules are held to a 19-gate contributor contract.</p>
         <div class="ctas">
           <a class="btn solid" href="https://github.com/alviso/saybooks">GitHub · AGPL-3.0</a>
           <a class="btn line" href="/specs">Read the specs</a>
         </div>
       </div>
       <ul>
-        <li>Six modules today: order-to-cash, CRM, job hunt, invoicing, personal finances, and the core — every one spec-first, with replayable conformance scenarios.</li>
+        <li>Seven modules today: order-to-cash, CRM, job hunt, invoicing, personal finances, the ledger bridge, and the core — every one spec-first, with replayable conformance scenarios.</li>
         <li>Open source under AGPL-3.0. Run it, fork it, write a competing module; scenario files speak in acts, so competing implementations run the same tests.</li>
         <li>Refusals are one sentence, written once in the rule, shown identically to the button and the agent.</li>
       </ul>

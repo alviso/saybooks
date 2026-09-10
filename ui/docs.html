@@ -32,7 +32,7 @@ table.plain{border-collapse:collapse;width:100%;font-size:14px;margin:0 0 1em} t
   <div class="kicker">Documentation</div>
   <h1>Using Saybooks</h1>
   <p>Saybooks is a place Claude can keep your records, under rules it cannot break, with everything it does written down where you can check it. This page covers what a person needs: connecting Claude, what keys and roles mean, spaces and their modules, documents, personal finances, getting your data out, and running it yourself. The rules themselves are in the <a href="/specs">specs</a>.</p>
-  <div class="toc"><a href="#connect">Connect Claude</a><a href="#talk">Talking to it</a><a href="#keys">Keys and roles</a><a href="#spaces">Spaces</a><a href="#documents">Documents</a><a href="#refusals">Refusals</a><a href="#data">Export and delete</a><a href="#selfhost">Run it yourself</a><a href="#faq">Questions</a></div>
+  <div class="toc"><a href="#connect">Connect Claude</a><a href="#talk">Talking to it</a><a href="#keys">Keys and roles</a><a href="#spaces">Spaces</a><a href="#documents">Documents</a> <a href="#ledger">Ledger</a><a href="#refusals">Refusals</a><a href="#data">Export and delete</a><a href="#selfhost">Run it yourself</a><a href="#faq">Questions</a></div>
 
   <h2 id="connect">Connect Claude</h2>
   <ol>
@@ -101,6 +101,16 @@ table.plain{border-collapse:collapse;width:100%;font-size:14px;margin:0 0 1em} t
     <li><b>Receipts</b> are what the receipt says plus the file's hash; the file stays with you. Matching to a row is a reasoned act, refused when the total does not fit.</li>
     <li><b>Charts</b> count reviewed purchases only, per currency, with no conversion.</li>
   </ul>
+  <h2 id="ledger">Your accountant's ledger</h2>
+  <p>Saybooks keeps the operational record; QuickBooks, Xero or your accountant's own system stays the ledger of record. The <b>Ledger</b> pages hand one to the other. The journal is derived from what happened, never posted or stored, so it is always current.</p>
+  <ul>
+    <li><b>Map the chart once.</b> Our derivation accounts (Accounts Receivable, Sales Revenue, Service Revenue, Sales Tax Payable, Cash, Customer Deposits and a few more) get your accountant's code and name. Xero matches on the code, QuickBooks on the name, so give both. Nothing is invented: an unmapped account in use blocks the export and says so.</li>
+    <li><b>Hand over a period.</b> Pick the shape (Xero manual journal, QuickBooks journal entries, or plain CSV) and a date. Leave the start blank and it continues from the last hand-over, so month-end is a diff rather than a re-key. You get a file to import; nothing is posted into the ledger by us.</li>
+    <li><b>The record answers "what did they already get?"</b> Every hand-over keeps its period, entry and line counts, control totals, a hash and the exact file, downloadable again. Re-sending a period is allowed and always says it overlaps an earlier one, and whether the numbers changed.</li>
+    <li>One currency per hand-over. A period holding two is refused until you name one.</li>
+  </ul>
+  <p class="note">The column layouts follow each product's published import template. If your import wants a column spelt differently, tell us and it is a one-line change: the formats are a table in <a href="https://github.com/alviso/saybooks/blob/main/src/modules/bridge/views.js">src/modules/bridge/views.js</a>.</p>
+
   <h2 id="refusals">Refusals</h2>
   <p>Every rule in your books applies to Claude exactly as it applies to you. When a command is not allowed, the answer is one sentence with the reason, shown identically on the button's tooltip, in the thrown error and in the agent's reply, and written to the audit log. A real one:</p>
   <div class="refusal">Credit check failed for Contoso Ltd. Order $2,500.00; available $1,000.00 (limit $1,000.00 less open AR $0.00 and committed $0.00). Short by $1,500.00.</div>
