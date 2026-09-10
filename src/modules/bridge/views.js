@@ -119,11 +119,15 @@ function exportsView() {
   for (const r of rows) if (!through[r.format] || through[r.format] < r.period_to) through[r.format] = r.period_to;
   return { count: rows.length, exports: rows, through };
 }
-/** Rows an area knows about but cannot post yet — an export that quietly omits them would be a lie. */
-function pending(from, to) {
-  let n = 0;
-  for (const m of require('../../registry.js').MODULES) if (m.api && typeof m.api.journalPending === 'function') n += m.api.journalPending({ from, to }) || 0;
-  return n;
+/** Rows an area knows about but cannot post — named, with their value: an export that quietly omitted them would be a lie. */
+function omitted(from, to) {
+  const rows = [];
+  for (const m of require('../../registry.js').MODULES) if (m.api && typeof m.api.journalOmitted === 'function') rows.push(...(m.api.journalOmitted({ from, to }) || []));
+  const by = {};
+  for (const r of rows) { const c = r.currency || 'USD'; by[c] = by[c] || { currency: c, count: 0, amount: 0 }; by[c].count++; by[c].amount += r.amount; }
+  for (const c of Object.keys(by)) by[c].amount_display = money(by[c].amount, c);
+  return { count: rows.length, rows, by_currency: by,
+    note: rows.length ? `${rows.length} statement row${rows.length > 1 ? 's are' : ' is'} not in this file (${Object.values(by).map(b => `${b.amount_display} net in ${b.currency}`).join(', ')}). The ledger's bank balance will differ from the statement by that much until they are dealt with.` : null };
 }
 const lastThrough = (format) => (db().prepare('SELECT MAX(period_to) d FROM bridge_export WHERE format = ?').get(format) || {}).d || null;
 
@@ -133,4 +137,4 @@ function build(format, from, to, currency) {
   return { journal, missing, f, rows, content: csvOf(f.columns, rows) };
 }
 
-module.exports = { ACCOUNTS, KINDS, FORMATS, mapping, mappable, hintOf, mapKey, pending, readiness, accountsView, exportsView, lastThrough, build, csvOf, entryNo };
+module.exports = { ACCOUNTS, KINDS, FORMATS, mapping, mappable, hintOf, mapKey, omitted, readiness, accountsView, exportsView, lastThrough, build, csvOf, entryNo };

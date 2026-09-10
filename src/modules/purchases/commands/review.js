@@ -44,8 +44,11 @@ defineCommand({
 categories and vendors. purchase is one-off spending; recurring is spending that repeats
 (rent, streaming, insurance) — name the vendor and the subscription is declared for you, then
 confirmed month by month (P-6). A transfer is money moving between the person's own accounts
-(card payoffs, brokerage, loans); a fee is the bank's charge; income is money in; ignored is
-a row that is not theirs to track. Never alter the amount or the date — a wrong row means a
+(card payoffs, brokerage, savings, an owner draw): give it a category saying WHERE it went, so
+the ledger's bank balance still ties to the statement. Leave that blank only when the money is
+already recorded elsewhere in these books, such as a client payment against an invoice you
+issued; those rows are then listed as not posted rather than counted twice. A fee is the bank's
+charge; income is money in; ignored is a row that is not theirs to track. Never alter the amount or the date — a wrong row means a
 wrong source, re-read and re-imported.`,
   effects: ['status, category, vendor, note recorded', 'subscription declared for a recurring row with a vendor'],
   guardless: true,   // any row may be re-reviewed; the sign checks live in the handler with their reasons

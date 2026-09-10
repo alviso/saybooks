@@ -94,12 +94,14 @@ when). Environment: core's journal derivation, and whatever module produced the 
 - **B-7** Re-exporting a period that has already gone over is allowed and always visible: the
   result names the earlier hand-over and says whether the numbers have changed since.
 - **B-8** The chart is theirs. Codes and names come from the accountant; nothing is invented.
-- **B-10** Spending posts against the account it was paid from: a reviewed purchase debits its
-  category and credits the statement's account; a fee debits Bank Fees; money in debits that
-  account and credits its category. A transfer is the person's own money moving and posts
-  nothing, so a receipt already recorded elsewhere in these books is never counted twice.
-- **B-11** A row nobody has reviewed posts nothing, and that is said out loud: the preview and
-  the hand-over both report how many rows in the period were left out for want of a word.
+- **B-10** Every statement row posts against the account it moved on, or is named as not
+  posted. A reviewed purchase debits its category and credits the statement's account; a fee
+  debits Bank Fees; money in debits that account and credits its category; a transfer debits or
+  credits the other side it names. A transfer that names no other side posts nothing — which is
+  how money already recorded elsewhere in these books stays out without being counted twice.
+- **B-11** Whatever does not post is named, every time. The preview and the hand-over both list
+  the statement rows left out, with their value, because the ledger's bank balance will differ
+  from the statement by exactly that much until they are dealt with.
 - **B-9** Every write is a logged act with an actor; refusals are logged too.
 
 ## 8. Conformance (scenarios)

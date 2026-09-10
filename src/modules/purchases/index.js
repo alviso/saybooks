@@ -48,7 +48,13 @@ statement from those words, show the person, and once they have answered write i
 purch_review_batch (one reason). purch_review_transaction is the single-row form. Statuses:
 purchase (one-off) / recurring (repeats — rent, streaming, insurance; naming the vendor
 declares the subscription) / transfer (their own money moving) / income / fee / ignored. Ask
-when unsure; never guess a category — a row you cannot name stays unreviewed. purch_set_vendor names
+when unsure; never guess a category — a row you cannot name stays unreviewed.
+
+A transfer still needs to say WHERE the money went, as its category: savings, owner draw, the
+card being paid off. That is how the ledger's bank balance keeps tying to the statement. The
+one time to leave it blank is money already recorded elsewhere in these books — a client
+payment against an invoice you already issued — which must not be counted twice; those rows
+are then listed, every time, as not posted. purch_set_vendor names
 the shop once and its statement spelling becomes an alias for every later row.
 
 Receipts: purch_add_receipt with what the receipt says (vendor, date, total, currency) and the
@@ -71,7 +77,7 @@ Money is integer minor units; sums are per currency and never cross.`,
       subscriptions: 'purch_subscriptions', receipts: 'purch_receipts', spend: 'purch_spend',
     },
   },
-  api: { views: V, journalLines: V.journalLines, journalPending: V.journalPending, mappableKeys: V.mappableKeys },
+  api: { views: V, journalLines: V.journalLines, journalOmitted: V.journalOmitted, mappableKeys: V.mappableKeys },
 });
 
 R.defineSubject('purch_transaction', { load: (id) => V.transactionView(id) });

@@ -96,7 +96,8 @@
           },
           {
             "transaction_id": "T-0004",
-            "status": "transfer"
+            "status": "transfer",
+            "category": "client payments"
           }
         ],
         "reason": "confirmed by the person"
@@ -108,7 +109,7 @@
           "still_unreviewed": 1
         }
       },
-      "notes": "the Adobe row is left unreviewed on purpose"
+      "notes": "the Adobe row is left unreviewed on purpose; the deposit is a transfer that says where it went"
     },
     {
       "act": "preview",
@@ -119,11 +120,10 @@
       "expect": {
         "ok": true,
         "include": {
-          "entry_count": 3,
-          "unreviewed_in_period": 1
+          "entry_count": 4
         }
       },
-      "notes": "B-10 the transfer posts nothing; B-11 the unreviewed row is reported"
+      "notes": "B-10 the transfer names no other side so it posts nothing and is listed; B-11 the unreviewed row is listed too"
     },
     {
       "act": "export",
@@ -158,6 +158,18 @@
         "kind": "category",
         "account": "supplies",
         "name": "Office Supplies",
+        "reason": "their chart"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "map_account",
+      "args": {
+        "kind": "category",
+        "account": "client payments",
+        "name": "Undeposited Funds",
         "reason": "their chart"
       },
       "expect": {
@@ -216,8 +228,8 @@
         "ok": true,
         "include": {
           "ready": true,
-          "entry_count": 3,
-          "line_count": 6
+          "entry_count": 4,
+          "line_count": 8
         }
       }
     },
@@ -231,11 +243,10 @@
       "expect": {
         "ok": true,
         "include": {
-          "entry_count": 3,
-          "unreviewed_left_out": 1
+          "entry_count": 4
         }
       },
-      "notes": "B-11: the hand-over says what it left out"
+      "notes": "B-11: the hand-over names what it left out, with its value"
     },
     {
       "act": "exports",

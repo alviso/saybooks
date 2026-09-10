@@ -176,7 +176,7 @@ function journalLines({ from, to } = {}) {
   try {
     rows = db().prepare(`SELECT t.*, v.name AS vendor, s.account AS source_account, s.kind AS source_kind
       FROM purch_transaction t LEFT JOIN purch_vendor v ON v.id = t.vendor_id JOIN purch_source s ON s.id = t.source_id
-      WHERE t.status IN ('purchase','recurring','fee','income') ORDER BY t.date, t.id`).all();
+      WHERE t.status IN ('purchase','recurring','fee','income','transfer') ORDER BY t.date, t.id`).all();
   } catch { return []; }
   const out = [];
   for (const t of rows) {
@@ -188,6 +188,17 @@ function journalLines({ from, to } = {}) {
     if (t.status === 'fee') {
       out.push({ date: t.date, memo: `Fee · ${t.description}`, customer: null, currency: t.currency, source: t.id,
         lines: [{ account: 'Bank Fees', debit: amount }, { ...paidFrom, credit: amount }] });
+    } else if (t.status === 'transfer') {
+      // A transfer is real money leaving or entering this account: it must post, or the ledger's
+      // bank balance stops tying to the statement. The category names the other side (savings,
+      // owner draw, the card being paid off). With no other side named it posts nothing and is
+      // reported as left out — which is also how money already recorded elsewhere in these books
+      // (a customer payment against an invoice) stays out without being counted twice.
+      const cat = (t.category || '').trim();
+      if (!cat) continue;
+      const other = { account: cat, map: { kind: 'category', key: cat } };
+      out.push({ date: t.date, memo: `Transfer · ${t.description}`, customer: null, currency: t.currency, source: t.id,
+        lines: t.amount < 0 ? [{ ...other, debit: amount }, { ...paidFrom, credit: amount }] : [{ ...paidFrom, debit: amount }, { ...other, credit: amount }] });
     } else if (t.status === 'income') {
       const cat = (t.category || '').trim();
       out.push({ date: t.date, memo: `Received · ${who}`, customer: t.vendor || null, currency: t.currency, source: t.id,
@@ -201,14 +212,29 @@ function journalLines({ from, to } = {}) {
   return out;
 }
 
-/** Rows in a period that post nothing because nobody has said what they are yet. */
-function journalPending({ from, to } = {}) {
+/**
+ * Rows an imported statement carries that post nothing, and why. An export that quietly left
+ * these out would break the one control an accountant has: the ledger's bank balance tying to
+ * the statement. So they are named, with their value, every time.
+ */
+function journalOmitted({ from, to } = {}) {
   try {
-    const w = []; const args = [];
-    if (from) { w.push('date >= ?'); args.push(from); }
-    if (to) { w.push('date <= ?'); args.push(to); }
-    return db().prepare(`SELECT COUNT(*) n FROM purch_transaction WHERE status = 'unreviewed'${w.length ? ' AND ' + w.join(' AND ') : ''}`).get(...args).n;
-  } catch { return 0; }
+    const w = ["(t.status = 'unreviewed' OR (t.status = 'transfer' AND COALESCE(TRIM(t.category), '') = '') OR t.status = 'ignored')"]; const args = [];
+    if (from) { w.push('t.date >= ?'); args.push(from); }
+    if (to) { w.push('t.date <= ?'); args.push(to); }
+    return db().prepare(`SELECT t.id, t.date, t.description, t.amount, t.currency, t.status, s.account AS source_account
+      FROM purch_transaction t JOIN purch_source s ON s.id = t.source_id WHERE ${w.join(' AND ')} ORDER BY t.date, t.id`).all(...args)
+      .map(r => ({ ...r, amount_display: money(r.amount, r.currency),
+        why: r.status === 'unreviewed' ? 'nobody has said what it is yet'
+          : r.status === 'ignored' ? 'reviewed as not theirs to track'
+          : 'a transfer with no other side named — say where the money went and it posts' }));
+  } catch (e) {
+    // No purchases tables in this space is the only expected miss; anything else is a bug and
+    // must not be hidden — an export that silently reports "nothing left out" would be a lie.
+    if (/no such table/i.test(e.message)) return [];
+    console.error('[purchases] journalOmitted:', e.message);
+    throw e;
+  }
 }
 
 /** The words the ledger has to have a chart account for: every category and statement account in use. */
@@ -218,4 +244,4 @@ function mappableKeys() {
   return { categories: [...new Set(cats.map(c => c.k))].sort(), sources: [...new Set(srcs.map(s => (s.k || `${s.kind} (unnamed)`).trim()))].sort() };
 }
 
-module.exports = { journalLines, journalPending, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };
+module.exports = { journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };

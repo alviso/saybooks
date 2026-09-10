@@ -1396,7 +1396,12 @@ async function renderPage() {
       const p = await api('bridge_preview', { format: box.querySelector('#bfmt').value, to: box.querySelector('#bto').value, from: box.querySelector('#bfrom').value || undefined });
       out.innerHTML = '';
       out.append($(`<div class="sub" style="margin:0 0 8px">${p.entry_count} entries · ${p.line_count} lines · ${p.debits_display} each side${p.continues_from ? ` · continues from ${p.continues_from}` : ''}${p.currencies.length > 1 ? ` · <span style="color:var(--warn)">${p.currencies.join(' and ')}</span>` : ''}</div>`));
-      out.append($(`<div class="doc" style="margin-bottom:10px${p.unreviewed_in_period ? ';color:var(--warn)' : ''}">${p.next}</div>`));
+      out.append($(`<div class="doc" style="margin-bottom:10px${p.left_out && p.left_out.count ? ';color:var(--warn)' : ''}">${p.next}</div>`));
+      if (p.left_out && p.left_out.count) {
+        const lt = $('<table style="margin-bottom:12px"><thead><tr><th>Not in this file</th><th>Date</th><th>Description</th><th class="num">Amount</th><th>Why</th></tr></thead><tbody></tbody></table>');
+        for (const r of p.left_out.rows) lt.querySelector('tbody').append($(`<tr><td>${r.id}</td><td style="font-size:12px">${r.date}</td><td>${r.description}</td><td class="num">${r.amount_display}</td><td style="font-size:12px;color:var(--dim)">${r.why}</td></tr>`));
+        out.append(lt);
+      }
       if (p.sample_rows.length) {
         const t = $(`<table><thead><tr>${p.columns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody></tbody></table>`);
         for (const r of p.sample_rows) t.querySelector('tbody').append($(`<tr>${r.map(c => `<td style="font-size:12.5px">${String(c).replace(/</g, '&lt;')}</td>`).join('')}</tr>`));
