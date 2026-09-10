@@ -50,7 +50,10 @@ ledger received has an answer.`,
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .run(id, a.format, from || null, a.to, journal.entry_count, rows.length, journal.debits, journal.credits, content, hash, token, actor || 'unknown', a.reason || null, at);
     const path = `/journal/${wsp.currentName()}/${token}.csv`;
-    return { id, format: a.format, label: fmt.label, currency: journal.currencies[0] || null, period_from: from || null, period_to: a.to,
+    const url = CFG.absolute(path);
+    return { _attachments: [{ kind: 'file', mime: 'text/csv', name: `saybooks-${a.format}-${id}.csv`, uri: url || `saybooks:/${path}`,
+      description: `${fmt.label} · ${journal.entry_count} entries, ${rows.length} lines, ${journal.debits_display} each side. The file exactly as handed over.` }],
+      id, format: a.format, label: fmt.label, currency: journal.currencies[0] || null, period_from: from || null, period_to: a.to,
       entry_count: journal.entry_count, line_count: rows.length, debits_display: journal.debits_display, credits_display: journal.credits_display, hash,
       csv_path: path, csv_url: CFG.absolute(path), continues_from: last || null,
       re_export_of: prior ? { export: prior.id, lines_then: prior.line_count, lines_now: rows.length, changed: prior.line_count !== rows.length || prior.debits !== journal.debits } : null,
