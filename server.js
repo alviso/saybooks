@@ -263,7 +263,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && (p === '/sitemap.xml' || p === '/robots.txt')) {
       const origin = PUBLIC_FALLBACK();
       if (p === '/robots.txt') {
-        return send(res, 200, `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /doc/\nDisallow: /journal/\nDisallow: /mcp\nDisallow: /oauth/\nDisallow: /authorize\nDisallow: /token\nDisallow: /register\nDisallow: /admin\n\nSitemap: ${origin}/sitemap.xml\n`, 'text/plain; charset=utf-8');
+        return send(res, 200, `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /doc/\nDisallow: /journal/\nDisallow: /session/\nDisallow: /mcp\nDisallow: /oauth/\nDisallow: /authorize\nDisallow: /token\nDisallow: /register\nDisallow: /admin\n\nSitemap: ${origin}/sitemap.xml\n`, 'text/plain; charset=utf-8');
       }
       const areas = fs.readdirSync(path.join(__dirname, 'specs')).filter(a => fs.existsSync(path.join(__dirname, 'specs', a, 'spec.md'))).sort();
       const mtime = (f) => { try { return fs.statSync(f).mtime.toISOString().slice(0, 10); } catch { return new Date().toISOString().slice(0, 10); } };
@@ -716,6 +716,8 @@ const server = http.createServer(async (req, res) => {
                : (p === '/admin' || p === '/admin/') ? 'admin.html'
                : (p === '/privacy' || p === '/privacy/') ? 'privacy.html'
                : (p === '/docs' || p === '/docs/') ? 'docs.html'
+               // Unlinked pages: a real session published for one reader. Never indexed, never in the sitemap.
+               : /^\/session\/harborline\/?$/.test(p) ? 'session-harborline.html'
                : path.basename(p);
     const full = path.join(UI, file);
     if (full.startsWith(UI) && fs.existsSync(full) && fs.statSync(full).isFile()) {
@@ -725,7 +727,7 @@ const server = http.createServer(async (req, res) => {
       // The social card may be cached hard; everything else stays no-store.
       const headers = /\.(png|mp4)$/.test(full) ? { 'cache-control': 'public, max-age=86400' } : {};
       // The workbench is a person's books, never a search result: crawlable (so the directive is seen), indexed never.
-      if (file === 'index.html' || file === 'admin.html') headers['x-robots-tag'] = 'noindex, nofollow';
+      if (file === 'index.html' || file === 'admin.html' || file.startsWith('session-')) headers['x-robots-tag'] = 'noindex, nofollow';
       return send(res, 200, fs.readFileSync(full), MIME[path.extname(full)] || 'application/octet-stream', headers);
     }
   }
