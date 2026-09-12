@@ -250,6 +250,9 @@ const server = http.createServer(async (req, res) => {
   const host = (req.headers.host || '').split(':')[0];
   if (!DEMO && !['127.0.0.1', 'localhost', '[::1]', '::1'].includes(host)) return send(res, 403, { error: 'localhost only' });
   if (DEMO && rateLimited(ipOf(req))) return send(res, 429, { error: 'slow down — this is a demo, and it is being fair to everyone else' });
+  // HEAD is GET without the body. Crawlers, link checkers and uptime probes send it, and a 404
+  // on a HEAD of the front page is a lie about the front page.
+  if (req.method === 'HEAD') { req.method = 'GET'; const end = res.end.bind(res); res.end = () => end(); }
   const url = new URL(req.url, `http://${req.headers.host}`);
   const p = url.pathname;
 
@@ -260,22 +263,40 @@ const server = http.createServer(async (req, res) => {
     // workspace is touched and nothing is minted; a stranger gets { user: null }.
     // Search engines: the public pages, the docs, and every spec page. Nothing private: the
     // workbench, the API, document links, the MCP endpoint and the OAuth door are excluded.
-    if (req.method === 'GET' && (p === '/sitemap.xml' || p === '/robots.txt')) {
+    if (req.method === 'GET' && (p === '/sitemap.xml' || p === '/robots.txt' || p === '/llms.txt')) {
       const origin = PUBLIC_FALLBACK();
       if (p === '/robots.txt') {
-        return send(res, 200, `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /doc/\nDisallow: /journal/\nDisallow: /session/\nDisallow: /mcp\nDisallow: /oauth/\nDisallow: /authorize\nDisallow: /token\nDisallow: /register\nDisallow: /admin\n\nSitemap: ${origin}/sitemap.xml\n`, 'text/plain; charset=utf-8');
+        // One rule set, spelled out per crawler. The answer-engine bots are named explicitly
+        // rather than left to the wildcard: several of them read only their own stanza, and a
+        // product whose whole pitch is "the rules are public" should be readable by the things
+        // people ask about products.
+        const rules = 'Allow: /\nDisallow: /api/\nDisallow: /doc/\nDisallow: /journal/\nDisallow: /session/\nDisallow: /mcp\nDisallow: /oauth/\nDisallow: /authorize\nDisallow: /token\nDisallow: /register\nDisallow: /admin\n';
+        const agents = ['*', 'Googlebot', 'Google-Extended', 'Bingbot', 'GPTBot', 'OAI-SearchBot', 'ChatGPT-User',
+                        'ClaudeBot', 'Claude-User', 'Claude-SearchBot', 'PerplexityBot', 'Perplexity-User',
+                        'Applebot', 'Applebot-Extended', 'CCBot', 'meta-externalagent', 'Bytespider'];
+        return send(res, 200, agents.map(a => `User-agent: ${a}\n${rules}`).join('\n') +
+          `\nSitemap: ${origin}/sitemap.xml\n`, 'text/plain; charset=utf-8');
       }
       const areas = fs.readdirSync(path.join(__dirname, 'specs')).filter(a => fs.existsSync(path.join(__dirname, 'specs', a, 'spec.md'))).sort();
       const mtime = (f) => { try { return fs.statSync(f).mtime.toISOString().slice(0, 10); } catch { return new Date().toISOString().slice(0, 10); } };
       const pages = [
-        ['/', mtime(path.join(UI, 'landing.html')), 'weekly', '1.0'],
-        ['/solo', mtime(path.join(UI, 'solo.html')), 'weekly', '0.9'],
-        ['/hunt', mtime(path.join(UI, 'hunt.html')), 'weekly', '0.9'],
-        ['/docs', mtime(path.join(UI, 'docs.html')), 'weekly', '0.8'],
-        ['/specs', mtime(path.join(__dirname, 'specs')), 'weekly', '0.8'],
-        ...areas.map(a => [`/specs/${a}`, mtime(path.join(__dirname, 'specs', a, 'spec.md')), 'weekly', '0.7']),
-        ['/privacy', mtime(path.join(UI, 'privacy.html')), 'monthly', '0.3'],
+        ['/', mtime(path.join(UI, 'landing.html')), 'weekly', '1.0', 'What Saybooks is, what it refuses to do, and the four kinds of books it keeps.'],
+        ['/solo', mtime(path.join(UI, 'solo.html')), 'weekly', '0.9', 'Free invoicing for freelancers who work with Claude: describe the work, get a numbered invoice, a link and a PDF.'],
+        ['/hunt', mtime(path.join(UI, 'hunt.html')), 'weekly', '0.9', 'Free job-hunt tracker for people running their search with Claude: postings, applications, interviews, a duplicate guard.'],
+        ['/docs', mtime(path.join(UI, 'docs.html')), 'weekly', '0.8', 'Connecting Claude, keys and roles, spaces and modules, documents, the ledger bridge, export and delete, self-hosting.'],
+        ['/about', mtime(path.join(UI, 'about.html')), 'monthly', '0.5', 'Who builds Saybooks and why: Peter Varga, thirty years of enterprise software, now in Portland.'],
+        ['/specs', mtime(path.join(__dirname, 'specs')), 'weekly', '0.8', 'Every rule the system enforces, written down and executed: acts, invariants, scenarios, last conformance run.'],
+        ...areas.map(a => [`/specs/${a}`, mtime(path.join(__dirname, 'specs', a, 'spec.md')), 'weekly', '0.7', `The ${a} specification: its acts, invariants and executable scenarios.`]),
+        ['/privacy', mtime(path.join(UI, 'privacy.html')), 'monthly', '0.3', 'What is stored, why, for how long, and how to take it with you or delete it.'],
       ];
+      // llms.txt: the same map, in the plainest form a reader can take. No marketing sentence
+      // that is not also true on the page it points at.
+      if (p === '/llms.txt') {
+        const txt = `# Saybooks\n\n> Open-source books an AI agent can keep: invoicing, order to cash and CRM, a job hunt, personal finances from bank statements. One command registry derives the agent's tools, the web workbench, the rules it cannot break and the audit trail, so a click and a sentence are the same event. Connected to Claude over MCP. Free to use, AGPL, self-hostable.\n\n## Pages\n\n` +
+          pages.map(([u, d, , , blurb]) => `- [${origin}${u}](${origin}${u}): ${blurb} Updated ${d}.`).join('\n') +
+          `\n\n## What it will not do\n\n- It never emails a customer, never charges a card, never ships anything. It records what happened.\n- It never invents a purchase order, a check number, a tracking number or a date. Empty beats guessed.\n- An issued invoice is immutable; corrections are credit notes.\n- A refusal names the business reason, and is written to the same log as the action that succeeded.\n\n## Source\n\n- [https://github.com/alviso/saybooks](https://github.com/alviso/saybooks): the whole thing, AGPL-3.0.\n- Built by Peter Varga, [https://portlandaiworks.com/](https://portlandaiworks.com/).\n`;
+        return send(res, 200, txt, 'text/plain; charset=utf-8');
+      }
       const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
         pages.map(([u, d, f, pr]) => `  <url><loc>${origin}${u}</loc><lastmod>${d}</lastmod><changefreq>${f}</changefreq><priority>${pr}</priority></url>`).join('\n') + `\n</urlset>\n`;
       return send(res, 200, xml, 'application/xml; charset=utf-8');
@@ -716,6 +737,7 @@ const server = http.createServer(async (req, res) => {
                : (p === '/admin' || p === '/admin/') ? 'admin.html'
                : (p === '/privacy' || p === '/privacy/') ? 'privacy.html'
                : (p === '/docs' || p === '/docs/') ? 'docs.html'
+               : (p === '/about' || p === '/about/') ? 'about.html'
                // Unlinked pages: a real session published for one reader. Never indexed, never in the sitemap.
                : /^\/session\/harborline\/?$/.test(p) ? 'session-harborline.html'
                : path.basename(p);
@@ -726,6 +748,10 @@ const server = http.createServer(async (req, res) => {
                      '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8', '.gif': 'image/gif', '.mp4': 'video/mp4' };
       // The social card may be cached hard; everything else stays no-store.
       const headers = /\.(png|mp4)$/.test(full) ? { 'cache-control': 'public, max-age=86400' } : {};
+      // Public pages are the same bytes for everyone: let a crawler and a browser keep them a
+      // few minutes. The workbench is somebody's books and stays no-store.
+      const PUBLIC_PAGES = ['landing.html', 'solo.html', 'hunt.html', 'docs.html', 'about.html', 'privacy.html'];
+      if (PUBLIC_PAGES.includes(file)) headers['cache-control'] = 'public, max-age=300, stale-while-revalidate=86400';
       // The workbench is a person's books, never a search result: crawlable (so the directive is seen), indexed never.
       if (file === 'index.html' || file === 'admin.html' || file.startsWith('session-')) headers['x-robots-tag'] = 'noindex, nofollow';
       return send(res, 200, fs.readFileSync(full), MIME[path.extname(full)] || 'application/octet-stream', headers);

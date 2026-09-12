@@ -75,9 +75,16 @@ function areaInfo(area) {
   return { area, title, spec, acts, scenarios, report };
 }
 
-const SHELL = (title, body, sub) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+// A spec page is a document with an author and a date, and search engines that answer questions
+// need to be told which URL it lives at. `at` is the path, `modified` the day the spec last moved.
+const mtime = (f) => { try { return fs.statSync(f).mtime.toISOString().slice(0, 10); } catch { return null; } };
+const newest = () => areas().map(a => mtime(path.join(SPEC_DIR, a, 'spec.md'))).filter(Boolean).sort().pop() || null;
+
+const SHELL = (title, body, sub, at = '/specs', modified = null) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)} — Saybooks specs</title><link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<meta name="description" content="${esc(sub || 'The Saybooks specifications: acts, invariants, executable scenarios, and the last conformance run.')}"><meta property="og:title" content="${esc(title)} — Saybooks specs"><meta property="og:image" content="https://saybooks.io/card.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<meta name="description" content="${esc(sub || 'The Saybooks specifications: acts, invariants, executable scenarios, and the last conformance run.')}"><link rel="canonical" href="https://saybooks.io${at}"><meta property="og:title" content="${esc(title)} — Saybooks specs"><meta property="og:description" content="${esc(sub || 'The Saybooks specifications: acts, invariants, executable scenarios, and the last conformance run.')}"><meta property="og:type" content="article"><meta property="og:url" content="https://saybooks.io${at}"><meta property="og:image" content="https://saybooks.io/card.png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://saybooks.io/card.png">
+<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'TechArticle', headline: `${title} — Saybooks specs`, description: sub || 'The Saybooks specifications: acts, invariants, executable scenarios, and the last conformance run.', url: `https://saybooks.io${at}`, inLanguage: 'en', ...(modified ? { dateModified: modified } : {}), author: { '@type': 'Person', name: 'Peter Varga', url: 'https://portlandaiworks.com/' }, publisher: { '@type': 'Organization', name: 'Saybooks', url: 'https://saybooks.io/' }, isPartOf: { '@type': 'WebSite', name: 'Saybooks', url: 'https://saybooks.io/' } }).replace(/</g, '\\u003c')}</script>
+<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Saybooks', item: 'https://saybooks.io/' }, { '@type': 'ListItem', position: 2, name: 'Specs', item: 'https://saybooks.io/specs' }, ...(at === '/specs' ? [] : [{ '@type': 'ListItem', position: 3, name: title, item: `https://saybooks.io${at}` }])] }).replace(/</g, '\\u003c')}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"><style>
 :root{--bg:hsl(210 20% 98%);--ink:hsl(215 40% 16%);--navy:hsl(215 60% 22%);--mid:hsl(215 20% 36%);--muted:hsl(215 15% 46%);--line:hsl(215 25% 88%);--tint:hsl(210 20% 94%);--ok:hsl(152 60% 34%);--refuse:hsl(0 72% 42%);--agent:hsl(248 52% 52%)}
 *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif} body::before{content:"";display:block;height:4px;background:var(--navy)}
@@ -95,7 +102,7 @@ footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-si
 </style></head><body><div class="wrap">
 <nav class="top"><a class="mark" href="/"><svg class="wv" width="17" height="20" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".3"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span><svg class="wv" width="17" height="20" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19" opacity=".3"/></svg></a><a href="/specs">Specs</a><a href="/docs">Docs</a><a href="https://github.com/alviso/saybooks">Source</a><a href="/app?demo=1">Demo</a></nav>
 ${body}
-<footer>These pages are generated from the files in <code>specs/</code> in the repository; scenarios are executed by <code>src/conformance.js</code> on every build. <a href="https://github.com/alviso/saybooks">github.com/alviso/saybooks</a> · AGPL-3.0</footer>
+<footer>These pages are generated from the files in <code>specs/</code> in the repository; scenarios are executed by <code>src/conformance.js</code> on every build. Written and maintained by <a href="/about">Peter Varga</a>, who also runs <a href="https://portlandaiworks.com/">Portland AI Works</a>. <a href="https://github.com/alviso/saybooks">github.com/alviso/saybooks</a> · AGPL-3.0</footer>
 </div></body></html>`;
 
 function renderIndex() {
@@ -107,7 +114,7 @@ function renderIndex() {
   }).join('');
   return SHELL('Specs', `<div class="kicker">Specifications</div><h1>The rules, written down and executed</h1>
 <p>Each area of Saybooks is governed by a written spec: the acts it must support, the invariants it must keep, and scenario files that replay real sequences of acts — including the refusals — through the actual command registry. A module that claims an area must map every act and pass every scenario; the contract test fails the build otherwise. The specs speak in acts, not commands, so a competing implementation can be certified by the same files.</p>
-<div class="cards">${cards}</div>`);
+<div class="cards">${cards}</div>`, 'Every rule Saybooks enforces, written down and executed: the acts each area must support, the invariants it must keep, and scenario files replayed through the real command registry on every build.', '/specs', newest());
 }
 
 function renderArea(area) {
@@ -143,7 +150,7 @@ function renderArea(area) {
       }).join('') + `</tbody></table></div>`;
     }
   }
-  return SHELL(info.title, body, `${info.title}: acts, invariants, scenarios and the last conformance run.`);
+  return SHELL(info.title, body, `${info.title}: acts, invariants, scenarios and the last conformance run.`, `/specs/${area}`, mtime(path.join(SPEC_DIR, area, 'spec.md')));
 }
 
 const render = (area) => (area ? renderArea(area) : renderIndex());
