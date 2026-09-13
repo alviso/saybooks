@@ -156,7 +156,8 @@ const NAV = [
   { key: 'newspace', label: 'New space', tabs: [['newspace', 'New space']], when: () => REG.user, hidden: true },
   { key: 'solo', label: 'Invoicing', prefix: 'solo_', tabs: [['soloinv', 'Invoices'], ['soloout', 'Outstanding'], ['soloclients', 'Clients']] },
   { key: 'o2c', label: 'Orders', prefix: 'o2c_', tabs: [['orders', 'Orders'], ['customers', 'Customers'], ['items', 'Items'], ['ar', 'AR aging'], ['cash', 'Unapplied cash']] },
-  { key: 'crm', label: 'CRM', prefix: 'crm_', tabs: [['today', 'Today'], ['campaigns', 'Campaigns'], ['accounts', 'Accounts'], ['crmcontacts', 'Contacts'], ['crmpipeline', 'Pipeline'], ['network', 'Network'], ['crmactivity', 'Activity']] },
+  { key: 'crm', label: 'CRM', prefix: 'crm_', tabs: [['today', 'Today'], ['campaigns', 'Campaigns'], ['accounts', 'Accounts'], ['crmcontacts', 'Contacts'], ['crmdrafts', 'Drafts'], ['crmpipeline', 'Pipeline'], ['network', 'Network'], ['crmactivity', 'Activity']] },
+  { key: 'pros', label: 'Prospects', prefix: 'pros_', tabs: [['prospulls', 'Pulls'], ['prosrows', 'Staged rows']] },
   { key: 'hunt', label: 'Job hunt', prefix: 'hunt_', tabs: [['huntdue', 'Due'], ['huntpipeline', 'Pipeline'], ['huntcontacts', 'Contacts'], ['huntresumes', 'Resumes']] },
   { key: 'purch', label: 'Personal finances', prefix: 'purch_', tabs: [['purchover', 'Overview'], ['purchtx', 'Transactions'], ['purchsubs', 'Subscriptions'], ['purchrec', 'Receipts'], ['purchsrc', 'Statements']] },
   { key: 'bridge', label: 'Ledger', prefix: 'bridge_', tabs: [['journal', 'Journal'], ['bridgeexport', 'Export'], ['bridgeaccounts', 'Account map'], ['bridgeexports', 'Hand-overs']] },
@@ -170,6 +171,7 @@ const MODULES = [
   { name: 'solo', nav: 'solo', label: 'Invoicing', blurb: 'Invoices, clients, payments, PDFs. Say the work, get a numbered invoice.' },
   { name: 'o2c', nav: 'o2c', label: 'Order to cash', blurb: 'Quotes, orders, shipments, invoices, receivables, with a credit limit that holds.' },
   { name: 'crm', nav: 'crm', label: 'CRM', blurb: 'Accounts, contacts, campaigns, the pipeline that feeds the orders.' },
+  { name: 'prospect', nav: 'pros', label: 'Prospects', blurb: 'Bought lists your agent judges and you promote. Nothing counts until you say so.' },
   { name: 'jobhunt', nav: 'hunt', label: 'Job hunt', blurb: 'Postings, applications, interviews, recruiters, what is due.' },
   { name: 'purchases', nav: 'purch', label: 'Personal finances', blurb: 'Statements and receipts your agent reads; purchases, subscriptions, spend.' },
 ];
@@ -829,6 +831,7 @@ function emptyCard(module) {
     o2c: { title: 'No orders yet', say: '"New customer Northwind Traders, net 30, credit limit $5,000. Then an order: 20 Widget B at $45."', note: 'Quotes, orders, shipments, invoices and payments follow one another, and the credit limit is a rule Claude cannot talk past. Or press New order and fill the form yourself.' },
     crm: { title: 'No accounts yet', say: '"Start a campaign for Q4: mid-size logistics firms in the Pacific Northwest. Add Harborline Distribution: why them, the trigger, and a source."', note: 'A campaign is a goal; every account argues why it belongs; every contact has a source. Gaps stay visible until someone closes them.' },
     purchases: { title: 'Nothing imported yet', say: '"Here is my August card statement — import it and tell me what I am subscribed to."', note: 'Claude reads the file and hands over the rows with the printed balances; the statement lands here whole or not at all. Review is your words; the charts follow.' },
+    prospect: { title: 'Nothing staged yet', say: '"Here is the list I bought for the Phoenix metro. Stage it under the criteria I gave them, then read every row and tell me which ones are worth my time."', note: 'Claude hands over the rows and judges them against the brief the pull was made under, with a reason on each one you can argue with. Nothing becomes an account until you promote it, and Claude cannot do that part.' },
   };
   const t = T[module]; if (!t) return null;
   return $(`<div class="card" style="max-width:720px"><h2 style="margin-bottom:6px">${t.title}</h2>
@@ -1035,6 +1038,84 @@ async function renderPage() {
       }
       main.append(t);
     }
+  }
+  if (view === 'crmdrafts') {
+    head('Drafts', 'Written here, sent by you. This system has no way to send anything — it records that you did.');
+    const st = window.__draftStatus || 'draft';
+    const bar = $('<div class="acts"></div>');
+    for (const [k, label] of [['draft', 'Waiting'], ['sent', 'Sent'], ['discarded', 'Discarded']]) {
+      const b = $(`<button class="${k === st ? 'on' : ''}">${label}</button>`);
+      b.onclick = () => { window.__draftStatus = k; render(); };
+      bar.append(b);
+    }
+    main.append(bar);
+    const d = await api('crm_drafts', { status: st, limit: 100 });
+    if (!d.drafts.length) {
+      main.append($(`<div class="card doc">${st === 'draft'
+        ? 'Nothing waiting. Ask your agent to draft a message to a contact, then read it here before you send it.'
+        : st === 'sent' ? 'Nothing recorded as sent yet. When you send one, tell your agent and it goes on the trail.'
+        : 'Nothing rejected yet.'}</div>`));
+      return;
+    }
+    for (const x of d.drafts) {
+      const card = $(`<div class="card" style="margin-bottom:12px">
+        <div class="sub">${x.account} · ${x.contact}${x.contact_title ? `, ${x.contact_title}` : ''} · ${x.channel}${x.sent_at ? ` · sent ${x.sent_at}` : ''}${x.account_parked ? ' · <span style="color:var(--warn)">account parked</span>' : ''}</div>
+        ${x.subject ? `<div style="font-weight:600;margin:6px 0 2px">${esc(x.subject)}</div>` : ''}
+        <div style="white-space:pre-wrap;margin:6px 0 10px">${esc(x.body)}</div>
+        <div class="doc" style="border-left:3px solid var(--agent);padding-left:10px;font-size:13px">
+          <b>Why this one</b> (never sent): ${esc(x.rationale)}</div>
+        ${x.status_reason ? `<div class="doc" style="font-size:13px;margin-top:8px"><b>Rejected:</b> ${esc(x.status_reason)}</div>` : ''}
+        <div style="font-size:12px;color:var(--muted);margin-top:8px">${x.id} · written by ${esc(x.written_by)}</div>
+      </div>`);
+      card.onclick = () => { selected = { type: 'account', id: x.account_id }; render(); };
+      main.append(card);
+    }
+  }
+  if (view === 'prospulls') {
+    head('Pulls', 'Bought or scraped lists waiting to be judged. Nothing here is an account, and nothing here counts.');
+    const d = await api('pros_sources', {});
+    if (!d.pulls.length) { main.append(emptyCard('prospect')); return; }
+    const t = $('<table><thead><tr><th>Pull</th><th>Rows</th><th class="num">Unjudged</th><th class="num">Qualified</th><th class="num">Rejected</th><th class="num">Unclear</th><th class="num">Promoted</th><th>Imported</th></tr></thead><tbody></tbody></table>');
+    for (const p of d.pulls) {
+      const tr = $(`<tr><td><b>${esc(p.label)}</b><div style="font-size:12px;color:var(--muted)">${esc(p.criteria)}</div></td>
+        <td>${p.rows}</td><td class="num">${p.unjudged}</td><td class="num">${p.qualified}</td><td class="num">${p.rejected}</td>
+        <td class="num">${p.unclear}</td><td class="num">${p.promoted}${p.awaiting_promotion ? ` <span style="color:var(--warn)">(+${p.awaiting_promotion} ready)</span>` : ''}</td>
+        <td>${p.imported}</td></tr>`);
+      tr.onclick = () => { window.__prosPull = p.id; selected = null; view = 'prosrows'; render(); };
+      t.querySelector('tbody').append(tr);
+    }
+    main.append(t);
+    main.append($(`<div class="card doc" style="margin-top:14px">${esc(d.note)}</div>`));
+  }
+  if (view === 'prosrows') {
+    head('Staged rows', 'Judged by an agent, promoted by you. A verdict never creates an account.');
+    const pull = window.__prosPull || null;
+    const filt = window.__prosFilter || 'unjudged';
+    const bar = $('<div class="acts"></div>');
+    for (const [k, label] of [['unjudged', 'Unjudged'], ['qualified', 'Qualified'], ['rejected', 'Rejected'], ['unclear', 'Unclear'], ['all', 'All']]) {
+      const b = $(`<button class="${k === filt ? 'on' : ''}">${label}</button>`);
+      b.onclick = () => { window.__prosFilter = k; render(); };
+      bar.append(b);
+    }
+    if (pull) { const b = $('<button>All pulls</button>'); b.onclick = () => { window.__prosPull = null; render(); }; bar.append(b); }
+    main.append(bar);
+    const args = { limit: 200, brief: true };
+    if (pull) args.source_id = pull;
+    if (filt === 'unjudged') args.judged = false; else if (filt !== 'all') args.verdict = filt;
+    const d = await api('pros_rows', args);
+    if (!d.rows.length) { main.append($('<div class="card doc">Nothing matches. Staged rows arrive when your agent hands over a pulled list.</div>')); return; }
+    const t = $('<table><thead><tr><th>Company</th><th>Industry</th><th class="num">Staff</th><th>Where</th><th>Verdict</th><th>Reason</th><th>Account</th></tr></thead><tbody></tbody></table>');
+    for (const r of d.rows) {
+      t.querySelector('tbody').append($(`<tr>
+        <td><b>${esc(r.company)}</b>${r.website ? ` <a href="${esc(r.website)}" target="_blank" rel="noopener" style="font-size:12px">site</a>` : ''}
+          <div style="font-size:12px;color:var(--muted)">${esc(r.description || '')}</div></td>
+        <td>${esc(r.industry || '')}</td><td class="num">${r.employees ?? ''}</td><td>${esc(r.where || '')}</td>
+        <td>${r.verdict ? `<span class="pill">${r.verdict}</span>` : '<span style="color:var(--muted)">not judged</span>'}</td>
+        <td style="font-size:13px">${esc(r.verdict_reason || '')}</td>
+        <td>${r.account_id || ''}</td></tr>`));
+    }
+    main.append(t);
+    main.append($(`<div class="card doc" style="margin-top:14px">${esc(d.note)}</div>`));
   }
   if (view === 'crmactivity') {
     head('Activity', 'Everything that happened, newest first — dated when it happened, not when it was typed.');

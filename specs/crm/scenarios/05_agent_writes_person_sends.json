@@ -1,0 +1,268 @@
+{
+  "name": "the agent writes, a person sends",
+  "spec": "crm@0.3",
+  "notes": "CRM-14 nothing here sends, CRM-16 the rationale is mandatory and never goes out, CRM-15 a sent draft is the record and does not get rewritten, CRM-17 claims are a person's to write, CRM-18 parking is not a status, CRM-19 state is derived.",
+  "steps": [
+    {
+      "act": "create_campaign",
+      "args": {
+        "name": "Outreach",
+        "goal": "Open conversations with operations owners at mid-sized services businesses."
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "add_account",
+      "args": {
+        "campaign": "CAM-0001",
+        "name": "Harborline Freight",
+        "tier": 1,
+        "why_them": "Announced a 2027 claims-handling review in their Q2 call, and the work is done in-house.",
+        "trigger_event": "New COO named a cost program on the Q2 earnings call, 14 Aug 2026.",
+        "hook": "The claims review they announced in August.",
+        "source_url": "https://example.com/harborline-q2"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "not_started"
+        }
+      }
+    },
+    {
+      "act": "add_contact",
+      "args": {
+        "account": "A-0001",
+        "role_type": "OPERATIONS OWNER",
+        "gap_note": "No VP Operations named on the site or in the Q2 call transcript; the leadership page lists only the C-suite."
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "gap"
+        }
+      },
+      "notes": "CRM-2: the role has no publicly named holder yet, which is a finding."
+    },
+    {
+      "act": "draft_message",
+      "args": {
+        "contact": "P-0001",
+        "body": "Saw the claims review you announced in August.",
+        "rationale": "Opens on the trigger event."
+      },
+      "expect": {
+        "refused": "gap"
+      },
+      "notes": "CRM-1 and CRM-14 together: there is no name to write to, so there is nothing to draft."
+    },
+    {
+      "act": "resolve_gap",
+      "args": {
+        "contact": "P-0001",
+        "name": "Dana Reeve",
+        "title": "VP Operations",
+        "source": "https://example.com/harborline-leadership",
+        "confidence_note": "Named on the company leadership page, 2 Sep 2026."
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "named"
+        }
+      }
+    },
+    {
+      "act": "draft_message",
+      "args": {
+        "contact": "P-0001",
+        "subject": "The claims review",
+        "body": "Hi [Name], saw the review you announced in August.",
+        "rationale": "Opens on the trigger event."
+      },
+      "expect": {
+        "refused": "placeholder"
+      },
+      "notes": "An unfinished draft is caught here rather than by a person reading it too fast at 7am."
+    },
+    {
+      "act": "draft_message",
+      "args": {
+        "contact": "P-0001",
+        "subject": "The claims review",
+        "body": "Dana, you named a claims-handling review on the August call. We measure handling time per claim and capacity per team, which is usually the first number that review needs. Worth twenty minutes?",
+        "rationale": "Opens on the trigger event from the Q2 call, which is the only thing on file about them. Dana rather than the CFO because the review is operational. Unsure whether the review is already staffed."
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "draft"
+        }
+      },
+      "notes": "CRM-16: the rationale is what makes this checkable, and it is not part of what would be sent."
+    },
+    {
+      "act": "account",
+      "args": {
+        "account": "A-0001"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "not_started"
+        }
+      },
+      "notes": "CRM-14: a written draft has approached nobody. The account has not moved."
+    },
+    {
+      "act": "update_draft",
+      "args": {
+        "draft": "D-0001",
+        "body": "Dana, you named a claims-handling review on the August call. We measure handling time per claim and capacity per team. Worth twenty minutes?",
+        "rationale": "Cut the middle sentence: it explained our thing rather than theirs."
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "draft"
+        }
+      },
+      "notes": "The angle changed, so the draft is rewritten rather than discarded: discarding would lose what was already tried on this contact."
+    },
+    {
+      "act": "draft_outcome",
+      "args": {
+        "draft": "D-0001",
+        "outcome": "sent"
+      },
+      "expect": {
+        "refused": "sent_at"
+      },
+      "notes": "CRM-5: when it actually went, not when this was typed."
+    },
+    {
+      "act": "draft_outcome",
+      "args": {
+        "draft": "D-0001",
+        "outcome": "sent",
+        "sent_at": "2026-09-05"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "sent",
+          "account_status": "approaching"
+        }
+      },
+      "notes": "CRM-15: the words are copied onto the trail. The account moves to approaching because it has been approached, which is a fact and not a forecast."
+    },
+    {
+      "act": "update_draft",
+      "args": {
+        "draft": "D-0001",
+        "body": "Actually, let us say thirty minutes."
+      },
+      "expect": {
+        "refused": "does not get rewritten"
+      },
+      "notes": "CRM-15: rewriting it would leave these books describing a message nobody sent."
+    },
+    {
+      "act": "draft_outcome",
+      "args": {
+        "draft": "D-0001",
+        "outcome": "discarded",
+        "reason": "changed my mind"
+      },
+      "expect": {
+        "refused": "closed once"
+      },
+      "notes": "A draft has one ending."
+    },
+    {
+      "act": "account",
+      "args": {
+        "account": "A-0001"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "approaching"
+        }
+      },
+      "notes": "CRM-19: the approach comes back with the account, so nobody reports this as an untouched door on Monday."
+    },
+    {
+      "act": "update_campaign",
+      "args": {
+        "campaign": "CAM-0001",
+        "claims_refused": [
+          {
+            "text": "SOC 2",
+            "note": "Not held."
+          }
+        ]
+      },
+      "expect": {
+        "refused": "human-only"
+      },
+      "notes": "CRM-17: an agent choosing which claims it may make is the check marking its own homework."
+    },
+    {
+      "act": "update_account",
+      "args": {
+        "account": "A-0001",
+        "park": "Both intake routes are dead: the contact form errors and research@ bounced on 11 Sep."
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "approaching",
+          "parked": true
+        }
+      },
+      "notes": "CRM-18: parking is a fact about what happened. The pursuit is still at approaching, and now says why nobody is spending time on it."
+    },
+    {
+      "act": "draft_message",
+      "args": {
+        "contact": "P-0001",
+        "body": "Following up on my note from the fifth.",
+        "rationale": "A nudge."
+      },
+      "expect": {
+        "refused": "parked"
+      },
+      "notes": "Parking means what it says: no more time goes here until somebody unparks it."
+    },
+    {
+      "act": "update_account",
+      "args": {
+        "account": "A-0001",
+        "park": ""
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "parked": false
+        }
+      },
+      "notes": "CRM-18: reversible, and the pursuit never moved."
+    },
+    {
+      "act": "drafts",
+      "args": {
+        "status": "sent"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "total_matching": 1
+        }
+      },
+      "notes": "CRM-14: 'sent' here means a person told us they sent it. Nothing in this system can send anything."
+    }
+  ]
+}

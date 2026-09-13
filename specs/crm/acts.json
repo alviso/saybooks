@@ -1,6 +1,6 @@
 {
   "area": "crm",
-  "spec": "0.2",
+  "spec": "0.3",
   "doc": "spec.md",
   "acts": {
     "add_account": {
@@ -114,6 +114,31 @@
     "campaigns": {
       "kind": "read",
       "required": []
+    },
+    "draft_message": {
+      "kind": "write",
+      "required": [
+        "contact",
+        "body",
+        "rationale"
+      ]
+    },
+    "update_draft": {
+      "kind": "write",
+      "required": [
+        "draft"
+      ]
+    },
+    "draft_outcome": {
+      "kind": "write",
+      "required": [
+        "draft",
+        "outcome"
+      ]
+    },
+    "drafts": {
+      "kind": "read",
+      "required": []
     }
   },
   "env_acts": {},
@@ -169,6 +194,30 @@
     {
       "id": "CRM-13",
       "title": "No campaign without a goal \u2014 the goal is the brief agents read before filling the list."
+    },
+    {
+      "id": "CRM-14",
+      "title": "There is no outbound channel: a draft is written and held; only a person sends it."
+    },
+    {
+      "id": "CRM-15",
+      "title": "A sent draft is immutable and its exact words are copied onto the activity trail; a discarded draft is never revived."
+    },
+    {
+      "id": "CRM-16",
+      "title": "Every draft carries a rationale for its reviewer, and the rationale is never part of what is sent."
+    },
+    {
+      "id": "CRM-17",
+      "title": "What a campaign may claim is written by a person; refused words are checked against every draft and edit alike."
+    },
+    {
+      "id": "CRM-18",
+      "title": "Parking is a fact about what happened and is orthogonal to status; it needs a reason and is reversible."
+    },
+    {
+      "id": "CRM-19",
+      "title": "Account state is derived on read, never stored: an approach already made is never reported as an untouched door."
     }
   ]
 }

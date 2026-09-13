@@ -30,6 +30,20 @@ read({ name: 'crm_gaps', title: 'Gaps', summary: 'Every unresolved gap with its 
 read({ name: 'crm_coverage', title: 'Coverage', summary: 'List health: accounts by status and tier, open gaps, and accounts going stale (no activity in 14 days).',
   args: { campaign_id: f.ref('campaign', 'Only this campaign.') }, handler: (a) => V.coverage(a.campaign_id) });
 
+read({ name: 'crm_drafts', title: 'Drafts',
+  summary: 'Messages written but not sent, with the contact and account behind each. Check before writing a second one to somebody who already has one waiting.',
+  doctrine: `Nothing in this list has been sent, because this system has no way to send
+anything (CRM-14). status="sent" is the record of what a PERSON sent and told us about, with
+the exact words that reached somebody; status="discarded" is what a person read and rejected,
+and the reason is the most useful thing in the list when you write the next one.`,
+  args: {
+    status:     f.pick(['draft', 'sent', 'discarded'], 'Default draft: what is waiting for a person.'),
+    account_id: f.ref('account', 'Only this account.'),
+    contact_id: f.text('Only this contact, e.g. P-0001.'),
+    limit:      f.int('Up to 200. Default 50.'),
+  },
+  handler: (a) => V.drafts(a) });
+
 // Extension reads (beyond the spec's act surface — allowed, own prefix, still read-only).
 read({ name: 'crm_today', title: 'Today', summary: 'The CRM work queue: open gaps, accounts going stale, and what happened lately.',
   doctrine: 'Three lists, one question: what deserves attention today. Gaps are research work; stale active accounts are follow-up work; recent activity is context.',

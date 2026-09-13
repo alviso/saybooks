@@ -49,14 +49,17 @@ const seedSandbox = (name) => {
 
 // Anonymous demo sandboxes mount the business modules only — jobhunt is a personal area
 // and belongs to owned spaces (where it mounts in full, data or no data).
-const DEMO_MOUNTS = ['core', 'o2c', 'crm', 'solo', 'purchases', 'bridge'];   // the demo shows everything but the job hunt
+const DEMO_MOUNTS = ['core', 'o2c', 'crm', 'prospect', 'solo', 'purchases', 'bridge'];   // the demo shows everything but the job hunt
 const HUNT_MOUNTS = ['core', 'jobhunt'];   // the free job-hunt offering: one module + the platform
 const SOLO_MOUNTS = ['core', 'solo', 'bridge'];   // the freelancer invoice generator, and the hand-over to their accountant
 const KIND_MOUNTS = { hunt: HUNT_MOUNTS, solo: SOLO_MOUNTS };
 const mountsFor = (w) => { try {
   const sp = users.spaceOf(w);
   // bridge rides along wherever there is a journal to hand over: it exports what o2c and solo derive.
-  if (sp) { const chosen = users.mountsOf(w); if (chosen) return [...new Set(['core', ...chosen, ...(chosen.some(m => m === 'o2c' || m === 'solo') ? ['bridge'] : [])])]; return KIND_MOUNTS[sp.kind] || null; }
+  // bridge rides with a journal; prospect rides with the curated list it promotes into.
+  if (sp) { const chosen = users.mountsOf(w); if (chosen) return [...new Set(['core', ...chosen,
+    ...(chosen.some(m => m === 'o2c' || m === 'solo') ? ['bridge'] : []),
+    ...(chosen.includes('crm') ? ['prospect'] : [])])]; return KIND_MOUNTS[sp.kind] || null; }
   if (!DEMO) return null;
   return w.startsWith('try-h') ? HUNT_MOUNTS : w.startsWith('try-s') ? SOLO_MOUNTS : DEMO_MOUNTS;
 } catch { return null; } };

@@ -1,0 +1,152 @@
+{
+  "name": "a bought metro, judged and handed to a person",
+  "spec": "prospect@0.1",
+  "notes": "PRO-2 the brief is mandatory and recorded, PRO-4 unjudged is its own state, PRO-3 the reason is the product, PRO-7 nothing counts before promotion, PRO-5 the door opens from one side only.",
+  "env": [
+    [
+      "create_campaign",
+      {
+        "name": "US market entry",
+        "goal": "Land the first five US customers in operations-heavy services businesses."
+      },
+      "the goal the pull was made for"
+    ]
+  ],
+  "steps": [
+    {
+      "act": "import_rows",
+      "args": {
+        "label": "Phoenix metro pull, Sep 2026",
+        "hash": "sha256:phx2026sep01",
+        "criteria": "Phoenix metro, 200-1000 employees, industries with desk-based transaction work: claims, billing, enrolment, case handling.",
+        "row_count": 3,
+        "rows": [
+          {
+            "company": "Saguaro Claims Administration",
+            "website": "https://saguaroclaims.example",
+            "industry": "insurance",
+            "employees": 640,
+            "city": "Phoenix",
+            "state": "AZ",
+            "country": "US",
+            "description": "Third-party administrator handling medical claims adjudication and enrolment for self-funded employer plans across the southwest."
+          },
+          {
+            "company": "Copper State Hospitality Group",
+            "website": "https://copperstatehg.example",
+            "industry": "hospitality",
+            "employees": 910,
+            "city": "Scottsdale",
+            "state": "AZ",
+            "country": "US",
+            "description": "Operator of eleven full-service restaurants and two resort properties in the greater Phoenix area."
+          },
+          {
+            "company": "Ironwood Digital",
+            "website": "https://ironwooddigital.example",
+            "industry": "information technology & services",
+            "employees": 260,
+            "city": "Tempe",
+            "state": "AZ",
+            "country": "US",
+            "description": "Information technology and services company serving regional clients."
+          }
+        ],
+        "campaign_id": "CAM-0001"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "rows_in": 3,
+          "rows_skipped": 0
+        }
+      },
+      "notes": "PRO-2: the brief goes in with the rows, not into somebody's memory of the conversation."
+    },
+    {
+      "act": "rows",
+      "args": {
+        "source_id": "PUL-0001",
+        "judged": false
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "total_matching": 3,
+          "has_more": false
+        }
+      },
+      "notes": "PRO-4: 'what is left to judge' is a query, and it answers with an honest total rather than a page."
+    },
+    {
+      "act": "qualify",
+      "args": {
+        "verdicts": [
+          {
+            "row_id": 1,
+            "verdict": "qualified",
+            "reason": "Third-party administrator: claims adjudication and enrolment are the desk-based transaction work the brief asks for, at 640 staff.",
+            "source_url": "https://saguaroclaims.example/about"
+          },
+          {
+            "row_id": 2,
+            "verdict": "rejected",
+            "reason": "Hospitality: 910 staff are front-of-house and kitchen, with no transaction-processing back office to measure."
+          },
+          {
+            "row_id": 3,
+            "verdict": "unclear",
+            "reason": "The site does not say whether the delivery teams are in-house or subcontracted, and the industry label covers both a BPO and a web agency."
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "applied": 3,
+          "failed": 0
+        }
+      },
+      "notes": "PRO-3: each reason can be overruled by a person reading only the reason. An industry label decided none of the three."
+    },
+    {
+      "act": "rows",
+      "args": {
+        "source_id": "PUL-0001",
+        "judged": false
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "total_matching": 0
+        }
+      },
+      "notes": "PRO-4: nothing is left unjudged, which is a different statement from 'nothing was rejected'."
+    },
+    {
+      "act": "pulls",
+      "args": {
+        "source_id": "PUL-0001"
+      },
+      "expect": {
+        "ok": true
+      },
+      "notes": "PRO-7: the pull reports its own counts. None of them reach the pipeline."
+    },
+    {
+      "act": "promote",
+      "args": {
+        "campaign_id": "CAM-0001",
+        "row_ids": [
+          {
+            "row_id": 1
+          }
+        ]
+      },
+      "expect": {
+        "refused": "is a person's act, never an agent's"
+      },
+      "notes": "PRO-5: the one qualified row still does not become an account. The agent judged it and stops there."
+    }
+  ]
+}

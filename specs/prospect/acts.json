@@ -1,0 +1,91 @@
+{
+  "area": "prospect",
+  "spec": "0.1",
+  "doc": "spec.md",
+  "acts": {
+    "import_rows": {
+      "kind": "write",
+      "required": [
+        "label",
+        "hash",
+        "criteria",
+        "row_count",
+        "rows"
+      ]
+    },
+    "qualify": {
+      "kind": "write",
+      "required": [
+        "verdicts"
+      ]
+    },
+    "promote": {
+      "kind": "write",
+      "required": [
+        "campaign_id",
+        "row_ids"
+      ]
+    },
+    "discard_pull": {
+      "kind": "write",
+      "required": [
+        "source_id",
+        "reason"
+      ]
+    },
+    "rows": {
+      "kind": "read",
+      "required": []
+    },
+    "pulls": {
+      "kind": "read",
+      "required": []
+    }
+  },
+  "invariants": [
+    {
+      "id": "PRO-1",
+      "title": "The same pull never lands twice: a repeated hash is refused, naming the pull that holds it."
+    },
+    {
+      "id": "PRO-2",
+      "title": "Every pull records the brief it was made under, and it is mandatory at the door."
+    },
+    {
+      "id": "PRO-3",
+      "title": "A verdict carries a reason a person can overrule, or it is refused."
+    },
+    {
+      "id": "PRO-4",
+      "title": "An unjudged row is a distinct state from any verdict, and is queryable as such."
+    },
+    {
+      "id": "PRO-5",
+      "title": "Only a person promotes. The act is refused to agents whatever their role."
+    },
+    {
+      "id": "PRO-6",
+      "title": "A promoted row records what it became; a promoted row is never re-judged or re-promoted."
+    },
+    {
+      "id": "PRO-7",
+      "title": "A staged row is counted in no pipeline, coverage or campaign statistic."
+    },
+    {
+      "id": "PRO-8",
+      "title": "Rows are never edited: a wrong pull is discarded and staged again from a fresh read."
+    },
+    {
+      "id": "PRO-9",
+      "title": "A discard keeps rows that already became accounts, so those accounts keep their provenance."
+    },
+    {
+      "id": "PRO-10",
+      "title": "A promoted account is held to the curated list's own gate: why_them and source_url, from the verdict."
+    },
+    {
+      "id": "PRO-11",
+      "title": "Every write is a logged act with an actor; refusals are logged; reads are not."
+    }
+  ]
+}

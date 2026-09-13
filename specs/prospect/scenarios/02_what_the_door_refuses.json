@@ -1,0 +1,128 @@
+{
+  "name": "what the door refuses",
+  "spec": "prospect@0.1",
+  "notes": "PRO-1 a pull lands once, PRO-2 a brief that is not a brief, PRO-3 a reason that cannot be overruled.",
+  "env": [
+    [
+      "create_campaign",
+      {
+        "name": "US market entry",
+        "goal": "Land the first five US customers in operations-heavy services businesses."
+      },
+      "the goal"
+    ]
+  ],
+  "steps": [
+    {
+      "act": "import_rows",
+      "args": {
+        "label": "Tucson pull",
+        "hash": "sha256:tuc2026sep01",
+        "criteria": "good ones",
+        "row_count": 1,
+        "rows": [
+          {
+            "company": "Saguaro Claims Administration",
+            "website": "https://saguaroclaims.example",
+            "industry": "insurance",
+            "employees": 640,
+            "city": "Phoenix",
+            "state": "AZ",
+            "country": "US",
+            "description": "Third-party administrator handling medical claims adjudication and enrolment for self-funded employer plans across the southwest."
+          }
+        ]
+      },
+      "expect": {
+        "refused": "write the actual brief"
+      },
+      "notes": "PRO-2: two words is not a brief, and a verdict judged against it could never be checked."
+    },
+    {
+      "act": "import_rows",
+      "args": {
+        "label": "Tucson pull",
+        "hash": "sha256:tuc2026sep01",
+        "criteria": "Phoenix metro, 200-1000 employees, industries with desk-based transaction work: claims, billing, enrolment, case handling.",
+        "row_count": 1,
+        "rows": [
+          {
+            "company": "Saguaro Claims Administration",
+            "website": "https://saguaroclaims.example",
+            "industry": "insurance",
+            "employees": 640,
+            "city": "Phoenix",
+            "state": "AZ",
+            "country": "US",
+            "description": "Third-party administrator handling medical claims adjudication and enrolment for self-funded employer plans across the southwest."
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "rows_in": 1
+        }
+      },
+      "notes": "The same file, now with the brief it was pulled under."
+    },
+    {
+      "act": "import_rows",
+      "args": {
+        "label": "Tucson pull again",
+        "hash": "sha256:tuc2026sep01",
+        "criteria": "Phoenix metro, 200-1000 employees, industries with desk-based transaction work: claims, billing, enrolment, case handling.",
+        "row_count": 1,
+        "rows": [
+          {
+            "company": "Saguaro Claims Administration",
+            "website": "https://saguaroclaims.example",
+            "industry": "insurance",
+            "employees": 640,
+            "city": "Phoenix",
+            "state": "AZ",
+            "country": "US",
+            "description": "Third-party administrator handling medical claims adjudication and enrolment for self-funded employer plans across the southwest."
+          }
+        ]
+      },
+      "expect": {
+        "refused": "already staged as PUL-0001"
+      },
+      "notes": "PRO-1: the refusal names the pull that holds it, so the person can go and look."
+    },
+    {
+      "act": "qualify",
+      "args": {
+        "verdicts": [
+          {
+            "row_id": 1,
+            "verdict": "rejected",
+            "reason": "not a fit"
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "applied": 0,
+          "failed": 1
+        }
+      },
+      "notes": "PRO-3: 'not a fit' tells the person reading it in March nothing at all. A bad row fails on its own and the batch survives."
+    },
+    {
+      "act": "rows",
+      "args": {
+        "judged": false
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "total_matching": 1
+        }
+      },
+      "notes": "PRO-4: the refused verdict left the row unjudged rather than half-judged."
+    }
+  ]
+}

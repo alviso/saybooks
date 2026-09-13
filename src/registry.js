@@ -172,7 +172,9 @@ function inModule(mod, fn) {
 }
 
 // ---------------------------------------------------------------- projection 1: MCP
-const description = (c) => [c.summary, c.doctrine && `\n${c.doctrine.trim()}`, c.effects.length && `\nEffects: ${c.effects.join('; ')}.`]
+const description = (c) => [c.summary,
+  c.human_only && `\nHUMAN-ONLY: this act is refused to you whatever your role — ${c.human_only} Ask your human to do it.`,
+  c.doctrine && `\n${c.doctrine.trim()}`, c.effects.length && `\nEffects: ${c.effects.join('; ')}.`]
   .filter(Boolean).join('');
 
 const inMount = (c, modules) => !modules || modules.includes(c.module);
@@ -198,6 +200,7 @@ const instructions = (base, opts = {}) => [base.trim(),
 // ---------------------------------------------------------------- projection 2: UI
 const formSpec = (opts = {}) => COMMANDS.filter(c => inMount(c, opts.modules)).map(c => ({
   name: c.name, title: c.title, group: c.group, subject: c.subject, intent: c.intent, scope: c.scope, module: c.module, permission: c.permission,
+  human_only: c.human_only || undefined,
   help: c.doctrine ? c.doctrine.trim() : '',
   effects: c.effects,
   fields: Object.entries(c.args).map(([key, a]) => ({
@@ -294,6 +297,9 @@ function execute(name, args = {}, ctx = {}) {
     const write = db.transaction(() => {
       if (!hasGrant(role, cmd.permission)) throw new Rejected(denial(cmd, role));
       if (who.actor_kind === 'agent') {
+        // A whole act can be human-only, not just a field. An agent that could promote rows
+        // from a bought list into the curated list is the loop the curation exists to stop.
+        if (cmd.human_only) throw new Rejected(`${cmd.name} is a person's act, never an agent's — ${cmd.human_only}`);
         for (const [k, v] of Object.entries(args)) {
           if (v !== undefined && v !== null && cmd.args[k] && cmd.args[k].human_only) {
             throw new Rejected(`${k} is human-only: entered by a person, never an agent — ${cmd.args[k].human_only}`);

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 0.2-draft |
+| **Version** | 0.3 |
 | **Status** | curated draft — implementation not started |
 | **Curator** | Peter Varga (single editor; spec PRs separate from implementation PRs) |
 | **Calibration** | a curated target list worked by a small team, not a mass-market funnel |
@@ -125,10 +125,63 @@ Allowed only for `won` accounts, at most once (CRM-8). Creates the `core` custom
 core's exported API — a logged act marking where this area's job ends and o2c's begins — and
 links it on the account. *Freedom:* carrying contacts across.
 
+### 4.5 Drafting, without a way to send
+
+**`draft_message`** (contact, body, rationale, subject?, channel?)
+Writes a message to a named, live contact and holds it. **Nothing is sent** (CRM-14): this
+area has no outbound channel and the absence is deliberate, not a missing feature. A person
+reads the draft, edits it, sends it from their own mailbox and says so.
+
+The `rationale` is mandatory and is never part of what goes out (CRM-16). It is the note to
+the reviewer: which hook the angle rests on, why this contact rather than another at the same
+account, what the writer was unsure about. A draft nobody can check is a draft nobody should
+send.
+
+Refused for a gap row (there is no name to write to), for a departed contact, and for an
+account that is parked. Refused when the text contains a placeholder, or any phrase on the
+campaign's refused list (CRM-17).
+
+**`update_draft`** (draft, body?, subject?, rationale?)
+Rewrites a draft that is still a draft. Refused on a sent draft, because its words are the
+record of what reached a real person (CRM-15), and refused on a discarded one, because a
+person rejected it and reviving it would overturn that decision quietly. The same claim gate
+applies: an edit cannot smuggle in what the first write would have stopped.
+
+**`draft_outcome`** (draft, outcome, sent_at?, reason?)
+Records what the person did. `sent` copies the draft's exact text onto the activity trail as
+the record of what actually reached somebody, makes the draft immutable, and moves an account
+still at `not_started` or `researching` to `approaching` — it has now been approached, which
+is a fact rather than a forecast. `discarded` needs a reason, because the next draft has
+nothing else to go on. *Freedom:* whether a send may be recorded by an agent on the person's
+word, or only by the person.
+
+### 4.6 What a campaign may say
+
+Claim lists live on the campaign and are **human-only** (CRM-17), for the same reason as
+CRM-4: an agent choosing which claims it is allowed to make is the check marking its own
+homework. `claims_allowed` is what this business has decided it may assert about itself;
+`claims_refused` is the phrases no draft may contain, checked at write time on creation and
+on edit alike.
+
+The gate is honest about its limit: it catches a forbidden phrase, and it cannot catch an
+overstatement of a claim that is itself allowed. A campaign with no lists refuses nothing,
+and that is the correct default. A built-in list of somebody else's sensitivities would be a
+safety theatre, not a safety feature.
+
+### 4.7 Parking
+
+Parking is recorded through `update_account` and is **not** a status move (CRM-18). `status`
+is a judgement about where a pursuit sits; parking is a fact about what happened to it: both
+intake routes dead, the sponsor left, a reorganisation in flight. An account parked at
+`researching` is still at `researching` and says why nobody is spending time on it. The reason
+is mandatory and is read by whoever considers reopening; parking is reversible and drafting
+against a parked account is refused.
+
 ### Act count
 
-9 write acts + 5 read models — comfortably inside the 25-tool budget, leaving room for
-extensions.
+13 write acts + 6 read models — inside the 25-tool budget. Bulk arrival of unresearched rows
+is a different area with a different doctrine; see `specs/prospect/spec.md`, which promotes
+into this one through the owner's API the way this area promotes into `core`.
 
 ## 5. Invariants
 
@@ -162,8 +215,27 @@ Namespaced `CRM-n` (areas own their invariant namespaces; o2c's unprefixed `INV-
     accounts. (The org/pursuit normalization this implies is deferred: §9.)
 13. **CRM-13 No campaign without a goal.** The goal is data, not a chat prompt: it is the
     brief an agent reads before filling the list, and the thesis every why_them argues.
+14. **CRM-14 There is no outbound channel.** A draft is written and held. Only a person
+    sends, from their own mailbox, and then records that it went. No implementation of this
+    area may send a message, and an implementation that does is not this area.
+15. **CRM-15 A sent draft is immutable.** Its exact words are copied onto the activity trail
+    as the record of what reached a real person, and that record is not rewritten. A
+    discarded draft is never revived: a person rejected it, and reversing that silently is
+    worse than writing a new one.
+16. **CRM-16 Every draft carries a rationale for its reviewer**, and the rationale is never
+    part of what is sent.
+17. **CRM-17 Claims are a person's to make.** What a campaign may assert about itself, and
+    what no draft may say, are written by people and refused to agents whatever their role.
+    The refused list is checked on creation and on edit alike.
+18. **CRM-18 Parking is orthogonal to status.** It is a fact about what happened, carries a
+    mandatory reason, is reversible, and does not move the pursuit.
+19. **CRM-19 State is derived, never stored.** Last touch, who has been written to, and what
+    is waiting are computed on read and come back with the account. A stored summary drifts,
+    and the drift has a shape: an account reported as an untouched door days after somebody
+    wrote to it.
+
 11. **CRM-11 Platform inheritance.** Every write is a logged command with an actor; refusals
-    (including CRM-4 denials) are logged; reads are never logged.
+    (including CRM-4 and CRM-17 denials) are logged; reads are never logged.
 
 ## 6. Required read models
 

@@ -46,21 +46,36 @@ defineCommand({
   title: 'Update account', group: 'CRM', subject: 'account',
   permission: 'sales.write', guardless: true,
   summary: 'Correct or deepen the account narrative. Only the fields you pass change.',
-  doctrine: 'Provenance survives updates (CRM-9): why_them and source_url can be corrected, never blanked. Status moves have their own command, with its own rules.',
-  effects: ['account narrative updated'],
+  doctrine: `Provenance survives updates (CRM-9): why_them and source_url can be corrected, never
+blanked. Status moves have their own command, with its own rules.
+
+PARKING IS NOT A STATUS MOVE (CRM-18). status is a judgement about where a pursuit sits;
+parking is a fact about what happened to it — both intake routes dead, the sponsor left, a
+reorganisation in flight. An account parked at researching is still at researching, and says
+why nobody is spending time on it. Parking needs a reason, is reversible with park="", and
+takes the account out of the worklists until it comes back.`,
+  effects: ['account narrative updated', 'account parked or unparked, with the reason kept'],
   args: {
     account_id: { ...f.ref('account', 'The account.'), required: true },
     name: f.text('Rename, if the company did.'),
     why_them: f.note('Correcting, not blanking (CRM-9).'),
     source_url: f.text('Correcting, not blanking (CRM-9).'),
+    park: f.note('Why this account should be left alone, as a fact about what happened. Empty string unparks it. Read by whoever considers reopening it, so "both intake routes dead: form errors, research@ bounced 11 Sep" is useful and "not worth it" is not.'),
     ...NARRATIVE,
   },
-  handler(a, { db, at }) {
+  handler(a, ctx) {
+    const { db, at } = ctx;
     H.need('account', a.account_id, 'account');
     for (const k of ['why_them', 'source_url']) {
       if (a[k] === '') throw new Rejected(`${k} can be corrected, never removed (CRM-9).`);
     }
     if (a.name === '') throw new Rejected('An account keeps its name.');
+    if (a.park !== undefined) {
+      const why = String(a.park).trim();
+      if (why && why.length < 12) throw new Rejected('A park needs a reason somebody can reopen against (CRM-18). Say what happened.');
+      db.prepare('UPDATE account SET parked_at = ?, parked_reason = ?, parked_by = ?, updated_at = ? WHERE id = ?')
+        .run(why ? at : null, why || null, why ? (ctx.actor || 'unknown') : null, at, a.account_id);
+    }
     const fields = ['name', 'why_them', 'source_url', 'tier', 'vertical', 'trigger_event', 'hook', 'owner_note'];
     // An explicit empty string means CLEAR (stored as NULL); absent means untouched.
     // why_them and source_url already refused above when blanked (CRM-9).

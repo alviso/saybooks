@@ -18,6 +18,10 @@
  *                    role; denials are the same one sentence on every surface
  *  13. human-only    a field declared human_only accepts a person and refuses an agent —
  *                    whatever the role — and the refusal is logged
+ *  14. the door       a whole act can be human-only too: an agent stages and judges bought
+ *                    rows, only a person promotes them, and the verdict becomes the why_them
+ *  15. claim gate     a person says what a campaign may claim; the gate holds on the create
+ *                    path and the edit path alike, and a sent draft stops being editable
  *
  * A PR that adds a hand-written form, a prefix-less command, or a cross-module UPDATE
  * fails here, not in review.
@@ -254,6 +258,112 @@ for (const tag of R.PERMISSIONS) {
   const still = wsp.use(WS, () => H.db().prepare('SELECT mutual_via FROM contact WHERE id = ?').get(g13c.id).mutual_via);
   assert.strictEqual(still, 'a real person typed this', 'the refused agent write must not have touched the field');
   ok('human-only: person accepted, agent refused (even as owner), denial logged, field untouched');
+}
+
+// ------------------------------------------------- 14. the door between staged and curated
+// The scenarios prove what an AGENT can reach, and conformance runs everything as an agent,
+// so the person's half of PRO-5 has no home there. It lives here: the same act that the
+// scenario watched get refused must work for a person, and must carry the verdict's reason
+// into the account as its why_them (PRO-10).
+{
+  execute('crm_create_campaign', { name: 'Gate14 campaign', goal: 'exercise the promotion door' }, human);
+  const camp = wsp.use(WS, () => H.db().prepare("SELECT id FROM campaign WHERE name = 'Gate14 campaign'").get().id);
+  const REASON = 'Third-party administrator: claims adjudication is exactly the desk-based work the brief asks for.';
+  execute('pros_import_rows', {
+    label: 'Gate14 pull', hash: 'sha256:gate14pull01', campaign_id: camp,
+    criteria: 'Phoenix metro, 200-1000 employees, desk-based transaction work.',
+    row_count: 2,
+    rows: [{ company: 'Gate14 Administrators', website: 'https://gate14.example', employees: 600 },
+           { company: 'Gate14 Restaurants', employees: 800 }],
+  }, human);
+  const rows = wsp.use(WS, () => H.db().prepare('SELECT id, company FROM pros_row ORDER BY id').all());
+  const keep = rows.find(r => r.company === 'Gate14 Administrators').id;
+  const drop = rows.find(r => r.company === 'Gate14 Restaurants').id;
+
+  // PRO-7: staged rows are in no statistic. The campaign has no accounts yet.
+  const before = execute('crm_pipeline', { campaign_id: camp }, human);
+  assert.strictEqual(JSON.stringify(before).includes('Gate14 Administrators'), false,
+    'a staged row must not appear in the pipeline');
+
+  // An agent may judge.
+  execute('pros_qualify', { verdicts: [
+    { row_id: keep, verdict: 'qualified', reason: REASON, source_url: 'https://gate14.example/about' },
+    { row_id: drop, verdict: 'rejected', reason: 'Restaurants: front-of-house headcount with no back office to measure.' },
+  ] }, { ...human, actor_kind: 'agent', role: 'owner' });
+
+  // PRO-5: an agent may not promote, even as owner.
+  let denied = null;
+  try { execute('pros_promote', { campaign_id: camp, row_ids: [{ row_id: keep }] }, { ...human, actor_kind: 'agent', role: 'owner' }); }
+  catch (e) { denied = e.message; }
+  assert.ok(denied && /person's act, never an agent's/.test(denied), 'an agent promoting must be refused naming whose act it is');
+  const log = wsp.use(WS, () => H.db().prepare('SELECT * FROM command_log ORDER BY id DESC LIMIT 1').get());
+  assert.strictEqual(log.ok, 0, 'the promotion denial must be logged');
+  assert.strictEqual(wsp.use(WS, () => H.db().prepare('SELECT account_id FROM pros_row WHERE id = ?').get(keep).account_id), null,
+    'the refused promotion must not have touched the row');
+
+  // PRO-5 the other way: the same act, by a person, lands.
+  const made = execute('pros_promote', { campaign_id: camp, row_ids: [{ row_id: keep }, { row_id: drop }] }, human);
+  assert.strictEqual(made.promoted, 1, 'exactly the qualified row promotes');
+  assert.strictEqual(made.failed, 1, 'the rejected row is refused on its own, and the batch survives it');
+  const acc = wsp.use(WS, () => H.db().prepare('SELECT * FROM account WHERE name = ?').get('Gate14 Administrators'));
+  assert.ok(acc, 'the promoted row became an account');
+  // PRO-10: the account arrives at the curated list's own gate, carrying the verdict.
+  assert.strictEqual(acc.why_them, REASON, "the account's why_them is the verdict's reason, not an invented one");
+  assert.ok(acc.source_url, 'the account carries a source_url (CRM-3)');
+  // PRO-6: what the row became is on the row, and it does not promote twice.
+  assert.strictEqual(wsp.use(WS, () => H.db().prepare('SELECT account_id FROM pros_row WHERE id = ?').get(keep).account_id), acc.id);
+  const again = execute('pros_promote', { campaign_id: camp, row_ids: [{ row_id: keep }] }, human);
+  assert.strictEqual(again.promoted, 0, 'a promoted row never promotes twice');
+  ok('staged rows: agent judges, only a person promotes; the verdict becomes the why_them, once');
+}
+
+// ----------------------------------------------------------- 15. the claim gate on drafts
+// The scenario proves an AGENT cannot write the claim list. The other half needs a person to
+// have written one, so it lives here: a phrase a person refused must stop a draft, and must
+// stop an edit too — otherwise the gate is a speed bump on the create path only.
+{
+  execute('crm_create_campaign', { name: 'Gate15 campaign', goal: 'exercise the claim gate on outreach drafts' }, human);
+  const camp = wsp.use(WS, () => H.db().prepare("SELECT id FROM campaign WHERE name = 'Gate15 campaign'").get().id);
+  execute('crm_update_campaign', { campaign_id: camp, claims_refused: [
+    { text: 'SOC 2', note: 'Not held, and claiming it is a compliance problem rather than a marketing one.' },
+  ] }, human);
+  execute('crm_add_account', { campaign_id: camp, name: 'Gate15 Co', why_them: 'exercises the gate', source_url: 'https://example.com/g15' }, human);
+  const acc = wsp.use(WS, () => H.db().prepare("SELECT id FROM account WHERE name = 'Gate15 Co'").get().id);
+  const c = execute('crm_add_contact', { account_id: acc, role_type: 'OPERATIONS OWNER', name: 'Sam Gate', source: 'https://example.com/g15/team' }, human);
+
+  // An agent reads the list back before drafting; that is the whole point of it being a read.
+  const camView = execute('crm_get_campaign', { campaign_id: camp }, agent);
+  assert.strictEqual(camView.claims_refused[0].text, 'SOC 2', "the campaign's refused claims must come back with the campaign");
+
+  let refused = null;
+  try {
+    execute('crm_draft_message', { contact_id: c.id, body: 'We are SOC 2 certified and would love to talk.',
+      rationale: 'tries a claim the business has not cleared' }, { ...human, actor_kind: 'agent', role: 'owner' });
+  } catch (e) { refused = e.message; }
+  assert.ok(refused && refused.includes('SOC 2') && /cannot appear/.test(refused),
+    'a refused claim must stop the draft, naming the phrase');
+
+  const d = execute('crm_draft_message', { contact_id: c.id, body: 'You mentioned a claims review. Worth twenty minutes?',
+    rationale: 'opens on what they said' }, { ...human, actor_kind: 'agent', role: 'owner' });
+  let onEdit = null;
+  try { execute('crm_update_draft', { draft_id: d.draft, body: 'Also, we are SOC 2 certified.' }, { ...human, actor_kind: 'agent', role: 'owner' }); }
+  catch (e) { onEdit = e.message; }
+  assert.ok(onEdit && onEdit.includes('SOC 2'), 'an edit must not smuggle in what the create path would have stopped');
+  const body = wsp.use(WS, () => H.db().prepare('SELECT body FROM crm_draft WHERE id = ?').get(d.draft).body);
+  assert.ok(!body.includes('SOC 2'), 'the refused edit must not have landed');
+
+  // CRM-15: once a person says it went, the words are the record and stop being editable.
+  execute('crm_draft_outcome', { draft_id: d.draft, outcome: 'sent', sent_at: '2026-09-01' }, human);
+  let frozen = null;
+  try { execute('crm_update_draft', { draft_id: d.draft, body: 'On reflection, thirty minutes.' }, human); }
+  catch (e) { frozen = e.message; }
+  assert.ok(frozen && /does not get rewritten/.test(frozen), 'a sent draft must be immutable, for a person too');
+  const trail = wsp.use(WS, () => H.db().prepare('SELECT summary FROM activity WHERE account_id = ? ORDER BY id DESC LIMIT 1').get(acc));
+  assert.ok(trail.summary.includes('Worth twenty minutes?'), "the sent draft's exact words must be on the activity trail");
+  const state = execute('crm_get_account', { account_id: acc }, agent);
+  assert.strictEqual(state.status, 'approaching', 'a first send moves the account to approaching');
+  assert.strictEqual(state.state.contacts_written_to.length, 1, 'derived state must know who has been written to');
+  ok('drafts: a person sets what may be said, the gate holds on create and on edit, a sent draft is the record');
 }
 
 console.log(`\n${n} contract checks passed across ${MODULES.length} modules, ${COMMANDS.length} commands.`);
