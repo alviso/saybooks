@@ -56,7 +56,7 @@ const d1 = R.execute('crm_draft_message', { contact_id: c.id, subject: 'The clai
 R.execute('crm_draft_outcome', { draft_id: d1.draft, outcome: 'sent', sent_at: '2026-09-02' }, h);
 const d2 = R.execute('crm_draft_message', { contact_id: c.id, body: 'Following up on the note.', rationale: 'A nudge, one week on.' }, a);
 const d3 = R.execute('crm_draft_message', { contact_id: c.id, body: 'Third angle on the review.', rationale: 'Different opening.' }, a);
-R.execute('crm_draft_outcome', { draft_id: d3.draft, outcome: 'discarded', reason: 'Too long, and it opened on us.' }, h);
+R.execute('crm_draft_outcome', { draft_id: d3.draft, outcome: 'discarded', rejected_because: 'Too long, and it opened on us.' }, h);
 R.execute('pros_import_rows', { label: 'Phoenix metro', hash: 'sha256:smoketest0001', campaign_id: 'CAM-0001', criteria: 'Phoenix metro, 200-1000 staff, desk-based transaction work.', row_count: 2, rows: [
   { company: 'Saguaro Claims', industry: 'insurance', employees: 640, city: 'Phoenix', state: 'AZ', website: 'https://saguaro.example', description: 'Third-party administrator handling claims adjudication.' },
   { company: 'Copper State Hospitality', industry: 'hospitality', employees: 910, city: 'Scottsdale', state: 'AZ', description: 'Restaurants and resorts.' }] }, a);

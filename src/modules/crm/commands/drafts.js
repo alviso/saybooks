@@ -144,7 +144,7 @@ the activity trail as the record of what reached a real person, and the draft be
 immutable from that moment (CRM-15). An account still sitting at not_started or researching
 moves to approaching, because it has now been approached — that is a fact, not a forecast.
 
-DISCARDED: a person read it and said no. The reason is for whoever writes the next one, so
+DISCARDED: a person read it and said no. rejected_because is for whoever writes the next one, so
 "too long, and it opened on us rather than on them" is worth typing and "no" is not.
 
 Never record a send you were told about by nobody. If you did not hear it from your human,
@@ -156,16 +156,17 @@ front of a stranger.`,
     draft_id: { ...f.text('The draft, e.g. D-0001.'), required: true },
     outcome:  { ...f.pick(['sent', 'discarded'], 'What the person did with it.'), required: true },
     sent_at:  f.date('When it actually went. Required when sent.'),
-    reason:   f.note('For discarded: why, so the next draft is better.'),
+    rejected_because: f.note('For discarded: why, so whoever writes the next one has something to go on.'),
   },
   handler(a, { db, at }) {
     const d = H.need('crm_draft', a.draft_id, 'draft');
     if (d.status !== 'draft') throw new Rejected(CLOSED_ONCE(d));
     const acc = H.need('account', d.account_id, 'account');
     if (a.outcome === 'discarded') {
-      if (!String(a.reason || '').trim()) throw new Rejected('A discard needs a reason — it is the only thing the next draft has to go on.');
-      db.prepare("UPDATE crm_draft SET status = 'discarded', status_reason = ?, updated_at = ? WHERE id = ?").run(String(a.reason).trim(), at, d.id);
-      return { draft: d.id, status: 'discarded', note: `${d.id} rejected: ${String(a.reason).trim()} Write a fresh one; this one cannot be revived.` };
+      if (!String(a.rejected_because || '').trim()) throw new Rejected('A discard needs a reason — it is the only thing the next draft has to go on.');
+      const why = String(a.rejected_because).trim();
+      db.prepare("UPDATE crm_draft SET status = 'discarded', status_reason = ?, updated_at = ? WHERE id = ?").run(why, at, d.id);
+      return { draft: d.id, status: 'discarded', note: `${d.id} rejected: ${why} Write a fresh one; this one cannot be revived.` };
     }
     if (!a.sent_at) throw new Rejected('sent_at is required: when it actually went, not when this was typed (CRM-5).');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(a.sent_at)) throw new Rejected('sent_at must be an ISO date, YYYY-MM-DD.');

@@ -147,7 +147,7 @@ record of what reached a real person (CRM-15), and refused on a discarded one, b
 person rejected it and reviving it would overturn that decision quietly. The same claim gate
 applies: an edit cannot smuggle in what the first write would have stopped.
 
-**`draft_outcome`** (draft, outcome, sent_at?, reason?)
+**`draft_outcome`** (draft, outcome, sent_at?, rejected_because?)
 Records what the person did. `sent` copies the draft's exact text onto the activity trail as
 the record of what actually reached somebody, makes the draft immutable, and moves an account
 still at `not_started` or `researching` to `approaching` — it has now been approached, which

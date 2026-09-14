@@ -1061,6 +1061,9 @@ async function renderPage() {
       return;
     }
     for (const x of d.drafts) {
+      // An account still at not_started or researching moves to approaching when a send is
+      // recorded, so say so on the button rather than letting the status change be a surprise.
+      const willMove = ['not_started', 'researching'].includes(x.account_status);
       const card = $(`<div class="card" style="margin-bottom:12px">
         <div class="sub">${x.account} · ${x.contact}${x.contact_title ? `, ${x.contact_title}` : ''} · ${x.channel}${x.sent_at ? ` · sent ${x.sent_at}` : ''}${x.account_parked ? ' · <span style="color:var(--warn)">account parked</span>' : ''}</div>
         ${x.subject ? `<div style="font-weight:600;margin:6px 0 2px">${esc(x.subject)}</div>` : ''}
@@ -1068,8 +1071,31 @@ async function renderPage() {
         <div class="doc" style="border-left:3px solid var(--agent);padding-left:10px;font-size:13px">
           <b>Why this one</b> (never sent): ${esc(x.rationale)}</div>
         ${x.status_reason ? `<div class="doc" style="font-size:13px;margin-top:8px"><b>Rejected:</b> ${esc(x.status_reason)}</div>` : ''}
-        <div style="font-size:12px;color:var(--muted);margin-top:8px">${x.id} · written by ${esc(x.written_by)}</div>
+        <div class="acts draftacts" style="margin-top:10px"></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px">${x.id} · written by ${esc(x.written_by)}${willMove && x.status === 'draft' ? ` · recording a send moves ${esc(x.account)} to approaching` : ''}</div>
       </div>`);
+      const acts = card.querySelector('.draftacts');
+      if (x.status === 'draft') {
+        // The send happened in the person's own mailbox; this records it. sent_at defaults to
+        // today because that is the common case, and it stays editable because CRM-5 is about
+        // when it actually went, not when somebody got round to typing it.
+        const sent = $('<button class="primary" type="button">Mark sent…</button>');
+        sent.onclick = (e) => { e.stopPropagation(); openForm(cmd('crm_draft_outcome'),
+          { draft_id: x.id, outcome: 'sent', sent_at: new Date().toISOString().slice(0, 10) }); };
+        const rej = $('<button type="button">Reject…</button>');
+        rej.onclick = (e) => { e.stopPropagation(); openForm(cmd('crm_draft_outcome'), { draft_id: x.id, outcome: 'discarded' }); };
+        const edit = $('<button type="button">Rewrite…</button>');
+        edit.onclick = (e) => { e.stopPropagation(); openForm(cmd('crm_update_draft'),
+          { draft_id: x.id, subject: x.subject || undefined, body: x.body, rationale: x.rationale }); };
+        const copy = $('<button type="button">Copy text</button>');
+        copy.onclick = async (e) => {
+          e.stopPropagation();
+          try { await navigator.clipboard.writeText((x.subject ? `${x.subject}\n\n` : '') + x.body); copy.textContent = 'Copied ✓'; }
+          catch { copy.textContent = 'Select it by hand'; }
+          setTimeout(() => copy.textContent = 'Copy text', 1600);
+        };
+        acts.append(copy, edit, rej, sent);
+      } else { acts.remove(); }
       card.onclick = () => { selected = { type: 'account', id: x.account_id }; render(); };
       main.append(card);
     }
