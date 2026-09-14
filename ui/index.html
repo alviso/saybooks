@@ -767,10 +767,13 @@ function bankImportDialog() {
   dlg.append(box); dlg.showModal();
 }
 
+/** Text somebody else wrote, printed into markup. Every view that shows a draft body, a
+    seller's blurb or an agent's rationale goes through here. */
+const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
 /* The document is a READ rendered for paper (INV-22): the system produces it; sending it to
    the customer is the operator's act, outside the system, on purpose. */
 function invoiceDoc(inv) {
-  const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
   const nl = (s) => esc(s).replace(/\n/g, '<br>');
   const s = inv.seller;
   const rows = inv.lines.map(l => `<tr><td>${esc(l.item_name)}</td><td class="n">${l.qty}</td><td class="n">${cents(l.unit_price)}</td>

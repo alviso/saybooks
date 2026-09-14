@@ -1,7 +1,7 @@
 {
   "name": "saybooks",
   "version": "0.2.0",
-  "description": "Saybooks — a conversational ERP where the agent and the UI are the same system: one command registry, one rulebook, one audit trail.",
+  "description": "Saybooks \u2014 a conversational ERP where the agent and the UI are the same system: one command registry, one rulebook, one audit trail.",
   "type": "commonjs",
   "private": true,
   "bin": {
@@ -11,7 +11,8 @@
     "start": "node server.js",
     "mcp": "node mcp-server.js",
     "demo": "node demo.js",
-    "test": "node test/contract.test.js"
+    "test": "node test/contract.test.js",
+    "smoke": "node --experimental-websocket test/smoke.mjs"
   },
   "engines": {
     "node": ">=20"
