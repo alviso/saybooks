@@ -1241,9 +1241,9 @@ async function renderPage() {
   }
   if (view === 'crmcal') {
     head('Calendar', 'What is coming, by day. Every date here has a source, because a date nobody can trace is a date somebody made up.');
-    const range = window.__calRange || 'next60';
+    const range = window.__calRange || 'upcoming';
     const bar = $('<div class="acts"></div>');
-    for (const [k, label] of [['next60', 'Next 60 days'], ['next7', 'This week'], ['past', 'Past'], ['all', 'Everything']]) {
+    for (const [k, label] of [['upcoming', 'Upcoming'], ['next7', 'This week'], ['past', 'Past'], ['all', 'Everything']]) {
       const b = $(`<button class="${k === range ? 'on' : ''}">${label}</button>`);
       b.onclick = () => { window.__calRange = k; render(); };
       bar.append(b);
@@ -1251,8 +1251,18 @@ async function renderPage() {
     main.append(bar);
     const today = new Date().toISOString().slice(0, 10);
     const plus = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
-    const args = range === 'next7' ? { from: today, to: plus(7) } : range === 'past' ? { from: '2000-01-01', to: plus(-1) } : range === 'all' ? { from: '2000-01-01', to: '2099-12-31' } : {};
+    const args = range === 'next7' ? { from: today, to: plus(7) } : range === 'past' ? { from: '2000-01-01', to: plus(-1) } : range === 'all' ? { from: '2000-01-01', to: '2099-12-31' } : { from: today, to: '2099-12-31' };
     const cal = await api('crm_calendar', args);
+    // Say what this filter is not showing. A window that narrows silently is how "is that all?"
+    // gets asked.
+    {
+      const hidden = [];
+      if (cal.planned_after_window) hidden.push(`${cal.planned_after_window} planned after ${cal.to}`);
+      if (cal.before_window && range !== 'all') hidden.push(`${cal.before_window} before ${cal.from}`);
+      const line = $(`<div class="sub" style="margin:4px 0 8px">${cal.count} event${cal.count === 1 ? '' : 's'} shown${hidden.length ? ` · not shown: ${hidden.join(', ')}` : ''}${hidden.length ? ' · <a href="#" data-all>show everything</a>' : ''}</div>`);
+      const all = line.querySelector('[data-all]'); if (all) all.onclick = (e) => { e.preventDefault(); window.__calRange = 'all'; render(); };
+      main.append(line);
+    }
     const add = $('<button class="primary" type="button">Add event…</button>');
     add.onclick = () => openForm(cmd('crm_add_event'), {});
     const addbar = $('<div class="acts" style="margin-bottom:12px"></div>'); addbar.append(add); main.append(addbar);

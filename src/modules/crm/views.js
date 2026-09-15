@@ -170,7 +170,9 @@ function drafts({ status = 'draft', account_id, contact_id, limit = 50 } = {}) {
 function calendar({ from, to, account_id, status } = {}) {
   const today = new Date().toISOString().slice(0, 10);
   const start = from || today;
-  const end = to || new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
+  // A year, not sixty days: a research-driven calendar is small, and a December session that
+  // the default window hid was the first thing the person asked about.
+  const end = to || new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
   const where = ['e.date >= ?', 'e.date <= ?']; const args = [start, end];
   if (account_id) { where.push('e.account_id = ?'); args.push(account_id); }
   if (status) { where.push('e.status = ?'); args.push(status); }
@@ -188,11 +190,15 @@ function calendar({ from, to, account_id, status } = {}) {
     if (!d || d.date !== r.date) { d = { date: r.date, events: [] }; days.push(d); }
     d.events.push(r);
   }
+  // What the window is hiding, so a filter never narrows silently.
+  const beyond = db().prepare(`SELECT COUNT(*) c FROM crm_event WHERE status = 'planned' AND date > ?${account_id ? ' AND account_id = ?' : ''}`).get(...(account_id ? [end, account_id] : [end])).c;
+  const before = db().prepare(`SELECT COUNT(*) c FROM crm_event WHERE date < ?${account_id ? ' AND account_id = ?' : ''}`).get(...(account_id ? [start, account_id] : [start])).c;
   return { from: start, to: end, today, days, count: rows.length,
+    planned_after_window: beyond, before_window: before,
     awaiting_outcome: overdue,
     note: overdue.length
       ? `${overdue.length} event${overdue.length === 1 ? '' : 's'} your human meant to attend ${overdue.length === 1 ? 'has' : 'have'} passed with no word since. Did they go, and what came of it? crm_attend_event and crm_update_event settle it.`
-      : `${rows.length} event${rows.length === 1 ? '' : 's'} between ${start} and ${end}.` };
+      : `${rows.length} event${rows.length === 1 ? '' : 's'} between ${start} and ${end}.${beyond ? ` ${beyond} more planned after ${end}; widen \`to\` to see them.` : ''}` };
 }
 
 /**

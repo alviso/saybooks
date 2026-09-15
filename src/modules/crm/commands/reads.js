@@ -46,12 +46,13 @@ and the reason is the most useful thing in the list when you write the next one.
 
 read({ name: 'crm_calendar', title: 'Calendar',
   summary: 'What is coming, by day, and every planned event that already passed with no outcome recorded.',
-  doctrine: `Default window is today to sixty days out. awaiting_outcome is the list to read
-first: a planned event whose date has gone by is done, cancelled, or forgotten, and only the
-third is a problem. Ask your human what came of each, then close it with crm_update_event.`,
+  doctrine: `Default window is today to a year out, and planned_after_window says what even
+that hides. awaiting_outcome is the list to read first: something your human meant to attend
+whose date has gone by with no word since. Ask what came of it, then settle it with
+crm_attend_event and crm_update_event.`,
   args: {
     from:       f.date('Start of the window. Default today.'),
-    to:         f.date('End of the window. Default sixty days out.'),
+    to:         f.date('End of the window. Default a year out.'),
     account_id: f.ref('account', 'Only this account.'),
     status:     f.pick(['planned', 'done', 'cancelled'], 'Only events in this state.'),
   },
