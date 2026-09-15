@@ -39,7 +39,11 @@
   td { padding:10px 14px; border-bottom:1px solid hsl(215 25% 93%) } tr:last-child td { border-bottom:none }
   tbody tr { cursor:pointer } tbody tr:hover { background:var(--bg) }
   .num { text-align:right; font-variant-numeric:tabular-nums }
+  /* A toggle that is on: the filter bars and the attendance row. Without this a pressed
+     button looked exactly like an unpressed one, which is the same as having no button. */
+  .acts button.on { background:var(--accent); color:#fff; border-color:var(--accent) }
   .pill { font:700 11px var(--display); padding:3px 9px; border-radius:4px; background:var(--tint2); color:var(--mid) }
+  .pill.attending,.pill.registered { background:#E3ECF7; color:#2C5282 } .pill.went { background:#E8F0E2; color:#3E6B2B } .pill.skip { background:var(--tint2); color:var(--mid); text-decoration:line-through }
   .pill.confirmed,.pill.sent,.pill.issued,.pill.submitted { background:#E3ECF7; color:#2C5282 } .pill.shipped { background:#E8F0E2; color:#3E6B2B }
   .pill.closed,.pill.paid,.pill.accepted,.pill.active,.pill.purchase,.pill.matched { background:var(--tint); color:var(--accent) } .pill.lapsed,.pill.missed,.pill.unreviewed { background:#FFF3CD; color:#7a5a00 } .pill.recurring { background:#E3ECF7; color:#2C5282 }
   .chart { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px 16px; box-shadow:var(--shadow) } .chart h3 { margin:0 0 8px; font-size:13px; color:var(--mid); font-weight:600 }
@@ -848,7 +852,7 @@ function eventRow(e, opts = {}) {
   const row = $(`<div class="card" style="margin-bottom:8px;padding:10px 14px">
     <div style="display:flex;gap:14px;align-items:baseline;flex-wrap:wrap">
       <b style="white-space:nowrap">${when}</b>
-      <span class="pill ${e.status}">${e.status}</span>${e.attendance ? `<span class="pill" style="background:var(--agent-muted, #eee)">${{ skip: 'not attending', attending: 'attending', registered: 'registered', went: 'went' }[e.attendance]}</span>` : ''}
+      <span class="pill ${e.status}">${e.status}</span>${e.attendance ? `<span class="pill ${e.attendance}">${{ skip: 'not attending', attending: 'attending', registered: 'registered', went: 'went' }[e.attendance]}</span>` : ''}
       <span class="pill">${e.kind}</span>
       <span style="font-weight:600">${esc(e.title)}</span>
       ${opts.showAccount && e.account_name ? `<a href="#" data-acc>${esc(e.account_name)}</a>` : ''}
