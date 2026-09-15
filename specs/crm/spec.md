@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 0.4 |
+| **Version** | 0.5 |
 | **Status** | curated draft — implementation not started |
 | **Curator** | Peter Varga (single editor; spec PRs separate from implementation PRs) |
 | **Calibration** | a curated target list worked by a small team, not a mass-market funnel |
@@ -194,12 +194,19 @@ Moving the date needs a reason and a source, as the date did the first time. `do
 outcome, because an event with no outcome is an intention that went stale. `cancelled` takes
 a reason. Neither is undone (CRM-21).
 
+**`attend_event`** (event, attendance)
+Whether an event happens is the organiser's business; whether the person goes is theirs
+(CRM-22). Most events on a research-driven calendar were found, not scheduled, so
+reschedule and cancel are the wrong verbs for them and this is the right one: `skip`,
+`attending`, `registered`, or `went`. Recorded only on the person's word; an agent has no
+other source for it. `went` is refused before the date.
+
 **`calendar`** (from?, to?, account?, status?) — read model: events by day in a window, and
-every planned event that already passed with no outcome. The second list is the Monday one.
+every event the person meant to attend that passed with no word since. The second list is the Monday one: found events pass unattended all the time and that is fine; a registered one passing in silence is not.
 
 ### Act count
 
-15 write acts + 7 read models — inside the 25-tool budget. Bulk arrival of unresearched rows
+16 write acts + 7 read models — inside the 25-tool budget. Bulk arrival of unresearched rows
 is a different area with a different doctrine; see `specs/prospect/spec.md`, which promotes
 into this one through the owner's API the way this area promotes into `core`.
 
@@ -257,6 +264,9 @@ Namespaced `CRM-n` (areas own their invariant namespaces; o2c's unprefixed `INV-
     who said it and when. A date the source does not pin is not a date and is not recorded.
 21. **CRM-21 Events close, they do not vanish.** Done takes an outcome, cancelled takes a
     reason, and neither is reopened; a cancelled thing that happens after all is a new event.
+22. **CRM-22 Attendance is the person's.** Whether an event happens is the organiser's
+    fact; whether the person goes is a separate axis, recorded only on their word, and
+    never inferred from the date having passed.
 
 11. **CRM-11 Platform inheritance.** Every write is a logged command with an actor; refusals
     (including CRM-4 and CRM-17 denials) are logged; reads are never logged.

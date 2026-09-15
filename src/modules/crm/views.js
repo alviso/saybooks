@@ -59,7 +59,8 @@ function derivedState(id) {
     // The next planned thing, and anything planned that already passed without an outcome.
     next_event: db().prepare(`SELECT id, title, date, time, kind FROM crm_event WHERE account_id = ? AND status = 'planned' AND date >= date('now')
       ORDER BY date, time LIMIT 1`).get(id) || null,
-    events_awaiting_outcome: db().prepare(`SELECT COUNT(*) c FROM crm_event WHERE account_id = ? AND status = 'planned' AND date < date('now')`).get(id).c,
+    events_awaiting_outcome: db().prepare(`SELECT COUNT(*) c FROM crm_event WHERE account_id = ? AND status = 'planned' AND date < date('now')
+      AND (attendance IN ('attending', 'registered') OR (attendance = 'went' AND outcome IS NULL))`).get(id).c,
   };
 }
 
@@ -176,7 +177,11 @@ function calendar({ from, to, account_id, status } = {}) {
   const sel = `SELECT e.*, a.name AS account_name, a.status AS account_status, c.name AS contact_name, c.email AS contact_email
     FROM crm_event e JOIN account a ON a.id = e.account_id LEFT JOIN contact c ON c.id = e.contact_id`;
   const rows = db().prepare(`${sel} WHERE ${where.join(' AND ')} ORDER BY e.date, e.time, e.id`).all(...args);
-  const overdue = account_id ? [] : db().prepare(`${sel} WHERE e.status = 'planned' AND e.date < ? ORDER BY e.date DESC`).all(today);
+  // The Monday question is not "what passed" (found events pass all the time, unattended, and
+  // that is fine). It is: you said attending or registered, the date went by, and nobody has
+  // said whether you went or what came of it.
+  const overdue = account_id ? [] : db().prepare(`${sel} WHERE e.status = 'planned' AND e.date < ?
+    AND (e.attendance IN ('attending', 'registered') OR (e.attendance = 'went' AND e.outcome IS NULL)) ORDER BY e.date DESC`).all(today);
   const days = [];
   for (const r of rows) {
     let d = days[days.length - 1];
@@ -186,7 +191,7 @@ function calendar({ from, to, account_id, status } = {}) {
   return { from: start, to: end, today, days, count: rows.length,
     awaiting_outcome: overdue,
     note: overdue.length
-      ? `${overdue.length} planned event${overdue.length === 1 ? ' has' : 's have'} passed with no outcome recorded. Done, cancelled, or forgotten: only the third is a problem, and crm_update_event settles it.`
+      ? `${overdue.length} event${overdue.length === 1 ? '' : 's'} your human meant to attend ${overdue.length === 1 ? 'has' : 'have'} passed with no word since. Did they go, and what came of it? crm_attend_event and crm_update_event settle it.`
       : `${rows.length} event${rows.length === 1 ? '' : 's'} between ${start} and ${end}.` };
 }
 

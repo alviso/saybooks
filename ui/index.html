@@ -848,7 +848,7 @@ function eventRow(e, opts = {}) {
   const row = $(`<div class="card" style="margin-bottom:8px;padding:10px 14px">
     <div style="display:flex;gap:14px;align-items:baseline;flex-wrap:wrap">
       <b style="white-space:nowrap">${when}</b>
-      <span class="pill ${e.status}">${e.status}</span>
+      <span class="pill ${e.status}">${e.status}</span>${e.attendance ? `<span class="pill" style="background:var(--agent-muted, #eee)">${{ skip: 'not attending', attending: 'attending', registered: 'registered', went: 'went' }[e.attendance]}</span>` : ''}
       <span class="pill">${e.kind}</span>
       <span style="font-weight:600">${esc(e.title)}</span>
       ${opts.showAccount && e.account_name ? `<a href="#" data-acc>${esc(e.account_name)}</a>` : ''}
@@ -866,14 +866,33 @@ function eventRow(e, opts = {}) {
   const a2 = row.querySelector('[data-con]'); if (a2) a2.onclick = (ev) => { ev.preventDefault(); selected = { type: 'crm_contact', id: e.contact_id }; render(); };
   row.querySelectorAll('[data-stop]').forEach(a => a.onclick = (ev) => ev.stopPropagation());
   const acts = row.querySelector('.evacts');
-  if (e.status === 'planned') {
-    const done = $('<button type="button">Done…</button>');
-    done.onclick = () => openForm(cmd('crm_update_event'), { event_id: e.id, status: 'done' });
-    const move = $('<button type="button">Reschedule…</button>');
-    move.onclick = () => openForm(cmd('crm_update_event'), { event_id: e.id, date: e.date, time: e.time || undefined, location: e.location || undefined });
-    const cancel = $('<button type="button">Cancel…</button>');
-    cancel.onclick = () => openForm(cmd('crm_update_event'), { event_id: e.id, status: 'cancelled' });
-    acts.append(done, move, cancel);
+  if (e.status !== 'cancelled') {
+    // Your stance, one click each, the current one lit. No form: there is nothing to type.
+    const today = new Date().toISOString().slice(0, 10);
+    const STANCE = [['skip', 'Not attending'], ['attending', 'Attending'], ['registered', 'Registered'], ['went', 'Went']];
+    for (const [k, label] of STANCE) {
+      const b = $(`<button type="button" class="${e.attendance === k ? 'on' : ''}">${label}</button>`);
+      if (k === 'went' && e.date > today) { b.disabled = true; b.title = 'After the date.'; }
+      b.onclick = async () => {
+        try { await api('crm_attend_event', { event_id: e.id, attendance: k }); toast(`✓ ${label}`); render(); }
+        catch (err) { toast(err.message); }
+      };
+      acts.append(b);
+    }
+    // The organiser's verbs, kept small: they fit an event you scheduled, and the odd found
+    // one whose page changed under you.
+    const more = $('<span style="margin-left:auto;display:inline-flex;gap:6px"></span>');
+    if (e.status === 'planned') {
+      const done = $('<button type="button" style="font-size:11px;padding:3px 9px">What came of it…</button>');
+      done.onclick = () => openForm(cmd('crm_update_event'), { event_id: e.id, status: 'done' });
+      const move = $('<button type="button" style="font-size:11px;padding:3px 9px">Reschedule…</button>');
+      move.onclick = () => openForm(cmd('crm_update_event'), { event_id: e.id, date: e.date, time: e.time || undefined, location: e.location || undefined });
+      const cancel = $('<button type="button" style="font-size:11px;padding:3px 9px">Cancelled…</button>');
+      cancel.onclick = () => openForm(cmd('crm_update_event'), { event_id: e.id, status: 'cancelled' });
+      more.append(done, move, cancel);
+    }
+    acts.append(more);
+    acts.style.display = 'flex'; acts.style.alignItems = 'center'; acts.style.flexWrap = 'wrap';
   } else acts.remove();
   return row;
 }
@@ -1234,7 +1253,7 @@ async function renderPage() {
     add.onclick = () => openForm(cmd('crm_add_event'), {});
     const addbar = $('<div class="acts" style="margin-bottom:12px"></div>'); addbar.append(add); main.append(addbar);
     if (cal.awaiting_outcome.length && range !== 'past') {
-      main.append($(`<div class="sub" style="margin-top:6px;color:var(--warn)">Passed with no outcome recorded (${cal.awaiting_outcome.length})</div>`));
+      main.append($(`<div class="sub" style="margin-top:6px;color:var(--warn)">You meant to go, and it has passed (${cal.awaiting_outcome.length}) — did you, and what came of it?</div>`));
       for (const e of cal.awaiting_outcome) main.append(eventRow(e, { showAccount: true }));
     }
     if (!cal.days.length) {

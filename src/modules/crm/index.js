@@ -16,7 +16,7 @@ const mod = R.defineModule({
     account: 'not_started -> researching -> approaching -> active -> won (terminal, promotable) | on_hold (re-enterable) | closed / excluded (terminal, reasoned)',
     contact: 'gap -> named (via resolve_gap only) -> departed; never deleted',
     crm_draft: 'draft (written by an agent, editable) -> sent by a PERSON (immutable, copied onto the trail) | discarded by a person (never revived)',
-    crm_event: 'planned (dated, sourced) -> done (with an outcome) | cancelled (with a reason); never deleted, never reopened',
+    crm_event: 'planned (dated, sourced) -> done (with an outcome) | cancelled (with a reason); never deleted, never reopened. Attendance is a separate axis: undecided -> skip | attending | registered | went',
   },
   rules: [
     'Never invent a person: a named contact requires a source. Empty beats guessed.',
@@ -29,6 +29,7 @@ const mod = R.defineModule({
     'What a campaign may claim about itself is written by a person, never by an agent.',
     'Parking is a fact about what happened; status is a judgement about the pursuit.',
     'An event carries the source its date came from; a date not on the source is not a date.',
+    'Whether an event happens is the organiser\'s business; whether the person goes is theirs, and only they say so.',
   ],
   doctrine: `Campaigns first: before adding any account, read crm_campaigns and match the ask
 to an existing goal — if one fits, work under it and argue its goal in every why_them. If none
@@ -57,7 +58,7 @@ them has not given you a date for any topic; say what you found and let your hum
   env_acts: { create_campaign: 'crm_create_campaign', add_account: 'crm_add_account' },
   env_argmap: { campaign: 'campaign_id' },
   implements: {
-    area: 'crm', spec: '0.4',
+    area: 'crm', spec: '0.5',
     argmap: { account: 'account_id', contact: 'contact_id', campaign: 'campaign_id', draft: 'draft_id', event: 'event_id' },
     acts: {
       create_campaign: 'crm_create_campaign', update_campaign: 'crm_update_campaign',
@@ -70,7 +71,7 @@ them has not given you a date for any topic; say what you found and let your hum
       pipeline: 'crm_pipeline', gaps: 'crm_gaps', coverage: 'crm_coverage',
       draft_message: 'crm_draft_message', update_draft: 'crm_update_draft',
       draft_outcome: 'crm_draft_outcome', drafts: 'crm_drafts',
-      add_event: 'crm_add_event', update_event: 'crm_update_event', calendar: 'crm_calendar',
+      add_event: 'crm_add_event', update_event: 'crm_update_event', attend_event: 'crm_attend_event', calendar: 'crm_calendar',
     },
   },
   search: (like) => ({

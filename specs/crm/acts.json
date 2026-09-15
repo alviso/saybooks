@@ -1,6 +1,6 @@
 {
   "area": "crm",
-  "spec": "0.4",
+  "spec": "0.5",
   "doc": "spec.md",
   "acts": {
     "add_account": {
@@ -158,6 +158,13 @@
     "calendar": {
       "kind": "read",
       "required": []
+    },
+    "attend_event": {
+      "kind": "write",
+      "required": [
+        "event",
+        "attendance"
+      ]
     }
   },
   "env_acts": {},
@@ -245,6 +252,10 @@
     {
       "id": "CRM-21",
       "title": "Events are never deleted or reopened: done takes an outcome, cancelled takes a reason."
+    },
+    {
+      "id": "CRM-22",
+      "title": "Attendance is the person's stance and a separate axis from the event's status; it is recorded only on their word."
     }
   ]
 }

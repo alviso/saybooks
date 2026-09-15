@@ -1,0 +1,105 @@
+{
+  "name": "found, not scheduled: the verb is attendance",
+  "spec": "crm@0.5",
+  "notes": "CRM-22 attendance is a separate axis from the event's status; went is refused before the date; a cancelled event cannot be attended.",
+  "steps": [
+    {
+      "act": "create_campaign",
+      "args": {
+        "name": "Workshops",
+        "goal": "Land paid teaching slots with chambers and SBDCs."
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "add_account",
+      "args": {
+        "campaign": "CAM-0001",
+        "name": "Keizer Chamber of Commerce",
+        "why_them": "Runs a monthly Lunch and Learn.",
+        "source_url": "https://example.com/keizer"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "add_event",
+      "args": {
+        "account": "A-0001",
+        "title": "Lunch and Learn",
+        "date": "2099-09-28",
+        "kind": "workshop",
+        "source": "https://example.com/keizer/events/sept"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "attend_event",
+      "args": {
+        "event": "EV-0001",
+        "attendance": "went"
+      },
+      "expect": {
+        "refused": "has not happened yet"
+      },
+      "notes": "CRM-22: went is for afterwards."
+    },
+    {
+      "act": "attend_event",
+      "args": {
+        "event": "EV-0001",
+        "attendance": "registered"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "attendance": "registered"
+        }
+      }
+    },
+    {
+      "act": "calendar",
+      "args": {
+        "from": "2099-01-01",
+        "to": "2099-12-31"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "count": 1
+        }
+      },
+      "notes": "Still planned: registering changed nothing about the event itself."
+    },
+    {
+      "act": "update_event",
+      "args": {
+        "event": "EV-0001",
+        "status": "cancelled",
+        "reason": "The chamber pulled the September session; the events page now lists nothing for that date."
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "cancelled"
+        }
+      }
+    },
+    {
+      "act": "attend_event",
+      "args": {
+        "event": "EV-0001",
+        "attendance": "attending"
+      },
+      "expect": {
+        "refused": "nothing to attend"
+      },
+      "notes": "The organiser's fact wins: a cancelled event has no attendance."
+    }
+  ]
+}

@@ -118,3 +118,37 @@ event with a new source.`,
           : now.status === 'done' ? `${now.id} done: ${now.outcome}` : `${now.id} cancelled: ${now.status_reason}` };
   },
 });
+
+const STANCES = ['skip', 'attending', 'registered', 'went'];
+
+defineCommand({
+  name: 'crm_attend_event',
+  permission: 'sales.write',
+  title: 'Attendance', group: 'CRM', subject: 'crm_event',
+  summary: 'Record where you stand on an event: not attending, attending, registered, or went. One word, no form.',
+  doctrine: `Whether an event happens is the organiser's business; whether your human goes is
+theirs (CRM-22). Most events here were found, not scheduled, so this is the verb that fits
+them: skip, attending, registered, or went.
+
+ONLY ON YOUR HUMAN'S WORD. You have no source for whether a person intends to turn up except
+that person. If they said it, record it; if they did not, ask.
+
+"went" is for after the date. An event with attendance went and no outcome is the one the
+calendar asks about afterwards: what came of it goes on the event with crm_update_event.`,
+  effects: ['attendance recorded on the event'],
+  guards: [ (e) => e.status !== 'cancelled' || `${e.id} was cancelled${e.status_reason ? ` (${e.status_reason})` : ''}; there is nothing to attend.` ],
+  args: {
+    event_id:   { ...f.text('The event, e.g. EV-0001.'), required: true },
+    attendance: { ...f.pick(STANCES, 'skip (not attending), attending, registered, or went.'), required: true },
+  },
+  handler(a, { db, at }) {
+    const e = H.need('crm_event', a.event_id, 'event');
+    if (e.status === 'cancelled') throw new Rejected(`${e.id} was cancelled${e.status_reason ? ` (${e.status_reason})` : ''}; there is nothing to attend.`);
+    if (!STANCES.includes(a.attendance)) throw new Rejected(`attendance must be one of ${STANCES.join(', ')}.`);
+    if (a.attendance === 'went' && e.date > at.slice(0, 10)) throw new Rejected(`${e.id} is on ${e.date}, which has not happened yet. "went" is for afterwards.`);
+    db.prepare('UPDATE crm_event SET attendance = ?, attendance_at = ?, updated_at = ? WHERE id = ?').run(a.attendance, at, at, e.id);
+    const word = { skip: 'not attending', attending: 'attending', registered: 'registered', went: 'went' }[a.attendance];
+    return { event: e.id, title: e.title, date: e.date, attendance: a.attendance,
+      note: `${e.id}: ${word}.${a.attendance === 'went' && !e.outcome ? ' What came of it? crm_update_event takes the outcome.' : ''}` };
+  },
+});
