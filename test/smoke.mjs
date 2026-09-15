@@ -129,6 +129,33 @@ for (const v of views) {
   const why = errors.length ? errors[0] : chars <= 0 ? 'rendered nothing at all' : null;
   if (why) { bad++; console.log(`  FAIL ${v} — ${why}`); } else { console.log(`  ok   ${v} (${chars} chars)`); }
 }
-console.log(`\n${views.length - bad}/${views.length} workbench views render without error.`);
+
+// Detail panels are their own surface: every entity type has its own facts block and its own
+// related lists, none of which any view above touches. A type whose panel throws looks
+// exactly like a row that does not open.
+const DETAILS = [
+  ['account', '(await api("crm_pipeline",{}))[0]?.id'],
+  ['crm_contact', '(await api("crm_list_contacts",{}))[0]?.id'],
+  ['campaign', '(await api("crm_campaigns",{}))[0]?.id'],
+  ['customer', '(await api("o2c_ar_aging",{})).detail?.[0]?.customer_id ?? REG.lookups?.customer?.[0]?.id'],
+  ['order', '(await api("o2c_backorders",{}))[0]?.order_id ?? REG.orders?.[0]?.id'],
+  ['solo_invoice', 'REG.solo_invoices?.[0]?.id'],
+  ['purch_transaction', '(await api("purch_transactions",{limit:1})).items?.[0]?.id'],
+  ['purch_source', '(await api("purch_sources",{})).items?.[0]?.id'],
+  ['posting', '(await api("hunt_pipeline",{}))[0]?.id'],
+];
+let dbad = 0, dseen = 0;
+for (const [type, expr] of DETAILS) {
+  const id = await evalJS(`(async () => { try { return ${expr} ?? null; } catch { return null; } })()`);
+  if (!id) { console.log(`  skip ${type} detail — nothing of this kind in the seed`); continue; }
+  dseen++; errors = [];
+  await evalJS(`(async () => { selected = { type: ${JSON.stringify(type)}, id: ${JSON.stringify(id)} }; await render(); })()`);
+  await new Promise(r => setTimeout(r, 300));
+  const chars = await evalJS('document.getElementById("main") ? document.getElementById("main").innerText.trim().length : -1');
+  const why = errors.length ? errors[0] : chars <= 0 ? 'rendered nothing at all' : null;
+  if (why) { dbad++; console.log(`  FAIL ${type} detail (${id}) — ${why}`); } else { console.log(`  ok   ${type} detail (${id}, ${chars} chars)`); }
+}
+
+console.log(`\n${views.length - bad}/${views.length} workbench views and ${dseen - dbad}/${dseen} detail panels render without error.`);
 ws.close();
-process.exit(bad ? 1 : 0);
+process.exit(bad + dbad ? 1 : 0);

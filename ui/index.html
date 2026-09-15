@@ -382,9 +382,9 @@ const newButtons = (subject) => REG.commands.filter(c => c.subject === subject &
 
 async function detail(type, id) {
   const wrap = $('<div></div>');
-  const idArg = type === 'solo_invoice' ? 'invoice_id' : type.startsWith('purch_') ? type.slice(6) + '_id' : type + '_id';
+  const idArg = type === 'solo_invoice' ? 'invoice_id' : type === 'crm_contact' ? 'contact_id' : type.startsWith('purch_') ? type.slice(6) + '_id' : type + '_id';
   const [entity, na] = await Promise.all([
-    api({ order:'o2c_get_order', customer: cmd('o2c_get_customer') ? 'o2c_get_customer' : 'core_get_customer', invoice:'o2c_get_invoice', account:'crm_get_account', campaign:'crm_get_campaign', posting:'hunt_get_posting', contact:'hunt_get_contact', resume:'hunt_get_resume', solo_invoice:'solo_get_invoice', purch_transaction:'purch_get_transaction', purch_receipt:'purch_get_receipt', purch_subscription:'purch_get_subscription', purch_source:'purch_source' }[type],
+    api({ order:'o2c_get_order', customer: cmd('o2c_get_customer') ? 'o2c_get_customer' : 'core_get_customer', invoice:'o2c_get_invoice', account:'crm_get_account', campaign:'crm_get_campaign', posting:'hunt_get_posting', contact:'hunt_get_contact', resume:'hunt_get_resume', solo_invoice:'solo_get_invoice', purch_transaction:'purch_get_transaction', purch_receipt:'purch_get_receipt', purch_subscription:'purch_get_subscription', purch_source:'purch_source', crm_contact:'crm_get_contact' }[type],
         { [idArg]: id }),
     fetch(wsUrl(`/api/next-actions?type=${type}&id=${id}`)).then(r => r.json()),
   ]);
@@ -411,6 +411,18 @@ async function detail(type, id) {
     ? { Vendor: entity.vendor, Cadence: entity.cadence, Expected: entity.amount_display, Status: entity.derived_status, 'Matched periods': entity.matched_periods, 'Missed periods': entity.missed_periods, 'Next expected': entity.next_expected ?? '—', 'Last charge': entity.last_charge ? `${entity.last_charge.date} (${entity.last_charge.transaction_id})` : '—', ...(entity.cancel_reason ? { Cancelled: entity.cancel_reason } : {}) }
     : type === 'purch_source'
     ? { Account: entity.account ?? '—', Kind: entity.kind, Period: `${entity.period_start} – ${entity.period_end}`, Opening: entity.opening_display, Closing: entity.closing_display, Rows: `${entity.rows_in} in${entity.rows_skipped ? `, ${entity.rows_skipped} skipped` : ''}`, Unreviewed: entity.unreviewed, 'Imported by': entity.imported_by, Hash: `<code style="font-size:11px">${entity.hash}</code>` }
+    : type === 'crm_contact'
+    ? { Account: entity.account_name ?? '—', Role: entity.role_type, Status: entity.status,
+        Title: entity.title ?? '—',
+        Email: entity.email ? `<a href="mailto:${entity.email}">${entity.email}</a>` : '—',
+        Phone: entity.phone ?? '—',
+        LinkedIn: entity.linkedin_url ? `<a href="${entity.linkedin_url}" target="_blank" rel="noopener">${String(entity.linkedin_url).replace(/^https?:\/\/(www\.)?/, '')}</a>` : '—',
+        Source: entity.source ? `<a href="${entity.source}" target="_blank" rel="noopener">where this came from</a>` : '—',
+        Confidence: entity.confidence_note ?? '—',
+        ...(entity.gap_note ? { 'Gap note': entity.gap_note } : {}),
+        Path: [entity.linkedin_path, entity.mutual_via ? `via ${entity.mutual_via}` : ''].filter(Boolean).join(' · ') || '— (entered by a person, never an agent)',
+        Drafts: entity.drafts.length ? `${entity.drafts.length} (${entity.drafts_waiting} waiting)` : '—',
+        'Last sent': entity.last_sent ?? '— (never written to)' }
     : type === 'contact'
     ? { Company: entity.company_name ?? '—', Role: entity.role ?? '—', Email: entity.email ?? '—', Phone: entity.phone ?? '—', LinkedIn: entity.linkedin_url ? `<a href="${entity.linkedin_url}" target="_blank" rel="noopener">profile</a>` : '—', Source: entity.source, 'Last touch': entity.last_touch ? entity.last_touch.slice(0,10) : '—' }
     : type === 'resume'
@@ -495,6 +507,29 @@ async function detail(type, id) {
       for (const x of entity.interactions) xt.querySelector('tbody').append($(`<tr><td>${(x.at||'').slice(0,16).replace('T',' ')}</td><td>${x.direction}</td><td>${x.summary}</td>
         <td style="font-size:12px;color:${x.next_action_state==='open'?'var(--accent)':'var(--dim)'}">${x.next_action ? x.next_action + ' [' + x.next_action_state + ']' : ''}</td></tr>`));
       wrap.append($('<div class="sub" style="margin-top:16px">Touches — superseded intentions kept</div>'), xt);
+    }
+  }
+  if (type === 'crm_contact') {
+    if (entity.notes) wrap.append($(`<div class="card"><b>Notes</b><div class="doc" style="margin-top:4px">${esc(entity.notes)}</div></div>`));
+    if (entity.drafts.length) {
+      wrap.append($('<div class="sub" style="margin-top:16px">Written to this person</div>'));
+      for (const d of entity.drafts) {
+        wrap.append($(`<div class="card" style="margin-bottom:10px">
+          <div class="sub"><span class="pill ${d.status}">${d.status}</span> ${d.channel}${d.sent_at ? ` · sent ${d.sent_at}` : ''} · ${d.id}</div>
+          ${d.subject ? `<div style="font-weight:600;margin:6px 0 2px">${esc(d.subject)}</div>` : ''}
+          <div style="white-space:pre-wrap;margin:6px 0 8px">${esc(d.body)}</div>
+          <div class="doc" style="border-left:3px solid var(--agent);padding-left:10px;font-size:13px"><b>Why this one</b> (never sent): ${esc(d.rationale)}</div>
+          ${d.status_reason ? `<div class="doc" style="font-size:13px;margin-top:8px"><b>Rejected:</b> ${esc(d.status_reason)}</div>` : ''}</div>`));
+      }
+      const acts3 = $('<div class="acts"></div>');
+      const b = $('<button type="button">Open the Drafts queue</button>');
+      b.onclick = () => { selected = null; view = 'crmdrafts'; render(); };
+      acts3.append(b); wrap.append(acts3);
+    }
+    if (entity.activity.length) {
+      const at3 = $('<table><thead><tr><th>Occurred</th><th>Dir</th><th>Medium</th><th>Summary</th></tr></thead><tbody></tbody></table>');
+      for (const x of entity.activity) at3.querySelector('tbody').append($(`<tr><td>${x.occurred_at}</td><td>${x.direction || ''}</td><td>${x.medium || ''}</td><td style="white-space:pre-wrap">${esc(x.summary)}</td></tr>`));
+      wrap.append($('<div class="sub" style="margin-top:16px">Everything that touched them</div>'), at3);
     }
   }
   if (type === 'contact') {
@@ -627,12 +662,12 @@ async function detail(type, id) {
   }
   if (type === 'purch_receipt' && entity.candidates && entity.candidates.length) {
     const t = $('<table><thead><tr><th>Row</th><th>Date</th><th>Description</th><th class="num">Amount</th></tr></thead><tbody></tbody></table>');
-    rowsInto(t, entity.candidates, r => `<td>${r.id}</td><td>${r.date}</td><td>${r.description}</td><td class="num">${r.amount_display}</td>`, 'purch_transaction');
+    wrap.append(fillRows(t, entity.candidates, r => `<td>${r.id}</td><td>${r.date}</td><td>${r.description}</td><td class="num">${r.amount_display}</td>`, 'purch_transaction'));
     wrap.append($('<div class="sub" style="margin-top:14px">Candidate rows — match one with a reason</div>'), t);
   }
   if (type === 'purch_source' && entity.rows) {
     const t = $('<table><thead><tr><th>#</th><th>Row</th><th>Date</th><th>Description</th><th>Vendor</th><th>Status</th><th class="num">Amount</th></tr></thead><tbody></tbody></table>');
-    rowsInto(t, entity.rows, r => `<td>${r.row_index}</td><td>${r.id}</td><td>${r.date}</td><td>${r.description}</td><td>${r.vendor || ''}</td><td><span class="pill ${r.status}">${r.status}</span></td><td class="num">${r.amount_display}</td>`, 'purch_transaction');
+    wrap.append(fillRows(t, entity.rows, r => `<td>${r.row_index}</td><td>${r.id}</td><td>${r.date}</td><td>${r.description}</td><td>${r.vendor || ''}</td><td><span class="pill ${r.status}">${r.status}</span></td><td class="num">${r.amount_display}</td>`, 'purch_transaction'));
     wrap.append($('<div class="sub" style="margin-top:14px">Rows, in the statement\'s order</div>'), t);
   }
   if (entity.lines && type !== 'solo_invoice') {
@@ -765,6 +800,22 @@ function bankImportDialog() {
     };
   };
   dlg.append(box); dlg.showModal();
+}
+
+/** Fill a table's tbody with clickable rows. Returns the table; the caller decides where it
+    goes, which is what lets a page and a detail panel share one row builder. */
+function fillRows(t, rows, cells, type) {
+  for (const r of rows) {
+    const tr = $(`<tr>${cells(r)}</tr>`);
+    tr.dataset.search = Object.values(r).filter(v => v != null && typeof v !== 'object').join(' ');
+    if (type && type !== 'nolink') {
+      tr.onclick = () => { selected = type === 'accountFromGap' ? { type: 'account', id: r.account_id } : { type, id: r.id }; render(); };
+    } else {
+      tr.style.cursor = 'default';
+    }
+    t.querySelector('tbody').append(tr);
+  }
+  return t;
 }
 
 /** Text somebody else wrote, printed into markup. Every view that shows a draft body, a
@@ -914,19 +965,10 @@ async function renderPage() {
     const cc = (REG.user ? view === 'home' : (ent && ent.tabs[0][0] === view && ent.key !== 'spec' && ent.key !== 'audit')) ? connectCard() : null;
     if (cc) main.append(cc);
   };
-  const rowsInto = (t, rows, cells, type) => {
-    for (const r of rows) {
-      const tr = $(`<tr>${cells(r)}</tr>`);
-      tr.dataset.search = Object.values(r).filter(v => v != null && typeof v !== 'object').join(' ');
-      if (type && type !== 'nolink') {
-        tr.onclick = () => { selected = type === 'accountFromGap' ? { type: 'account', id: r.account_id } : { type, id: r.id }; render(); };
-      } else {
-        tr.style.cursor = 'default';
-      }
-      t.querySelector('tbody').append(tr);
-    }
-    main.append(t);
-  };
+  // rowsInto is renderPage's own: it appends into this page's main. The row building itself
+  // is fillRows, at module scope, because detail panels build the same tables into their own
+  // container — a helper only one function can see is a helper the other one crashes on.
+  const rowsInto = (t, rows, cells, type) => { main.append(fillRows(t, rows, cells, type)); };
 
   if (view === 'orders') {
     head('Orders', 'Quote to cash. Click an order to see what can be done to it and why.');
@@ -1007,7 +1049,7 @@ async function renderPage() {
         <td style="font-size:12px">${c.source ? `<a href="${c.source}" target="_blank" rel="noopener">link</a>` : ''}</td>
         <td style="font-size:12px;white-space:nowrap">${[c.linkedin_url ? `<a href="${c.linkedin_url}" target="_blank" rel="noopener">profile</a>` : '', c.email ? `<a href="mailto:${c.email}">${c.email}</a>` : '', c.phone || '', c.linkedin_path || '', c.mutual_via ? `via ${c.mutual_via}` : ''].filter(Boolean).join(' · ')}</td>
         <td style="font-size:12px;color:var(--dim)">${c.confidence_note || ''}</td></tr>`);
-      tr.onclick = () => { selected = { type: 'account', id: c.account_id }; render(); };
+      tr.onclick = () => { selected = { type: 'crm_contact', id: c.id }; render(); };
       t.querySelector('tbody').append(tr);
     }
     main.append(t);
@@ -1064,8 +1106,18 @@ async function renderPage() {
       // An account still at not_started or researching moves to approaching when a send is
       // recorded, so say so on the button rather than letting the status change be a surprise.
       const willMove = ['not_started', 'researching'].includes(x.account_status);
+      // Who it goes to, and how to reach them, on the card. Whoever sends this should not
+      // have to go and find the address somewhere else and risk pasting the wrong one.
+      const reach = [
+        x.contact_email ? `<a href="mailto:${x.contact_email}" data-stop>${esc(x.contact_email)}</a>` : '',
+        x.contact_linkedin_url ? `<a href="${x.contact_linkedin_url}" target="_blank" rel="noopener" data-stop>LinkedIn profile</a>` : '',
+        x.contact_phone ? esc(x.contact_phone) : '',
+        x.contact_linkedin_path ? esc(x.contact_linkedin_path) : '',
+        x.contact_mutual_via ? `via ${esc(x.contact_mutual_via)}` : '',
+      ].filter(Boolean).join(' · ');
       const card = $(`<div class="card" style="margin-bottom:12px">
-        <div class="sub">${x.account} · ${x.contact}${x.contact_title ? `, ${x.contact_title}` : ''} · ${x.channel}${x.sent_at ? ` · sent ${x.sent_at}` : ''}${x.account_parked ? ' · <span style="color:var(--warn)">account parked</span>' : ''}</div>
+        <div class="sub"><a href="#" data-acc>${esc(x.account)}</a> · <a href="#" data-con>${esc(x.contact)}</a>${x.contact_title ? `, ${esc(x.contact_title)}` : ''} · ${x.channel}${x.sent_at ? ` · sent ${x.sent_at}` : ''}${x.account_parked ? ' · <span style="color:var(--warn)">account parked</span>' : ''}</div>
+        ${reach ? `<div style="font-size:12.5px;color:var(--muted);margin:2px 0 4px">${reach}</div>` : '<div style="font-size:12.5px;color:var(--warn);margin:2px 0 4px">No email or profile on this contact — open them and add one, with its source.</div>'}
         ${x.subject ? `<div style="font-weight:600;margin:6px 0 2px">${esc(x.subject)}</div>` : ''}
         <div style="white-space:pre-wrap;margin:6px 0 10px">${esc(x.body)}</div>
         <div class="doc" style="border-left:3px solid var(--agent);padding-left:10px;font-size:13px">
@@ -1096,7 +1148,11 @@ async function renderPage() {
         };
         acts.append(copy, edit, rej, sent);
       } else { acts.remove(); }
-      card.onclick = () => { selected = { type: 'account', id: x.account_id }; render(); };
+      // Named links go where they say. The card itself no longer navigates: a card carrying
+      // a mailto and an outbound profile link is not a click target.
+      card.querySelector('[data-acc]').onclick = (e) => { e.preventDefault(); selected = { type: 'account', id: x.account_id }; render(); };
+      card.querySelector('[data-con]').onclick = (e) => { e.preventDefault(); selected = { type: 'crm_contact', id: x.contact_id }; render(); };
+      card.querySelectorAll('[data-stop]').forEach(a => a.onclick = (e) => e.stopPropagation());
       main.append(card);
     }
   }
@@ -1324,7 +1380,7 @@ async function renderPage() {
     head('Search', `Everything in these books matching "${window.__q || ''}".`);
     if (!window.__q) { main.append($('<div class="card doc">Type in the box above and press Enter.</div>')); return; }
     const r = await api('core_search', { q: window.__q });
-    const TYPE = { customers: 'customer', orders: 'order', invoices: 'invoice', solo_invoices: 'solo_invoice', accounts: 'account', crm_contacts: 'contact', postings: 'posting', hunt_contacts: 'contact', campaigns: 'campaign' };
+    const TYPE = { customers: 'customer', orders: 'order', invoices: 'invoice', solo_invoices: 'solo_invoice', accounts: 'account', crm_contacts: 'crm_contact', postings: 'posting', hunt_contacts: 'contact', campaigns: 'campaign' };
     let any = false;
     for (const [group, rows] of Object.entries(r)) {
       if (!Array.isArray(rows) || !rows.length) continue; any = true;

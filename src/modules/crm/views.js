@@ -59,10 +59,20 @@ function derivedState(id) {
 
 function contactView(id) {
   const c = need('contact', id, 'contact');
+  const acc = H.get('account', c.account_id) || {};
+  // Everything written to this person, in every state. A draft waiting on somebody is a fact
+  // about that person, and it belongs where you look them up, not only in a queue elsewhere.
+  const drafts = db().prepare(`SELECT id, status, channel, subject, body, rationale, sent_at,
+      status_reason, written_by, updated_at FROM crm_draft WHERE contact_id = ? ORDER BY id DESC`).all(id);
   return {
     ...c,
-    account_name: H.get('account', c.account_id).name,
+    account_name: acc.name || null,
+    account_status: acc.status || null,
+    account_parked: !!acc.parked_at,
     activity: db().prepare('SELECT * FROM activity WHERE contact_id = ? ORDER BY occurred_at DESC LIMIT 20').all(id),
+    drafts,
+    drafts_waiting: drafts.filter(d => d.status === 'draft').length,
+    last_sent: drafts.filter(d => d.sent_at).map(d => d.sent_at).sort().pop() || null,
   };
 }
 
@@ -122,6 +132,8 @@ function drafts({ status = 'draft', account_id, contact_id, limit = 50 } = {}) {
   const n = Math.max(1, Math.min(200, limit | 0 || 50));
   const total = db().prepare(`SELECT COUNT(*) n FROM crm_draft d${sql}`).get(...args).n;
   const rows = db().prepare(`SELECT d.*, c.name AS contact_name, c.title AS contact_title, c.email AS contact_email,
+      c.phone AS contact_phone, c.linkedin_url AS contact_linkedin_url, c.linkedin_path AS contact_linkedin_path,
+      c.mutual_via AS contact_mutual_via, c.status AS contact_status,
       a.name AS account_name, a.status AS account_status, a.parked_at
     FROM crm_draft d JOIN contact c ON c.id = d.contact_id JOIN account a ON a.id = d.account_id${sql}
     ORDER BY d.updated_at DESC, d.id DESC LIMIT ?`).all(...args, n);
@@ -129,7 +141,13 @@ function drafts({ status = 'draft', account_id, contact_id, limit = 50 } = {}) {
     drafts: rows.map(d => ({ id: d.id, status: d.status, channel: d.channel, subject: d.subject, body: d.body,
       rationale: d.rationale, account: d.account_name, account_id: d.account_id, account_status: d.account_status,
       account_parked: !!d.parked_at, contact: d.contact_name, contact_id: d.contact_id, contact_title: d.contact_title,
-      contact_email: d.contact_email, sent_at: d.sent_at, status_reason: d.status_reason,
+      contact_status: d.contact_status,
+      // The reach, carried with the draft: whoever sends it should not have to go and look
+      // the address up somewhere else and risk pasting the wrong one.
+      contact_email: d.contact_email, contact_phone: d.contact_phone,
+      contact_linkedin_url: d.contact_linkedin_url, contact_linkedin_path: d.contact_linkedin_path,
+      contact_mutual_via: d.contact_mutual_via,
+      sent_at: d.sent_at, status_reason: d.status_reason,
       written_by: d.written_by, updated_at: d.updated_at })),
     total_matching: total, returned: rows.length, has_more: rows.length < total,
     note: 'Nothing here has been sent by this system, which has no way to send anything. A person sends, then records it.',
