@@ -44,6 +44,19 @@ and the reason is the most useful thing in the list when you write the next one.
   },
   handler: (a) => V.drafts(a) });
 
+read({ name: 'crm_calendar', title: 'Calendar',
+  summary: 'What is coming, by day, and every planned event that already passed with no outcome recorded.',
+  doctrine: `Default window is today to sixty days out. awaiting_outcome is the list to read
+first: a planned event whose date has gone by is done, cancelled, or forgotten, and only the
+third is a problem. Ask your human what came of each, then close it with crm_update_event.`,
+  args: {
+    from:       f.date('Start of the window. Default today.'),
+    to:         f.date('End of the window. Default sixty days out.'),
+    account_id: f.ref('account', 'Only this account.'),
+    status:     f.pick(['planned', 'done', 'cancelled'], 'Only events in this state.'),
+  },
+  handler: (a) => V.calendar(a) });
+
 // Extension reads (beyond the spec's act surface — allowed, own prefix, still read-only).
 read({ name: 'crm_today', title: 'Today', summary: 'The CRM work queue: open gaps, accounts going stale, and what happened lately.',
   doctrine: 'Three lists, one question: what deserves attention today. Gaps are research work; stale active accounts are follow-up work; recent activity is context.',

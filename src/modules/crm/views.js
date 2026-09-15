@@ -19,6 +19,8 @@ function accountView(id) {
     activity: db().prepare('SELECT * FROM activity WHERE account_id = ? ORDER BY occurred_at DESC, id DESC LIMIT 20').all(id),
     drafts: drafts.map(d => ({ id: d.id, contact: d.contact_name, channel: d.channel, subject: d.subject,
       status: d.status, sent_at: d.sent_at, updated_at: d.updated_at })),
+    events: db().prepare(`SELECT e.*, c.name AS contact_name FROM crm_event e LEFT JOIN contact c ON c.id = e.contact_id
+      WHERE e.account_id = ? ORDER BY e.date DESC, e.time DESC, e.id DESC LIMIT 30`).all(id),
     state: derivedState(id),
   };
 }
@@ -54,6 +56,10 @@ function derivedState(id) {
     ever_answered: !!lastIn,
     contacts_written_to: written.map(w => ({ contact_id: w.id, name: w.name, last_sent: w.last_sent })),
     drafts_waiting: waiting,
+    // The next planned thing, and anything planned that already passed without an outcome.
+    next_event: db().prepare(`SELECT id, title, date, time, kind FROM crm_event WHERE account_id = ? AND status = 'planned' AND date >= date('now')
+      ORDER BY date, time LIMIT 1`).get(id) || null,
+    events_awaiting_outcome: db().prepare(`SELECT COUNT(*) c FROM crm_event WHERE account_id = ? AND status = 'planned' AND date < date('now')`).get(id).c,
   };
 }
 
@@ -72,6 +78,7 @@ function contactView(id) {
     activity: db().prepare('SELECT * FROM activity WHERE contact_id = ? ORDER BY occurred_at DESC LIMIT 20').all(id),
     drafts,
     drafts_waiting: drafts.filter(d => d.status === 'draft').length,
+    events: db().prepare('SELECT * FROM crm_event WHERE contact_id = ? ORDER BY date DESC, id DESC LIMIT 20').all(id),
     last_sent: drafts.filter(d => d.sent_at).map(d => d.sent_at).sort().pop() || null,
   };
 }
@@ -120,7 +127,7 @@ function campaignView(id) {
 const campaignsView = () => db().prepare('SELECT * FROM campaign ORDER BY status = \'active\' DESC, created_at').all()
   .map(c => ({ ...c, ...coverage(c.id) }));
 
-module.exports = { accountView, contactView, derivedState, drafts, pipeline, gaps, coverage, campaignView, campaignsView, STAGE_P };
+module.exports = { accountView, contactView, derivedState, drafts, calendar, pipeline, gaps, coverage, campaignView, campaignsView, STAGE_P };
 
 /** Drafts on file, with the contact they are for and the account behind them. */
 function drafts({ status = 'draft', account_id, contact_id, limit = 50 } = {}) {
@@ -152,6 +159,35 @@ function drafts({ status = 'draft', account_id, contact_id, limit = 50 } = {}) {
     total_matching: total, returned: rows.length, has_more: rows.length < total,
     note: 'Nothing here has been sent by this system, which has no way to send anything. A person sends, then records it.',
   };
+}
+
+/**
+ * What is coming, by day, and what already passed without anyone saying what came of it.
+ * The second list is the one that matters on a Monday: a planned event whose date has gone
+ * by is either done, cancelled, or forgotten, and only the third is a problem.
+ */
+function calendar({ from, to, account_id, status } = {}) {
+  const today = new Date().toISOString().slice(0, 10);
+  const start = from || today;
+  const end = to || new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
+  const where = ['e.date >= ?', 'e.date <= ?']; const args = [start, end];
+  if (account_id) { where.push('e.account_id = ?'); args.push(account_id); }
+  if (status) { where.push('e.status = ?'); args.push(status); }
+  const sel = `SELECT e.*, a.name AS account_name, a.status AS account_status, c.name AS contact_name, c.email AS contact_email
+    FROM crm_event e JOIN account a ON a.id = e.account_id LEFT JOIN contact c ON c.id = e.contact_id`;
+  const rows = db().prepare(`${sel} WHERE ${where.join(' AND ')} ORDER BY e.date, e.time, e.id`).all(...args);
+  const overdue = account_id ? [] : db().prepare(`${sel} WHERE e.status = 'planned' AND e.date < ? ORDER BY e.date DESC`).all(today);
+  const days = [];
+  for (const r of rows) {
+    let d = days[days.length - 1];
+    if (!d || d.date !== r.date) { d = { date: r.date, events: [] }; days.push(d); }
+    d.events.push(r);
+  }
+  return { from: start, to: end, today, days, count: rows.length,
+    awaiting_outcome: overdue,
+    note: overdue.length
+      ? `${overdue.length} planned event${overdue.length === 1 ? ' has' : 's have'} passed with no outcome recorded. Done, cancelled, or forgotten: only the third is a problem, and crm_update_event settles it.`
+      : `${rows.length} event${rows.length === 1 ? '' : 's'} between ${start} and ${end}.` };
 }
 
 /**

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | 0.3 |
+| **Version** | 0.4 |
 | **Status** | curated draft — implementation not started |
 | **Curator** | Peter Varga (single editor; spec PRs separate from implementation PRs) |
 | **Calibration** | a curated target list worked by a small team, not a mass-market funnel |
@@ -177,9 +177,29 @@ intake routes dead, the sponsor left, a reorganisation in flight. An account par
 is mandatory and is read by whoever considers reopening; parking is reversible and drafting
 against a parked account is refused.
 
+### 4.8 Things that will happen
+
+**`add_event`** (account, title, date, source, time?, kind?, contact?, location?, url?, note?)
+The activity trail is what happened; an event is what will. A workshop the research agent
+found, a call somebody agreed to, a deadline a form published. The source is mandatory
+(CRM-20) because a date is a fact and the person deciding whether to turn up reads it back.
+
+The rule the field exists for: a page listing dates in one column and topics in another has
+not given a date for any topic. Reading one off by position and writing to the person who
+owns the curriculum is how a first approach ends. If the source does not pin the date, there
+is no event.
+
+**`update_event`** (event, status?, outcome?, reason?, date?, time?, source?, ...)
+Moving the date needs a reason and a source, as the date did the first time. `done` takes an
+outcome, because an event with no outcome is an intention that went stale. `cancelled` takes
+a reason. Neither is undone (CRM-21).
+
+**`calendar`** (from?, to?, account?, status?) — read model: events by day in a window, and
+every planned event that already passed with no outcome. The second list is the Monday one.
+
 ### Act count
 
-13 write acts + 6 read models — inside the 25-tool budget. Bulk arrival of unresearched rows
+15 write acts + 7 read models — inside the 25-tool budget. Bulk arrival of unresearched rows
 is a different area with a different doctrine; see `specs/prospect/spec.md`, which promotes
 into this one through the owner's API the way this area promotes into `core`.
 
@@ -233,6 +253,10 @@ Namespaced `CRM-n` (areas own their invariant namespaces; o2c's unprefixed `INV-
     is waiting are computed on read and come back with the account. A stored summary drifts,
     and the drift has a shape: an account reported as an untouched door days after somebody
     wrote to it.
+20. **CRM-20 A date is a fact.** An event carries the source its date came from: a URL, or
+    who said it and when. A date the source does not pin is not a date and is not recorded.
+21. **CRM-21 Events close, they do not vanish.** Done takes an outcome, cancelled takes a
+    reason, and neither is reopened; a cancelled thing that happens after all is a new event.
 
 11. **CRM-11 Platform inheritance.** Every write is a logged command with an actor; refusals
     (including CRM-4 and CRM-17 denials) are logged; reads are never logged.

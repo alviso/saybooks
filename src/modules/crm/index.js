@@ -10,12 +10,13 @@ const H = require('../../db.js');
 
 const mod = R.defineModule({
   name: 'crm', prefix: 'crm',
-  tables: ['account', 'account_path_in', 'contact', 'activity', 'crm_draft', 'campaign_claim'],
-  ids: { account: 'A-0001', contact: 'P-0001', campaign: 'CAM-0001', crm_draft: 'D-0001' },
+  tables: ['account', 'account_path_in', 'contact', 'activity', 'crm_draft', 'campaign_claim', 'crm_event'],
+  ids: { account: 'A-0001', contact: 'P-0001', campaign: 'CAM-0001', crm_draft: 'D-0001', crm_event: 'EV-0001' },
   lifecycles: {
     account: 'not_started -> researching -> approaching -> active -> won (terminal, promotable) | on_hold (re-enterable) | closed / excluded (terminal, reasoned)',
     contact: 'gap -> named (via resolve_gap only) -> departed; never deleted',
     crm_draft: 'draft (written by an agent, editable) -> sent by a PERSON (immutable, copied onto the trail) | discarded by a person (never revived)',
+    crm_event: 'planned (dated, sourced) -> done (with an outcome) | cancelled (with a reason); never deleted, never reopened',
   },
   rules: [
     'Never invent a person: a named contact requires a source. Empty beats guessed.',
@@ -27,6 +28,7 @@ const mod = R.defineModule({
     'A sent draft is immutable; its words are the record of what reached a real person.',
     'What a campaign may claim about itself is written by a person, never by an agent.',
     'Parking is a fact about what happened; status is a judgement about the pursuit.',
+    'An event carries the source its date came from; a date not on the source is not a date.',
   ],
   doctrine: `Campaigns first: before adding any account, read crm_campaigns and match the ask
 to an existing goal — if one fits, work under it and argue its goal in every why_them. If none
@@ -45,14 +47,18 @@ THERE IS NO SEND. crm_draft_message writes a message and stops. A person reads i
 sends it from their own mailbox and then tells you, and crm_draft_outcome records that. Never
 say a message was sent unless your human told you it was. Read the campaign's claims before
 drafting: they are what this business has decided it may assert about itself, and they are the
-only claims you may make.`,
+only claims you may make.
+
+DATES ARE FACTS. When you find something happening that touches an account, crm_add_event
+records it with the page the date is on. A page that lists dates and topics without pairing
+them has not given you a date for any topic; say what you found and let your human decide.`,
   // Offered to other areas' scenarios: a campaign is world-building for anything that
   // promotes into this list. An area's own acts still win over these (conformance precedence).
   env_acts: { create_campaign: 'crm_create_campaign', add_account: 'crm_add_account' },
   env_argmap: { campaign: 'campaign_id' },
   implements: {
-    area: 'crm', spec: '0.3',
-    argmap: { account: 'account_id', contact: 'contact_id', campaign: 'campaign_id', draft: 'draft_id' },
+    area: 'crm', spec: '0.4',
+    argmap: { account: 'account_id', contact: 'contact_id', campaign: 'campaign_id', draft: 'draft_id', event: 'event_id' },
     acts: {
       create_campaign: 'crm_create_campaign', update_campaign: 'crm_update_campaign',
       set_campaign_status: 'crm_set_campaign_status', campaigns: 'crm_campaigns',
@@ -64,6 +70,7 @@ only claims you may make.`,
       pipeline: 'crm_pipeline', gaps: 'crm_gaps', coverage: 'crm_coverage',
       draft_message: 'crm_draft_message', update_draft: 'crm_update_draft',
       draft_outcome: 'crm_draft_outcome', drafts: 'crm_drafts',
+      add_event: 'crm_add_event', update_event: 'crm_update_event', calendar: 'crm_calendar',
     },
   },
   search: (like) => ({
@@ -72,6 +79,7 @@ only claims you may make.`,
     crm_contacts: H.db().prepare(`SELECT id, account_id, name, role_type, status FROM contact WHERE id LIKE ? OR name LIKE ? OR role_type LIKE ? OR title LIKE ? OR notes LIKE ? OR gap_note LIKE ? LIMIT 10`).all(like, like, like, like, like, like),
     activities: H.db().prepare('SELECT id, account_id, occurred_at, summary FROM activity WHERE summary LIKE ? LIMIT 10').all(like),
     drafts: H.db().prepare('SELECT id, account_id, contact_id, status, subject FROM crm_draft WHERE id LIKE ? OR subject LIKE ? OR body LIKE ? LIMIT 10').all(like, like, like),
+    events: H.db().prepare('SELECT id, account_id, date, title, status FROM crm_event WHERE id LIKE ? OR title LIKE ? OR location LIKE ? OR note LIKE ? LIMIT 10').all(like, like, like, like),
   }),
   api: { views: V, createAccount: V.createAccount },
 });
@@ -80,6 +88,7 @@ R.defineSubject('account', { load: V.accountView });
 R.defineSubject('campaign', { load: V.campaignView });
 R.defineSubject('crm_contact', { load: V.contactView });
 R.defineSubject('crm_draft', { load: (id) => H.need('crm_draft', id, 'draft') });
+R.defineSubject('crm_event', { load: (id) => H.need('crm_event', id, 'event') });
 
 R.inModule(mod, () => {
   require('./commands/campaigns.js');
@@ -87,6 +96,7 @@ R.inModule(mod, () => {
   require('./commands/contacts.js');
   require('./commands/pursuit.js');
   require('./commands/drafts.js');
+  require('./commands/events.js');
   require('./commands/reads.js');
 });
 

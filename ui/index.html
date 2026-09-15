@@ -156,7 +156,7 @@ const NAV = [
   { key: 'newspace', label: 'New space', tabs: [['newspace', 'New space']], when: () => REG.user, hidden: true },
   { key: 'solo', label: 'Invoicing', prefix: 'solo_', tabs: [['soloinv', 'Invoices'], ['soloout', 'Outstanding'], ['soloclients', 'Clients']] },
   { key: 'o2c', label: 'Orders', prefix: 'o2c_', tabs: [['orders', 'Orders'], ['customers', 'Customers'], ['items', 'Items'], ['ar', 'AR aging'], ['cash', 'Unapplied cash']] },
-  { key: 'crm', label: 'CRM', prefix: 'crm_', tabs: [['today', 'Today'], ['campaigns', 'Campaigns'], ['accounts', 'Accounts'], ['crmcontacts', 'Contacts'], ['crmdrafts', 'Drafts'], ['crmpipeline', 'Pipeline'], ['network', 'Network'], ['crmactivity', 'Activity']] },
+  { key: 'crm', label: 'CRM', prefix: 'crm_', tabs: [['today', 'Today'], ['campaigns', 'Campaigns'], ['accounts', 'Accounts'], ['crmcontacts', 'Contacts'], ['crmdrafts', 'Drafts'], ['crmcal', 'Calendar'], ['crmpipeline', 'Pipeline'], ['network', 'Network'], ['crmactivity', 'Activity']] },
   { key: 'pros', label: 'Prospects', prefix: 'pros_', tabs: [['prospulls', 'Pulls'], ['prosrows', 'Staged rows']] },
   { key: 'hunt', label: 'Job hunt', prefix: 'hunt_', tabs: [['huntdue', 'Due'], ['huntpipeline', 'Pipeline'], ['huntcontacts', 'Contacts'], ['huntresumes', 'Resumes']] },
   { key: 'purch', label: 'Personal finances', prefix: 'purch_', tabs: [['purchover', 'Overview'], ['purchtx', 'Transactions'], ['purchsubs', 'Subscriptions'], ['purchrec', 'Receipts'], ['purchsrc', 'Statements']] },
@@ -526,6 +526,16 @@ async function detail(type, id) {
       b.onclick = () => { selected = null; view = 'crmdrafts'; render(); };
       acts3.append(b); wrap.append(acts3);
     }
+    if ((entity.events || []).length) {
+      wrap.append($('<div class="sub" style="margin-top:16px">Events with this person</div>'));
+      for (const e of entity.events) wrap.append(eventRow(e));
+    }
+    {
+      const evbar = $('<div class="acts" style="margin-top:10px"></div>');
+      const addEv = $('<button type="button">Add event with them…</button>');
+      addEv.onclick = () => openForm(cmd('crm_add_event'), { account_id: entity.account_id, contact_id: id });
+      evbar.append(addEv); wrap.append(evbar);
+    }
     if (entity.activity.length) {
       const at3 = $('<table><thead><tr><th>Occurred</th><th>Dir</th><th>Medium</th><th>Summary</th></tr></thead><tbody></tbody></table>');
       for (const x of entity.activity) at3.querySelector('tbody').append($(`<tr><td>${x.occurred_at}</td><td>${x.direction || ''}</td><td>${x.medium || ''}</td><td style="white-space:pre-wrap">${esc(x.summary)}</td></tr>`));
@@ -611,9 +621,22 @@ async function detail(type, id) {
         openForm(spec2, p);
       };
       tr.lastElementChild.append(btn);
+      tr.onclick = () => { selected = { type: 'crm_contact', id: c.id }; render(); };
+      btn.addEventListener('click', (e) => e.stopPropagation());
+      tr.querySelectorAll('a').forEach(a => a.addEventListener('click', (e) => e.stopPropagation()));
       ct.querySelector('tbody').append(tr);
     }
     wrap.append($('<div class="sub" style="margin-top:16px">Contacts — gaps are findings, not blanks</div>'), ct);
+    {
+      const evbar = $('<div class="acts" style="margin-top:16px"></div>');
+      const addEv = $('<button type="button">Add event…</button>');
+      addEv.onclick = () => openForm(cmd('crm_add_event'), { account_id: id });
+      evbar.append(addEv);
+      const evs = entity.events || [];
+      wrap.append($(`<div class="sub" style="margin-top:16px">Events — ${evs.length ? `${evs.filter(e => e.status === 'planned').length} planned` : 'nothing on the calendar for this account'}</div>`));
+      wrap.append(evbar);
+      for (const e of evs) wrap.append(eventRow(e));
+    }
     if (entity.activity.length) {
       const at2 = $('<table><thead><tr><th>Occurred</th><th>Medium</th><th>Summary</th></tr></thead><tbody></tbody></table>');
       for (const x of entity.activity) at2.querySelector('tbody').append($(`<tr><td>${x.occurred_at}</td><td>${x.medium || ''}</td><td>${x.summary}</td></tr>`));
@@ -816,6 +839,43 @@ function fillRows(t, rows, cells, type) {
     t.querySelector('tbody').append(tr);
   }
   return t;
+}
+
+/** One event, as a card row: when, what, with whom, where it came from, and the buttons that
+    close it. Shared by the calendar page and the account and contact panels. */
+function eventRow(e, opts = {}) {
+  const when = `${e.date}${e.time ? ` ${e.time}` : ''}`;
+  const row = $(`<div class="card" style="margin-bottom:8px;padding:10px 14px">
+    <div style="display:flex;gap:14px;align-items:baseline;flex-wrap:wrap">
+      <b style="white-space:nowrap">${when}</b>
+      <span class="pill ${e.status}">${e.status}</span>
+      <span class="pill">${e.kind}</span>
+      <span style="font-weight:600">${esc(e.title)}</span>
+      ${opts.showAccount && e.account_name ? `<a href="#" data-acc>${esc(e.account_name)}</a>` : ''}
+      ${e.contact_name ? `<span style="color:var(--muted)">with <a href="#" data-con>${esc(e.contact_name)}</a></span>` : ''}
+    </div>
+    <div style="font-size:12.5px;color:var(--muted);margin-top:3px">
+      ${e.location ? esc(e.location) + ' · ' : ''}${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener" data-stop>event page</a> · ` : ''}source: ${/^https?:\/\//.test(e.source) ? `<a href="${esc(e.source)}" target="_blank" rel="noopener" data-stop>${esc(e.source.replace(/^https?:\/\/(www\.)?/, '').slice(0, 60))}</a>` : esc(e.source)} · added by ${esc(e.created_by)}
+    </div>
+    ${e.note ? `<div class="doc" style="font-size:13px;margin-top:5px">${esc(e.note)}</div>` : ''}
+    ${e.outcome ? `<div class="doc" style="font-size:13px;margin-top:5px"><b>Outcome:</b> ${esc(e.outcome)}</div>` : ''}
+    ${e.status === 'cancelled' && e.status_reason ? `<div class="doc" style="font-size:13px;margin-top:5px"><b>Cancelled:</b> ${esc(e.status_reason)}</div>` : ''}
+    <div class="acts evacts" style="margin-top:8px"></div>
+  </div>`);
+  const a1 = row.querySelector('[data-acc]'); if (a1) a1.onclick = (ev) => { ev.preventDefault(); selected = { type: 'account', id: e.account_id }; render(); };
+  const a2 = row.querySelector('[data-con]'); if (a2) a2.onclick = (ev) => { ev.preventDefault(); selected = { type: 'crm_contact', id: e.contact_id }; render(); };
+  row.querySelectorAll('[data-stop]').forEach(a => a.onclick = (ev) => ev.stopPropagation());
+  const acts = row.querySelector('.evacts');
+  if (e.status === 'planned') {
+    const done = $('<button type="button">Done…</button>');
+    done.onclick = () => openForm(cmd('crm_update_event'), { event_id: e.id, status: 'done' });
+    const move = $('<button type="button">Reschedule…</button>');
+    move.onclick = () => openForm(cmd('crm_update_event'), { event_id: e.id, date: e.date, time: e.time || undefined, location: e.location || undefined });
+    const cancel = $('<button type="button">Cancel…</button>');
+    cancel.onclick = () => openForm(cmd('crm_update_event'), { event_id: e.id, status: 'cancelled' });
+    acts.append(done, move, cancel);
+  } else acts.remove();
+  return row;
 }
 
 /** Text somebody else wrote, printed into markup. Every view that shows a draft body, a
@@ -1154,6 +1214,38 @@ async function renderPage() {
       card.querySelector('[data-con]').onclick = (e) => { e.preventDefault(); selected = { type: 'crm_contact', id: x.contact_id }; render(); };
       card.querySelectorAll('[data-stop]').forEach(a => a.onclick = (e) => e.stopPropagation());
       main.append(card);
+    }
+  }
+  if (view === 'crmcal') {
+    head('Calendar', 'What is coming, by day. Every date here has a source, because a date nobody can trace is a date somebody made up.');
+    const range = window.__calRange || 'next60';
+    const bar = $('<div class="acts"></div>');
+    for (const [k, label] of [['next60', 'Next 60 days'], ['next7', 'This week'], ['past', 'Past'], ['all', 'Everything']]) {
+      const b = $(`<button class="${k === range ? 'on' : ''}">${label}</button>`);
+      b.onclick = () => { window.__calRange = k; render(); };
+      bar.append(b);
+    }
+    main.append(bar);
+    const today = new Date().toISOString().slice(0, 10);
+    const plus = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+    const args = range === 'next7' ? { from: today, to: plus(7) } : range === 'past' ? { from: '2000-01-01', to: plus(-1) } : range === 'all' ? { from: '2000-01-01', to: '2099-12-31' } : {};
+    const cal = await api('crm_calendar', args);
+    const add = $('<button class="primary" type="button">Add event…</button>');
+    add.onclick = () => openForm(cmd('crm_add_event'), {});
+    const addbar = $('<div class="acts" style="margin-bottom:12px"></div>'); addbar.append(add); main.append(addbar);
+    if (cal.awaiting_outcome.length && range !== 'past') {
+      main.append($(`<div class="sub" style="margin-top:6px;color:var(--warn)">Passed with no outcome recorded (${cal.awaiting_outcome.length})</div>`));
+      for (const e of cal.awaiting_outcome) main.append(eventRow(e, { showAccount: true }));
+    }
+    if (!cal.days.length) {
+      main.append($(`<div class="card doc" style="margin-top:8px">${range === 'past' ? 'Nothing in the past.' : 'Nothing coming up. Ask your agent to put what it finds on here, with the page the date is on.'}</div>`));
+      return;
+    }
+    for (const d of cal.days) {
+      const dt = new Date(d.date + 'T00:00:00');
+      const label = dt.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+      main.append($(`<div class="sub" style="margin-top:14px">${d.date === today ? 'Today · ' : ''}${label}</div>`));
+      for (const e of d.events) main.append(eventRow(e, { showAccount: true }));
     }
   }
   if (view === 'prospulls') {

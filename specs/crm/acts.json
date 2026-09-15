@@ -1,6 +1,6 @@
 {
   "area": "crm",
-  "spec": "0.3",
+  "spec": "0.4",
   "doc": "spec.md",
   "acts": {
     "add_account": {
@@ -139,6 +139,25 @@
     "drafts": {
       "kind": "read",
       "required": []
+    },
+    "add_event": {
+      "kind": "write",
+      "required": [
+        "account",
+        "title",
+        "date",
+        "source"
+      ]
+    },
+    "update_event": {
+      "kind": "write",
+      "required": [
+        "event"
+      ]
+    },
+    "calendar": {
+      "kind": "read",
+      "required": []
     }
   },
   "env_acts": {},
@@ -218,6 +237,14 @@
     {
       "id": "CRM-19",
       "title": "Account state is derived on read, never stored: an approach already made is never reported as an untouched door."
+    },
+    {
+      "id": "CRM-20",
+      "title": "An event carries the source its date came from; a date not on the source is not a date."
+    },
+    {
+      "id": "CRM-21",
+      "title": "Events are never deleted or reopened: done takes an outcome, cancelled takes a reason."
     }
   ]
 }

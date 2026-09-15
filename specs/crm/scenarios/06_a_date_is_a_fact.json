@@ -1,0 +1,154 @@
+{
+  "name": "a date is a fact",
+  "spec": "crm@0.4",
+  "notes": "CRM-20 the source is mandatory and the date comes from it, CRM-21 events close with an outcome or a reason and never reopen.",
+  "steps": [
+    {
+      "act": "create_campaign",
+      "args": {
+        "name": "Workshops",
+        "goal": "Land paid teaching slots with chambers and SBDCs."
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "add_account",
+      "args": {
+        "campaign": "CAM-0001",
+        "name": "Keizer Chamber of Commerce",
+        "tier": 2,
+        "why_them": "Runs a monthly Lunch and Learn for owner-operated businesses.",
+        "source_url": "https://example.com/keizer"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "add_event",
+      "args": {
+        "account": "A-0001",
+        "title": "Lunch and Learn: AI for small business",
+        "date": "2026-09-28",
+        "source": "found"
+      },
+      "expect": {
+        "refused": "source"
+      },
+      "notes": "CRM-20: 'found' is not a source. Where is the date?"
+    },
+    {
+      "act": "add_event",
+      "args": {
+        "account": "A-0001",
+        "title": "Lunch and Learn: AI for small business",
+        "date": "2026-09-28",
+        "source": "https://example.com/keizer/events/lunch-and-learn-september",
+        "kind": "workshop",
+        "time": "12:00",
+        "location": "Keizer Civic Center",
+        "note": "A Chemeketa SBDC adviser presents. Turning up puts a face to the SBDC approach."
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "planned"
+        }
+      }
+    },
+    {
+      "act": "add_event",
+      "args": {
+        "account": "A-0001",
+        "title": "SBM session: AI and Cybersecurity",
+        "date": "2027-02-02",
+        "source": "https://example.com/chemeketa/sbm/schedule",
+        "time": "25:00"
+      },
+      "expect": {
+        "refused": "time"
+      },
+      "notes": "A time is a fact too, and a malformed one is refused rather than stored."
+    },
+    {
+      "act": "calendar",
+      "args": {
+        "from": "2026-09-01",
+        "to": "2026-12-31"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "count": 1
+        }
+      }
+    },
+    {
+      "act": "update_event",
+      "args": {
+        "event": "EV-0001",
+        "date": "2026-10-05"
+      },
+      "expect": {
+        "refused": "reason"
+      },
+      "notes": "Moving the date needs a reason and a source, as the date did the first time."
+    },
+    {
+      "act": "update_event",
+      "args": {
+        "event": "EV-0001",
+        "date": "2026-10-05",
+        "reason": "The chamber moved it; the events page now shows 5 October.",
+        "source": "https://example.com/keizer/events/lunch-and-learn-october"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "date": "2026-10-05",
+          "status": "planned"
+        }
+      }
+    },
+    {
+      "act": "update_event",
+      "args": {
+        "event": "EV-0001",
+        "status": "done"
+      },
+      "expect": {
+        "refused": "outcome"
+      },
+      "notes": "CRM-21: an event with no outcome is an intention that went stale."
+    },
+    {
+      "act": "update_event",
+      "args": {
+        "event": "EV-0001",
+        "status": "done",
+        "outcome": "Met the SBDC adviser in person; she offered an intro to the program coordinator."
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "done"
+        }
+      }
+    },
+    {
+      "act": "update_event",
+      "args": {
+        "event": "EV-0001",
+        "date": "2026-11-01",
+        "reason": "second thoughts",
+        "source": "https://example.com/x"
+      },
+      "expect": {
+        "refused": "closed"
+      },
+      "notes": "CRM-21: done stays done. If it is happening again, that is a new event."
+    }
+  ]
+}
