@@ -38,8 +38,12 @@ categorised here — review follows, one act at a time.`,
     rows: { ...f.lines(ROW, 'Every row, in the statement\'s order.'), required: true },
   },
   handler(a, { db, at, actor }) {
-    const hash = String(a.hash).trim().toLowerCase();
-    if (!/^[a-z0-9][a-z0-9._:-]{7,79}$/.test(hash)) throw new Rejected('hash: 8–80 characters, letters, digits, . _ : - (a content hash, or the statement id plus period).');
+    // The hash exists to stop the same file landing twice, nothing more. A content hash is
+    // best; a filename is an honest stable id and a model that cannot compute a digest will
+    // hand one over. Spaces and case are not a reason to refuse: normalise, then require
+    // enough of it to be distinctive.
+    const hash = String(a.hash).trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9._:-]/g, '');
+    if (!/^[a-z0-9][a-z0-9._:-]{7,159}$/.test(hash)) throw new Rejected('hash: at least 8 characters of letters, digits, . _ : - once spaces are collapsed (a content hash, the file name, or the statement id plus period).');
     const dup = db.prepare('SELECT id, name, created_at FROM purch_source WHERE hash = ?').get(hash);
     if (dup) throw new Rejected(`This statement is already imported as ${dup.id} (${dup.name}, ${dup.created_at.slice(0, 10)}). The same file never goes in twice (P-4).`);
     const cur = String(a.currency).toUpperCase(); if (!H.CUR_RE.test(cur)) throw new Rejected('currency is a three-letter ISO 4217 code.');
@@ -74,9 +78,12 @@ categorised here — review follows, one act at a time.`,
       n++;
     });
     db.prepare('UPDATE purch_source SET rows_in = ?, rows_skipped = ? WHERE id = ?').run(n, skipped.length, id);
-    return { source: id, name: a.name, currency: cur, reconciled: true, rows_in: n, rows_skipped: skipped.length, skipped,
+    const ids = db.prepare('SELECT id, row_index, date, amount, description FROM purch_transaction WHERE source_id = ? ORDER BY row_index').all(id);
+    return { source: id, name: a.name, hash, currency: cur, reconciled: true, rows_in: n, rows_skipped: skipped.length, skipped,
+      // The ids the review step needs, so nobody has to guess them or fetch them again.
+      transactions: ids.map(t => ({ id: t.id, row_index: t.row_index, date: t.date, amount: t.amount, description: t.description })),
       spend: H.money(-rows.filter(r => r.amount < 0).reduce((s, r) => s + r.amount, 0), cur), money_in: H.money(rows.filter(r => r.amount > 0).reduce((s, r) => s + r.amount, 0), cur),
-      note: `Accepted whole: ${rows.length} rows reconcile to ${H.money(a.opening_balance, cur)} → ${H.money(a.closing_balance, cur)}.${skipped.length ? ` ${skipped.length} already on record, skipped (listed).` : ''} Review follows: purch_review_transaction, one row at a time, or purch_transactions to see them.` };
+      note: `Accepted whole: ${rows.length} rows reconcile to ${H.money(a.opening_balance, cur)} → ${H.money(a.closing_balance, cur)}.${skipped.length ? ` ${skipped.length} already on record, skipped (listed).` : ''} Review follows with purch_review_batch, using the transaction ids listed here.` };
   },
 });
 
