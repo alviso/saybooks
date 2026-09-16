@@ -26,6 +26,9 @@ if (modules) for (const m of modules) if (!R.MODULES.some(x => x.name === m)) {
 }
 const mount = { modules };
 const session = `mcp-${workspace}-${process.pid}`;
+// Who is on the other end, for the audit trail. Claude by default, since that is what most
+// stdio clients are; a local model in LM Studio sets SAYBOOKS_ACTOR=gemma-4 and is named.
+const actor = process.env.SAYBOOKS_ACTOR || 'claude';
 
 const server = new Server(
   { name: 'saybooks', version: '0.2.0' },
@@ -42,11 +45,13 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
   }
   const { _reason, ...rest } = args;              // an optional why, carried into the log
   try {
-    const out = R.execute(name, rest, { workspace, actor: 'claude', actor_kind: 'agent', session, reason: _reason, modules: mount.modules });
+    const out = R.execute(name, rest, { workspace, actor, actor_kind: 'agent', session, reason: _reason, modules: mount.modules });
     return { content: [{ type: 'text', text: typeof out === 'string' ? out : JSON.stringify(out, null, 1) }] };
   } catch (e) {
     // Business refusals come back as text the model should relay, not swallow.
-    return { isError: true, content: [{ type: 'text', text: e.message }] };
+    // A refusal must read as one even to a client that drops the isError flag: some models
+    // took "hash: at least 8 characters..." for advice and reported the write as done.
+    return { isError: true, content: [{ type: 'text', text: `REFUSED, nothing was written: ${e.message}` }] };
   }
 });
 

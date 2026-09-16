@@ -84,7 +84,9 @@ actor_kind=agent, in the same audit trail as their clicks. Play freely; nothing 
       return { content: [{ type: 'text', text: typeof out === 'string' ? out : JSON.stringify(out, null, 1) }] };
     } catch (e) {
       // Business refusals come back as text the model should relay, not swallow.
-      return { isError: true, content: [{ type: 'text', text: e.message }] };
+      // A refusal must read as one even to a client that drops the isError flag: some models
+      // took "hash: at least 8 characters..." for advice and reported the write as done.
+      return { isError: true, content: [{ type: 'text', text: `REFUSED, nothing was written: ${e.message}` }] };
     }
   });
 
