@@ -3,6 +3,22 @@ const { defineCommand, f, Rejected } = require('../../../registry.js');
 const H = require('../../../db.js');
 const V = require('../views.js');
 
+/** A wrong transaction id, refused in a way the caller can act on: the shape ids take here,
+    the range this space holds, and the id they probably meant when only the padding is off.
+    Models copy their own earlier guesses ("T-001") rather than the id a result just handed
+    them; a refusal that only says "does not exist" leaves them guessing again. */
+function needTx(id, where = '') {
+  const t = H.get('purch_transaction', id);
+  if (t) return t;
+  const db = H.db();
+  const m = /^t-0*(\d+)$/i.exec(String(id || '').trim());
+  const meant = m ? db.prepare('SELECT id FROM purch_transaction WHERE id = ?').get(`T-${String(m[1]).padStart(4, '0')}`) : null;
+  const range = db.prepare('SELECT MIN(id) lo, MAX(id) hi, COUNT(*) n FROM purch_transaction').get();
+  const hint = meant ? ` Did you mean ${meant.id}? Ids are four digits.`
+    : range.n ? ` Ids here run ${range.lo} to ${range.hi}, four digits, as the import result lists them.` : ' No statement has been imported yet.';
+  throw new Rejected(`${where}transaction ${id} does not exist.${hint}`);
+}
+
 const STATUSES = ['purchase', 'recurring', 'transfer', 'income', 'fee', 'ignored'];
 const SPENDING = new Set(['purchase', 'recurring']);
 const CADENCES = ['weekly', 'monthly', 'yearly'];
@@ -62,7 +78,7 @@ wrong source, re-read and re-imported.`,
     reason: f.text('Why — part of the record.'),
   },
   handler(a, { db, at }) {
-    const t = H.need('purch_transaction', a.transaction_id, 'transaction');
+    const t = needTx(a.transaction_id);
     checkSign(t, a.status);
     if (a.status === 'recurring' && !(a.vendor && a.vendor.trim()) && !t.vendor_id) throw new Rejected(`${t.id}: a recurring charge needs its vendor named, so the subscription can be declared and confirmed.`);
     db.prepare('UPDATE purch_transaction SET status = ?, category = COALESCE(?, category), note = COALESCE(?, note), reviewed_at = ? WHERE id = ?')
@@ -89,7 +105,7 @@ defineCommand({
     reason: f.text('Why — optional.'),
   },
   handler(a, { db, at }) {
-    const t = H.need('purch_transaction', a.transaction_id, 'transaction');
+    const t = needTx(a.transaction_id);
     const name = a.vendor.trim(); if (!name) throw new Rejected('A vendor needs a name.');
     let v = db.prepare('SELECT * FROM purch_vendor WHERE name = ? COLLATE NOCASE').get(name);
     if (!v) { const id = H.nextId('V', 'purch_vendor'); db.prepare('INSERT INTO purch_vendor (id,name,created_at) VALUES (?,?,?)').run(id, name, at); v = { id, name }; }
@@ -148,8 +164,7 @@ name stays out of the batch and unreviewed, never guessed. Up to 200 rows.`,
     const plan = rows.map((r, i) => {
       if (seen.has(r.transaction_id)) throw new Rejected(`Row ${i + 1}: ${r.transaction_id} appears twice in the batch.`);
       seen.add(r.transaction_id);
-      const t = H.get('purch_transaction', r.transaction_id);
-      if (!t) throw new Rejected(`Row ${i + 1}: transaction ${r.transaction_id} does not exist.`);
+      const t = needTx(r.transaction_id, `Row ${i + 1}: `);
       checkSign(t, r.status);
       if (r.status === 'recurring' && !(r.vendor && r.vendor.trim()) && !t.vendor_id) throw new Rejected(`${t.id}: a recurring charge needs its vendor named.`);
       return { t, r };
