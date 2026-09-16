@@ -221,12 +221,16 @@ read({
   doctrine: `Call this FIRST in a space you have not seen before, before core_schema's details
 matter. It lists what the company profile still needs, in the order to ask: name, country,
 currency, tax scheme, address, payment instructions; then the optional numbering format and
-logo; then a first client. Ask ONE question at a time, in that order, as a person would —
-"What's the business called, as it should print on invoices?" — and write each answer with
-core_set_company_profile as you get it. 'next' is the key to ask about now; 'ask' is a
-question you may use verbatim. Country comes first because it decides how dates and amounts
-print; tax must be ANSWERED (registered yes or no) — the default is not an answer. Nothing here
-is needed for a job-hunt space.`,
+logo; then a first client.
+
+WHAT THE PERSON ALREADY TOLD YOU, WRITE NOW. If their message carried the name, the country,
+the currency or the tax position, call core_set_company_profile with all of it in one go
+before asking anything. 'ask' is the question for something still MISSING after that; asking
+a person for a fact they gave you a moment ago is the fastest way to lose them. Ask ONE
+question at a time, in this order, only for what is genuinely missing, and write each answer
+as you get it. Country comes first because it decides how dates and amounts print; tax must be
+ANSWERED (registered yes or no) — the default is not an answer. Nothing here is needed for a
+job-hunt space.`,
   args: {},
   handler: () => {
     const has = (n) => MODULES.some(m => m.name === n);

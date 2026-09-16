@@ -35,7 +35,7 @@ function nextInvoiceId(db, loc, at) {
 }
 
 const NO_ADDRESS = (c) => `${c.name} has no billing address — the document needs a bill-to block. Ask for it (one question), call core_update_customer, and come back (S-3).`;
-const NO_PROFILE = 'No company details yet — ask for the company name first (one question at a time), then the address as it should print, then how clients pay; then call core_set_company_profile and come back (S-3).';
+const NO_PROFILE = 'No company details yet — set whatever the person has already told you with core_set_company_profile, then ask for what is still missing one question at a time: the company name, the address as it should print, how clients pay; then come back (S-3).';
 const profile = (db) => db.prepare('SELECT * FROM company_profile WHERE id = 1').get();
 
 function writeLines(db, invoiceId, lines, loc) {

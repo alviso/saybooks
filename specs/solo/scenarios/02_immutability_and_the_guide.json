@@ -39,7 +39,7 @@
         "invoice": "INV-0001"
       },
       "expect": {
-        "refused": "No company details yet — ask for the company name first"
+        "refused": "No company details yet"
       },
       "notes": "S-3: the refusal is the GUIDE — it tells the agent exactly what to gather, one question at a time. This is the interactive-onboarding mechanism, as a testable sentence"
     },
