@@ -248,6 +248,9 @@ function nextActions(subjectType, id, role = 'owner') {
 class Rejected extends Error {}                      // a business rule said no — expected, logged, not a bug
 
 function validate(cmd, args) {
+  // Some small models call a no-argument tool as {"": ""} before they manage {}. An argument
+  // with no name is not an argument; dropping it is not leniency about the schema.
+  if (args && typeof args === 'object' && '' in args) delete args[''];
   for (const k of cmd.required) {
     if (args[k] === undefined || args[k] === null || args[k] === '') throw new Rejected(`${cmd.name}: ${k} is required.`);
   }
