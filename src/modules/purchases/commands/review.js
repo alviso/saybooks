@@ -80,7 +80,7 @@ wrong source, re-read and re-imported.`,
   handler(a, { db, at }) {
     const t = needTx(a.transaction_id);
     checkSign(t, a.status);
-    if (a.status === 'recurring' && !(a.vendor && a.vendor.trim()) && !t.vendor_id) throw new Rejected(`${t.id}: a recurring charge needs its vendor named, so the subscription can be declared and confirmed.`);
+    if (a.status === 'recurring' && !(a.vendor && a.vendor.trim()) && !t.vendor_id) throw new Rejected(`${t.id} (${t.description}): a recurring charge needs its vendor named, so the subscription can be declared and confirmed. Pass vendor, the shop's name as a person would say it.`);
     db.prepare('UPDATE purch_transaction SET status = ?, category = COALESCE(?, category), note = COALESCE(?, note), reviewed_at = ? WHERE id = ?')
       .run(a.status, a.category ? a.category.trim() : null, a.note || null, at, t.id);
     let sub = null;
@@ -147,10 +147,16 @@ defineCommand({
   permission: 'cash.write',
   title: 'Review many', group: 'Purchases', subject: 'purch_transaction', scope: 'collection',
   summary: 'Review a whole statement in one act: status, category and vendor per row, one reason. Checked whole; refused whole.',
-  doctrine: `The same rules as purch_review_transaction, once for many rows: the person has
-looked at your proposal and said which words to use — write it all in one act with their
-confirmation as the reason. Every row is validated before any is written; a row you cannot
-name stays out of the batch and unreviewed, never guessed. Up to 200 rows.`,
+  doctrine: `READ purch_vocabulary FIRST: it holds the statuses and what they mean, and the
+person's own categories and vendors, which are the words to use. Propose a status, a category
+and a vendor for every row, show the person the whole table, and write nothing until they have
+answered. Then write it all in one act with their confirmation as the reason.
+
+Every row marked recurring must carry its vendor (the shop's name, e.g. "Adobe"): naming it is
+what declares the subscription. A transfer's category is where the money went or came from
+(checking, savings, the card being paid). Every row is validated before any is written, and
+the batch is refused whole with the row and the fix named; a row you cannot name stays out of
+the batch and unreviewed, never guessed. Up to 200 rows.`,
   effects: ['status, category, vendor recorded on every row listed'],
   args: {
     rows: { ...f.lines(REVIEW_ROW, 'The rows and what they are.'), required: true },
@@ -162,11 +168,16 @@ name stays out of the batch and unreviewed, never guessed. Up to 200 rows.`,
     if (rows.length > 200) throw new Rejected('Up to 200 rows per batch.');
     const seen = new Set();
     const plan = rows.map((r, i) => {
+      // The import result lists rows under `id`; a model that copies that shape is not wrong
+      // about which row it means. Accept it as the same thing, and refuse a row with no id
+      // by naming the field rather than by saying "undefined does not exist".
+      if (r.transaction_id == null && r.id != null) r.transaction_id = r.id;
+      if (r.transaction_id == null) throw new Rejected(`Row ${i + 1} has no transaction_id. Each row is { transaction_id, status, category, vendor }; the ids are the ones the import result listed (T-0001 upward).`);
       if (seen.has(r.transaction_id)) throw new Rejected(`Row ${i + 1}: ${r.transaction_id} appears twice in the batch.`);
       seen.add(r.transaction_id);
       const t = needTx(r.transaction_id, `Row ${i + 1}: `);
       checkSign(t, r.status);
-      if (r.status === 'recurring' && !(r.vendor && r.vendor.trim()) && !t.vendor_id) throw new Rejected(`${t.id}: a recurring charge needs its vendor named.`);
+      if (r.status === 'recurring' && !(r.vendor && r.vendor.trim()) && !t.vendor_id) throw new Rejected(`${t.id} (${t.description}): a recurring charge needs its vendor named. Add vendor to that row, the shop's name as a person would say it, and send the whole batch again.`);
       return { t, r };
     });
     let vendorsNamed = 0, aliased = 0; const declared = [];

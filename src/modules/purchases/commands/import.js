@@ -83,7 +83,7 @@ categorised here — review follows, one act at a time.`,
       // The ids the review step needs, so nobody has to guess them or fetch them again.
       transactions: ids.map(t => ({ id: t.id, row_index: t.row_index, date: t.date, amount: t.amount, description: t.description })),
       spend: H.money(-rows.filter(r => r.amount < 0).reduce((s, r) => s + r.amount, 0), cur), money_in: H.money(rows.filter(r => r.amount > 0).reduce((s, r) => s + r.amount, 0), cur),
-      note: `Accepted whole: ${rows.length} rows reconcile to ${H.money(a.opening_balance, cur)} → ${H.money(a.closing_balance, cur)}.${skipped.length ? ` ${skipped.length} already on record, skipped (listed).` : ''} Review follows with purch_review_batch, using the transaction ids listed here.` };
+      note: `Accepted whole: ${rows.length} rows reconcile to ${H.money(a.opening_balance, cur)} → ${H.money(a.closing_balance, cur)}.${skipped.length ? ` ${skipped.length} already on record, skipped (listed).` : ''} NEXT: read purch_vocabulary (the statuses and the person's own categories and vendors), propose a status, a category and a vendor for every row listed here, show the person the whole table, and once they have answered write it in one purch_review_batch with their confirmation as the reason. A row marked recurring must carry its vendor.` };
   },
 });
 

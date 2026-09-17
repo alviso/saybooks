@@ -4,3 +4,6 @@ data/
 *.db-shm
 *.db-wal
 nohup.out
+
+# local-model harness output: one JSON per run, useful on the machine that ran it
+test/local/reports/

@@ -12,7 +12,8 @@
     "mcp": "node mcp-server.js",
     "demo": "node demo.js",
     "test": "node test/contract.test.js",
-    "smoke": "node --experimental-websocket test/smoke.mjs"
+    "smoke": "node --experimental-websocket test/smoke.mjs",
+    "local": "node test/local/harness.mjs"
   },
   "engines": {
     "node": ">=20"
