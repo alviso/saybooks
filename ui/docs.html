@@ -30,13 +30,13 @@ table.plain{border-collapse:collapse;width:100%;font-size:14px;margin:0 0 1em} t
 </head>
 <body>
 <div class="wrap">
-  <nav class="top"><a class="mark" href="/"><svg class="wv" width="17" height="20" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".3"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span><svg class="wv" width="17" height="20" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19" opacity=".3"/></svg></a><a href="/specs">Specs</a><a href="/about">About</a><a href="/privacy">Privacy</a><a href="https://github.com/alviso/saybooks">Source</a><a href="/app?demo=1">Demo</a></nav>
+  <nav class="top"><a class="mark" href="/"><svg class="wv" width="17" height="20" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".3"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span><svg class="wv" width="17" height="20" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19" opacity=".3"/></svg></a><a href="/notes">Notes</a><a href="/specs">Specs</a><a href="/about">About</a><a href="/privacy">Privacy</a><a href="https://github.com/alviso/saybooks">Source</a><a href="/app?demo=1">Demo</a></nav>
 
   <div class="kicker">Documentation</div>
   <h1>Using Saybooks</h1>
   <p class="asof" style="font-size:13px;color:var(--muted);margin:0 0 1em">Last updated 12 September 2026.</p>
   <p>Saybooks is a place Claude can keep your records, under rules it cannot break, with everything it does written down where you can check it. This page covers what a person needs: connecting Claude, what keys and roles mean, spaces and their modules, documents, personal finances, getting your data out, and running it yourself. The rules themselves are in the <a href="/specs">specs</a>.</p>
-  <div class="toc"><a href="#connect">Connect Claude</a><a href="#talk">Talking to it</a><a href="#keys">Keys and roles</a><a href="#spaces">Spaces</a><a href="#documents">Documents</a> <a href="#ledger">Ledger</a><a href="#refusals">Refusals</a><a href="#data">Export and delete</a><a href="#selfhost">Run it yourself</a><a href="#faq">Questions</a></div>
+  <div class="toc"><a href="#connect">Connect Claude</a><a href="#local">A local model</a><a href="#talk">Talking to it</a><a href="#keys">Keys and roles</a><a href="#spaces">Spaces</a><a href="#documents">Documents</a> <a href="#ledger">Ledger</a><a href="#refusals">Refusals</a><a href="#data">Export and delete</a><a href="#selfhost">Run it yourself</a><a href="#faq">Questions</a></div>
 
   <h2 id="connect">Connect Claude</h2>
   <ol>
@@ -63,6 +63,22 @@ table.plain{border-collapse:collapse;width:100%;font-size:14px;margin:0 0 1em} t
   <h3>Keys instead of sign-in</h3>
   <p>A script, a second agent, or a client without OAuth can use a key directly. In the sidebar open <b>Share this space…</b>, type a name for the agent, pick its role, press <b>Mint key</b>, and use the URL that appears: <code>https://saybooks.io/mcp/m-…</code>. The link is the key: whoever holds it acts as your delegate with that role. Revoke it from the same dialog; the connection made through sign-in above is a key of exactly this kind, minted for you at consent, and shows up in the same list.</p>
   <div class="note"><b>After an update, remove and re-add the connector.</b> Claude caches a connector's tool list when it is added. If Saybooks gains a command and your Claude cannot see it, or a tool has fewer arguments than the schema says, that is the cache: remove the connector, add it again, start a new chat.</div>
+
+  <h2 id="local">Run it with a local model</h2>
+  <p>Saybooks is a plain MCP server, so a model on your own machine can keep the books with nothing leaving it. Tested on a 32 GB MacBook with LM Studio and <b>Gemma 4 26B A4B</b> (the QAT 4-bit MLX build): a full invoice cycle first time, and a full statement cycle. <a href="/notes/local-models">What that took</a> is its own note.</p>
+  <ol>
+    <li><b>Run Saybooks locally.</b> <code>git clone</code>, <code>npm install</code>, <code>node server.js</code> for the workbench at <code>localhost:8140</code>. The stdio MCP server is <code>mcp-server.js</code> in the same folder.</li>
+    <li><b>Point LM Studio at it.</b> Chat view → Program → Install → Edit <code>mcp.json</code>:
+<pre><code>{ "mcpServers": { "saybooks": {
+    "command": "/usr/local/bin/node",
+    "args": ["/path/to/saybooks/mcp-server.js"],
+    "env": { "SAYBOOKS_WORKSPACE": "main", "SAYBOOKS_MODULES": "core,solo", "SAYBOOKS_ACTOR": "gemma-4" }
+} } }</code></pre>
+      Use the absolute path to <code>node</code>. <code>SAYBOOKS_MODULES</code> picks the tools the model sees: <code>core,solo</code> is 35 tools for invoicing, <code>core,purchases</code> 48 for statements; all eight modules is 144 and too many for a small model. <code>SAYBOOKS_ACTOR</code> is the name on the audit trail.</li>
+    <li><b>Load the model with one concurrent slot and a 32k context.</b> LM Studio defaults to four slots and reserves a full context cache for each; on a 32 GB machine that is the difference between quick and swapping.</li>
+    <li><b>Talk plainly.</b> "Set up my company: Vega Consulting, US, USD, not registered for sales tax." "Add a client, Meridian Logistics, net 30." "Invoice them for 12 hours at $250 and issue it." Paste a statement and say "here is my September card statement."</li>
+  </ol>
+  <p class="note">What to expect. A 26B model does one step at a time reliably and relays refusals in the system's words. It will sometimes stop mid-turn on LM Studio's current Gemma template; "continue" recovers it. It will occasionally report success on a refusal, which is what the audit trail is for, and it once invented a purchase order number, which is what the preview before issue is for. The rules held on every run. The plain-language scripts we test with are in <code>test/local/</code>: <code>npm run local -- --model &lt;id&gt; --script plain-invoicing --instructions off</code>.</p>
 
   <h2 id="talk">Talking to it</h2>
   <p>Say what happened, in your own words. Claude calls the same commands the buttons call, under the same rules, and every action lands in your audit log attributed to the agent.</p>
@@ -148,7 +164,7 @@ npm test                  # the 16-gate contract and every conformance scenario<
   <h3>What happens to my books if Saybooks disappears?</h3><p>Export takes everything with you, in JSON, audit log included, any day. The code is public under the AGPL and runs on a laptop. Your data does not depend on the hosted service existing.</p>
   <h3>Something is wrong.</h3><p><a href="mailto:hello@saybooks.io">hello@saybooks.io</a>, or open an issue on <a href="https://github.com/alviso/saybooks/issues">GitHub</a>. If it is a rule that let something through that it should have refused, say so first: that is the bug we care most about.</p>
 
-  <footer>Written and maintained by <a href="/about">Peter Varga</a>, who also runs <a href="https://portlandaiworks.com/">Portland AI Works</a>. · <a href="/">saybooks.io</a> · <a href="/specs">Specs</a> · <a href="/privacy">Privacy</a> · <a href="https://github.com/alviso/saybooks">Source</a></footer>
+  <footer>Written and maintained by <a href="/about">Peter Varga</a>, who also runs <a href="https://portlandaiworks.com/">Portland AI Works</a>. · <a href="/">saybooks.io</a> · <a href="/notes">Notes</a> · <a href="/specs">Specs</a> · <a href="/privacy">Privacy</a> · <a href="https://github.com/alviso/saybooks">Source</a></footer>
 </div>
 </body>
 </html>

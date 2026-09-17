@@ -288,6 +288,8 @@ const server = http.createServer(async (req, res) => {
         ['/hunt', mtime(path.join(UI, 'hunt.html')), 'weekly', '0.9', 'Free job-hunt tracker for people running their search with Claude: postings, applications, interviews, a duplicate guard.'],
         ['/docs', mtime(path.join(UI, 'docs.html')), 'weekly', '0.8', 'Connecting Claude, keys and roles, spaces and modules, documents, the ledger bridge, export and delete, self-hosting.'],
         ['/about', mtime(path.join(UI, 'about.html')), 'monthly', '0.5', 'Who builds Saybooks and why: Peter Varga, thirty years of enterprise software, now in Portland.'],
+        ['/notes', mtime(path.join(UI, 'notes.html')), 'weekly', '0.6', 'Notes from building Saybooks, with the numbers in them.'],
+        ['/notes/local-models', mtime(path.join(UI, 'notes-local-models.html')), 'monthly', '0.7', 'Smart model, average MCP. Small model, smart MCP: a 26B local model keeping the books on a laptop, and the six fixes it forced in the tools.'],
         ['/specs', mtime(path.join(__dirname, 'specs')), 'weekly', '0.8', 'Every rule the system enforces, written down and executed: acts, invariants, scenarios, last conformance run.'],
         ...areas.map(a => [`/specs/${a}`, mtime(path.join(__dirname, 'specs', a, 'spec.md')), 'weekly', '0.7', `The ${a} specification: its acts, invariants and executable scenarios.`]),
         ['/privacy', mtime(path.join(UI, 'privacy.html')), 'monthly', '0.3', 'What is stored, why, for how long, and how to take it with you or delete it.'],
@@ -741,6 +743,8 @@ const server = http.createServer(async (req, res) => {
                : (p === '/privacy' || p === '/privacy/') ? 'privacy.html'
                : (p === '/docs' || p === '/docs/') ? 'docs.html'
                : (p === '/about' || p === '/about/') ? 'about.html'
+               : (p === '/notes' || p === '/notes/') ? 'notes.html'
+               : (p === '/notes/local-models' || p === '/notes/local-models/') ? 'notes-local-models.html'
                // Unlinked pages: a real session published for one reader. Never indexed, never in the sitemap.
                : /^\/session\/harborline\/?$/.test(p) ? 'session-harborline.html'
                : path.basename(p);
@@ -753,7 +757,7 @@ const server = http.createServer(async (req, res) => {
       const headers = /\.(png|mp4)$/.test(full) ? { 'cache-control': 'public, max-age=86400' } : {};
       // Public pages are the same bytes for everyone: let a crawler and a browser keep them a
       // few minutes. The workbench is somebody's books and stays no-store.
-      const PUBLIC_PAGES = ['landing.html', 'solo.html', 'hunt.html', 'docs.html', 'about.html', 'privacy.html'];
+      const PUBLIC_PAGES = ['landing.html', 'solo.html', 'hunt.html', 'docs.html', 'about.html', 'privacy.html', 'notes.html', 'notes-local-models.html'];
       if (PUBLIC_PAGES.includes(file)) headers['cache-control'] = 'public, max-age=300, stale-while-revalidate=86400';
       // The workbench is a person's books, never a search result: crawlable (so the directive is seen), indexed never.
       if (file === 'index.html' || file === 'admin.html' || file.startsWith('session-')) headers['x-robots-tag'] = 'noindex, nofollow';

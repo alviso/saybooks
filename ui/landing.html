@@ -310,7 +310,7 @@ h1{font-size:64px}
       <div><b>Not accounting software</b>It keeps your operational records. Your accountant's ledger stays where it is: map your chart once, and Saybooks hands over balanced journal lines as a Xero or QuickBooks import file, recording what went and through when.</div>
       <div><b>It never sends or pays</b>It produces invoices for you to send and records payments you received. It never emails anyone or moves money.</div>
       <div><b>One company per space</b>Any currency, each invoice its own; your tax scheme and numbering. Several companies means several spaces — which you can have.</div>
-      <div><b>Shipping weekly</b>This week: personal finances from statements and receipts, a module chooser for new spaces, a new workbench. The <a href="https://github.com/alviso/saybooks/commits/main">commit log</a> is the changelog. Your data is yours to export or delete at any moment.</div>
+      <div><b>Shipping weekly</b>This week: a prospect staging area and outreach drafts in the CRM, events and a calendar, and a harness that proves a local model can drive the books<a href="https://github.com/alviso/saybooks/commits/main">commit log</a> is the changelog. Your data is yours to export or delete at any moment.</div>
     </div>
   </section>
 
@@ -319,7 +319,7 @@ h1{font-size:64px}
       <div>
         <div class="kicker">For builders</div>
         <h2>Under the hood: one definition, both surfaces</h2>
-        <p>Every business act is declared once. From that one declaration Saybooks derives the tool Claude sees (over MCP), the form a person sees, the rule that can refuse either, and the audit entry — so the two surfaces can't drift; a contract test fails the build if they do. Each area is governed by a written spec with executable scenarios, and modules are held to a 20-gate contributor contract.</p>
+        <p>Every business act is declared once. From that one declaration Saybooks derives the tool Claude sees (over MCP), the form a person sees, the rule that can refuse either, and the audit entry — so the two surfaces can't drift; a contract test fails the build if they do. Each area is governed by a written spec with executable scenarios, and modules are held to a 23-gate contributor contract. It also works with a local model: a 26B model in LM Studio on a laptop kept a full invoice cycle and a statement cycle, nothing leaving the machine. <a href="/notes/local-models">What that took</a>, and <a href="/docs#local">how to run it</a>.</p>
         <div class="ctas">
           <a class="btn solid" href="https://github.com/alviso/saybooks">GitHub · AGPL-3.0</a>
           <a class="btn line" href="/specs">Read the specs</a>
@@ -336,7 +336,7 @@ h1{font-size:64px}
   <p class="promise">Your data exports completely, in open formats, on every plan, forever. Prices, where they exist, change with twelve months' notice.</p>
   <footer>
     <span class="mark"><svg class="wv" width="14" height="16" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".3"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span><svg class="wv" width="14" height="16" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19" opacity=".3"/></svg></span>
-    <a href="/solo">Invoicing</a> <a href="/hunt">Job hunt</a> <a href="/app?demo=1">Demo</a> <a href="/docs">Docs</a> <a href="/specs">Specs</a> <a href="/about">About</a> <a href="/privacy">Privacy</a> <a href="https://github.com/alviso/saybooks">Source</a> <a href="https://portlandaiworks.com/">Portland AI Works</a> <a href="mailto:hello@saybooks.io">hello@saybooks.io</a>
+    <a href="/solo">Invoicing</a> <a href="/hunt">Job hunt</a> <a href="/app?demo=1">Demo</a> <a href="/docs">Docs</a> <a href="/notes">Notes</a> <a href="/specs">Specs</a> <a href="/about">About</a> <a href="/privacy">Privacy</a> <a href="https://github.com/alviso/saybooks">Source</a> <a href="https://portlandaiworks.com/">Portland AI Works</a> <a href="mailto:hello@saybooks.io">hello@saybooks.io</a>
   </footer>
 </div>
 <script>(function(){try{if(/(?:^|; )sb_src=/.test(document.cookie))return;var q=new URLSearchParams(location.search);var r='';try{r=document.referrer?new URL(document.referrer).host:''}catch(e){}if(r===location.host)r='';var v={r:r,p:location.pathname+(location.search?location.search.slice(0,80):''),s:q.get('utm_source')||'',m:q.get('utm_medium')||'',c:q.get('utm_campaign')||'',t:new Date().toISOString().slice(0,10)};document.cookie='sb_src='+encodeURIComponent(JSON.stringify(v))+'; Path=/; Max-Age=2592000; SameSite=Lax'}catch(e){}})();</script>
