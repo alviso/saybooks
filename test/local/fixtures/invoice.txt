@@ -1,0 +1,17 @@
+Cascade Print Co.
+2210 NW Quimby St, Portland, OR 97210 · hello@cascadeprint.example · (503) 555-0142
+INVOICE #4471
+Invoice date: September 12, 2026
+Due: September 26, 2026
+Payment terms: Net 14
+Bill to
+Harborline Studio LLC
+1800 SE Hawthorne Blvd, Portland, OR 97214
+Description   Qty   Unit   Amount
+Business cards, 16pt matte, 500   2   $48.00   $96.00
+Tri-fold brochures, 100lb gloss, 250   1   $187.50   $187.50
+Vinyl banner 3x6 ft, grommets   1   $129.00   $129.00
+Subtotal   $412.50
+Sales tax   $0.00
+Total due   $412.50
+Paid by card ending 4421 on September 14, 2026. Thank you for your business.

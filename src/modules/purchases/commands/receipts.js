@@ -8,7 +8,12 @@ defineCommand({
   permission: 'cash.write',
   title: 'Add receipt', group: 'Purchases', subject: 'purch_receipt', scope: 'collection',
   summary: 'Record a receipt you read: vendor, date, total, and the file\'s name and hash. Candidates to match come back; matching is a separate act.',
-  doctrine: 'The file stays with the person (P-9); this keeps what it says. Look at the candidates and match with purch_match_receipt, with a reason. An unmatched receipt is a visible state, not an error.',
+  doctrine: `The file stays with the person (P-9); this keeps what it says. HAND OVER THE LINES
+TOO when the receipt prints them, tax as its own line: they must add up to the total, and that
+check is what catches a misread digit in a photo, the same way a statement's printed balances
+catch a misread row. If the lines do not add up, the receipt is refused and you look again; never
+adjust a number to make it fit. Then look at the candidates and match with purch_match_receipt,
+with a reason. An unmatched receipt is a visible state, not an error.`,
   effects: ['receipt recorded, unmatched'],
   args: {
     name: { ...f.text('File name as given.'), required: true },
@@ -17,14 +22,27 @@ defineCommand({
     date: { ...f.date('Receipt date.'), required: true },
     total: { ...f.money('The total on the receipt, positive.'), required: true },
     currency: { ...f.text('ISO 4217 code.'), required: true },
+    lines: f.lines({
+      description: { ...f.text('The line as printed.'), required: true },
+      amount: { ...f.money('The line amount, positive.'), required: true },
+    }, 'The lines on the receipt, when it prints them. They must add up to the total, tax included as its own line: that is how a misread digit is caught.'),
     note: f.note(''),
   },
   handler(a, { db, at }) {
-    const hash = String(a.hash).trim().toLowerCase();
-    if (!/^[a-z0-9][a-z0-9._:-]{7,79}$/.test(hash)) throw new Rejected('hash: 8–80 characters, letters, digits, . _ : -.');
+    // Same rule as a statement's hash: it exists to stop the same file landing twice, so a file
+    // name is an honest id and spaces are not a reason to refuse.
+    const hash = String(a.hash).trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9._:-]/g, '');
+    if (!/^[a-z0-9][a-z0-9._:-]{7,159}$/.test(hash)) throw new Rejected('hash: at least 8 characters of letters, digits, . _ : - once spaces are collapsed (a content hash, the file name, or the receipt number plus date).');
     if (db.prepare('SELECT id FROM purch_receipt WHERE hash = ?').get(hash)) throw new Rejected(`This receipt is already on record (${db.prepare('SELECT id FROM purch_receipt WHERE hash = ?').get(hash).id}).`);
     if (!Number.isInteger(a.total) || a.total <= 0) throw new Rejected('total is a positive whole number of minor units.');
     const cur = String(a.currency).toUpperCase(); if (!H.CUR_RE.test(cur)) throw new Rejected('currency is a three-letter ISO 4217 code.');
+    // A receipt's lines are its control total. A model reading a photo swaps digits; the sum
+    // does not, so a total that disagrees with its own lines is re-read, never stored.
+    if (a.lines && a.lines.length) {
+      const sum = a.lines.reduce((t, l) => t + (Number.isInteger(l.amount) ? l.amount : NaN), 0);
+      if (!Number.isInteger(sum)) throw new Rejected('Every line amount is a whole number of minor units.');
+      if (sum !== a.total) throw new Rejected(`The lines add up to ${H.money(sum, cur)} but the total you read is ${H.money(a.total, cur)}. One of them is misread; look at the receipt again and hand over what it prints (P-3).`);
+    }
     const id = H.nextId('R', 'purch_receipt');
     db.prepare('INSERT INTO purch_receipt (id,name,hash,vendor,date,total,currency,note,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)')
       .run(id, a.name, hash, a.vendor || null, a.date, a.total, cur, a.note || null, at, at);

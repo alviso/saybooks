@@ -46,6 +46,11 @@ if (LOAD) {
   execSync(`"${lms}" load "${MODEL}" --context-length 32768 --parallel 1 -y`, { stdio: 'ignore' });
 }
 
+// Preflight: a server that is not there produces one clear line, not a failure per prompt.
+try { const r = await fetch(`${URL_}/v1/models`, { signal: AbortSignal.timeout(5000) }); if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const ids = (await r.json()).data.map(m => m.id); if (!ids.includes(MODEL)) console.log(`note: ${MODEL} is not in LM Studio's model list (${ids.join(', ')}); it will be loaded on first request if it exists.`); }
+catch (e) { console.error(`LM Studio's API server is not reachable at ${URL_} (${e.message}). Start it with: ~/.lmstudio/bin/lms server start`); process.exit(2); }
+
 const WS = 'local';
 const mount = { modules: script.mounts };
 const tools = R.mcpTools(mount).map(t => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.inputSchema } }));
@@ -73,7 +78,11 @@ const execute = (name, args) => {
 const allCalls = [];   // every call so far: a check may ask "did it ever read the vocabulary"
 const say = async (step, i) => {
   const t0 = Date.now(); const calls = []; const turns = []; let prose = ''; let usage = null; let finish = null; let nudges = 0;
-  messages.push({ role: 'user', content: step.say });
+  // A step may carry an image (a receipt photo, a PDF page), the way a chat client attaches a
+  // file. Sent as a data URL alongside the words; only vision models can read it.
+  messages.push({ role: 'user', content: step.image
+    ? [{ type: 'text', text: step.say }, { type: 'image_url', image_url: { url: `data:${step.image.mime};base64,${fs.readFileSync(step.image.path).toString('base64')}` } }]
+    : step.say });
   for (let hop = 0; hop < 10; hop++) {
     const j = await chat(); usage = j.usage; const m = j.choices[0].message; messages.push(m); finish = j.choices[0].finish_reason;
     if (m.content && m.content.trim()) turns.push({ hop, finish, chars: m.content.length, text: m.content.trim().slice(0, 700) });

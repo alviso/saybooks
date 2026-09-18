@@ -10,7 +10,7 @@ const ROWS = [
 ];
 const OPEN = -412055, CLOSE = OPEN + ROWS.reduce((s, r) => s + r[2], 0);
 const m = (c) => `${c < 0 ? '-' : ''}$${Math.floor(Math.abs(c) / 100).toLocaleString('en-US')}.${String(Math.abs(c) % 100).padStart(2, '0')}`;
-const CSV = ['Harborline Studio LLC', 'Business Card ending 4421', 'Statement period: 2026-09-01 to 2026-09-30',
+export const CSV = ['Harborline Studio LLC', 'Business Card ending 4421', 'Statement period: 2026-09-01 to 2026-09-30',
   `Previous balance,${m(OPEN)}`, `New balance,${m(CLOSE)}`, `Transactions,${ROWS.length}`, '', 'Date,Description,Amount',
   ...ROWS.map(r => `${r[0]},${r[1]},${m(r[2])}`)].join('\n');
 const one = (db, sql, ...a) => db.prepare(sql).get(...a);
