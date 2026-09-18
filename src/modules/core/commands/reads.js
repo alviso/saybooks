@@ -60,6 +60,9 @@ read({ name: 'core_search', title: 'Search', summary: 'Find entities by id, name
       items:     H.db().prepare('SELECT id,name,unit_price,on_hand FROM item WHERE id LIKE ? OR name LIKE ? LIMIT 10').all(like, like),
     };
     for (const m of MODULES) if (m.search) Object.assign(out, m.search(like));
+    // Optional: the same books in a local retrieval engine, ranked by meaning. Off by default.
+    const A = require('../../../search-antfly.js');
+    if (A.enabled()) out.related = A.related(a.q);
     return out;
   } });
 
