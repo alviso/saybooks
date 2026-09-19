@@ -549,9 +549,16 @@ const server = http.createServer(async (req, res) => {
           top = tdb.prepare('SELECT ws, first_at, last_at, api_calls, writes, agent_calls FROM ws_activity ORDER BY api_calls DESC LIMIT 12').all();
         } catch { /* telemetry not born yet */ }
         const udb = users.db();
+        // Owned spaces are never in telemetry, by design. Their pulse is the audit trail: the
+        // last write and who made it, human or agent, read from each space's own database.
+        const pulse = (w) => { try { return wsp.use(w, () => {
+          const last = H.db().prepare("SELECT at, actor, actor_kind, command FROM command_log WHERE ok = 1 ORDER BY id DESC LIMIT 1").get() || null;
+          const c = H.db().prepare("SELECT COUNT(*) n, SUM(actor_kind = 'agent') agent FROM command_log WHERE ok = 1").get();
+          return { last_write_at: last ? last.at : null, last_actor: last ? last.actor : null, last_actor_kind: last ? last.actor_kind : null, last_command: last ? last.command : null, writes: c.n, agent_writes: c.agent || 0 };
+        }); } catch { return {}; } };
         const allUsers = udb.prepare('SELECT id, email, name, created_at FROM user ORDER BY created_at DESC LIMIT 100').all()
           .map(u2 => ({ ...u2, spaces: udb.prepare('SELECT ws, display_name, kind, created_at FROM space WHERE owner_user_id = ? ORDER BY created_at').all(u2.id)
-            .map(s => ({ ...s, channel: users.channelOf(users.acquisitionOf(s.ws)) })) }));
+            .map(s => ({ ...s, channel: users.channelOf(users.acquisitionOf(s.ws)), ...pulse(s.ws) })) }));
         const topWithSource = (rows) => rows.map(t => ({ ...t, channel: users.channelOf(users.acquisitionOf(t.ws)) }));
         const huntSpaces = udb.prepare("SELECT COUNT(*) n FROM space WHERE kind = 'hunt'").get().n;
         let metrics = [];
