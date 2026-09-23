@@ -3,11 +3,62 @@ const { defineCommand, f, Rejected } = require('../../../registry.js');
 const H = require('../../../db.js');
 const V = require('../views.js');
 
+// The statement as pasted, read here instead of retyped by the model. A model that cannot retype
+// twenty rows without a slip can still hand over the lines it was given, unchanged; the same
+// control totals gate the batch either way. Conservative on purpose: a line that starts with a
+// date and cannot be read is refused by line number, never guessed. Lines without a date at the
+// start (headers, footers, blank) are ignored, and the row count then catches a row lost that way.
+const DATE_RE = /^(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4}|\d{1,2}\.\d{1,2}\.\d{4})\b/;
+function isoDate(d) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  const m = /^(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})$/.exec(d); if (!m) return null;
+  let [, a, b, y] = m; a = +a; b = +b;
+  const [mm, dd] = a > 12 ? [b, a] : [a, b];          // 13/09/2026 can only be day-first
+  return `${y}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+}
+function parseMoney(s) {
+  let t = String(s).trim().replace(/^[A-Z]{3}\s*|\s*[A-Z]{3}$/g, '').replace(/\s+/g, '');
+  let neg = false;
+  if (/^\(.*\)$/.test(t)) { neg = true; t = t.slice(1, -1); }
+  if (/-$/.test(t)) { neg = true; t = t.slice(0, -1); }
+  if (/^[-+]/.test(t)) { neg = t[0] === '-'; t = t.slice(1); }
+  t = t.replace(/^\$/, '');
+  if (/^[-+]/.test(t)) { neg = neg || t[0] === '-'; t = t.slice(1); }   // "$-89.12"
+  const m = /^(\d{1,3}(?:,\d{3})*|\d+)(?:\.(\d{1,2}))?$/.exec(t); if (!m) return null;
+  const cents = Number(m[1].replace(/,/g, '')) * 100 + Number((m[2] || '0').padEnd(2, '0'));
+  return neg ? -cents : cents;
+}
+function splitLine(line) {
+  if (line.includes('\t')) return line.split('\t').map(x => x.trim());
+  if (/\S {2,}\S/.test(line)) return line.split(/ {2,}/).map(x => x.trim());
+  const out = []; let cur = ''; let q = false;                  // CSV with quoted fields
+  for (const ch of line) { if (ch === '"') q = !q; else if (ch === ',' && !q) { out.push(cur.trim()); cur = ''; } else cur += ch; }
+  out.push(cur.trim()); return out;
+}
+function parseStatementText(text) {
+  const rows = [];
+  String(text).split(/\r?\n/).forEach((raw, n) => {
+    const line = raw.trim(); if (!line || !DATE_RE.test(line)) return;
+    const parts = splitLine(line);
+    const bad = () => new Rejected(`Line ${n + 1} starts with a date but could not be read as a row (date, description, amount): "${line.slice(0, 80)}". Fix the line or hand the rows over as fields.`);
+    if (parts.length < 3) throw bad();
+    const date = isoDate(parts[0]); if (!date) throw bad();
+    // An unquoted "$1,800.00" in a CSV arrives as two fields. The amount is the longest run of
+    // trailing fields that reads as one money value; the description is what is left.
+    let amount = null, k = 0;
+    for (let j = 1; j <= 3 && j < parts.length - 1; j++) { const v = parseMoney(parts.slice(-j).join(',')); if (v !== null) { amount = v; k = j; } }
+    if (amount === null) throw bad();
+    const description = parts.slice(1, -k).join(' ').replace(/^"|"$/g, '').trim(); if (!description) throw bad();
+    rows.push({ row_index: rows.length + 1, date, amount, description, raw: line });
+  });
+  return rows;
+}
+
 const ROW = {
   date: { ...f.date('The row\'s date.'), required: true },
   amount: { ...f.money('Signed: spending NEGATIVE, money in POSITIVE.'), required: true },
-  description: { ...f.text('Exactly as printed.'), required: true },
-  counterparty: f.text('Who, when the row names one (payee, merchant).'),
+  description: { ...f.text('The line as the statement prints it (the merchant or payee text). Every row has one.'), required: true },
+  counterparty: f.text('Only when the statement names a payee separately from the printed line. Usually left out.'),
   row_index: f.int('Position in the statement, from 1. Defaults to the order you hand the rows in.'),
   raw: f.text('The line as you read it, verbatim. Provenance.'),
 };
@@ -18,11 +69,13 @@ defineCommand({
   title: 'Import statement', group: 'Purchases', subject: 'purch_source', scope: 'collection',
   summary: 'Hand over one statement you read: its rows and the control totals it prints. Accepted whole, or refused with the gap named.',
   doctrine: `You read the file; this records it. State the opening balance, closing balance and
-row count the statement PRINTS, then every row with a signed amount (spending negative). The
-batch is refused unless opening + rows = closing and the count matches — that is where a
-misread digit is caught (P-3). Never adjust a row to make it fit: re-read. The same hash is
-refused a second time (P-4); rows already on record are skipped and listed back. Nothing is
-categorised here — review follows, one act at a time.`,
+row count the statement PRINTS, then the rows: either every row as fields with a signed amount
+(spending negative), or the statement's lines exactly as pasted in \`text\` and this reads
+them (date, description, amount per line). Pass text when you were handed the file; retyping
+twenty rows is where slips happen. The batch is refused unless opening + rows = closing and the
+count matches — that is where a misread digit is caught (P-3). Never adjust a row to make it
+fit: re-read. The same hash is refused a second time (P-4); rows already on record are skipped
+and listed back. Nothing is categorised here — review follows, one act at a time.`,
   effects: ['source recorded', 'transactions recorded with provenance', 'duplicates skipped and listed'],
   args: {
     name: { ...f.text('File name as given.'), required: true },
@@ -35,7 +88,8 @@ categorised here — review follows, one act at a time.`,
     opening_balance: { ...f.money('Opening balance as printed, signed.'), required: true },
     closing_balance: { ...f.money('Closing balance as printed, signed.'), required: true },
     row_count: { ...f.int('Number of rows the statement lists.'), required: true },
-    rows: { ...f.lines(ROW, 'Every row, in the statement\'s order.'), required: true },
+    rows: f.lines(ROW, 'Every row, in the statement\'s order. Leave out when you pass text.'),
+    text: f.note('The statement\'s lines exactly as you were given them, unchanged: one row per line, date first, amount last. Header and footer lines are ignored. Use this instead of rows when you were handed the file.'),
   },
   handler(a, { db, at, actor }) {
     // The hash exists to stop the same file landing twice, nothing more. A content hash is
@@ -47,8 +101,9 @@ categorised here — review follows, one act at a time.`,
     const dup = db.prepare('SELECT id, name, created_at FROM purch_source WHERE hash = ?').get(hash);
     if (dup) throw new Rejected(`This statement is already imported as ${dup.id} (${dup.name}, ${dup.created_at.slice(0, 10)}). The same file never goes in twice (P-4).`);
     const cur = String(a.currency).toUpperCase(); if (!H.CUR_RE.test(cur)) throw new Rejected('currency is a three-letter ISO 4217 code.');
-    const rows = a.rows || [];
-    if (!rows.length) throw new Rejected('A statement with no rows is not a statement.');
+    if (a.rows?.length && a.text) throw new Rejected('Pass the rows as fields or the statement as text, not both.');
+    const rows = a.rows?.length ? a.rows : a.text ? parseStatementText(a.text) : [];
+    if (!rows.length) throw new Rejected(a.text ? 'No line in the text starts with a date, so no row could be read. A row is date, description, amount.' : 'A statement with no rows is not a statement.');
     if (rows.length !== a.row_count) throw new Rejected(`The statement says ${a.row_count} rows; you handed over ${rows.length}. Re-read it and pass every row (P-3).`);
     if (a.period_end < a.period_start) throw new Rejected('period_end is before period_start.');
     let sum = 0;

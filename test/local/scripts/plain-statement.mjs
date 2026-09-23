@@ -18,7 +18,7 @@ export default {
   name: 'plain statement',
   mounts: ['core', 'purchases'],
   steps: [
-    { say: `Here is my September card statement.\n\n${CSV}`,
+    { say: 'Here is my September card statement.', attach: { name: 'statement-2026-09.csv', text: CSV },
       check: (db) => { const s = one(db, 'SELECT * FROM purch_source ORDER BY id DESC LIMIT 1'); if (!s) return 'nothing imported';
         if (s.rows_in !== 20) return `${s.rows_in} rows landed, not 20`;
         const sum = one(db, 'SELECT SUM(amount) s FROM purch_transaction WHERE source_id = ?', s.id).s;
@@ -31,6 +31,7 @@ export default {
       check: (db) => { const left = one(db, "SELECT COUNT(*) n FROM purch_transaction WHERE status IS NULL OR status = 'unreviewed'").n;
         if (left) return `${left} rows still unreviewed`;
         const pay = one(db, "SELECT status, category FROM purch_transaction WHERE description LIKE 'PAYMENT%'");
+        if (!pay) return 'no card payment row on the books (the statement never landed)';
         if (pay.status !== 'transfer') return `the card payment is ${pay.status}, not a transfer`;
         if (!/check/i.test(pay.category || '')) return `transfer category is "${pay.category}", not the checking account it came from`;
         const rec = one(db, "SELECT COUNT(*) n FROM purch_transaction WHERE status = 'recurring'").n; if (rec < 3) return `only ${rec} recurring, expected Adobe, Zoom, Spotify at least`;

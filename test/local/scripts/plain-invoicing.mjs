@@ -3,6 +3,7 @@ const one = (db, sql, ...a) => db.prepare(sql).get(...a);
 export default {
   name: 'plain invoicing',
   mounts: ['core', 'solo'],
+  books: 'blank',   // step 1 is the onboarding itself
   steps: [
     { say: "Set up my company: Vega Consulting, in the US, working in USD. We're not registered for sales tax. Address is 12 Oak Lane, Portland, OR 97205. Clients pay by ACH to First Federal, routing 026009593, account 5550123.",
       check: (db) => { const p = one(db, 'SELECT * FROM company_profile WHERE id = 1') || {};

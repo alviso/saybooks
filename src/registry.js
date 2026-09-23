@@ -263,6 +263,19 @@ function validate(cmd, args) {
     if (v === undefined || v === null) continue;
     if (spec.type === 'integer' && (!Number.isInteger(v))) throw new Rejected(`${cmd.name}: ${k} must be a whole number${spec.ui.widget === 'money' ? ' of cents' : ''}.`);
     if (spec.enum && !spec.enum.includes(v)) throw new Rejected(`${cmd.name}: ${k} must be one of ${spec.enum.join(', ')}.`);
+    // Line items are where a small model most often invents a field name (counterparty for
+    // description) or drops a required one. Say which row and what a row takes, here, rather
+    // than letting the database answer NOT NULL a moment later.
+    if (spec.type === 'array' && spec.items?.properties) {
+      if (!Array.isArray(v)) throw new Rejected(`${cmd.name}: ${k} must be a list.`);
+      const names = Object.keys(spec.items.properties); const req = spec.items.required || [];
+      v.forEach((row, i) => {
+        if (!row || typeof row !== 'object' || Array.isArray(row)) throw new Rejected(`${cmd.name}: ${k}[${i + 1}] must be an object with ${names.join(', ')}.`);
+        for (const r of req) if (row[r] === undefined || row[r] === null || row[r] === '') throw new Rejected(`${cmd.name}: ${k}[${i + 1}] has no ${r}. Each row takes: ${names.join(', ')} (${req.join(', ')} required).`);
+        const bad = Object.keys(row).filter(x => !spec.items.properties[x]);
+        if (bad.length) throw new Rejected(`${cmd.name}: ${k}[${i + 1}] has unknown field${bad.length > 1 ? 's' : ''} ${bad.join(', ')}. Each row takes: ${names.join(', ')}.`);
+      });
+    }
   }
 }
 
