@@ -15,19 +15,11 @@
  * --load              unload everything in LM Studio and load this model alone, one slot, 32k context
  * --api openai        talk OpenAI chat completions (LM Studio, or Ollama's /v1); the default
  * --api ollama        talk Ollama's native /api/chat, the only door where thinking can be switched
- * --think on|off|auto let the model think before it answers (ollama api only; LM Studio decides itself).
- *                     auto: off on a step that hands over a file (bulk arguments, where thinking only adds
- *                     minutes and slips), on for every other step (judgment, where it earned its time)
+ * --think on|off      let the model think before it answers (ollama api only; LM Studio decides itself)
  * --max-tokens N      generation budget per hop (default 4000; a 20-row import needs more with thinking on)
  * --tag word          a word for the report filename, so two setups do not overwrite each other
- * A step may carry `attach: { name, text }`: a file the person handed over. The host shows the model
- * the contents and tells it the file can be passed to a tool by reference, as the string "@<name>";
- * before a tool runs, any string argument that is exactly that reference is replaced by the file's
- * contents. The model never retypes the file. (A host feature; LM Studio and friends do not do it.)
- *
- * --repair            host-side: a call repeated verbatim right after the same call is not executed again;
- *                     the model is told it repeated itself, with the refusal again if it was refused, or a
- *                     pointer at the result it already has if it succeeded (a host feature under test)
+ * A step may carry `attach: { name, text }`: a file the person handed over, pasted into the message
+ * the way a chat client pastes it. (A host that passes files by reference is a different program.)
  *
  * A step passes on what is in the database afterwards. The tool names the model chose, the
  * refusals it hit and what it said are all recorded, because the point of a failure is to read
@@ -45,7 +37,7 @@ const ROOT = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.ur
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > -1 ? (process.argv[i + 1] ?? true) : d; };
 const MODEL = arg('model'); const SCRIPT = arg('script'); const URL_ = arg('url', 'http://127.0.0.1:1234');
 const INSTR = arg('instructions', 'on') !== 'off'; const LOAD = process.argv.includes('--load');
-const REPAIR = process.argv.includes('--repair'); const API = arg('api', 'openai'); const THINK_MODE = arg('think', 'on'); let THINK = THINK_MODE !== 'off'; const MAXTOK = Number(arg('max-tokens', 4000)); const TAG = arg('tag', '');
+const API = arg('api', 'openai'); const THINK = arg('think', 'on') !== 'off'; const MAXTOK = Number(arg('max-tokens', 4000)); const TAG = arg('tag', '');
 if (!MODEL || !SCRIPT) { console.error('usage: --model <id> --script <name> [--instructions on|off] [--load]'); process.exit(2); }
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'saybooks-local-'));
@@ -82,7 +74,7 @@ if (script.books !== 'blank') R.execute('core_set_company_profile', { name: 'Har
 const system = INSTR ? R.instructions(BASE, mount)
   : 'You keep the books for one small company through the tools provided. Money is integer cents.';
 const messages = [{ role: 'system', content: system }];
-const report = { model: MODEL, script: SCRIPT, instructions: INSTR, repair: REPAIR, api: API, think: API === 'ollama' ? THINK_MODE : null, max_tokens: MAXTOK, tools: tools.length,
+const report = { model: MODEL, script: SCRIPT, instructions: INSTR, api: API, think: API === 'ollama' ? THINK : null, max_tokens: MAXTOK, tools: tools.length,
   schema_tokens_est: Math.round(JSON.stringify(tools).length / 4), started: new Date().toISOString(), steps: [] };
 
 // Messages are kept in the OpenAI shape. Ollama's native door wants tool arguments as objects,
@@ -122,31 +114,19 @@ const chat = async () => {
 };
 
 // The same envelope the MCP doors hand back, so a refusal reads the same here as there.
-const attachments = {};   // name -> text, for "@name" references in tool arguments
-const deref = (v) => typeof v === 'string' ? (v.startsWith('@') && attachments[v.slice(1)] !== undefined ? attachments[v.slice(1)] : v)
-  : Array.isArray(v) ? v.map(deref) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, deref(x)])) : v;
 const execute = (name, args) => {
-  const { _reason, ...rest } = deref(args);
+  const { _reason, ...rest } = args;
   try { return { ok: true, text: JSON.stringify(R.execute(name, rest, { ...ctx, reason: _reason })).slice(0, 6000) }; }
   catch (e) { return { ok: false, text: `REFUSED, nothing was written: ${e.message}` }; }
 };
 
-let lastCall = null;   // the most recent executed call, for --repair
-// Field names a refusal says are missing, in the registry's own phrasing ("rows[1] has no
-// description", "customer_id is required"); and whether a key by that name exists anywhere.
-const namedMissing = (text) => [...new Set([...(text || '').matchAll(/has no ([a-z_]+)|([a-z_]+) is required/g)].map(m => m[1] || m[2]))];
-const hasKey = (v, k) => v && typeof v === 'object' && (Array.isArray(v) ? v.some(x => hasKey(x, k)) : (k in v || Object.values(v).some(x => hasKey(x, k))));
 const allCalls = [];   // every call so far: a check may ask "did it ever read the vocabulary"
 const say = async (step, i) => {
   const t0 = Date.now(); const calls = []; const turns = []; let prose = ''; let usage = null; let finish = null; let nudges = 0;
   // A step may carry an image (a receipt photo, a PDF page), the way a chat client attaches a
   // file. Sent as a data URL alongside the words; only vision models can read it.
   let say = step.say;
-  if (THINK_MODE === 'auto') THINK = !step.attach;
-  if (step.attach) {
-    attachments[step.attach.name] = step.attach.text;
-    say += `\n\n[Attached file: ${step.attach.name}, ${step.attach.text.split('\n').length} lines. Its contents follow. To hand the whole file to a tool unchanged, pass the string "@${step.attach.name}" as that argument's value; the host substitutes the contents.]\n\n${step.attach.text}`;
-  }
+  if (step.attach) say += `\n\n${step.attach.text}`;
   messages.push({ role: 'user', content: step.image
     ? [{ type: 'text', text: say }, { type: 'image_url', image_url: { url: `data:${step.image.mime};base64,${fs.readFileSync(step.image.path).toString('base64')}` } }]
     : say });
@@ -162,25 +142,8 @@ const say = async (step, i) => {
     }
     for (const c of m.tool_calls) {
       let args = {}; try { args = JSON.parse(c.function.arguments || '{}'); } catch { }
-      // A small model with thinking off tends to answer a refusal by re-sending the exact same
-      // call, and to re-read the same document until the hop cap. The host can see that where
-      // the model cannot: same name, same arguments, right after the same call. With --repair
-      // it is not executed again; the model is told what it did.
-      // Two signatures. Exact: the same call again (a read loop, or a refusal answered by
-      // resending). Named field: the refusal said a field is missing and the retry of the same
-      // tool still has no key by that name anywhere in its arguments; the model changed
-      // something, but not the thing it was told.
-      const sig = c.function.name + JSON.stringify(args);
-      const missing = lastCall && !lastCall.ok && lastCall.name === c.function.name ? namedMissing(lastCall.text).filter(k => !hasKey(args, k)) : [];
-      const out = REPAIR && lastCall && lastCall.sig === sig
-        ? { ok: false, repeated: true, text: lastCall.ok
-            ? 'NOT EXECUTED: this is the exact call you just made; its result is above. Use it: answer the person or make a different call.'
-            : `NOT EXECUTED: this is the exact call that was just refused, unchanged. Change it before calling again. The refusal was: ${lastCall.text}` }
-        : REPAIR && missing.length
-        ? { ok: false, repeated: true, text: `NOT EXECUTED: the refusal said ${missing.join(', ')} is missing, and this call still has no field named ${missing.join(', ')}. Add it (every row, if it is a row field) and call again. The refusal was: ${lastCall.text}` }
-        : execute(c.function.name, args);
-      lastCall = out.repeated ? lastCall : { sig, name: c.function.name, ok: out.ok, text: out.text };
-      const rec = { name: c.function.name, ok: out.ok, repeated: !!out.repeated, args: JSON.stringify(args).slice(0, out.ok ? 600 : 20000), refusal: out.ok ? null : out.text.slice(0, 400) };
+      const out = execute(c.function.name, args);
+      const rec = { name: c.function.name, ok: out.ok, args: JSON.stringify(args).slice(0, out.ok ? 600 : 20000), refusal: out.ok ? null : out.text.slice(0, 400) };
       calls.push(rec); allCalls.push(rec);
       messages.push({ role: 'tool', tool_call_id: c.id, content: out.text });
     }
@@ -192,12 +155,12 @@ const say = async (step, i) => {
   report.steps.push(row);
   const line = `${row.pass ? 'ok  ' : 'FAIL'} ${row.n}. ${row.say}  [${row.seconds}s, ${calls.length} call${calls.length === 1 ? '' : 's'}, finish ${finish}${nudges ? `, ${nudges} nudge` : ''}]`;
   console.log(line);
-  for (const c of calls) console.log(`       ${c.ok ? '->' : c.repeated ? '==' : 'XX'} ${c.name}(${c.args})${c.refusal ? `\n          ${c.refusal}` : ''}`);
+  for (const c of calls) console.log(`       ${c.ok ? '->' : 'XX'} ${c.name}(${c.args})${c.refusal ? `\n          ${c.refusal}` : ''}`);
   if (!row.pass) console.log(`       why: ${row.why}`);
   if (prose) console.log(`       model: ${prose.replace(/\s+/g, ' ').slice(0, 220)}`);
 };
 
-console.log(`${MODEL} · ${SCRIPT} · instructions ${INSTR ? 'on' : 'off'} · ${API}${API === 'ollama' ? ` think ${THINK_MODE}` : ''} · max ${MAXTOK} · ${tools.length} tools (~${report.schema_tokens_est} tokens of schema)\n`);
+console.log(`${MODEL} · ${SCRIPT} · instructions ${INSTR ? 'on' : 'off'} · ${API}${API === 'ollama' ? ` think ${THINK ? 'on' : 'off'}` : ''} · max ${MAXTOK} · ${tools.length} tools (~${report.schema_tokens_est} tokens of schema)\n`);
 for (let i = 0; i < script.steps.length; i++) {
   try { await say(script.steps[i], i); }
   catch (e) { report.steps.push({ n: i + 1, say: script.steps[i].say.split('\n')[0].slice(0, 100), pass: false, why: `request failed: ${e.message}`, calls: [], turns: [] }); console.log(`FAIL ${i + 1}. request failed: ${e.message}`); }
@@ -205,7 +168,7 @@ for (let i = 0; i < script.steps.length; i++) {
 const passed = report.steps.filter(s => s.pass).length;
 report.passed = passed; report.total = report.steps.length; report.finished = new Date().toISOString();
 report.audit = wsp.use(WS, () => H.db().prepare('SELECT command, ok, error FROM command_log ORDER BY id').all());
-const out = path.join(ROOT, 'test/local/reports', `${MODEL.replace(/[^a-z0-9]+/gi, '-')}--${SCRIPT}--instr-${INSTR ? 'on' : 'off'}${API === 'ollama' ? `--think-${THINK_MODE}` : ''}${REPAIR ? '--repair' : ''}${TAG ? `--${TAG}` : ''}--${report.started.slice(0, 16).replace(/[:T]/g, '')}.json`);
+const out = path.join(ROOT, 'test/local/reports', `${MODEL.replace(/[^a-z0-9]+/gi, '-')}--${SCRIPT}--instr-${INSTR ? 'on' : 'off'}${API === 'ollama' ? `--think-${THINK ? 'on' : 'off'}` : ''}${TAG ? `--${TAG}` : ''}--${report.started.slice(0, 16).replace(/[:T]/g, '')}.json`);
 fs.writeFileSync(out, JSON.stringify(report, null, 1));
 console.log(`\n${passed}/${report.total} steps pass · ${report.audit.filter(a => !a.ok).length} refusals on the trail · report: ${path.relative(ROOT, out)}`);
 fs.rmSync(tmp, { recursive: true, force: true });
