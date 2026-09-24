@@ -60,7 +60,9 @@ const mountsFor = (w) => { try {
   if (sp) { const chosen = users.mountsOf(w); if (chosen) return [...new Set(['core', ...chosen,
     ...(chosen.some(m => m === 'o2c' || m === 'solo') ? ['bridge'] : []),
     ...(chosen.includes('crm') ? ['prospect'] : [])])]; return KIND_MOUNTS[sp.kind] || null; }
-  if (!DEMO) return null;
+  // A local server honours SAYBOOKS_MODULES the way mcp-server.js does, so a client can be handed
+  // the same subset over HTTP as over stdio.
+  if (!DEMO) return process.env.SAYBOOKS_MODULES ? process.env.SAYBOOKS_MODULES.split(',').map(x => x.trim()).filter(Boolean) : null;
   return w.startsWith('try-h') ? HUNT_MOUNTS : w.startsWith('try-s') ? SOLO_MOUNTS : DEMO_MOUNTS;
 } catch { return null; } };
 /** What is in one space, by module: used or not, the numbers that matter for its kind, last activity. Computed inside its own database. */
@@ -647,7 +649,8 @@ const server = http.createServer(async (req, res) => {
     // inside the demo app wasted them.
     if (req.method === 'GET' && /^\/specs(\/[a-z0-9]+)?\/?$/.test(p)) {
       const area = (p.split('/')[2] || '').replace(/\/$/, '');
-      try { return send(res, 200, require('./src/specpage.js').render(area || null), 'text/html; charset=utf-8'); }
+      // Public, same bytes for everyone: cached like the other public pages, not no-store.
+      try { return send(res, 200, require('./src/specpage.js').render(area || null), 'text/html; charset=utf-8', { 'cache-control': 'public, max-age=300, stale-while-revalidate=86400' }); }
       catch (e) { return send(res, 404, 'Not found', 'text/plain'); }
     }
     if (req.method === 'GET' && p === '/api/spec') {

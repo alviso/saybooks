@@ -45,7 +45,10 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
   }
   const { _reason, ...rest } = args;              // an optional why, carried into the log
   try {
-    const out = R.execute(name, rest, { workspace, actor, actor_kind: 'agent', session, reason: _reason, modules: mount.modules });
+    // A command's prepare step (fetching a logo from its URL, say) runs before the write, the
+    // same as on the web door; without it logo_url reached the handler and was refused.
+    const prepared = await R.prepare(name, rest);
+    const out = R.execute(name, prepared, { workspace, actor, actor_kind: 'agent', session, reason: _reason, modules: mount.modules });
     return { content: [{ type: 'text', text: typeof out === 'string' ? out : JSON.stringify(out, null, 1) }] };
   } catch (e) {
     // Business refusals come back as text the model should relay, not swallow.

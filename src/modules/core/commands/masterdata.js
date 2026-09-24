@@ -227,14 +227,24 @@ only the first time.`,
     // Country and currency codes: short, upper-case, and the currency set must contain the default.
     if (next.country) { next.country = next.country.toUpperCase(); if (!/^[A-Z]{2}$/.test(next.country)) throw new Rejected('country is a two-letter ISO 3166 code, e.g. NZ.'); }
     if (next.currency) { next.currency = next.currency.toUpperCase(); if (!H.CUR_RE.test(next.currency)) throw new Rejected('currency is a three-letter ISO 4217 code, e.g. NZD.'); }
-    if (next.currencies) {
-      const set = [...new Set(String(next.currencies).toUpperCase().split(/[\s,;]+/).filter(Boolean))];
+    // The stored set is JSON; only a set the caller passes is a comma list. Re-reading the stored
+    // one as a list refused every later patch with `["USD"] is not a currency` (found by a local
+    // model closing the numbering question after setup).
+    if (a.currencies !== undefined && a.currencies !== null && a.currencies !== '') {
+      const set = [...new Set(String(a.currencies).toUpperCase().split(/[\s,;]+/).filter(Boolean))];
       for (const c of set) if (!H.CUR_RE.test(c)) throw new Rejected(`${c} is not a three-letter ISO 4217 currency code.`);
       if (!set.length) throw new Rejected('currencies needs at least one code.');
       const def = next.currency || 'USD';
       if (!set.includes(def)) set.unshift(def);
       next.currencies = JSON.stringify(set);
     } else if (a.currencies === '') next.currencies = null;
+    else if (next.currencies && next.currency) {
+      // The stored set stays; a changed default must be in it.
+      let set; try { set = JSON.parse(next.currencies); } catch { set = String(next.currencies).toUpperCase().split(/[\s,;]+/).filter(Boolean); }
+      if (!Array.isArray(set)) set = [];
+      if (!set.includes(next.currency)) set.unshift(next.currency);
+      next.currencies = JSON.stringify(set);
+    }
     if (next.tax_rate_bp != null && (!Number.isInteger(next.tax_rate_bp) || next.tax_rate_bp < 0 || next.tax_rate_bp > 10000)) throw new Rejected('tax_rate_bp is a whole number of basis points between 0 and 10000.');
     if (next.tax_registered && !next.tax_rate_bp) throw new Rejected('A registered business needs a default tax rate: pass tax_rate_bp (1500 = 15%) with tax_registered.');
     if (next.number_format) {

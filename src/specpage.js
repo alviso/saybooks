@@ -110,12 +110,36 @@ function renderIndex() {
     const info = areaInfo(a);
     const n = info.acts ? Object.keys(info.acts.acts || {}).length : 0;
     const status = info.report ? (info.report.scenarios || []).every(s => s.pass) ? 'conformant' : 'failing' : (info.acts ? 'no run yet' : 'draft');
-    return `<a class="card" href="/specs/${a}"><b>${esc(info.title)}</b><span>${info.acts ? `${info.acts.area}@${esc(info.acts.spec)} · ${n} acts · ${info.scenarios.length} scenarios · ` : 'spec only · '}<span class="status ${status === 'conformant' ? 'pass' : status === 'failing' ? 'fail' : ''}">${status}</span></span></a>`;
+    return `<a class="card" href="/specs/${a}"><b>${esc(info.title)}</b><span>${BLURB[a] ? esc(BLURB[a]) + '<br>' : ''}${info.acts ? `${info.acts.area}@${esc(info.acts.spec)} · ${n} acts · ${info.scenarios.length} scenarios · ` : 'spec only · '}<span class="status ${status === 'conformant' ? 'pass' : status === 'failing' ? 'fail' : ''}">${status}</span></span></a>`;
   }).join('');
+  // Every invariant in one place. The index used to be eight cards and a paragraph, which is a
+  // hub a search engine skips; the rules themselves are the content people come for.
+  const invariants = areas().map(a => {
+    const info = areaInfo(a); const inv = (info.acts && info.acts.invariants) || [];
+    if (!inv.length) return '';
+    return `<h2 id="${esc(a)}"><a href="/specs/${a}" style="text-decoration:none;color:inherit">${esc(info.title)}</a></h2>
+<table><thead><tr><th>Id</th><th>Invariant</th></tr></thead><tbody>${inv.map(v => `<tr><td><code>${esc(v.id)}</code></td><td>${esc(v.title)}</td></tr>`).join('')}</tbody></table>`;
+  }).join('');
+  const total = areas().reduce((t, a) => t + (((areaInfo(a).acts || {}).invariants) || []).length, 0);
   return SHELL('Specs', `<div class="kicker">Specifications</div><h1>The rules, written down and executed</h1>
 <p>Each area of Saybooks is governed by a written spec: the acts it must support, the invariants it must keep, and scenario files that replay real sequences of acts — including the refusals — through the actual command registry. A module that claims an area must map every act and pass every scenario; the contract test fails the build otherwise. The specs speak in acts, not commands, so a competing implementation can be certified by the same files.</p>
-<div class="cards">${cards}</div>`, 'Every rule Saybooks enforces, written down and executed: the acts each area must support, the invariants it must keep, and scenario files replayed through the real command registry on every build.', '/specs', newest());
+<div class="cards">${cards}</div>
+<h2 style="margin-top:2.2em">Every invariant, in one place</h2>
+<p>${total} rules across ${areas().length} areas. Each is one sentence, enforced at the one place every command passes through, and shown identically to a person and to an agent when it refuses. The area pages hold the acts, the scenarios and the last conformance run.</p>
+${invariants}`, `Every rule Saybooks enforces, written down and executed: ${total} invariants across ${areas().length} areas, the acts each must support, and scenario files replayed through the real command registry on every build.`, '/specs', newest());
 }
+
+/** One sentence per area, for the index. What it governs, in the words a person would use. */
+const BLURB = {
+  o2c: 'Quotes, orders, shipments, invoices, receivables and credit: the order-to-cash cycle of a small business, with a credit gate the agent cannot talk past.',
+  solo: 'A freelancer\'s invoicing: numbered invoices with a link and a PDF, any currency, your tax scheme, payments and what is still open. Issued means issued.',
+  crm: 'Relationship pursuit: campaigns with a goal, accounts that earned their place, contacts with sources or recorded as gaps, drafts the agent writes and a person sends, events with the page their date came from.',
+  prospect: 'The holding area in front of the CRM: bought or scraped rows the agent stages and judges, that only a person promotes.',
+  jobhunt: 'A job search as a system of record: postings, applications, interviews, recruiters, a duplicate guard, and one next action per pursuit.',
+  purchases: 'Bank and card statements and receipts the agent read: rows with provenance, accepted whole or not at all, reviewed in the person\'s own words, subscriptions and spend.',
+  bridge: 'The hand-over to the accountant: map their chart once, export a period as QuickBooks Online or Xero journal lines, keep what went and when.',
+  p2p: 'Procure-to-pay, specified ahead of any implementation: purchase orders, receipts against them, supplier invoices matched three ways, payment runs.',
+};
 
 function renderArea(area) {
   if (!/^[a-z0-9]+$/.test(area) || !fs.existsSync(path.join(SPEC_DIR, area, 'spec.md'))) throw new Error('no such area');
