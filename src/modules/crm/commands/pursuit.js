@@ -49,7 +49,7 @@ its whole pursuit history; the customer starts clean.`,
   ],
   args: {
     account_id:   { ...f.ref('account', 'The won account.'), required: true },
-    terms:        f.pick(['immediate', 'net15', 'net30', 'net60'], 'Payment terms for the new customer.'),
+    terms:        f.text('Payment terms for the new customer: immediate, or netN for N days (net7, net15, net30, net60).'),
     credit_limit: f.money('Opening credit limit. 0 (or omitted) means prepay only — a real position, not a missing value.'),
     email:        f.text('Billing email.'),
   },

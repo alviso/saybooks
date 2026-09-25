@@ -9,7 +9,12 @@ const wsp = require('./workspace.js');
 const db = wsp.db;
 const today = () => new Date().toISOString().slice(0, 10);
 const addDays = (iso, n) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * 864e5).toISOString().slice(0, 10);
+// Payment terms: "immediate", or "netN" for any whole number of days (net7, net15, net30, net60,
+// net45...). The four common ones were once the whole list; a customer on net 7 is not unusual.
 const TERMS = { immediate: 0, net15: 15, net30: 30, net60: 60 };
+const TERMS_RE = /^(immediate|net[1-9]\d{0,2})$/;
+const termsDays = (t) => t === 'immediate' ? 0 : (/^net(\d{1,3})$/.exec(String(t || '')) ? Number(RegExp.$1) : 30);
+const normTerms = (t) => { const v = String(t ?? '').trim().toLowerCase().replace(/\s+/g, ''); return v.replace(/^net-/, 'net'); };
 // ---------------------------------------------------------------- money and dates, per space
 // The company profile says where the business is (country -> locale) and what it bills in
 // (a default currency and an allowed set). money() formats minor units in a currency, in the
@@ -66,4 +71,4 @@ const auditTrail = (limit = 50, subjectId = null) => db().prepare(`
   SELECT * FROM command_log ${subjectId ? 'WHERE subject_id = ?' : ''} ORDER BY id DESC LIMIT ?`)
   .all(...(subjectId ? [subjectId, limit] : [limit]));
 
-module.exports = { db, today, addDays, TERMS, money, fmtDate, locale, CUR_RE, nextId, get, need, auditTrail };
+module.exports = { db, today, addDays, TERMS, TERMS_RE, termsDays, normTerms, money, fmtDate, locale, CUR_RE, nextId, get, need, auditTrail };

@@ -76,20 +76,22 @@ to issue; never hand-roll the document yourself.`,
   args: {
     customer_id: { ...f.ref('customer', 'The client.'), required: true },
     lines: { ...f.lines(LINE, 'The work being billed.'), required: true },
-    due_in_days: f.int('Days until due, from your agreement — 30 for net-30. Freezes into the due date at issue. Defaults to 30.'),
+    due_in_days: f.int('Days until due. Defaults to the customer\'s payment terms (net7 = 7, net30 = 30, immediate = 0); pass it only to depart from them for this invoice. Freezes into the due date at issue.'),
     currency: f.text('Currency of this invoice, ISO 4217. Defaults to the company default; must be one of the company\'s currencies.'),
     subject: f.text('One line above the table — project, period. Printed on the document.'),
     notes: f.note('Printed on the document (project reference, thanks, PO number they gave you).'),
   },
   handler(a, { db, at }) {
-    H.need('customer', a.customer_id, 'customer');
+    const customer = H.need('customer', a.customer_id, 'customer');
     if (!a.lines || !a.lines.length) throw new Rejected('An invoice needs at least one line.');
+    // The customer's terms are the default; a due_in_days on the call is this invoice's own agreement.
+    const dueInDays = a.due_in_days ?? H.termsDays(customer.terms);
     const loc = H.locale();
     const currency = pickCurrency(a.currency, loc);
     const id = nextInvoiceId(db, loc, at);
     // The preview link exists from the first draft (S-7): the same token becomes the document at issue.
     db.prepare(`INSERT INTO solo_invoice (id,customer_id,status,due_in_days,notes,currency,subject,doc_token,created_at,updated_at)
-                VALUES (?,?,'draft',?,?,?,?,?,?,?)`).run(id, a.customer_id, a.due_in_days ?? 30, a.notes || null, currency, a.subject || null, crypto.randomBytes(12).toString('hex'), at, at);
+                VALUES (?,?,'draft',?,?,?,?,?,?,?)`).run(id, a.customer_id, dueInDays, a.notes || null, currency, a.subject || null, crypto.randomBytes(12).toString('hex'), at, at);
     const { subtotal, taxTotal } = writeLines(db, id, a.lines, loc);
     db.prepare('UPDATE solo_invoice SET subtotal = ?, tax_total = ?, total = ?, updated_at = ? WHERE id = ?')
       .run(subtotal, taxTotal, subtotal + taxTotal, at, id);

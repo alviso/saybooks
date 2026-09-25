@@ -164,9 +164,11 @@ the next question to ask; one question at a time, written as it is answered.`,
       if (db.prepare('SELECT id FROM customer WHERE lower(name) = lower(?)').get(name)) {
         throw new R.Rejected(`A customer named ${name} already exists. Use it, or give this one a distinguishing name.`);
       }
+      const t = terms === undefined || terms === null || terms === '' ? 'net30' : H.normTerms(terms);
+      if (!H.TERMS_RE.test(t)) throw new R.Rejected(`terms is immediate or netN for a whole number of days, 1 to 999 (net7, net15, net30, net60), not "${terms}".`);
       const id = H.nextId('C', 'customer');
       db.prepare('INSERT INTO customer (id,name,email,terms,credit_limit,address,tax_id,created_at) VALUES (?,?,?,?,?,?,?,?)')
-        .run(id, name, email || null, terms || 'net30', credit_limit || 0, address || null, tax_id || null, at || new Date().toISOString());
+        .run(id, name, email || null, t, credit_limit || 0, address || null, tax_id || null, at || new Date().toISOString());
       return H.get('customer', id);
     },
     needItem: (id) => H.need('item', id, 'item'),

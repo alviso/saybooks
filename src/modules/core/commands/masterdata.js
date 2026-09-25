@@ -17,7 +17,7 @@ authority to change it changes it, and that change is its own logged command.`,
     email:        f.text('Billing email.'),
     address:      f.note('Billing address, as it should print in the bill-to block. Required before a solo invoice can be issued.'),
     tax_id:       f.text('Their VAT / EIN, printed on the document where present.'),
-    terms:        f.pick(['immediate', 'net15', 'net30', 'net60'], 'Payment terms. Drives the invoice due date.'),
+    terms:        f.text('Payment terms: immediate, or netN for N days (net7, net15, net30, net60). Drives the invoice due date.'),
     credit_limit: f.money('How much unpaid exposure we will carry for this customer.'),
   },
   handler(a, { db, at }) {
@@ -40,7 +40,7 @@ authority, not contact details. Issued documents keep the bill-to block they wer
     email:   f.text('Billing email.'),
     address: f.note('Billing address, as it should print.'),
     tax_id:  f.text('Their VAT / EIN.'),
-    terms:   f.pick(['immediate', 'net15', 'net30', 'net60'], 'Payment terms.'),
+    terms:   f.text('Payment terms: immediate, or netN for N days (net7, net15, net30, net60).'),
   },
   handler(a, { db, at }) {
     const cur = H.need('customer', a.customer_id, 'customer');
@@ -48,7 +48,8 @@ authority, not contact details. Issued documents keep the bill-to block they wer
     let touched = 0;
     for (const k of ['email', 'address', 'tax_id', 'terms']) if (a[k] !== undefined) { next[k] = a[k] === '' ? null : a[k]; touched++; }
     if (!touched) throw new Rejected('Nothing to change — pass email, address, tax_id or terms.');
-    if (next.terms === null) throw new Rejected('terms cannot be cleared; pick one of immediate, net15, net30, net60.');
+    if (next.terms === null) throw new Rejected('terms cannot be cleared; pass immediate or netN (net7, net15, net30, net60).');
+    if (a.terms !== undefined) { next.terms = H.normTerms(a.terms); if (!H.TERMS_RE.test(next.terms)) throw new Rejected(`terms is immediate or netN for a whole number of days, 1 to 999 (net7, net15, net30, net60), not "${a.terms}".`); }
     db.prepare('UPDATE customer SET email = ?, address = ?, tax_id = ?, terms = ? WHERE id = ?').run(next.email, next.address, next.tax_id, next.terms, cur.id);
     return H.get('customer', cur.id);
   },
