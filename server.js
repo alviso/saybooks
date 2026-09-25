@@ -377,7 +377,12 @@ const server = http.createServer(async (req, res) => {
       let body;
       try { body = raw ? JSON.parse(raw) : undefined; } catch { return send(res, 400, { error: 'invalid JSON body' }); }
       if (DEMO && /^try-/.test(mws) && !users.isOwnedSpace(mws)) require('./src/telemetry.js').record(mws, 'agent');
-      require('./src/mcp-http.js').handleMcp(req, res, body, mws, DEMO, mMember, mountsFor(mws))
+      // A local client may name the modules it wants on the door (?modules=core,solo), the way
+      // the hosted spaces carry their mounts: fewer tools is a smaller prompt for a small model.
+      // Unknown names are dropped, core always rides along. Hosted spaces decide for themselves.
+      const asked = !DEMO && url.searchParams.get('modules');
+      const mounts = asked ? [...new Set(['core', ...asked.split(',').map(x => x.trim()).filter(m => R.MODULES.some(x => x.name === m))])] : mountsFor(mws);
+      require('./src/mcp-http.js').handleMcp(req, res, body, mws, DEMO, mMember, mounts)
         .catch(e => { if (!res.headersSent) send(res, 500, { error: e.message }); });
     });
     return undefined;
