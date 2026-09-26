@@ -12,12 +12,12 @@
         "period_start": "2026-12-20",
         "period_end": "2027-01-19",
         "opening_balance": 412055,
-        "closing_balance": 231872,
-        "row_count": 6,
-        "text": "Harborline Studio LLC\nBusiness Checking  ending 7710\nStatement period 12/20/2026 to 01/19/2027\nBeginning balance  4,120.55\nEnding balance     2,318.72\n\nDate    Description                        Amount     Balance\n12/22   CHECK 1042 PORTLAND WATER          186.40     3,934.15\n12/28   DEPOSIT MERIDIAN LOGISTICS ACH     1,500.00   5,434.15\n01/03   ADOBE *CREATIVE CLOUD              59.99      5,374.16\n01/09   WITHDRAWAL TRANSFER TO SAVINGS     3,000.00   2,374.16\n01/15   MONTHLY SERVICE FEE                55.44      2,318.72\nTotals  5 items"
+        "closing_balance": 219872,
+        "row_count": 7,
+        "text": "Harborline Studio LLC\nBusiness Checking  ending 7710\nStatement period 12/20/2026 to 01/19/2027\nBeginning balance  4,120.55\nEnding balance     2,198.72\n\nDate    Description                        Amount     Balance\n12/22   CHECK 1042 PORTLAND WATER          186.40     3,934.15\n12/28   DEPOSIT MERIDIAN LOGISTICS ACH     1,500.00   5,434.15\n01/03   ADOBE *CREATIVE CLOUD              59.99      5,374.16\n01/09   WITHDRAWAL TRANSFER TO SAVINGS     3,000.00   2,374.16\n01/12 PURCHASE HARBOR SUPPLY, INC. REF 8841 120.00 2,254.16\n01/15   MONTHLY SERVICE FEE                55.44      2,198.72\nTotals  6 items"
       },
       "expect": {
-        "refused": "says 6 rows; 5 were read"
+        "refused": "says 7 rows; 6 were read"
       },
       "notes": "A printed count that disagrees with the lines is refused when one is given; nothing landed, so the text stays free to import."
     },
@@ -30,8 +30,8 @@
         "period_start": "2026-12-20",
         "period_end": "2027-01-19",
         "opening_balance": 412055,
-        "closing_balance": 231800,
-        "text": "Harborline Studio LLC\nBusiness Checking  ending 7710\nStatement period 12/20/2026 to 01/19/2027\nBeginning balance  4,120.55\nEnding balance     2,318.72\n\nDate    Description                        Amount     Balance\n12/22   CHECK 1042 PORTLAND WATER          186.40     3,934.15\n12/28   DEPOSIT MERIDIAN LOGISTICS ACH     1,500.00   5,434.15\n01/03   ADOBE *CREATIVE CLOUD              59.99      5,374.16\n01/09   WITHDRAWAL TRANSFER TO SAVINGS     3,000.00   2,374.16\n01/15   MONTHLY SERVICE FEE                55.44      2,318.72\nTotals  5 items"
+        "closing_balance": 219800,
+        "text": "Harborline Studio LLC\nBusiness Checking  ending 7710\nStatement period 12/20/2026 to 01/19/2027\nBeginning balance  4,120.55\nEnding balance     2,198.72\n\nDate    Description                        Amount     Balance\n12/22   CHECK 1042 PORTLAND WATER          186.40     3,934.15\n12/28   DEPOSIT MERIDIAN LOGISTICS ACH     1,500.00   5,434.15\n01/03   ADOBE *CREATIVE CLOUD              59.99      5,374.16\n01/09   WITHDRAWAL TRANSFER TO SAVINGS     3,000.00   2,374.16\n01/12 PURCHASE HARBOR SUPPLY, INC. REF 8841 120.00 2,254.16\n01/15   MONTHLY SERVICE FEE                55.44      2,198.72\nTotals  6 items"
       },
       "expect": {
         "refused": "do not reconcile"
@@ -47,13 +47,13 @@
         "period_start": "2026-12-20",
         "period_end": "2027-01-19",
         "opening_balance": 412055,
-        "closing_balance": 231872,
-        "text": "Harborline Studio LLC\nBusiness Checking  ending 7710\nStatement period 12/20/2026 to 01/19/2027\nBeginning balance  4,120.55\nEnding balance     2,318.72\n\nDate    Description                        Amount     Balance\n12/22   CHECK 1042 PORTLAND WATER          186.40     3,934.15\n12/28   DEPOSIT MERIDIAN LOGISTICS ACH     1,500.00   5,434.15\n01/03   ADOBE *CREATIVE CLOUD              59.99      5,374.16\n01/09   WITHDRAWAL TRANSFER TO SAVINGS     3,000.00   2,374.16\n01/15   MONTHLY SERVICE FEE                55.44      2,318.72\nTotals  5 items"
+        "closing_balance": 219872,
+        "text": "Harborline Studio LLC\nBusiness Checking  ending 7710\nStatement period 12/20/2026 to 01/19/2027\nBeginning balance  4,120.55\nEnding balance     2,198.72\n\nDate    Description                        Amount     Balance\n12/22   CHECK 1042 PORTLAND WATER          186.40     3,934.15\n12/28   DEPOSIT MERIDIAN LOGISTICS ACH     1,500.00   5,434.15\n01/03   ADOBE *CREATIVE CLOUD              59.99      5,374.16\n01/09   WITHDRAWAL TRANSFER TO SAVINGS     3,000.00   2,374.16\n01/12 PURCHASE HARBOR SUPPLY, INC. REF 8841 120.00 2,254.16\n01/15   MONTHLY SERVICE FEE                55.44      2,198.72\nTotals  6 items"
       },
       "expect": {
         "ok": true,
         "include": {
-          "rows_in": 5,
+          "rows_in": 6,
           "rows_skipped": 0,
           "reconciled": true
         }
@@ -68,10 +68,10 @@
       "expect": {
         "ok": true,
         "include": {
-          "count": 5
+          "count": 6
         }
       },
-      "notes": "12/28 is 2026, 01/03 is 2027; the deposit is positive, the rest negative."
+      "notes": "12/28 is 2026, 01/03 is 2027; the deposit is positive, the rest negative; the single-spaced line with a comma in the payee's name is one row, not two."
     },
     {
       "act": "import_statement",
@@ -82,8 +82,8 @@
         "period_start": "2026-12-20",
         "period_end": "2027-01-19",
         "opening_balance": 412055,
-        "closing_balance": 231872,
-        "text": "Harborline Studio LLC\nBusiness Checking  ending 7710\nStatement period 12/20/2026 to 01/19/2027\nBeginning balance  4,120.55\nEnding balance     2,318.72\n\nDate    Description                        Amount     Balance\n12/22   CHECK 1042 PORTLAND WATER          186.40     3,934.15\n12/28   DEPOSIT MERIDIAN LOGISTICS ACH     1,500.00   5,434.15\n01/03   ADOBE *CREATIVE CLOUD              59.99      5,374.16\n01/09   WITHDRAWAL TRANSFER TO SAVINGS     3,000.00   2,374.16\n01/15   MONTHLY SERVICE FEE                55.44      2,318.72\nTotals  5 items"
+        "closing_balance": 219872,
+        "text": "Harborline Studio LLC\nBusiness Checking  ending 7710\nStatement period 12/20/2026 to 01/19/2027\nBeginning balance  4,120.55\nEnding balance     2,198.72\n\nDate    Description                        Amount     Balance\n12/22   CHECK 1042 PORTLAND WATER          186.40     3,934.15\n12/28   DEPOSIT MERIDIAN LOGISTICS ACH     1,500.00   5,434.15\n01/03   ADOBE *CREATIVE CLOUD              59.99      5,374.16\n01/09   WITHDRAWAL TRANSFER TO SAVINGS     3,000.00   2,374.16\n01/12 PURCHASE HARBOR SUPPLY, INC. REF 8841 120.00 2,254.16\n01/15   MONTHLY SERVICE FEE                55.44      2,198.72\nTotals  6 items"
       },
       "expect": {
         "refused": "already imported as SRC-0001"

@@ -40,7 +40,12 @@ function splitLine(line) {
   if (/\S {2,}\S/.test(line)) return line.split(/ {2,}/).map(x => x.trim());
   const out = []; let cur = ''; let q = false;                  // CSV with quoted fields
   for (const ch of line) { if (ch === '"') q = !q; else if (ch === ',' && !q) { out.push(cur.trim()); cur = ''; } else cur += ch; }
-  out.push(cur.trim()); return out;
+  out.push(cur.trim());
+  // A comma makes a line CSV only if the comma split reads as one: a date alone in the first
+  // field and money in the last. "7/24 HARBOR SUPPLY, INC. REF 8841 120.00" is a payee with a
+  // comma in its name on a single-spaced line, and splits on spaces instead.
+  if (out.length >= 3 && DATE_RE.test(out[0]) && /^\S+$/.test(out[0]) && parseMoney(out[out.length - 1]) !== null) return out;
+  return line.split(/\s+/);
 }
 function parseStatementText(text, ctx = {}) {
   const lines = [];
