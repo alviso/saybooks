@@ -8,13 +8,20 @@ const V = require('../views.js');
 // control totals gate the batch either way. Conservative on purpose: a line that starts with a
 // date and cannot be read is refused by line number, never guessed. Lines without a date at the
 // start (headers, footers, blank) are ignored, and the row count then catches a row lost that way.
-const DATE_RE = /^(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4}|\d{1,2}\.\d{1,2}\.\d{4})\b/;
-function isoDate(d) {
+// A row starts with a date. Real bank statements print "7/24" with no year at all; the year
+// then comes from the period the statement covers.
+const DATE_RE = /^(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}(?:\/\d{4})?|\d{1,2}\.\d{1,2}(?:\.\d{4})?)\b/;
+function isoDate(d, period = {}) {
   if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
-  const m = /^(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})$/.exec(d); if (!m) return null;
-  let [, a, b, y] = m; a = +a; b = +b;
-  const [mm, dd] = a > 12 ? [b, a] : [a, b];          // 13/09/2026 can only be day-first
-  return `${y}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+  let m = /^(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})$/.exec(d);
+  if (m) { let [, a, b, y] = m; a = +a; b = +b; const [mm, dd] = a > 12 ? [b, a] : [a, b]; return `${y}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`; }   // 13/09/2026 can only be day-first
+  m = /^(\d{1,2})([\/.])(\d{1,2})$/.exec(d); if (!m || !period.period_start) return null;
+  // Slashes are month-first (US statements), dots day-first. The year is the period's; a
+  // period that straddles New Year takes the year that puts the date inside it.
+  const a = +m[1], b = +m[3]; const [mm, dd] = m[2] === '.' ? [b, a] : (a > 12 ? [b, a] : [a, b]);
+  const y0 = period.period_start.slice(0, 4), y1 = (period.period_end || period.period_start).slice(0, 4);
+  const mk = (y) => `${y}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+  return (y0 !== y1 && mk(y0) < period.period_start) ? mk(y1) : mk(y0);
 }
 function parseMoney(s) {
   let t = String(s).trim().replace(/^[A-Z]{3}\s*|\s*[A-Z]{3}$/g, '').replace(/\s+/g, '');
@@ -35,23 +42,40 @@ function splitLine(line) {
   for (const ch of line) { if (ch === '"') q = !q; else if (ch === ',' && !q) { out.push(cur.trim()); cur = ''; } else cur += ch; }
   out.push(cur.trim()); return out;
 }
-function parseStatementText(text) {
-  const rows = [];
+function parseStatementText(text, ctx = {}) {
+  const lines = [];
   String(text).split(/\r?\n/).forEach((raw, n) => {
     const line = raw.trim(); if (!line || !DATE_RE.test(line)) return;
     const parts = splitLine(line);
     const bad = () => new Rejected(`Line ${n + 1} starts with a date but could not be read as a row (date, description, amount): "${line.slice(0, 80)}". Fix the line or hand the rows over as fields.`);
     if (parts.length < 3) throw bad();
-    const date = isoDate(parts[0]); if (!date) throw bad();
+    const date = isoDate(parts[0], ctx); if (!date) throw bad();
     // An unquoted "$1,800.00" in a CSV arrives as two fields. The amount is the longest run of
     // trailing fields that reads as one money value; the description is what is left.
     let amount = null, k = 0;
     for (let j = 1; j <= 3 && j < parts.length - 1; j++) { const v = parseMoney(parts.slice(-j).join(',')); if (v !== null) { amount = v; k = j; } }
     if (amount === null) throw bad();
-    const description = parts.slice(1, -k).join(' ').replace(/^"|"$/g, '').trim(); if (!description) throw bad();
-    rows.push({ row_index: rows.length + 1, date, amount, description, raw: line });
+    // A second money value before the last: the line may end "amount balance", the way bank
+    // statements print a running balance beside unsigned deposit and withdrawal columns.
+    const before = parts.length - k - 1 >= 1 ? parseMoney(parts[parts.length - k - 1]) : null;
+    lines.push({ n, line, parts, date, amount, k, before, bad });
   });
-  return rows;
+  if (!lines.length) return [];
+  // Running balance: when every line carries two trailing amounts and the last ones chain from
+  // the printed opening balance, the last is the balance, and the sign of each row comes from
+  // the balance movement, which the statement's own unsigned columns never say.
+  if (Number.isInteger(ctx.opening_balance) && lines.every(l => l.before !== null)) {
+    let prev = ctx.opening_balance, ok = true; const derived = [];
+    for (const l of lines) { const delta = l.amount - prev; if (delta === 0 || Math.abs(delta) !== Math.abs(l.before)) { ok = false; break; } derived.push(delta); prev = l.amount; }
+    if (ok) return lines.map((l, i) => {
+      const description = l.parts.slice(1, -(l.k + 1)).join(' ').replace(/^"|"$/g, '').trim(); if (!description) throw l.bad();
+      return { row_index: i + 1, date: l.date, amount: derived[i], description, raw: l.line };
+    });
+  }
+  return lines.map((l, i) => {
+    const description = l.parts.slice(1, -l.k).join(' ').replace(/^"|"$/g, '').trim(); if (!description) throw l.bad();
+    return { row_index: i + 1, date: l.date, amount: l.amount, description, raw: l.line };
+  });
 }
 
 const ROW = {
@@ -67,44 +91,55 @@ defineCommand({
   name: 'purch_import_statement',
   permission: 'cash.write',
   title: 'Import statement', group: 'Purchases', subject: 'purch_source', scope: 'collection',
-  summary: 'Hand over one statement you read: its rows and the control totals it prints. Accepted whole, or refused with the gap named.',
-  doctrine: `You read the file; this records it. State the opening balance, closing balance and
-row count the statement PRINTS, then the rows: either every row as fields with a signed amount
-(spending negative), or the statement's lines exactly as pasted in \`text\` and this reads
-them (date, description, amount per line). Pass text when you were handed the file; retyping
-twenty rows is where slips happen. The batch is refused unless opening + rows = closing and the
-count matches — that is where a misread digit is caught (P-3). Never adjust a row to make it
-fit: re-read. The same hash is refused a second time (P-4); rows already on record are skipped
-and listed back. Nothing is categorised here — review follows, one act at a time.`,
+  summary: 'Hand over one statement: the balances it prints and its lines as you were given them. Accepted whole, or refused with the gap named.',
+  doctrine: `You were handed a file; this reads it. Pass the statement's lines in \`text\`
+exactly as you have them, one row per line, and state the opening and closing balance the
+statement PRINTS. That is the normal way, and the only way when you have the text: retyping
+rows is where digits slip. The rows are read here; the batch is refused unless opening + rows
+= closing, and the refusal names the gap (P-3). Never adjust a line to make it fit: re-read.
+
+\`rows\` as typed fields exists for one case only: a statement you have no text for, a person
+reading from paper. \`row_count\` is the count the statement prints, if it prints one; leave
+it out otherwise. \`hash\` is computed from the text; pass one only with rows. The same
+statement is refused a second time (P-4); rows already on record are skipped and listed back.
+Nothing is categorised here; review follows.`,
   effects: ['source recorded', 'transactions recorded with provenance', 'duplicates skipped and listed'],
   args: {
     name: { ...f.text('File name as given.'), required: true },
-    hash: { ...f.text('Content hash of the file if you can compute one; otherwise a stable id the statement carries (statement number + period).'), required: true },
     kind: { ...f.pick(['bank', 'card', 'other'], 'What kind of statement.'), required: true },
-    account: f.text('The account label as printed (e.g. "Visa ending 4421").'),
     currency: { ...f.text('ISO 4217 code of the statement.'), required: true },
     period_start: { ...f.date('First day the statement covers.'), required: true },
     period_end: { ...f.date('Last day the statement covers.'), required: true },
     opening_balance: { ...f.money('Opening balance as printed, signed.'), required: true },
     closing_balance: { ...f.money('Closing balance as printed, signed.'), required: true },
-    row_count: { ...f.int('Number of rows the statement lists.'), required: true },
-    rows: f.lines(ROW, 'Every row, in the statement\'s order. Leave out when you pass text.'),
-    text: f.note('The statement\'s lines exactly as you were given them, unchanged: one row per line, date first, amount last. Header and footer lines are ignored. Use this instead of rows when you were handed the file.'),
+    text: f.note('The statement\'s lines exactly as you were given them, unchanged: one row per line, date first, amount last. A running-balance column after the amount is fine; dates without a year are fine. Header and footer lines are ignored. This is the normal way.'),
+    account: f.text('The account label as printed (e.g. "Visa ending 4421").'),
+    row_count: f.int('The number of rows the statement prints, if it prints one. Checked against the rows read; leave it out when the statement does not say.'),
+    hash: f.text('Only with rows: a content hash of the file, or a stable id the statement carries. With text the hash is computed here.'),
+    rows: f.lines(ROW, 'Only when there is no text to pass: every row as typed fields, in the statement\'s order.'),
   },
   handler(a, { db, at, actor }) {
     // The hash exists to stop the same file landing twice, nothing more. A content hash is
     // best; a filename is an honest stable id and a model that cannot compute a digest will
     // hand one over. Spaces and case are not a reason to refuse: normalise, then require
     // enough of it to be distinctive.
-    const hash = String(a.hash).trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9._:-]/g, '');
-    if (!/^[a-z0-9][a-z0-9._:-]{7,159}$/.test(hash)) throw new Rejected('hash: at least 8 characters of letters, digits, . _ : - once spaces are collapsed (a content hash, the file name, or the statement id plus period).');
+    if (a.rows?.length && a.text) throw new Rejected('Pass the statement as text, or the rows as fields, not both.');
+    if (!a.text && !a.rows?.length) throw new Rejected('Nothing to import: pass the statement\'s lines in text (the normal way), or rows as fields if you have no text.');
+    // With text the hash is a digest of the text, which nobody has to invent. With rows it is
+    // whatever stable id the caller has: a file name is honest, spaces are not a reason to refuse.
+    let hash;
+    if (a.text) hash = 'sha1:' + require('crypto').createHash('sha1').update(String(a.text).replace(/\s+/g, ' ').trim().toLowerCase()).digest('hex').slice(0, 24);
+    else {
+      hash = String(a.hash || '').trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9._:-]/g, '');
+      if (!/^[a-z0-9][a-z0-9._:-]{7,159}$/.test(hash)) throw new Rejected('With rows, hash is required: at least 8 characters of letters, digits, . _ : - (a content hash, the file name, or the statement id plus period). With text it is computed for you.');
+    }
     const dup = db.prepare('SELECT id, name, created_at FROM purch_source WHERE hash = ?').get(hash);
     if (dup) throw new Rejected(`This statement is already imported as ${dup.id} (${dup.name}, ${dup.created_at.slice(0, 10)}). The same file never goes in twice (P-4).`);
     const cur = String(a.currency).toUpperCase(); if (!H.CUR_RE.test(cur)) throw new Rejected('currency is a three-letter ISO 4217 code.');
-    if (a.rows?.length && a.text) throw new Rejected('Pass the rows as fields or the statement as text, not both.');
-    const rows = a.rows?.length ? a.rows : a.text ? parseStatementText(a.text) : [];
-    if (!rows.length) throw new Rejected(a.text ? 'No line in the text starts with a date, so no row could be read. A row is date, description, amount.' : 'A statement with no rows is not a statement.');
-    if (rows.length !== a.row_count) throw new Rejected(`The statement says ${a.row_count} rows; you handed over ${rows.length}. Re-read it and pass every row (P-3).`);
+    const rows = a.rows?.length ? a.rows : parseStatementText(a.text, { period_start: a.period_start, period_end: a.period_end, opening_balance: a.opening_balance });
+    if (!rows.length) throw new Rejected(a.text ? 'No line in the text starts with a date, so no row could be read. A row is a date, a description and an amount on one line.' : 'A statement with no rows is not a statement.');
+    // The printed count is a control when the statement prints one; the balances always are.
+    if (a.row_count != null && rows.length !== a.row_count) throw new Rejected(`The statement says ${a.row_count} rows; ${rows.length} were read. Re-read it: every row, and only rows (P-3).`);
     if (a.period_end < a.period_start) throw new Rejected('period_end is before period_start.');
     let sum = 0;
     rows.forEach((r, i) => {
@@ -121,7 +156,7 @@ and listed back. Nothing is categorised here — review follows, one act at a ti
     const skipped = []; let n = 0;
     const seen = db.prepare('SELECT id, source_id FROM purch_transaction WHERE currency = ? AND date = ? AND amount = ? AND lower(description) = lower(?) LIMIT 1');
     db.prepare(`INSERT INTO purch_source (id,name,hash,kind,account,currency,period_start,period_end,opening_balance,closing_balance,row_count,rows_in,rows_skipped,imported_by,created_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,0,0,?,?)`).run(id, a.name, hash, a.kind, a.account || null, cur, a.period_start, a.period_end, a.opening_balance, a.closing_balance, a.row_count, actor || 'unknown', at);
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,0,0,?,?)`).run(id, a.name, hash, a.kind, a.account || null, cur, a.period_start, a.period_end, a.opening_balance, a.closing_balance, a.row_count ?? rows.length, actor || 'unknown', at);
     const alias = db.prepare('SELECT vendor_id FROM purch_vendor_alias WHERE alias = ?');
     rows.forEach((r, i) => {
       const have = seen.get(cur, r.date, r.amount, r.description);

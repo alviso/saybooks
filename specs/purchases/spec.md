@@ -1,7 +1,7 @@
 # purchases — What You Buy · Area Specification
 
-**Status: 0.2.** A spec on the record before a line of module code, so the shape can be
-argued with. No module implements it yet.
+**Status: 0.3.** A spec on the record before a line of module code, so the shape can be
+argued with. 0.3 makes the statement's own lines the normal path of import_statement.
 
 ## 1. Calibration: who this is for
 
@@ -61,10 +61,13 @@ purchases, subscriptions, receipts, spend, source.
   a currency; sums are per currency and never cross.
 - **P-2** Every transaction traces to a source: source id, row index, and the raw line as
   the agent read it. A transaction without provenance cannot exist.
-- **P-3** A statement is accepted whole or not at all. The agent states the control totals
-  the statement prints — opening balance, closing balance, row count — and the batch is
-  refused when the rows do not reconcile to them, naming the gap. That is where a
-  transcription error is caught.
+- **P-3** A statement is accepted whole or not at all. The agent hands over the statement's
+  lines as it was given them and states the control totals the statement prints: the opening
+  and closing balance always, the row count when one is printed. The batch is refused when
+  the rows do not reconcile to them, naming the gap. That is where a transcription error is
+  caught. (0.3: the lines as text are the normal path and the hash is computed from them;
+  typed rows remain for a statement with no text, and then carry the hash. Five runs out of
+  five, a 26B model retyped forty-seven rows into fields when the schema listed fields first.)
 - **P-4** The same source (by hash) is refused a second time. Rows already present from an
   overlapping source (same date, amount, description) are skipped and listed in the result,
   never silently merged and never silently duplicated.

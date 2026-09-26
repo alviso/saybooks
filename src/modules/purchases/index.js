@@ -31,16 +31,14 @@ const mod = R.defineModule({
 and hand over what it says. The module checks it and keeps it. Nothing here parses.
 
 Importing a statement (purch_import_statement):
-- Read every row: date (ISO), signed amount in minor units (spending NEGATIVE, money in
-  POSITIVE), the description exactly as printed, and the raw line. Keep the statement's
-  own order; row_index is its position.
-- State the control totals the statement prints: opening balance, closing balance, number
-  of rows. The import is refused when the rows do not add up to them — then re-read; a
-  refusal names the gap. Never "fix" a row to make it reconcile.
-- hash: a content hash of the file if you can compute one; otherwise a stable id the
-  statement itself carries (statement number + period). The same hash is refused twice.
-- Rows already on record (same date, amount, description) are skipped and listed back; say
-  so to the person.
+- You were handed the file. Pass its lines in text, exactly as you have them, one row per
+  line. Do not retype rows into fields: that is where digits slip, and the tool reads the
+  lines itself. Dates without a year and a running-balance column are fine.
+- State the opening and closing balance the statement prints. The import is refused when
+  the rows do not add up to them, and the refusal names the gap; then re-read. Never "fix"
+  a line to make it reconcile. row_count only if the statement prints a count.
+- The hash is computed from the text. The same statement is refused twice; rows already on
+  record (same date, amount, description) are skipped and listed back; say so to the person.
 
 Reviewing: FIRST read purch_vocabulary — the statuses and what they mean, and the person's
 own categories and vendors. Propose a status, category and vendor for every row of the
@@ -72,7 +70,7 @@ Money is integer minor units; sums are per currency and never cross.`,
   env_acts: { import_statement: 'purch_import_statement', review_batch: 'purch_review_batch', review_transaction: 'purch_review_transaction', set_vendor: 'purch_set_vendor' },
   env_argmap: { transaction: 'transaction_id' },
   implements: {
-    area: 'purchases', spec: '0.2',
+    area: 'purchases', spec: '0.3',
     argmap: { transaction: 'transaction_id', receipt: 'receipt_id', subscription: 'subscription_id', source: 'source_id' },
     acts: {
       import_statement: 'purch_import_statement', discard_source: 'purch_discard_source', review_transaction: 'purch_review_transaction', review_batch: 'purch_review_batch', split_transaction: 'purch_split_transaction', set_vendor: 'purch_set_vendor', vocabulary: 'purch_vocabulary', rename_category: 'purch_rename_category',

@@ -1,0 +1,94 @@
+{
+  "name": "the statement as the bank printed it",
+  "spec": "purchases@0.3",
+  "notes": "P-3 with text as the normal path: dates without a year taken from the period, unsigned columns signed by the running balance, a printed count checked only when given; P-4 the hash comes from the text, so the same text is refused without anyone inventing an id.",
+  "steps": [
+    {
+      "act": "import_statement",
+      "args": {
+        "name": "checking-jan-short.txt",
+        "kind": "bank",
+        "currency": "USD",
+        "period_start": "2026-12-20",
+        "period_end": "2027-01-19",
+        "opening_balance": 412055,
+        "closing_balance": 231872,
+        "row_count": 6,
+        "text": "Harborline Studio LLC\nBusiness Checking  ending 7710\nStatement period 12/20/2026 to 01/19/2027\nBeginning balance  4,120.55\nEnding balance     2,318.72\n\nDate    Description                        Amount     Balance\n12/22   CHECK 1042 PORTLAND WATER          186.40     3,934.15\n12/28   DEPOSIT MERIDIAN LOGISTICS ACH     1,500.00   5,434.15\n01/03   ADOBE *CREATIVE CLOUD              59.99      5,374.16\n01/09   WITHDRAWAL TRANSFER TO SAVINGS     3,000.00   2,374.16\n01/15   MONTHLY SERVICE FEE                55.44      2,318.72\nTotals  5 items"
+      },
+      "expect": {
+        "refused": "says 6 rows; 5 were read"
+      },
+      "notes": "A printed count that disagrees with the lines is refused when one is given; nothing landed, so the text stays free to import."
+    },
+    {
+      "act": "import_statement",
+      "args": {
+        "name": "checking-jan-bad.txt",
+        "kind": "bank",
+        "currency": "USD",
+        "period_start": "2026-12-20",
+        "period_end": "2027-01-19",
+        "opening_balance": 412055,
+        "closing_balance": 231800,
+        "text": "Harborline Studio LLC\nBusiness Checking  ending 7710\nStatement period 12/20/2026 to 01/19/2027\nBeginning balance  4,120.55\nEnding balance     2,318.72\n\nDate    Description                        Amount     Balance\n12/22   CHECK 1042 PORTLAND WATER          186.40     3,934.15\n12/28   DEPOSIT MERIDIAN LOGISTICS ACH     1,500.00   5,434.15\n01/03   ADOBE *CREATIVE CLOUD              59.99      5,374.16\n01/09   WITHDRAWAL TRANSFER TO SAVINGS     3,000.00   2,374.16\n01/15   MONTHLY SERVICE FEE                55.44      2,318.72\nTotals  5 items"
+      },
+      "expect": {
+        "refused": "do not reconcile"
+      },
+      "notes": "P-3: a misread closing balance is caught by the rows, and the refusal names the gap. Still nothing landed."
+    },
+    {
+      "act": "import_statement",
+      "args": {
+        "name": "checking-jan.txt",
+        "kind": "bank",
+        "currency": "USD",
+        "period_start": "2026-12-20",
+        "period_end": "2027-01-19",
+        "opening_balance": 412055,
+        "closing_balance": 231872,
+        "text": "Harborline Studio LLC\nBusiness Checking  ending 7710\nStatement period 12/20/2026 to 01/19/2027\nBeginning balance  4,120.55\nEnding balance     2,318.72\n\nDate    Description                        Amount     Balance\n12/22   CHECK 1042 PORTLAND WATER          186.40     3,934.15\n12/28   DEPOSIT MERIDIAN LOGISTICS ACH     1,500.00   5,434.15\n01/03   ADOBE *CREATIVE CLOUD              59.99      5,374.16\n01/09   WITHDRAWAL TRANSFER TO SAVINGS     3,000.00   2,374.16\n01/15   MONTHLY SERVICE FEE                55.44      2,318.72\nTotals  5 items"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "rows_in": 5,
+          "rows_skipped": 0,
+          "reconciled": true
+        }
+      },
+      "notes": "Five rows read from lines that print no sign and no year: the running balance says which way each went, the period says which year."
+    },
+    {
+      "act": "transactions",
+      "args": {
+        "source_id": "SRC-0001"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "count": 5
+        }
+      },
+      "notes": "12/28 is 2026, 01/03 is 2027; the deposit is positive, the rest negative."
+    },
+    {
+      "act": "import_statement",
+      "args": {
+        "name": "checking-jan-again.txt",
+        "kind": "bank",
+        "currency": "USD",
+        "period_start": "2026-12-20",
+        "period_end": "2027-01-19",
+        "opening_balance": 412055,
+        "closing_balance": 231872,
+        "text": "Harborline Studio LLC\nBusiness Checking  ending 7710\nStatement period 12/20/2026 to 01/19/2027\nBeginning balance  4,120.55\nEnding balance     2,318.72\n\nDate    Description                        Amount     Balance\n12/22   CHECK 1042 PORTLAND WATER          186.40     3,934.15\n12/28   DEPOSIT MERIDIAN LOGISTICS ACH     1,500.00   5,434.15\n01/03   ADOBE *CREATIVE CLOUD              59.99      5,374.16\n01/09   WITHDRAWAL TRANSFER TO SAVINGS     3,000.00   2,374.16\n01/15   MONTHLY SERVICE FEE                55.44      2,318.72\nTotals  5 items"
+      },
+      "expect": {
+        "refused": "already imported as SRC-0001"
+      },
+      "notes": "P-4: same text, same hash, and nobody had to make an id up."
+    }
+  ]
+}

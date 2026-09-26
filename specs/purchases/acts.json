@@ -1,21 +1,18 @@
 {
   "area": "purchases",
-  "spec": "0.2",
+  "spec": "0.3",
   "doc": "spec.md",
   "acts": {
     "import_statement": {
       "kind": "write",
       "required": [
         "name",
-        "hash",
         "kind",
         "currency",
         "period_start",
         "period_end",
         "opening_balance",
-        "closing_balance",
-        "row_count",
-        "rows"
+        "closing_balance"
       ]
     },
     "review_transaction": {
@@ -143,7 +140,7 @@
     },
     {
       "id": "P-3",
-      "title": "A statement is accepted whole or not at all: the rows must reconcile to the printed opening balance, closing balance and row count, or the batch is refused with the gap named."
+      "title": "A statement is accepted whole or not at all: the rows must reconcile to the printed opening and closing balance, and to the printed row count when the statement prints one, or the batch is refused with the gap named."
     },
     {
       "id": "P-4",
