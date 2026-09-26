@@ -1,0 +1,59 @@
+{
+  "name": "the balance on each day's last row only",
+  "spec": "purchases@0.3",
+  "notes": "P-3 with the shape big banks print: unsigned deposit and withdrawal columns, a running balance on a day's last row only. The signs are solved against each day's movement; when two assignments fit, the description words decide; when none fits, the day is named.",
+  "steps": [
+    {
+      "act": "import_statement",
+      "args": {
+        "name": "checking-jan.txt",
+        "kind": "bank",
+        "currency": "USD",
+        "period_start": "2027-01-01",
+        "period_end": "2027-01-31",
+        "opening_balance": 412000,
+        "closing_balance": 502000,
+        "text": "Harborline Studio LLC\nBusiness Checking ending 7710\nStatement period 01/01/2027 to 01/31/2027\nBeginning balance 4,120.00\nEnding balance 5,020.00\n\nDate Description Deposits Withdrawals Ending daily balance\n01/05 PURCHASE HARBOR SUPPLY, INC. REF 8841 120.00\n01/05 DEPOSIT MERIDIAN LOGISTICS ACH 1,500.00\n01/05 ZELLE TO ALEX RIVERA 200.00 5,300.00\n01/09 MONTHLY SERVICE FEE 55.00 5,245.00\n01/14 DEPOSIT NORTHWIND REFUND 100.00\n01/14 PURCHASE OFFICE DEPOT 100.00 5,245.00\n01/22 PAYROLL GUSTO 225.00 5,020.00\nTotals 7 items"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "rows_in": 7,
+          "rows_skipped": 0,
+          "reconciled": true
+        }
+      },
+      "notes": "01/05: three rows, one balance; only -120 +1,500 -200 reaches +1,180. 01/14: two rows of 100.00 and no movement; 'deposit' and 'refund' say which is which."
+    },
+    {
+      "act": "transactions",
+      "args": {
+        "source_id": "SRC-0001",
+        "status": "unreviewed"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "count": 7
+        }
+      }
+    },
+    {
+      "act": "import_statement",
+      "args": {
+        "name": "checking-jan-bad.txt",
+        "kind": "bank",
+        "currency": "USD",
+        "period_start": "2027-01-01",
+        "period_end": "2027-01-31",
+        "opening_balance": 412000,
+        "closing_balance": 502000,
+        "text": "Harborline Studio LLC\nBusiness Checking ending 7710\nStatement period 01/01/2027 to 01/31/2027\nBeginning balance 4,120.00\nEnding balance 5,020.00\n\nDate Description Deposits Withdrawals Ending daily balance\n01/05 PURCHASE HARBOR SUPPLY, INC. REF 8841 120.00\n01/05 DEPOSIT MERIDIAN LOGISTICS ACH 1,500.00\n01/05 ZELLE TO ALEX RIVERA 250.00 5,300.00\n01/09 MONTHLY SERVICE FEE 55.00 5,245.00\n01/14 DEPOSIT NORTHWIND REFUND 100.00\n01/14 PURCHASE OFFICE DEPOT 100.00 5,245.00\n01/22 PAYROLL GUSTO 225.00 5,020.00\nTotals 7 items"
+      },
+      "expect": {
+        "refused": "Day 2027-01-05"
+      },
+      "notes": "A misread digit on a middle row of a day: no sign assignment reaches the printed balance, and the refusal names the day rather than the whole statement."
+    }
+  ]
+}

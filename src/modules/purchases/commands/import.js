@@ -77,6 +77,45 @@ function parseStatementText(text, ctx = {}) {
       return { row_index: i + 1, date: l.date, amount: derived[i], description, raw: l.line };
     });
   }
+  // Daily balance: some banks print the balance on the LAST row of each day only. Then the
+  // day's rows, signed, add up to the movement from the previous day's balance. The columns
+  // that would give the sign are lost in a text paste, so the signs are solved against the
+  // movement, and when two assignments fit, the words decide (deposit, payroll, refund...).
+  if (Number.isInteger(ctx.opening_balance)) {
+    const days = [];
+    for (const l of lines) { const d = days[days.length - 1]; if (!d || d.date !== l.date) days.push({ date: l.date, rows: [l] }); else d.rows.push(l); }
+    if (days.every(d => d.rows[d.rows.length - 1].before !== null)) {
+      const $ = (c) => H.money(c, ctx.currency || 'USD');
+      const CREDIT = /\b(deposit|payroll|direct dep|transfer from|zelle from|refund|reversal|interest paid|credit)\b/i;
+      // A day whose middle rows carry no second amount is this shape beyond doubt; then a day
+      // that will not solve is a misread to name, not a sign to try the per-line reading.
+      const mixed = days.some(d => d.rows.slice(0, -1).some(l => l.before === null));
+      let prev = ctx.opening_balance; const out = []; let first = true;
+      for (const d of days) {
+        const n = d.rows.length; const last = d.rows[n - 1]; const bal = last.amount; const move = bal - prev;
+        const mags = d.rows.map((l, i) => Math.abs(i === n - 1 ? l.before : l.amount));
+        if (n > 18) throw new Rejected(`Day ${d.date} has ${n} rows; solving their signs against one balance is not safe past 18. Hand that day's rows over as fields, signed.`);
+        const sols = []; for (let m = 0; m < (1 << n); m++) { let s = 0; for (let i = 0; i < n; i++) s += (m >> i & 1) ? mags[i] : -mags[i]; if (s === move) sols.push(m); }
+        if (!sols.length) {
+          if (first && !mixed) break;   // not this shape after all; the per-line reading below gets its turn
+          throw new Rejected(`Day ${d.date}: ${n} row${n === 1 ? '' : 's'} (${mags.map($).join(', ')}) cannot add up to the balance movement ${$(move)} (${$(prev)} to ${$(bal)}). Re-read that day, or hand its rows over as fields, signed.`);
+        }
+        let mask = sols[0];
+        if (sols.length > 1) {
+          const want = d.rows.reduce((m, l, i) => m | ((CREDIT.test(l.line) ? 1 : 0) << i), 0);
+          const pick = sols.filter(m => m === want);
+          if (pick.length !== 1) throw new Rejected(`Day ${d.date}: ${sols.length} sign assignments fit the balance movement ${$(move)} and the descriptions do not settle it. Hand that day's rows over as fields, signed.`);
+          mask = pick[0];
+        }
+        d.rows.forEach((l, i) => {
+          const description = l.parts.slice(1, -(i === n - 1 ? l.k + 1 : l.k)).join(' ').replace(/^"|"$/g, '').trim(); if (!description) throw l.bad();
+          out.push({ row_index: out.length + 1, date: l.date, amount: (mask >> i & 1) ? mags[i] : -mags[i], description, raw: l.line });
+        });
+        prev = bal; first = false;
+      }
+      if (!first) return out;
+    }
+  }
   return lines.map((l, i) => {
     const description = l.parts.slice(1, -l.k).join(' ').replace(/^"|"$/g, '').trim(); if (!description) throw l.bad();
     return { row_index: i + 1, date: l.date, amount: l.amount, description, raw: l.line };
@@ -141,7 +180,7 @@ Nothing is categorised here; review follows.`,
     const dup = db.prepare('SELECT id, name, created_at FROM purch_source WHERE hash = ?').get(hash);
     if (dup) throw new Rejected(`This statement is already imported as ${dup.id} (${dup.name}, ${dup.created_at.slice(0, 10)}). The same file never goes in twice (P-4).`);
     const cur = String(a.currency).toUpperCase(); if (!H.CUR_RE.test(cur)) throw new Rejected('currency is a three-letter ISO 4217 code.');
-    const rows = a.rows?.length ? a.rows : parseStatementText(a.text, { period_start: a.period_start, period_end: a.period_end, opening_balance: a.opening_balance });
+    const rows = a.rows?.length ? a.rows : parseStatementText(a.text, { period_start: a.period_start, period_end: a.period_end, opening_balance: a.opening_balance, currency: cur });
     if (!rows.length) throw new Rejected(a.text ? 'No line in the text starts with a date, so no row could be read. A row is a date, a description and an amount on one line.' : 'A statement with no rows is not a statement.');
     // The printed count is a control when the statement prints one; the balances always are.
     if (a.row_count != null && rows.length !== a.row_count) throw new Rejected(`The statement says ${a.row_count} rows; ${rows.length} were read. Re-read it: every row, and only rows (P-3).`);
