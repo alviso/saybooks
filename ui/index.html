@@ -1508,12 +1508,31 @@ async function renderPage() {
     const TYPE = { customers: 'customer', orders: 'order', invoices: 'invoice', solo_invoices: 'solo_invoice', accounts: 'account', crm_contacts: 'crm_contact', postings: 'posting', hunt_contacts: 'contact', campaigns: 'campaign' };
     let any = false;
     for (const [group, rows] of Object.entries(r)) {
+      if (group === 'related') continue;
       if (!Array.isArray(rows) || !rows.length) continue; any = true;
       const t = $(`<table style="margin-bottom:16px"><thead><tr><th colspan="3">${group.replace(/_/g, ' ')}</th></tr></thead><tbody></tbody></table>`);
       rowsInto(t, rows, x => `<td style="width:120px">${x.id}</td><td>${x.name || x.title || x.customer || x.customer_id || ''}</td><td style="color:var(--dim)">${x.status || x.company || x.stage || ''}</td>`, TYPE[group] || 'nolink');
       main.append(t);
     }
     if (!any) main.append($('<div class="card doc">Nothing matched.</div>'));
+    // Antfly, when a table is configured: the same books ranked by meaning, beside the
+    // substring hits above. An honest empty and a weak-match note are shown as such.
+    if (r.related) {
+      const rel = r.related;
+      const box = $(`<div style="margin-top:8px"><div style="font-size:12px;color:var(--dim);margin-bottom:6px">Related (Antfly): ${esc(rel.error || rel.note || '')}</div></div>`);
+      if (rel.hits && rel.hits.length) {
+        const KIND = { posting: 'posting', contact: 'contact', account: 'account', crm_contact: 'crm_contact' };
+        const t = $(`<table><thead><tr><th style="width:120px">id</th><th>what</th><th>kind</th><th style="width:70px">score</th></tr></thead><tbody></tbody></table>`);
+        for (const h of rel.hits) {
+          const tr = $(`<tr><td>${esc(h.id)}</td><td>${esc(h.title || '')}${h.company && h.company !== h.title ? ` <span style="color:var(--dim)">· ${esc(h.company)}</span>` : ''}</td><td style="color:var(--dim)">${esc(h.kind || '')}${h.application_status ? ' · ' + esc(h.application_status) : h.status ? ' · ' + esc(h.status) : ''}</td><td style="color:var(--dim)">${h.score}</td></tr>`);
+          const type = KIND[h.kind];
+          if (type) tr.onclick = () => { selected = { type, id: h.id }; render(); }; else tr.style.cursor = 'default';
+          t.querySelector('tbody').append(tr);
+        }
+        box.append(t);
+      }
+      main.append(box);
+    }
   }
   if (view === 'home' && !(REG.user && REG.spaces.length > 1)) {
     const demo = REG.demo && !REG.user;
