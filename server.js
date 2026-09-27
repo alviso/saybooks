@@ -290,6 +290,7 @@ const server = http.createServer(async (req, res) => {
         ['/hunt', mtime(path.join(UI, 'hunt.html')), 'weekly', '0.9', 'Free job-hunt tracker for people running their search with Claude: postings, applications, interviews, a duplicate guard.'],
         ['/docs', mtime(path.join(UI, 'docs.html')), 'weekly', '0.8', 'Connecting Claude, keys and roles, spaces and modules, documents, the ledger bridge, export and delete, self-hosting.'],
         ['/about', mtime(path.join(UI, 'about.html')), 'monthly', '0.5', 'Who builds Saybooks and why: Peter Varga, thirty years of enterprise software, now in Portland.'],
+        ['/hostel', mtime(path.join(UI, 'hostel.html')), 'weekly', '0.8', 'hostel: a Mac app where a model on your own machine keeps your books through Saybooks. Download, requirements, what stays on the Mac.'],
         ['/notes', mtime(path.join(UI, 'notes.html')), 'weekly', '0.6', 'Notes from building Saybooks, with the numbers in them.'],
         ['/notes/local-models', mtime(path.join(UI, 'notes-local-models.html')), 'monthly', '0.7', 'Smart model, average MCP. Small model, smart MCP: a 26B local model keeping the books on a laptop, and the six fixes it forced in the tools.'],
         ['/specs', mtime(path.join(__dirname, 'specs')), 'weekly', '0.8', 'Every rule the system enforces, written down and executed: acts, invariants, scenarios, last conformance run.'],
@@ -747,6 +748,27 @@ const server = http.createServer(async (req, res) => {
     return send(res, 500, { error: e.message });
   }
 
+  // What this server is, for a host that bundles a copy and wants to know when it is stale.
+  // VERSION is written when the source is packaged for deployment; a checkout reads git.
+  if (req.method === 'GET' && p === '/version.json') {
+    let v = null;
+    try { v = JSON.parse(fs.readFileSync(path.join(__dirname, 'VERSION'), 'utf8')); } catch { /* not a packaged build */ }
+    if (!v) { try { const head = fs.readFileSync(path.join(__dirname, '.git', 'HEAD'), 'utf8').trim(); const ref = head.startsWith('ref:') ? fs.readFileSync(path.join(__dirname, '.git', head.slice(5)), 'utf8').trim() : head; v = { commit: ref.slice(0, 12), date: null }; } catch { v = { commit: null, date: null }; } }
+    return send(res, 200, { name: 'saybooks', commit: v.commit, date: v.date, min_app_version: '0.2' }, 'application/json; charset=utf-8', { 'cache-control': 'public, max-age=300' });
+  }
+  // Downloads live on the data volume, not in the image: a 73 MB app is not source. Streamed,
+  // with a length, from DATA_DIR/downloads. The version file beside it is what the app polls.
+  if (req.method === 'GET' && /^\/hostel\/(hostel-[0-9.]+\.zip|version\.json)$/.test(p)) {
+    const name = p.slice('/hostel/'.length);
+    const full = path.join(wsp.DATA_DIR, 'downloads', name === 'version.json' ? 'hostel-version.json' : name);
+    if (!fs.existsSync(full)) return send(res, 404, { error: 'not here yet' });
+    const st = fs.statSync(full);
+    res.writeHead(200, { 'content-type': name.endsWith('.zip') ? 'application/zip' : 'application/json; charset=utf-8', 'content-length': st.size,
+      'cache-control': name.endsWith('.zip') ? 'public, max-age=86400' : 'public, max-age=300',
+      ...(name.endsWith('.zip') ? { 'content-disposition': `attachment; filename="${name}"` } : {}) });
+    fs.createReadStream(full).pipe(res); return undefined;
+  }
+
   if (req.method === 'GET') {
     // In demo mode the root is the landing page and the workbench lives at /app;
     // locally the root stays the workbench.
@@ -758,6 +780,7 @@ const server = http.createServer(async (req, res) => {
                : (p === '/privacy' || p === '/privacy/') ? 'privacy.html'
                : (p === '/docs' || p === '/docs/') ? 'docs.html'
                : (p === '/about' || p === '/about/') ? 'about.html'
+               : (p === '/hostel' || p === '/hostel/') ? 'hostel.html'
                : (p === '/notes' || p === '/notes/') ? 'notes.html'
                : (p === '/notes/local-models' || p === '/notes/local-models/') ? 'notes-local-models.html'
                // Unlinked pages: a real session published for one reader. Never indexed, never in the sitemap.
@@ -772,7 +795,7 @@ const server = http.createServer(async (req, res) => {
       const headers = /\.(png|mp4)$/.test(full) ? { 'cache-control': 'public, max-age=86400' } : {};
       // Public pages are the same bytes for everyone: let a crawler and a browser keep them a
       // few minutes. The workbench is somebody's books and stays no-store.
-      const PUBLIC_PAGES = ['landing.html', 'solo.html', 'hunt.html', 'docs.html', 'about.html', 'privacy.html', 'notes.html', 'notes-local-models.html'];
+      const PUBLIC_PAGES = ['landing.html', 'solo.html', 'hunt.html', 'docs.html', 'about.html', 'privacy.html', 'notes.html', 'notes-local-models.html', 'hostel.html'];
       if (PUBLIC_PAGES.includes(file)) headers['cache-control'] = 'public, max-age=300, stale-while-revalidate=86400';
       // The workbench is a person's books, never a search result: crawlable (so the directive is seen), indexed never.
       if (file === 'index.html' || file === 'admin.html' || file.startsWith('session-')) headers['x-robots-tag'] = 'noindex, nofollow';
@@ -784,7 +807,9 @@ const server = http.createServer(async (req, res) => {
 
 // Conformance evidence self-heals at boot: the data volume can shadow anything baked into
 // the image, and a Spec tab with report:null is a broken shop window. ~1s per area, once.
-for (const m of R.MODULES.filter(m => m.implements)) {
+// SAYBOOKS_CONFORMANCE=0 skips it: a host that bundles this server for one person's books has
+// no Spec tab to keep honest, and the scratch ws_spec-*.db files would land in their folder.
+for (const m of process.env.SAYBOOKS_CONFORMANCE === '0' ? [] : R.MODULES.filter(m => m.implements)) {
   const area = m.implements.area;
   const prior = C.lastReport(area);
   // Rerun when anything moved: the version, the scenario set, or the acts. A Spec tab showing

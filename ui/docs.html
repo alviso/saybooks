@@ -65,6 +65,7 @@ table.plain{border-collapse:collapse;width:100%;font-size:14px;margin:0 0 1em} t
   <div class="note"><b>After an update, remove and re-add the connector.</b> Claude caches a connector's tool list when it is added. If Saybooks gains a command and your Claude cannot see it, or a tool has fewer arguments than the schema says, that is the cache: remove the connector, add it again, start a new chat.</div>
 
   <h2 id="local">Run it with a local model</h2>
+  <p><b>The easy way is <a href="/hostel">hostel</a></b>, a free Mac app that runs the model and Saybooks together and passes the model the whole doctrine, which LM Studio does not. What follows is the by-hand route.</p>
   <p>Saybooks is a plain MCP server, so a model on your own machine can keep the books with nothing leaving it. Tested on a 32 GB MacBook with LM Studio and <b>Gemma 4 26B A4B</b> (the QAT 4-bit MLX build): a full invoice cycle first time, and a full statement cycle. <a href="/notes/local-models">What that took</a> is its own note.</p>
   <ol>
     <li><b>Run Saybooks locally.</b> <code>git clone</code>, <code>npm install</code>, <code>node server.js</code> for the workbench at <code>localhost:8140</code>. The stdio MCP server is <code>mcp-server.js</code> in the same folder.</li>
