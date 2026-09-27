@@ -1522,9 +1522,9 @@ async function renderPage() {
       const box = $(`<div style="margin-top:8px"><div style="font-size:12px;color:var(--dim);margin-bottom:6px">Related (Antfly): ${esc(rel.error || rel.note || '')}</div></div>`);
       if (rel.hits && rel.hits.length) {
         const KIND = { posting: 'posting', contact: 'contact', account: 'account', crm_contact: 'crm_contact' };
-        const t = $(`<table><thead><tr><th style="width:120px">id</th><th>what</th><th>kind</th><th style="width:70px">score</th></tr></thead><tbody></tbody></table>`);
+        const t = $(`<table><thead><tr><th style="width:120px">id</th><th>what</th><th>kind</th><th style="width:170px">matched on</th></tr></thead><tbody></tbody></table>`);
         for (const h of rel.hits) {
-          const tr = $(`<tr><td>${esc(h.id)}</td><td>${esc(h.title || '')}${h.company && h.company !== h.title ? ` <span style="color:var(--dim)">· ${esc(h.company)}</span>` : ''}</td><td style="color:var(--dim)">${esc(h.kind || '')}${h.application_status ? ' · ' + esc(h.application_status) : h.status ? ' · ' + esc(h.status) : ''}</td><td style="color:var(--dim)">${h.score}</td></tr>`);
+          const tr = $(`<tr><td>${esc(h.id)}</td><td>${esc(h.title || '')}${h.company && h.company !== h.title ? ` <span style="color:var(--dim)">· ${esc(h.company)}</span>` : ''}</td><td style="color:var(--dim)">${esc(h.kind || '')}${h.application_status ? ' · ' + esc(h.application_status) : h.status ? ' · ' + esc(h.status) : ''}</td><td style="color:var(--dim)">${esc(h.via || '')}${h.similarity != null ? ` · ${h.similarity}` : ''}</td></tr>`);
           const type = KIND[h.kind];
           if (type) tr.onclick = () => { selected = { type, id: h.id }; render(); }; else tr.style.cursor = 'default';
           t.querySelector('tbody').append(tr);

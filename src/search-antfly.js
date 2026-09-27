@@ -31,7 +31,14 @@ function related(q, limit = 8) {
   const hits = (((j.responses || [])[0] || {}).hits || {}).hits || [];
   const max = hits.length ? hits[0]._score : 0;
   return {
-    hits: hits.map(h => ({ id: h._id, score: Math.round(h._score * 1000) / 1000, ...h._source })),
+    // The fused score is a reciprocal-rank number: it says which lists a hit sat near the top
+    // of, not how strong the match was. So each hit also says which side matched (the words,
+    // the meaning, or both) and carries the semantic similarity where there is one.
+    hits: hits.map(h => {
+      const ix = h._index_scores || {};
+      const via = [ix.full_text != null && 'words', ix[INDEX] != null && 'meaning'].filter(Boolean).join(' + ');
+      return { id: h._id, score: Math.round(h._score * 1000) / 1000, via, similarity: ix[INDEX] != null ? Math.round(ix[INDEX] * 100) / 100 : null, ...h._source };
+    }),
     // Fused scores are tiny when only one side matched; a top score under this is "nothing
     // here really", which a pure semantic search can never say.
     confident: max >= 0.02,
