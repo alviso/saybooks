@@ -2,135 +2,119 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Free job hunt tracker for people searching with Claude — Saybooks Jobhunt</title>
-<meta name="description" content="A free, agent-governed job-hunt tracker. Your Claude connects as your delegate — with rules. Never invents a date, catches retitled duplicate reqs, remembers who ghosted.">
-<meta property="og:title" content="Free job hunt tracker for people searching with Claude — Saybooks Jobhunt">
-<meta property="og:description" content="Free agent-governed job-hunt tracker for people running their search with Claude. Duplicate guard, ghosted-as-status, never-invented facts. Export or delete everything, anytime.">
-<meta property="og:url" content="https://saybooks.io/hunt"><link rel="canonical" href="https://saybooks.io/hunt"><meta property="og:type" content="website"><meta property="og:image" content="https://saybooks.io/card.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://saybooks.io/card.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Saybooks Jobhunt","url":"https://saybooks.io/hunt","applicationCategory":"BusinessApplication","operatingSystem":"Web","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Free job-hunt tracker for people running their search with Claude: postings, applications, interviews, recruiters; a duplicate guard, never-invented dates, ghosted as a status, one next action per pursuit.","license":"https://www.gnu.org/licenses/agpl-3.0.html","isAccessibleForFree":true,"creator":{"@type":"Organization","name":"Saybooks","url":"https://saybooks.io/"}}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Free job hunt tracker for people searching with Claude · Saybooks</title>
+<meta name="description" content="A free job-hunt tracker your AI agent keeps under rules: it never invents a date, catches the same job reaching you twice through different agencies, and remembers who went quiet.">
+<meta property="og:title" content="Free job hunt tracker for people searching with Claude · Saybooks">
+<meta property="og:description" content="Postings, applications, interviews and recruiters, kept by your agent under rules. A duplicate guard, ghosted as a status, never-invented facts. Export or delete everything, any time.">
+<meta property="og:url" content="https://saybooks.io/hunt"><link rel="canonical" href="https://saybooks.io/hunt"><meta property="og:type" content="website"><meta property="og:image" content="https://saybooks.io/card.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://saybooks.io/card.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Saybooks Jobhunt","url":"https://saybooks.io/hunt","applicationCategory":"BusinessApplication","operatingSystem":"Web, macOS","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Free job-hunt tracker for people running their search with Claude: postings, applications, interviews, recruiters; a duplicate guard, never-invented dates, ghosted as a status, one next action per pursuit.","license":"https://www.gnu.org/licenses/agpl-3.0.html","isAccessibleForFree":true,"creator":{"@type":"Organization","name":"Saybooks","url":"https://saybooks.io/"}}</script>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,500..700,100,0&family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="/site.css">
 <style>
-  * { box-sizing: border-box; margin: 0 }
-  body { font: 16px/1.6 'IBM Plex Sans', -apple-system, 'Segoe UI', sans-serif; color: hsl(215 40% 16%); background: hsl(210 20% 98%) }
-  .wrap { max-width: 880px; margin: 0 auto; padding: 3em 1.5em 4em }
-  .mark { font-family: 'IBM Plex Sans', sans-serif; font-weight:700; letter-spacing: .06em; font-size: 14px }
-  .mark a { color: inherit; text-decoration: none; display:inline-flex; align-items:center; gap:6px } .mark .wv { flex:none }
-  .mark > span { color: hsl(215 15% 46%); font-weight: 400; letter-spacing: 0 }
-  h1 { font-family: 'IBM Plex Sans', sans-serif; font-weight:700; letter-spacing: -.025em; font-size: 46px; line-height: 1.08; margin: 1.1em 0 .4em }
-  .sub { font-size: 19px; color: hsl(215 20% 36%); max-width: 40em }
-  .cta { display: inline-block; margin: 1.8em 0 .4em; background: hsl(215 60% 22%); color: #fff; padding: .9em 1.6em; border-radius: 6px; text-decoration: none; font-family: 'IBM Plex Sans', sans-serif; font-weight: 700; font-size: 17px; box-shadow: none }
-  .cta:hover { background: hsl(215 60% 17%) }
-  .cta.ghost { background: hsl(210 20% 94%); color: hsl(215 60% 22%); border: none; margin-left: .6em; box-shadow: none }
-  .cta.ghost:hover { background: hsl(210 25% 90%) }
-  .ctasub { font-size: 13px; color: hsl(215 15% 46%) }
-  .log { background: hsl(215 60% 22%); border: 1px solid hsl(215 50% 32%); border-radius: 8px; padding: 1em 1.2em; margin: 2.5em 0; font: 13px/1.7 ui-monospace, 'Courier New', monospace; overflow-wrap: anywhere }
-  .chat { margin: 2.5em 0; max-width: 44em }
-  .chat .msg { padding: .8em 1.1em; font-size: 15px; line-height: 1.55 }
-  .chat .you { background: hsl(210 20% 94%); color: hsl(215 40% 16%); margin-right: 3em; border-radius: 18px 18px 18px 4px }
-  .chat .ai { background: hsl(215 60% 22%); color: #fff; margin: .6em 0 0 3em; border-radius: 18px 18px 4px 18px }
-  .chat .ai b { color: #fff }
-  .log .t { color: #8FCBBF } .log .a { color: #F2C14E; font-weight: 700 } .log .c { color: #CFEDE6 } .log .w { color: #F2A54E }
-  h2 { font-family: 'IBM Plex Sans', sans-serif; font-weight:700; letter-spacing: -.02em; font-size: 26px; margin: 2.2em 0 .8em }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px }
-  .card { background: #fff; border: 1px solid hsl(215 25% 88%); border-radius: 8px; padding: 1.3em 1.4em; box-shadow: none }
-  .card b { display: block; margin-bottom: .35em; color: hsl(215 40% 16%); font-family: 'IBM Plex Sans', sans-serif; font-size: 17px }
-  .card p { font-size: 14px; color: hsl(215 20% 36%) }
-  .yours { background: #fff; border: 1px solid hsl(215 25% 88%); border-radius: 8px; padding: 1.4em 1.5em; margin-top: 2.2em; box-shadow: none }
-  .yours ul { margin: .5em 0 0; padding-left: 1.3em; font-size: 14.5px; color: hsl(215 20% 36%) }
-  .yours li { margin-bottom: .3em }
-  .how { font-size: 15px; color: hsl(215 20% 36%); margin-top: .6em }
-  .how code { background: hsl(210 20% 94%); padding: .15em .45em; border-radius: 5px; font-size: 13px }
-  .foot { margin-top: 3.5em; padding-top: 1.5em; border-top: 1px solid hsl(215 25% 88%); font-size: 13.5px; color: hsl(215 15% 46%) }
-  .foot a { color: hsl(215 60% 22%) }
-  .step { display: flex; gap: 14px; margin-top: 1.6em }
-  .step .n { flex: none; width: 30px; height: 30px; border-radius: 50%; background: hsl(215 60% 22%); font-family: 'IBM Plex Sans', sans-serif; color: #fff; text-align: center; line-height: 28px; font-weight: 700 }
-  .step p { font-size: 14.5px; color: hsl(215 20% 36%); margin-top: .3em }
-  .mock { background: #fff; border: 1px solid hsl(215 25% 88%); border-radius: 8px; padding: .9em 1em; margin-top: .7em; max-width: 34em }
-  .mock.dark { background: #23262b; border-color: #3a3e45 }
-  .mockrow { display: flex; gap: 8px; align-items: center }
-  .mockfield { flex: 1; border: 1px solid #d8d5cc; border-radius: 8px; padding: .45em .8em; color: hsl(215 40% 16%); font-size: 14px; background: #fff }
-  .mockfield.dark { background: #2b2f35; border-color: #3a3e45; color: #e8eaed; font-family: ui-monospace, monospace; font-size: 13px; overflow-wrap: anywhere }
-  .mocksel { border: 1px solid #d8d5cc; border-radius: 8px; padding: .45em .8em; color: hsl(215 40% 16%); font-size: 14px; background: #fff }
-  .mockbtn { background: hsl(215 60% 22%); color: #fff; border-radius: 8px; padding: .45em 1em; font-weight: 700; font-size: 14px }
-  .mocklabel { font-size: 12px; color: #9aa0a6 }
-  .mockout { margin-top: .7em; padding-top: .7em; border-top: 1px solid #eceae3; font-size: 13px; color: hsl(215 40% 16%); font-family: ui-monospace, monospace; overflow-wrap: anywhere }
+.phero{display:grid;grid-template-columns:1.05fr 1fr;gap:56px;align-items:center;padding:36px 0 0}
+.phero h1{margin:0 0 22px} .phero .lede{margin:0 0 28px}
+.warn{margin-top:6px;background:var(--sun-soft);border-radius:12px;padding:10px 14px;border-left:4px solid var(--sun);font-size:15px;line-height:1.5}
+.feat .card{padding:28px 28px 26px} .feat h3{margin:0 0 8px} .feat .card p{margin:0;color:var(--ink2);font-size:16px}
+.howto{counter-reset:s;display:grid;gap:18px}
+.howto .card{display:grid;grid-template-columns:56px 1fr;gap:18px;padding:26px 28px}
+.howto .card::before{counter-increment:s;content:counter(s);display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--green);color:#fff;font:700 19px var(--sans)}
+.howto h3{margin:6px 0 8px;font-size:22px} .howto p{margin:0 0 8px;color:var(--ink2)}
+.field{margin-top:14px;display:grid;gap:8px;max-width:520px}
+.field span{font:700 12px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.field code,.prompt{display:block;font:14.5px/1.55 var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px 14px;color:var(--ink)}
+.prompt{background:var(--forest);color:#DDEFE3;border:none;padding:16px 18px;margin:12px 0 14px;white-space:pre-wrap}
+.yours{background:var(--green-soft);border-radius:28px;padding:40px 44px}
+.yours ul{margin:18px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:16px 32px}
+.yours li{color:var(--ink2)} .yours li b{display:block;color:var(--ink);font:600 19px var(--serif);margin-bottom:2px}
+.also{margin-top:26px;color:var(--ink2);font-size:16px}
+code.inl{font:14px var(--mono);background:var(--paper2);border-radius:6px;padding:1px 6px}
+@media (max-width:980px){ .phero{grid-template-columns:1fr;gap:36px} .yours{padding:30px 24px} .yours ul{grid-template-columns:1fr} .howto .card{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="mark"><a href="/"><svg class="wv" width="16" height="18" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".3"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span><svg class="wv" width="16" height="18" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19" opacity=".3"/></svg></a> <span>· jobhunt</span></div>
+  <nav class="top">
+    <a class="mark" href="/"><svg width="18" height="21" viewBox="0 0 22 26" fill="none" stroke="#1E7A4C" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".35"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".65"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span></a>
+    <div class="links"><a href="/hostel">Mac &amp; iPhone</a><a href="/solo">Invoicing</a><a class="on" href="/hunt">Job hunt</a><a href="/docs">Docs</a><a href="/notes">Notes</a></div>
+    <div class="auth"><a class="btn line small" href="/auth/google">Sign in</a><a class="btn solid small" href="/app?demo=hunt">Try it now</a></div>
+  </nav>
 
-  <h1>Your job hunt, on the record.</h1>
-  <p class="sub">A free tracker for people running their search with an AI agent. Your Claude connects
-  as your delegate — and works under rules: it never invents a date or a name, the duplicate guard
-  catches the same req retitled by a fourth agency, and every action lands in an audit trail you can read.</p>
-
-  <a class="cta" href="/auth/google?next=hunt">Start free with Google →</a>
-  <a class="cta ghost" href="/app?demo=hunt">See it working first</a>
-  <div class="ctasub">The demo is a live sandbox with a seeded hunt — no account, poke anything. Sign in later to keep a space of your own. No credit card, no trial clock; export or delete everything, any time.</div>
-
-  <div class="chat">
-    <div class="msg you"><b>You:</b> Log this one — "Senior Operations Manager, Lakeshore Foods", came through a TalentBridge recruiter. JD pasted below.</div>
-    <div class="msg ai"><b>Claude:</b> Logged. One thing before you apply: ⚠ this looks like the <b>same role</b> you already applied to directly at Lakeshore two weeks ago — same employer, near-identical description under a different title. A second submission through an agency can get you disqualified. Want me to mark it a duplicate and skip it?</div>
-  </div>
-
-  <h2>What the rules catch</h2>
-  <div class="grid">
-    <div class="card"><b>The double-submission guard</b><p>Agencies retitle the same req constantly. The guard matches on req id, URL, employer — and the job description body itself, reordered templates included. Warnings are surfaced for you to weigh, never silently resolved.</p></div>
-    <div class="card"><b>Never an invented fact</b><p>An application date that was never recorded stays <i>"unknown"</i> — the agent is refused if it tries to guess. When the true date surfaces, a correction records it with its source.</p></div>
-    <div class="card"><b>Ghosted is a status, not a deletion</b><p>Silence is an outcome, and which companies go quiet is pattern knowledge. Terminal states stay on the books, one click away.</p></div>
-    <div class="card"><b>One open next action</b><p>Per pursuit, one thing to do next, with a due date. The Due page is your morning list; superseded intentions are kept, not erased.</p></div>
-  </div>
-
-  <h2>How it works with Claude — three steps</h2>
-
-  <div class="step"><div class="n">1</div><div>
-    <b>Sign in above.</b>
-    <p>You get your own private space for the hunt. Nothing to install.</p>
-  </div></div>
-
-  <div class="step"><div class="n">2</div><div>
-    <b>Add Saybooks to Claude as a connector.</b>
-    <p>In the Claude app: <b>Customize → Connectors → Add</b> (or open <a href="https://claude.ai/customize/connectors" style="color:inherit">claude.ai/customize/connectors</a>), paste the address below, Continue. Claude sends you to sign in with Google and asks which books to open and what the agent may do — pick your hunt, leave <b>owner</b>, and you're connected. Revoke it any time under <b>Share this space…</b>.</p>
-    <div class="mock dark">
-      <div class="mocklabel">Name</div><div class="mockfield dark">hunt</div>
-      <div class="mocklabel" style="margin-top:8px">Remote MCP server URL</div><div class="mockfield dark">https://saybooks.io/mcp/hunt</div>
+  <header class="phero">
+    <div>
+      <span class="kicker">A job-hunt tracker</span>
+      <h1>Your job hunt, <span class="hl">on the record.</span></h1>
+      <p class="lede">For people running their search with an AI agent. Your agent works as your delegate, under rules: it never invents a date or a name, it catches the same job reaching you twice, and everything it does lands in a trail you can read.</p>
+      <div class="ctas">
+        <a class="btn solid" href="/auth/google?next=hunt">Start free with Google</a>
+        <a class="btn line" href="/app?demo=hunt">See it working first</a>
+      </div>
+      <p class="fine" data-who>The demo is a live sandbox with a hunt already in it, no account needed. No credit card, no trial clock; export or delete everything, any time.</p>
     </div>
-  </div></div>
+    <div class="replay" aria-label="A posting caught as a duplicate before applying">
+      <div class="cap"><span>Before you apply twice</span><span>hunt</span></div>
+      <div class="r you"><span class="say">Log this one: "Senior Operations Manager, Lakeshore Foods", came through a TalentBridge recruiter. JD pasted below.</span></div>
+      <div class="r ai"><span class="who ai">Claude</span><span class="say">Logged. One thing before you apply:</span><span class="warn">This looks like the <b>same role</b> you applied to directly at Lakeshore two weeks ago: same employer, near-identical description under a different title. A second submission through an agency can get you disqualified.</span><span class="say" style="margin-top:6px">Want me to mark it a duplicate and skip it?</span></div>
+    </div>
+  </header>
 
-  <div class="step"><div class="n">3</div><div>
-    <b>Open a new session with the connector on, and paste this — with a job description under it.</b>
-    <div class="log" style="white-space:pre-wrap;font-size:13px;color:#CFEDE6;margin:0.8em 0">You're my job-hunt assistant, connected to my Saybooks hunt space through the "hunt" connector. Call core_schema first to learn the rules. Then log the posting below: evaluate the fit, run the duplicate check, and give me one next action with a due date.</div>
-    <p>From then on, just talk: <i>"the recruiter called, interview Thursday"</i> · <i>"TCS ghosted me"</i> ·
-    <i>"what's due today?"</i> Everything it records shows up in your browser too — same data, same rules,
-    one audit trail. Works with any MCP-capable agent (Claude Code: <code>claude mcp add hunt -t http https://saybooks.io/mcp/hunt</code>, then <code>/mcp</code> to sign in).</p>
-  </div></div>
+  <section class="feat">
+    <span class="kicker">What the rules catch</span>
+    <h2>The mistakes a busy search makes</h2>
+    <p class="sub">Warnings come to you to weigh. Nothing is quietly resolved behind your back.</p>
+    <div class="grid2">
+      <div class="card"><h3>The double-submission guard</h3><p>Agencies retitle the same job constantly. The guard matches on the req id, the link, the employer, and the description itself, reordered templates included.</p></div>
+      <div class="card"><h3>Never an invented fact</h3><p>An application date that was never recorded stays unknown, and the agent is refused if it tries to guess. When the true date turns up, a correction records it with its source.</p></div>
+      <div class="card"><h3>Ghosted is a status, not a deletion</h3><p>Silence is an outcome, and which companies go quiet is worth knowing. Closed pursuits stay on the books, one click away.</p></div>
+      <div class="card"><h3>One open next action</h3><p>Each pursuit has one thing to do next, with a due date. The Due page is your morning list; plans you replaced are kept, not erased.</p></div>
+    </div>
+  </section>
 
-  <div class="yours">
-    <b style="color:hsl(215 60% 22%)">Your data, actually yours</b>
-    <ul>
-      <li><b>Export</b> — one click downloads every table as JSON, audit log included.</li>
-      <li><b>Delete</b> — one button permanently removes your space, its database, and every access key.</li>
-      <li><b>Self-host</b> — the whole thing is open source (AGPL): <a href="https://github.com/alviso/saybooks" style="color:hsl(215 60% 22%)">github.com/alviso/saybooks</a>. Run it on your laptop if you'd rather.</li>
-      <li>No LinkedIn integration, by design — nothing here touches your account or scrapes anything. You and your agent record what you know.</li>
-    </ul>
-  </div>
+  <section>
+    <span class="kicker">How it works</span>
+    <h2>Three steps with Claude</h2>
+    <p class="sub">Everything the agent records shows up in your browser too: same data, same rules, one audit trail.</p>
+    <div class="howto">
+      <div class="card"><div><h3>Sign in</h3><p>You get your own private space for the hunt. Nothing to install.</p></div></div>
+      <div class="card"><div><h3>Add Saybooks to Claude as a connector</h3><p>In the Claude app open <b>Customize, Connectors, Add</b> (or <a href="https://claude.ai/customize/connectors">claude.ai/customize/connectors</a>), paste the address below and continue. Claude sends you to sign in with Google and asks which books to open and what the agent may do: pick your hunt, leave <b>owner</b>, and you're connected. Revoke it any time under <b>Share this space</b>.</p>
+        <div class="field"><span>Name</span><code>hunt</code><span>Remote MCP server URL</span><code>https://saybooks.io/mcp/hunt</code></div></div></div>
+      <div class="card"><div><h3>Start a session and paste this, with a job description under it</h3>
+        <div class="prompt">You're my job-hunt assistant, connected to my Saybooks hunt space through the "hunt" connector. Call core_schema first to learn the rules. Then log the posting below: evaluate the fit, run the duplicate check, and give me one next action with a due date.</div>
+        <p>From then on, just talk: <em>"the recruiter called, interview Thursday"</em>, <em>"TCS ghosted me"</em>, <em>"what's due today?"</em></p>
+        <p>Works with any agent that speaks MCP. In Claude Code: <code class="inl">claude mcp add hunt -t http https://saybooks.io/mcp/hunt</code>, then <code class="inl">/mcp</code> to sign in.</p></div></div>
+    </div>
+  </section>
 
-  <div class="foot">
-    Built on <a href="/">Saybooks</a> — the open-source ERP where AI agents and humans share one set of rules
-    and one audit trail. The jobhunt module is the proof that the machine generalizes: same registry,
-    same guards, pointed at a personal domain. The founder runs his own hunt on it. How it works is in the <a href="/docs">docs</a>; the rules it keeps are the <a href="/specs/jobhunt">job-hunt spec</a>.
-    Built by <a href="/about">Peter Varga</a> in Portland, Oregon, who also runs <a href="https://portlandaiworks.com/">Portland AI Works</a>.
-  </div>
+  <section>
+    <div class="yours">
+      <span class="kicker">Your data, actually yours</span>
+      <h2>Nothing touches your accounts</h2>
+      <ul>
+        <li><b>Export</b>One click downloads every table as one file, audit log included.</li>
+        <li><b>Delete</b>One button permanently removes your space, its database and every access key.</li>
+        <li><b>No LinkedIn integration</b>By design. Nothing here touches your account or scrapes anything; you and your agent record what you know.</li>
+        <li><b>Or keep it on your Mac</b>The same tracker runs in <a href="/hostel">Saybooks for Mac</a>, with a model on your own machine. Move your hunt across any time.</li>
+      </ul>
+      <p class="also">The founder runs his own hunt on it. The rules it keeps are the <a href="/specs/jobhunt">job-hunt spec</a>. Also free: <a href="/solo">invoicing for freelancers</a>.</p>
+    </div>
+  </section>
 </div>
+
+<footer class="site">
+  <div class="wrap">
+    <div class="fcols">
+      <div><a class="mark" href="/"><svg width="18" height="21" viewBox="0 0 22 26" fill="none" stroke="#6BBF8C" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".35"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".65"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span></a><p>Books you keep by talking, under rules that refuse a guess, with every act on the record. Built in Portland, Oregon by <a href="/about">Peter Varga</a>.</p></div>
+      <div><b>Books</b><a href="/solo">Invoicing</a><a href="/hunt">Job hunt</a><a href="/app?demo=1">Personal finances</a><a href="/app?demo=1">Order to cash</a><a href="/app?demo=1">CRM and prospects</a><a href="/docs#ledger">Ledger hand-over</a></div>
+      <div><b>Get it</b><a href="/app?demo=1">saybooks.io</a><a href="/hostel">Mac and iPhone</a><a href="/docs#connect">Claude connector</a><a href="https://github.com/alviso/saybooks">Source code</a></div>
+      <div><b>Read</b><a href="/docs">Docs</a><a href="/specs">Specs</a><a href="/notes">Notes</a><a href="/notes/local-models">Local models</a><a href="/session/harborline">A full session</a></div>
+      <div><b>Company</b><a href="/about">About</a><a href="/privacy">Privacy</a><a href="https://portlandaiworks.com/">Portland AI Works</a><a href="mailto:hello@saybooks.io">hello@saybooks.io</a></div>
+    </div>
+    <div class="legal">Open source under AGPL-3.0. Saybooks never emails a customer, charges a card or moves money; it records what happened.</div>
+  </div>
+</footer>
 <script>(function(){try{if(/(?:^|; )sb_src=/.test(document.cookie))return;var q=new URLSearchParams(location.search);var r='';try{r=document.referrer?new URL(document.referrer).host:''}catch(e){}if(r===location.host)r='';var v={r:r,p:location.pathname+(location.search?location.search.slice(0,80):''),s:q.get('utm_source')||'',m:q.get('utm_medium')||'',c:q.get('utm_campaign')||'',t:new Date().toISOString().slice(0,10)};document.cookie='sb_src='+encodeURIComponent(JSON.stringify(v))+'; Path=/; Max-Age=2592000; SameSite=Lax'}catch(e){}})();</script>
+<script src="/site.js" defer></script>
 </body>
 </html>
-<script>(function(){fetch('/api/whoami',{credentials:'same-origin'}).then(function(r){return r.json()}).then(function(d){if(!d||!d.user)return;var sp=d.spaces||[];var by=function(k){return sp.find(function(s){return (s.kind||null)===k})};var full=by(null),solo=by('solo'),hunt=by('hunt');var first=sp[0];var open=function(s){return '/app?ws='+encodeURIComponent(s.ws)};
-document.querySelectorAll('a[href="/auth/google"]').forEach(function(a){if(a.classList.contains('line')&&!a.classList.contains('small')){a.textContent='Try the demo';a.href='/app?demo=1';return}a.textContent='Open my books';a.href=first?open(first):'/app'});
-document.querySelectorAll('a[href="/app?demo=1"]').forEach(function(a){if(a.classList.contains('box')){if(full){a.href=open(full);var g=a.querySelector('.go');if(g)g.textContent='Open my books →'}return}if(a.classList.contains('solid')){a.href=first?open(first):'/app';a.textContent='Open my books'}else{a.textContent='Try the demo';}});
-document.querySelectorAll('a[href="/auth/google?next=solo"],a.box[href="/solo"]').forEach(function(a){if(solo){a.href=open(solo);var g=a.querySelector('.go');if(g)g.textContent='Open my invoices →';else a.textContent='Open my invoices →'}});
-document.querySelectorAll('a[href="/auth/google?next=hunt"],a.box[href="/hunt"]').forEach(function(a){if(hunt){a.href=open(hunt);var g=a.querySelector('.go');if(g)g.textContent='Open my hunt →';else a.textContent='Open my hunt →'}});
-document.querySelectorAll('.fine,.ctasub').forEach(function(f){if(/demo gives you|live sandbox/.test(f.textContent))f.innerHTML='Signed in as '+String(d.user.email).replace(/[<>&]/g,'')+' · <a href="/auth/logout" style="color:inherit">sign out</a>'});
-}).catch(function(){})})();</script>

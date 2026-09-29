@@ -3,34 +3,47 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Notes — Saybooks</title><link rel="canonical" href="https://saybooks.io/notes">
+<title>Notes · Saybooks</title><link rel="canonical" href="https://saybooks.io/notes">
 <meta name="description" content="Notes from building Saybooks: what was learned, with the numbers, written by the person who built it.">
 <meta property="og:title" content="Saybooks notes"><meta property="og:url" content="https://saybooks.io/notes"><meta property="og:image" content="https://saybooks.io/card.png">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"CollectionPage","name":"Saybooks notes","url":"https://saybooks.io/notes","author":{"@type":"Person","name":"Peter Varga","url":"https://portlandaiworks.com/"},"hasPart":[{"@type":"Article","headline":"Smart model, average MCP. Small model, smart MCP.","url":"https://saybooks.io/notes/local-models","datePublished":"2026-09-16"}]}</script>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<style>
-:root{--bg:hsl(210 20% 98%);--ink:hsl(215 40% 16%);--navy:hsl(215 60% 22%);--mid:hsl(215 20% 36%);--muted:hsl(215 15% 46%);--line:hsl(215 25% 88%);--tint:hsl(210 20% 94%);--agent:hsl(248 52% 52%)}
-*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif} body::before{content:"";display:block;height:4px;background:var(--navy)}
-.wrap{max-width:760px;margin:0 auto;padding:0 28px 60px} nav.top{display:flex;align-items:center;gap:22px;padding:20px 0;border-bottom:1px solid var(--line);margin-bottom:28px}
-.mark{display:inline-flex;align-items:center;gap:6px;font:700 14px 'IBM Plex Sans',sans-serif;letter-spacing:.14em;color:var(--ink);text-decoration:none;margin-right:auto} .mark .wv{flex:none} a{color:var(--navy)} nav.top a{color:var(--mid);text-decoration:none;font-size:14px;font-weight:500}
-h1{font-size:32px;line-height:1.1;letter-spacing:-.015em;margin:.2em 0 .3em} h2{font-size:20px;margin:1.9em 0 .5em} p,li{color:var(--mid)} ul{padding-left:1.3em} li{margin-bottom:.4em}
-.kicker{font:600 11.5px 'IBM Plex Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)} .asof{font-size:13px;color:var(--muted)}
-.note{border-left:3px solid var(--agent);padding:4px 0 4px 14px;font-size:14.5px;margin:1.2em 0}
-table.plain{border-collapse:collapse;width:100%;font-size:14.5px;margin:.4em 0 1.4em} table.plain td{padding:7px 12px 7px 0;border-bottom:1px solid var(--line);vertical-align:top;color:var(--mid)} table.plain td:first-child{white-space:nowrap;color:var(--ink);font-weight:500}
-footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)} footer a{color:var(--mid)}
 
-.note{display:block;background:#fff;border:1px solid var(--line);border-radius:8px;padding:18px 20px;margin:0 0 14px;text-decoration:none;color:inherit} .note:hover{border-color:var(--navy)} .note b{display:block;font-size:19px;color:var(--ink);margin-bottom:4px} .note span{font-size:14.5px;color:var(--mid)} .note small{display:block;margin-top:8px;color:var(--muted);font-size:12.5px}
-</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,500..700,100,0&family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="/site.css">
+<style>.notelist{display:grid;gap:18px;margin-top:30px}.notecard{display:block;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px 26px;text-decoration:none;color:inherit;box-shadow:var(--shadow);transition:transform .15s ease,border-color .15s ease}.notecard:hover{transform:translateY(-2px);border-color:var(--green);color:inherit}.notecard small{display:block;font:700 12.5px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}.notecard b{display:block;font:600 24px/1.2 var(--serif);color:var(--ink);margin-bottom:8px;letter-spacing:-.01em}.notecard span{color:var(--ink2)}</style>
 </head>
 <body>
 <div class="wrap">
-  <nav class="top"><a class="mark" href="/"><svg class="wv" width="17" height="20" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".3"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span><svg class="wv" width="17" height="20" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19" opacity=".3"/></svg></a><a href="/docs">Docs</a><a href="/specs">Specs</a><a href="/about">About</a><a href="https://github.com/alviso/saybooks">Source</a></nav>
+  <nav class="top">
+    <a class="mark" href="/"><svg width="18" height="21" viewBox="0 0 22 26" fill="none" stroke="#1E7A4C" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".35"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".65"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span></a>
+    <div class="links"><a href="/hostel">Mac &amp; iPhone</a><a href="/solo">Invoicing</a><a href="/hunt">Job hunt</a><a href="/docs">Docs</a><a class="on" href="/notes">Notes</a></div>
+    <div class="auth"><a class="btn line small" href="/auth/google">Sign in</a><a class="btn solid small" href="/app?demo=1">Try it now</a></div>
+  </nav>
+  <main class="prose">
   <div class="kicker">Notes</div>
   <h1>What building this taught me</h1>
   <p>Short pieces with the numbers in them, written as the work happens. The commit log is the changelog; this is the part of it worth a paragraph.</p>
-  <a class="note" href="/notes/local-models"><b>Smart model, average MCP. Small model, smart MCP.</b><span>A day of getting a 26B local model to keep a set of books over MCP, on a laptop, with nothing leaving the machine, and the six things it forced me to fix in the tools rather than the model.</span><small>16 September 2026</small></a>
-  <footer>Written by <a href="/about">Peter Varga</a>, who also runs <a href="https://portlandaiworks.com/">Portland AI Works</a>. · <a href="/">saybooks.io</a> · <a href="/notes">Notes</a> · <a href="/docs">Docs</a> · <a href="mailto:hello@saybooks.io">hello@saybooks.io</a></footer>
+  <div class="notelist">
+    <a class="notecard" href="https://portlandaiworks.com/articles/inside-hostel"><small>On portlandaiworks.com</small><b>Inside hostel</b><span>How the Mac app is built and why it exists: a local model host that gets MCP right for a small model, with Saybooks as the first thing it talks to.</span></a>
+    <a class="notecard" href="https://portlandaiworks.com/articles/local-model-harness-for-mcp"><small>24 September 2026 · on portlandaiworks.com</small><b>A local model keeps the books</b><span>The measurements, with the diagrams: the same model going from one task in four to four in four when only the layer between it and the books changed.</span></a>
+    <a class="notecard" href="/notes/local-models"><small>16 September 2026</small><b>Smart model, average MCP. Small model, smart MCP.</b><span>A day of getting a 26B local model to keep a set of books over MCP, on a laptop, with nothing leaving the machine, and the six things it forced me to fix in the tools rather than the model.</span></a>
+  </div>
+  </main>
 </div>
+<footer class="site">
+  <div class="wrap">
+    <div class="fcols">
+      <div><a class="mark" href="/"><svg width="18" height="21" viewBox="0 0 22 26" fill="none" stroke="#6BBF8C" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".35"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".65"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span></a><p>Books you keep by talking, under rules that refuse a guess, with every act on the record. Built in Portland, Oregon by <a href="/about">Peter Varga</a>.</p></div>
+      <div><b>Books</b><a href="/solo">Invoicing</a><a href="/hunt">Job hunt</a><a href="/app?demo=1">Personal finances</a><a href="/app?demo=1">Order to cash</a><a href="/app?demo=1">CRM and prospects</a><a href="/docs#ledger">Ledger hand-over</a></div>
+      <div><b>Get it</b><a href="/app?demo=1">saybooks.io</a><a href="/hostel">Mac and iPhone</a><a href="/docs#connect">Claude connector</a><a href="https://github.com/alviso/saybooks">Source code</a></div>
+      <div><b>Read</b><a href="/docs">Docs</a><a href="/specs">Specs</a><a href="/notes">Notes</a><a href="/notes/local-models">Local models</a><a href="/session/harborline">A full session</a></div>
+      <div><b>Company</b><a href="/about">About</a><a href="/privacy">Privacy</a><a href="https://portlandaiworks.com/">Portland AI Works</a><a href="mailto:hello@saybooks.io">hello@saybooks.io</a></div>
+    </div>
+    <div class="legal">Open source under AGPL-3.0. Saybooks never emails a customer, charges a card or moves money; it records what happened.</div>
+  </div>
+</footer>
+<script src="/site.js" defer></script>
 </body>
 </html>

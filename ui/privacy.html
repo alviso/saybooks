@@ -3,29 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Privacy — Saybooks</title><link rel="canonical" href="https://saybooks.io/privacy">
+<title>Privacy · Saybooks</title><link rel="canonical" href="https://saybooks.io/privacy">
 <meta name="description" content="What Saybooks stores, why, for how long, and how to take it with you or delete it.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<style>
-:root{--bg:hsl(210 20% 98%);--ink:hsl(215 40% 16%);--navy:hsl(215 60% 22%);--mid:hsl(215 20% 36%);--muted:hsl(215 15% 46%);--line:hsl(215 25% 88%);--tint:hsl(210 20% 94%)}
-*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif} body::before{content:"";display:block;height:4px;background:var(--navy)}
-.wrap{max-width:760px;margin:0 auto;padding:0 28px 60px} nav.top{display:flex;align-items:center;gap:22px;padding:20px 0;border-bottom:1px solid var(--line);margin-bottom:28px}
-.mark{display:inline-flex;align-items:center;gap:6px;font:700 14px 'IBM Plex Sans',sans-serif;letter-spacing:.14em;color:var(--ink);text-decoration:none;margin-right:auto} .mark .wv{flex:none} a{color:var(--navy)} nav.top a{color:var(--mid);text-decoration:none;font-size:14px;font-weight:500}
-h1{font-size:32px;line-height:1.1;letter-spacing:-.015em;margin:.2em 0 .3em} h2{font-size:20px;margin:1.8em 0 .5em} p,li{color:var(--mid)} ul{padding-left:1.3em} li{margin-bottom:.4em}
-code{font-family:'IBM Plex Mono',monospace;font-size:.88em;background:var(--tint);padding:.1em .35em;border-radius:4px}
-table{border-collapse:collapse;width:100%;font-size:14px;background:#fff;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:0 0 1.2em} th{text-align:left;font:600 11px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:9px 12px;border-bottom:1px solid var(--line);background:var(--tint)} td{padding:9px 12px;border-bottom:1px solid hsl(215 25% 93%);vertical-align:top;color:var(--mid)} tr:last-child td{border-bottom:none}
-.kicker{font:600 11.5px 'IBM Plex Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)} .asof{font-size:13px;color:var(--muted)}
-footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)} footer a{color:var(--mid)}
-</style>
+
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,500..700,100,0&family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="/site.css">
 </head>
 <body>
 <div class="wrap">
-  <nav class="top"><a class="mark" href="/"><svg class="wv" width="17" height="20" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".3"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span><svg class="wv" width="17" height="20" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19" opacity=".3"/></svg></a><a href="/docs">Docs</a><a href="/specs">Specs</a><a href="/about">About</a><a href="https://github.com/alviso/saybooks">Source</a></nav>
+  <nav class="top">
+    <a class="mark" href="/"><svg width="18" height="21" viewBox="0 0 22 26" fill="none" stroke="#1E7A4C" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".35"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".65"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span></a>
+    <div class="links"><a href="/hostel">Mac &amp; iPhone</a><a href="/solo">Invoicing</a><a href="/hunt">Job hunt</a><a href="/docs">Docs</a><a href="/notes">Notes</a></div>
+    <div class="auth"><a class="btn line small" href="/auth/google">Sign in</a><a class="btn solid small" href="/app?demo=1">Try it now</a></div>
+  </nav>
+  <main class="prose">
 
   <div class="kicker">Privacy</div>
   <h1>What Saybooks keeps, and what it doesn't</h1>
-  <p class="asof">Effective 2026-09-08. Saybooks is operated by Peter Varga, the sole founder, and this page is written by him rather than by a template. If something here is unclear, write to <a href="mailto:hello@saybooks.io">hello@saybooks.io</a>.</p>
+  <p class="asof">Effective 2026-09-29. Saybooks is operated by Peter Varga, the sole founder, and this page is written by him rather than by a template. If something here is unclear, write to <a href="mailto:hello@saybooks.io">hello@saybooks.io</a>.</p>
 
   <h2>The short version</h2>
   <ul>
@@ -62,9 +59,21 @@ footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-si
   <h2>Agents and AI</h2>
   <p>When you connect Claude or another agent, it reads and writes your books through the same commands you use, under the role of the key you minted, and every action lands in your audit log with the agent named as the actor. Saybooks itself does not call any AI model and does not send your data to one; whatever your agent sees is governed by your agreement with its provider.</p>
 
+  <h2 id="mac">Saybooks for Mac and iPhone</h2>
+  <p>The Mac app (called hostel) and its iPhone app work differently from saybooks.io: there is no server of ours in the path, so there is nothing for us to store.</p>
+  <ul>
+    <li><b>On the Mac.</b> Your books, the documents you attach, your conversations and the model all live on your Mac, in the app's folder under your user account. We receive none of it. The model runs through Ollama on the same Mac; downloading the model the first time is a request to Ollama's library.</li>
+    <li><b>Between your iPhone and your Mac.</b> Messages and the overview of your books travel through the private iCloud database of your own Apple account, sealed with keys that only your Mac and your phone hold. Apple carries them and cannot open them, and neither can we: we never receive them.</li>
+    <li><b>On the iPhone.</b> The phone keeps the latest overview of your books so it opens offline, and invoice PDFs it has shown, in its own storage. A photo or file you pick on the phone is read on the phone; only its words go to your Mac. Forgetting the Mac in the app's settings forgets these too.</li>
+    <li><b>Web search, if you turn it on.</b> The model's search queries go to DuckDuckGo, and pages it reads are fetched from their sites. Your books, your files and what you type do not.</li>
+    <li><b>Books on saybooks.io.</b> If you point the Mac app at books you keep on saybooks.io, those books are stored as described above for saybooks.io.</li>
+    <li><b>No analytics.</b> Neither app sends usage data, crash reports or advertising identifiers anywhere. The iPhone app's privacy manifest declares the same: no data collected.</li>
+  </ul>
+
   <h2>Your controls</h2>
   <ul>
-    <li><b>Export</b>: in the workbench sidebar, one click downloads every table of the space as JSON, audit log included.</li>
+    <li><b>Export</b>: in the menu under your name, one click downloads every table of the space as one JSON file, audit log included.</li>
+    <li><b>Move</b>: that file can be brought into empty books on saybooks.io or on your Mac, history and audit trail included.</li>
     <li><b>Delete</b>: one button permanently removes the space, its database, and every key and invitation on it. There is no soft-delete and no retention copy.</li>
     <li><b>Revoke</b>: keys and invitations are revoked from the same dialog that created them.</li>
     <li><b>Account removal</b>: after deleting your spaces, email us and the Google identity row goes too.</li>
@@ -74,9 +83,22 @@ footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-si
   <p>The whole system is published under AGPL-3.0 at <a href="https://github.com/alviso/saybooks">github.com/alviso/saybooks</a>. If you would rather not trust a hosted service, run it yourself; the code that handles your data is the code you can read.</p>
 
   <h2>Changes</h2>
+  <p>2026-09-29: Saybooks for Mac and iPhone added; books can be brought in from an export file.</p>
   <p>2026-09-08: personal finances added (statements and receipts as rows and hashes, never files); the server remembers each person's last space. If this page changes in a way that matters, the change is dated here and announced on the site. Prices, where they exist, change with twelve months' notice.</p>
-
-  <footer>Written by <a href="/about">Peter Varga</a>, who also runs <a href="https://portlandaiworks.com/">Portland AI Works</a>. · <a href="/">saybooks.io</a> · <a href="/notes">Notes</a> · <a href="/docs">Docs</a> · <a href="mailto:hello@saybooks.io">hello@saybooks.io</a></footer>
+  </main>
 </div>
+<footer class="site">
+  <div class="wrap">
+    <div class="fcols">
+      <div><a class="mark" href="/"><svg width="18" height="21" viewBox="0 0 22 26" fill="none" stroke="#6BBF8C" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".35"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".65"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span></a><p>Books you keep by talking, under rules that refuse a guess, with every act on the record. Built in Portland, Oregon by <a href="/about">Peter Varga</a>.</p></div>
+      <div><b>Books</b><a href="/solo">Invoicing</a><a href="/hunt">Job hunt</a><a href="/app?demo=1">Personal finances</a><a href="/app?demo=1">Order to cash</a><a href="/app?demo=1">CRM and prospects</a><a href="/docs#ledger">Ledger hand-over</a></div>
+      <div><b>Get it</b><a href="/app?demo=1">saybooks.io</a><a href="/hostel">Mac and iPhone</a><a href="/docs#connect">Claude connector</a><a href="https://github.com/alviso/saybooks">Source code</a></div>
+      <div><b>Read</b><a href="/docs">Docs</a><a href="/specs">Specs</a><a href="/notes">Notes</a><a href="/notes/local-models">Local models</a><a href="/session/harborline">A full session</a></div>
+      <div><b>Company</b><a href="/about">About</a><a href="/privacy">Privacy</a><a href="https://portlandaiworks.com/">Portland AI Works</a><a href="mailto:hello@saybooks.io">hello@saybooks.io</a></div>
+    </div>
+    <div class="legal">Open source under AGPL-3.0. Saybooks never emails a customer, charges a card or moves money; it records what happened.</div>
+  </div>
+</footer>
+<script src="/site.js" defer></script>
 </body>
 </html>

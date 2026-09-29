@@ -3,38 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Saybooks docs — connect Claude, keys and roles, documents, export</title><link rel="canonical" href="https://saybooks.io/docs"><meta property="og:title" content="Saybooks docs"><meta property="og:url" content="https://saybooks.io/docs"><meta property="og:image" content="https://saybooks.io/card.png">
+<title>Saybooks docs · connect Claude, keys and roles, documents, export</title><link rel="canonical" href="https://saybooks.io/docs"><meta property="og:title" content="Saybooks docs"><meta property="og:url" content="https://saybooks.io/docs"><meta property="og:image" content="https://saybooks.io/card.png">
 <meta name="description" content="How to connect Claude to your Saybooks books, what keys and roles mean, how documents, export and delete work, and how to run it yourself.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Using Saybooks","url":"https://saybooks.io/docs","dateModified":"2026-09-12","inLanguage":"en","author":{"@type":"Person","name":"Peter Varga","url":"https://portlandaiworks.com/"},"publisher":{"@type":"Organization","name":"Saybooks","url":"https://saybooks.io/"},"about":"Connecting Claude to Saybooks over MCP, keys and roles, spaces and modules, documents, the ledger hand-over to QuickBooks Online and Xero, export and self-hosting."}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Does Saybooks send my invoices or take payments?","acceptedAnswer":{"@type":"Answer","text":"No. It produces documents and records payments you received. It never emails anyone, never charges a card, never moves money. You send the link or the PDF yourself."}},{"@type":"Question","name":"Does it sync with QuickBooks Online or Xero?","acceptedAnswer":{"@type":"Answer","text":"It hands over, rather than syncing. The Ledger pages export a period as a Xero manual journal, QuickBooks Online journal entries, or plain CSV, mapped to your accountant's own chart of accounts, and every hand-over keeps its control totals and the exact file. Nothing is posted into your ledger over an API, and nothing is read back out of it."}},{"@type":"Question","name":"What currencies does it handle?","acceptedAnswer":{"@type":"Answer","text":"Any currency your company declares, and each invoice carries its own. What it does not do is convert between them: a period holding two currencies comes back grouped by currency rather than translated, and a ledger hand-over covering two is refused until you name one."}},{"@type":"Question","name":"Can I use it without an AI agent?","acceptedAnswer":{"@type":"Answer","text":"Yes. Every command has a screen in the web workbench, and a click and a sentence to Claude are the same event, logged and refused the same way. The agent is the fast path, not the only one."}},{"@type":"Question","name":"Is it accounting software?","acceptedAnswer":{"@type":"Answer","text":"No. It keeps the operational record upstream of the ledger: quotes, orders, shipments, invoices, receivables, pipeline, and reviewed spending from your bank statements. Your accountant's system stays the ledger of record and the hand-over feeds it."}},{"@type":"Question","name":"What happens to my books if Saybooks disappears?","acceptedAnswer":{"@type":"Answer","text":"Export takes everything with you, in JSON, audit log included, any day. The code is public under the AGPL and runs on a laptop. Your data does not depend on the hosted service existing."}}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Saybooks","item":"https://saybooks.io/"},{"@type":"ListItem","position":2,"name":"Docs","item":"https://saybooks.io/docs"}]}</script>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<style>
-:root{--bg:hsl(210 20% 98%);--ink:hsl(215 40% 16%);--navy:hsl(215 60% 22%);--mid:hsl(215 20% 36%);--muted:hsl(215 15% 46%);--line:hsl(215 25% 88%);--tint:hsl(210 20% 94%);--agent:hsl(248 52% 52%);--refuse:hsl(0 72% 42%)}
-*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif} body::before{content:"";display:block;height:4px;background:var(--navy)}
-.wrap{max-width:820px;margin:0 auto;padding:0 28px 60px} nav.top{display:flex;align-items:center;gap:22px;padding:20px 0;border-bottom:1px solid var(--line);margin-bottom:28px}
-.mark{display:inline-flex;align-items:center;gap:6px;font:700 14px 'IBM Plex Sans',sans-serif;letter-spacing:.14em;color:var(--ink);text-decoration:none;margin-right:auto} .mark .wv{flex:none} a{color:var(--navy)} nav.top a{color:var(--mid);text-decoration:none;font-size:14px;font-weight:500}
-h1{font-size:32px;line-height:1.1;letter-spacing:-.015em;margin:.2em 0 .3em} h2{font-size:21px;margin:2em 0 .5em;padding-top:1.2em;border-top:1px solid var(--line)} h3{font-size:16px;margin:1.3em 0 .3em}
-p,li{color:var(--mid)} ul,ol{padding-left:1.3em} li{margin-bottom:.4em}
-code{font-family:'IBM Plex Mono',monospace;font-size:.88em;background:var(--tint);padding:.1em .35em;border-radius:4px} pre{background:#fff;border:1px solid var(--line);border-radius:6px;padding:12px 14px;overflow-x:auto;font-size:13px} pre code{background:none;padding:0}
-.kicker{font:600 11.5px 'IBM Plex Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
-.toc{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px;margin:0 0 1em} .toc a{color:var(--navy)}
-.mock{background:#23262b;border:1px solid #3a3e45;border-radius:8px;padding:.8em 1em;max-width:32em;margin:.6em 0 1em} .mocklabel{font-size:12px;color:#9aa0a6} .mockfield{background:#2b2f35;border:1px solid #3a3e45;border-radius:6px;padding:.4em .7em;color:#e8eaed;font-family:'IBM Plex Mono',monospace;font-size:13px;overflow-wrap:anywhere;margin-top:.25em}
-table{border-collapse:collapse;width:100%;font-size:14px;background:#fff;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:0 0 1.2em} th{text-align:left;font:600 11px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:9px 12px;border-bottom:1px solid var(--line);background:var(--tint)} td{padding:9px 12px;border-bottom:1px solid hsl(215 25% 93%);vertical-align:top;color:var(--mid)} tr:last-child td{border-bottom:none}
-.note{border-left:3px solid var(--agent);padding:4px 0 4px 14px;font-size:14.5px;margin:1em 0} .refusal{border-left:3px solid var(--refuse);padding:4px 0 4px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:hsl(0 60% 28%);margin:1em 0}
-footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)} footer a{color:var(--mid)}
-table.plain{border-collapse:collapse;width:100%;font-size:14px;margin:0 0 1em} table.plain td{padding:6px 10px 6px 0;border-bottom:1px solid var(--line);vertical-align:top;color:var(--mid)} table.plain td:first-child{white-space:nowrap}
-.mocktabs{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px;font-size:12px;color:#9aa0a6} .mocktabs span{margin-right:4px} .mocktabs button{font:500 12px 'IBM Plex Sans',sans-serif;background:transparent;color:#c9ccd1;border:1px solid #3a3e45;border-radius:6px;padding:3px 9px;cursor:pointer} .mocktabs button.on{background:#e8eaed;color:#23262b;border-color:#e8eaed}
-</style>
+
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,500..700,100,0&family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="/site.css">
 </head>
 <body>
 <div class="wrap">
-  <nav class="top"><a class="mark" href="/"><svg class="wv" width="17" height="20" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".3"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span><svg class="wv" width="17" height="20" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19" opacity=".3"/></svg></a><a href="/notes">Notes</a><a href="/specs">Specs</a><a href="/about">About</a><a href="/privacy">Privacy</a><a href="https://github.com/alviso/saybooks">Source</a><a href="/app?demo=1">Demo</a></nav>
+  <nav class="top">
+    <a class="mark" href="/"><svg width="18" height="21" viewBox="0 0 22 26" fill="none" stroke="#1E7A4C" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".35"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".65"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span></a>
+    <div class="links"><a href="/hostel">Mac &amp; iPhone</a><a href="/solo">Invoicing</a><a href="/hunt">Job hunt</a><a class="on" href="/docs">Docs</a><a href="/notes">Notes</a></div>
+    <div class="auth"><a class="btn line small" href="/auth/google">Sign in</a><a class="btn solid small" href="/app?demo=1">Try it now</a></div>
+  </nav>
+  <main class="prose">
 
   <div class="kicker">Documentation</div>
   <h1>Using Saybooks</h1>
-  <p class="asof" style="font-size:13px;color:var(--muted);margin:0 0 1em">Last updated 12 September 2026.</p>
+  <p class="asof" style="font-size:13px;color:var(--muted);margin:0 0 1em">Last updated 29 September 2026.</p>
   <p>Saybooks is a place Claude can keep your records, under rules it cannot break, with everything it does written down where you can check it. This page covers what a person needs: connecting Claude, what keys and roles mean, spaces and their modules, documents, personal finances, getting your data out, and running it yourself. The rules themselves are in the <a href="/specs">specs</a>.</p>
   <div class="toc"><a href="#connect">Connect Claude</a><a href="#local">A local model</a><a href="#talk">Talking to it</a><a href="#keys">Keys and roles</a><a href="#spaces">Spaces</a><a href="#documents">Documents</a> <a href="#ledger">Ledger</a><a href="#refusals">Refusals</a><a href="#data">Export and delete</a><a href="#selfhost">Run it yourself</a><a href="#faq">Questions</a></div>
 
@@ -65,7 +56,7 @@ table.plain{border-collapse:collapse;width:100%;font-size:14px;margin:0 0 1em} t
   <div class="note"><b>After an update, remove and re-add the connector.</b> Claude caches a connector's tool list when it is added. If Saybooks gains a command and your Claude cannot see it, or a tool has fewer arguments than the schema says, that is the cache: remove the connector, add it again, start a new chat.</div>
 
   <h2 id="local">Run it with a local model</h2>
-  <p><b>The easy way is <a href="/hostel">hostel</a></b>, a free Mac app that runs the model and Saybooks together and passes the model the whole doctrine, which LM Studio does not. What follows is the by-hand route.</p>
+  <p><b>The easy way is <a href="/hostel">Saybooks for Mac</a></b> (the app is called hostel): a free app that runs the model and Saybooks together on your Mac and passes the model the whole doctrine, which LM Studio does not. It comes with an iPhone app that asks your Mac from anywhere. What follows is the by-hand route.</p>
   <p>Saybooks is a plain MCP server, so a model on your own machine can keep the books with nothing leaving it. Tested on a 32 GB MacBook with LM Studio and <b>Gemma 4 26B A4B</b> (the QAT 4-bit MLX build): a full invoice cycle first time, and a full statement cycle. <a href="/notes/local-models">What that took</a> is its own note.</p>
   <ol>
     <li><b>Run Saybooks locally.</b> <code>git clone</code>, <code>npm install</code>, <code>node server.js</code> for the workbench at <code>localhost:8140</code>. The stdio MCP server is <code>mcp-server.js</code> in the same folder.</li>
@@ -84,16 +75,16 @@ table.plain{border-collapse:collapse;width:100%;font-size:14px;margin:0 0 1em} t
   <h2 id="talk">Talking to it</h2>
   <p>Say what happened, in your own words. Claude calls the same commands the buttons call, under the same rules, and every action lands in your audit log attributed to the agent.</p>
   <ul>
-    <li><i>"let's create an invoice"</i> — the guide asks for anything missing, one question at a time, shows you the draft and the preview link, and issues only when you say so.</li>
-    <li><i>"the recruiter called, interview Thursday at 2"</i> — logged, with the next action and its due date.</li>
-    <li><i>"receive 20 Widget B and finish Northwind's order"</i> — stock in, order shipped, invoice from what shipped.</li>
-    <li><i>"what's due today?"</i>, <i>"who owes me?"</i>, <i>"show me the audit trail for Contoso"</i> — reads, never logged, always current.</li>
+    <li><i>"let's create an invoice"</i>: the guide asks for anything missing, one question at a time, shows you the draft and the preview link, and issues only when you say so.</li>
+    <li><i>"the recruiter called, interview Thursday at 2"</i>: logged, with the next action and its due date.</li>
+    <li><i>"receive 20 Widget B and finish Northwind's order"</i>: stock in, order shipped, invoice from what shipped.</li>
+    <li><i>"what's due today?"</i>, <i>"who owes me?"</i>, <i>"show me the audit trail for Contoso"</i>: reads, never logged, always current.</li>
   </ul>
   <p>Claude cannot invent an amount, a date, a name or an address: when it does not have a fact it asks you, and if it tries to write one anyway the system refuses. Everything Claude does also appears in your browser, as normal pages, the moment it happens.</p>
 
   <h2 id="keys">Keys and roles</h2>
   <table><thead><tr><th>Role</th><th>Can</th><th>Cannot</th></tr></thead><tbody>
-    <tr><td><b>owner</b></td><td>Everything, including inviting people, minting keys, setting credit limits, deleting the space</td><td>—</td></tr>
+    <tr><td><b>owner</b></td><td>Everything, including inviting people, minting keys, setting credit limits, deleting the space</td><td>Nothing</td></tr>
     <tr><td><b>controller</b></td><td>Every business act: customers, orders, invoices, payments, credit authority</td><td>Invite, mint, delete the space, change the company profile</td></tr>
     <tr><td><b>clerk</b></td><td>Day-to-day writes: orders, shipments, invoices, payments</td><td>Credit authority, everything an owner keeps</td></tr>
     <tr><td><b>viewer</b></td><td>Read everything</td><td>Write anything</td></tr>
@@ -130,7 +121,7 @@ table.plain{border-collapse:collapse;width:100%;font-size:14px;margin:0 0 1em} t
     <li><b>The record answers "what did they already get?"</b> Every hand-over keeps its period, entry and line counts, control totals, a hash and the exact file, downloadable again. Re-sending a period is allowed and always says it overlaps an earlier one, and whether the numbers changed.</li>
     <li><b>Both sides of the books.</b> Money in comes from your invoices and orders. Money out comes from the statements your agent read: a reviewed purchase debits its category and credits the card it was paid from, a fee debits Bank Fees. A transfer posts nothing, which is how money already recorded elsewhere in these books avoids being counted twice.</li>
     <li><b>One line, several things.</b> A payroll run is wages, employer taxes and the processor's fee; a warehouse trip is supplies and groceries. Split the row into parts that add to it exactly, and the ledger sees one posting per part against the one bank line. The row itself never moves: the statement said what it said.</li>
-    <li><b>Every statement row posts, or is named.</b> A transfer says where the money went (savings, an owner draw, the card being paid off) and posts against it, so the ledger's bank balance keeps tying to the statement. Whatever does not post — a row nobody has reviewed, or a receipt already recorded against an invoice here — is listed with its value, every time, because that is exactly the difference the accountant would otherwise have to hunt for.</li>
+    <li><b>Every statement row posts, or is named.</b> A transfer says where the money went (savings, an owner draw, the card being paid off) and posts against it, so the ledger's bank balance keeps tying to the statement. Whatever does not post, a row nobody has reviewed, or a receipt already recorded against an invoice here, is listed with its value, every time, because that is exactly the difference the accountant would otherwise have to hunt for.</li>
     <li>One currency per hand-over. A period holding two is refused until you name one.</li>
   </ul>
   <p class="note">The column layouts follow each product's published import template. If your import wants a column spelt differently, tell us and it is a one-line change: the formats are a table in <a href="https://github.com/alviso/saybooks/blob/main/src/modules/bridge/views.js">src/modules/bridge/views.js</a>.</p>
@@ -142,7 +133,8 @@ table.plain{border-collapse:collapse;width:100%;font-size:14px;margin:0 0 1em} t
 
   <h2 id="data">Export and delete</h2>
   <ul>
-    <li><b>Export</b>, bottom of the sidebar: one click downloads every table of the space as JSON, audit log included.</li>
+    <li><b>Export</b>, in the menu under your name (on a Mac, at the bottom of the Home page): one click downloads every table of the space as one JSON file, audit log included.</li>
+    <li><b>Bring books in</b>: the same file goes back in. On saybooks.io, <b>New space</b> offers <b>Choose export file</b> and makes a space of it; on a Mac, empty books offer it on their Home page. Everything comes along, history and audit trail included, and the import itself goes on the record. It only goes into empty books, so nothing is ever mixed or overwritten, and an export from a newer version than the one taking it is refused whole.</li>
     <li><b>Journal export</b>: a balanced double-entry journal derived from the books, as CSV for QuickBooks or Xero, under <b>Journal</b>. Saybooks is not accounting software; your accountant's ledger stays where it is and this feeds it.</li>
     <li><b>Delete</b>: one button permanently removes the space, its database, every key and every invitation. Type the space's name to confirm. There is no undo.</li>
   </ul>
@@ -152,7 +144,7 @@ table.plain{border-collapse:collapse;width:100%;font-size:14px;margin:0 0 1em} t
 <pre><code>git clone https://github.com/alviso/saybooks.git
 cd saybooks && npm ci
 node server.js            # workbench at http://127.0.0.1:8140, one local workspace, you are the owner
-npm test                  # the 16-gate contract and every conformance scenario</code></pre>
+npm test                  # the 23-gate contract and every conformance scenario</code></pre>
   <p>Environment: <code>SAYBOOKS_PORT</code> (default 8140); <code>SAYBOOKS_DEMO=1</code> turns on the hosted mode with sandboxes, Google sign-in and the public pages; <code>SAYBOOKS_PUBLIC_URL</code> is the origin printed into document links; <code>SAYBOOKS_ADMIN</code> is the Google account allowed to open <code>/admin</code>. Google sign-in needs OAuth client credentials; see <code>src/auth.js</code>. A <code>Dockerfile</code> is included and is what runs saybooks.io.</p>
   <p>Local MCP for development: <code>node mcp-server.js</code> speaks stdio. Over HTTP, each key's URL is its own endpoint; a sandbox's bare id is a key too.</p>
 
@@ -164,9 +156,22 @@ npm test                  # the 16-gate contract and every conformance scenario<
   <h3>Is it accounting software?</h3><p>No. It keeps the operational record upstream of the ledger: quotes, orders, shipments, invoices, receivables, pipeline, and reviewed spending from your bank statements. Your accountant's system stays the ledger of record and the hand-over feeds it.</p>
   <h3>What happens to my books if Saybooks disappears?</h3><p>Export takes everything with you, in JSON, audit log included, any day. The code is public under the AGPL and runs on a laptop. Your data does not depend on the hosted service existing.</p>
   <h3>Something is wrong.</h3><p><a href="mailto:hello@saybooks.io">hello@saybooks.io</a>, or open an issue on <a href="https://github.com/alviso/saybooks/issues">GitHub</a>. If it is a rule that let something through that it should have refused, say so first: that is the bug we care most about.</p>
-
-  <footer>Written and maintained by <a href="/about">Peter Varga</a>, who also runs <a href="https://portlandaiworks.com/">Portland AI Works</a>. · <a href="/">saybooks.io</a> · <a href="/notes">Notes</a> · <a href="/specs">Specs</a> · <a href="/privacy">Privacy</a> · <a href="https://github.com/alviso/saybooks">Source</a></footer>
+  <p class="more">Written and maintained by <a href="/about">Peter Varga</a>, who also runs <a href="https://portlandaiworks.com/">Portland AI Works</a>.</p>
+  </main>
 </div>
+<footer class="site">
+  <div class="wrap">
+    <div class="fcols">
+      <div><a class="mark" href="/"><svg width="18" height="21" viewBox="0 0 22 26" fill="none" stroke="#6BBF8C" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".35"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".65"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span></a><p>Books you keep by talking, under rules that refuse a guess, with every act on the record. Built in Portland, Oregon by <a href="/about">Peter Varga</a>.</p></div>
+      <div><b>Books</b><a href="/solo">Invoicing</a><a href="/hunt">Job hunt</a><a href="/app?demo=1">Personal finances</a><a href="/app?demo=1">Order to cash</a><a href="/app?demo=1">CRM and prospects</a><a href="/docs#ledger">Ledger hand-over</a></div>
+      <div><b>Get it</b><a href="/app?demo=1">saybooks.io</a><a href="/hostel">Mac and iPhone</a><a href="/docs#connect">Claude connector</a><a href="https://github.com/alviso/saybooks">Source code</a></div>
+      <div><b>Read</b><a href="/docs">Docs</a><a href="/specs">Specs</a><a href="/notes">Notes</a><a href="/notes/local-models">Local models</a><a href="/session/harborline">A full session</a></div>
+      <div><b>Company</b><a href="/about">About</a><a href="/privacy">Privacy</a><a href="https://portlandaiworks.com/">Portland AI Works</a><a href="mailto:hello@saybooks.io">hello@saybooks.io</a></div>
+    </div>
+    <div class="legal">Open source under AGPL-3.0. Saybooks never emails a customer, charges a card or moves money; it records what happened.</div>
+  </div>
+</footer>
+<script src="/site.js" defer></script>
 </body>
 </html>
 <script>(function(){try{if(/(?:^|; )sb_src=/.test(document.cookie))return;var q=new URLSearchParams(location.search);var r='';try{r=document.referrer?new URL(document.referrer).host:''}catch(e){}if(r===location.host)r='';var v={r:r,p:location.pathname+(location.search?location.search.slice(0,80):''),s:q.get('utm_source')||'',m:q.get('utm_medium')||'',c:q.get('utm_campaign')||'',t:new Date().toISOString().slice(0,10)};document.cookie='sb_src='+encodeURIComponent(JSON.stringify(v))+'; Path=/; Max-Age=2592000; SameSite=Lax'}catch(e){}})();</script>

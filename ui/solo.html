@@ -2,127 +2,118 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Free invoice generator for freelancers who work with Claude — Saybooks Solo</title>
-<meta name="description" content="A free invoice generator for freelancers who work with Claude. Talk your invoice into existence — it asks what it needs, shows you every number, and hands back a document link to send.">
-<meta property="og:title" content="Free invoice generator for freelancers who work with Claude — Saybooks Solo">
-<meta property="og:description" content="Free invoicing for freelancers with an AI agent. The agent guides you one question at a time; issued invoices are immutable; your data exports or deletes any time. Open source.">
-<meta property="og:url" content="https://saybooks.io/solo"><link rel="canonical" href="https://saybooks.io/solo"><meta property="og:type" content="website"><meta property="og:image" content="https://saybooks.io/card.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://saybooks.io/card.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Saybooks Solo","url":"https://saybooks.io/solo","applicationCategory":"BusinessApplication","operatingSystem":"Web","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Free invoicing for freelancers with Claude: describe the work, get a numbered invoice, a link and a PDF; any currency, your tax scheme; issued invoices immutable; payments and outstanding on the record.","license":"https://www.gnu.org/licenses/agpl-3.0.html","isAccessibleForFree":true,"creator":{"@type":"Organization","name":"Saybooks","url":"https://saybooks.io/"}}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Free invoicing for freelancers who work with Claude · Saybooks</title>
+<meta name="description" content="A free invoice generator for freelancers who work with Claude. Say the work, and it asks for what it needs, shows every number, and hands back a numbered invoice with a link and a PDF.">
+<meta property="og:title" content="Free invoicing for freelancers who work with Claude · Saybooks">
+<meta property="og:description" content="Say the work, get a numbered invoice, a link and a PDF. Issued invoices never change; your data exports or deletes any time. Open source.">
+<meta property="og:url" content="https://saybooks.io/solo"><link rel="canonical" href="https://saybooks.io/solo"><meta property="og:type" content="website"><meta property="og:image" content="https://saybooks.io/card.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://saybooks.io/card.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Saybooks Solo","url":"https://saybooks.io/solo","applicationCategory":"BusinessApplication","operatingSystem":"Web, macOS","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Free invoicing for freelancers with Claude: describe the work, get a numbered invoice, a link and a PDF; any currency, your tax scheme; issued invoices never change; payments and outstanding on the record.","license":"https://www.gnu.org/licenses/agpl-3.0.html","isAccessibleForFree":true,"creator":{"@type":"Organization","name":"Saybooks","url":"https://saybooks.io/"}}</script>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,500..700,100,0&family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="/site.css">
 <style>
-  * { box-sizing: border-box; margin: 0 }
-  body { font: 16px/1.6 'IBM Plex Sans', -apple-system, 'Segoe UI', sans-serif; color: hsl(215 40% 16%); background: hsl(210 20% 98%) }
-  .wrap { max-width: 880px; margin: 0 auto; padding: 3em 1.5em 4em }
-  .mark { font-family: 'IBM Plex Sans', sans-serif; font-weight:700; letter-spacing: .06em; font-size: 14px }
-  .mark a { color: inherit; text-decoration: none; display:inline-flex; align-items:center; gap:6px } .mark .wv { flex:none }
-  .mark > span { color: hsl(215 15% 46%); font-weight: 400; letter-spacing: 0 }
-  h1 { font-family: 'IBM Plex Sans', sans-serif; font-weight:700; letter-spacing: -.025em; font-size: 46px; line-height: 1.08; margin: 1.1em 0 .4em }
-  .sub { font-size: 19px; color: hsl(215 20% 36%); max-width: 40em }
-  .cta { display: inline-block; margin: 1.8em 0 .4em; background: hsl(215 60% 22%); color: #fff; padding: .9em 1.6em; border-radius: 6px; text-decoration: none; font-family: 'IBM Plex Sans', sans-serif; font-weight: 700; font-size: 17px; box-shadow: none }
-  .cta:hover { background: hsl(215 60% 17%) }
-  .cta.ghost { background: hsl(210 20% 94%); color: hsl(215 60% 22%); border: none; margin-left: .6em; box-shadow: none }
-  .cta.ghost:hover { background: hsl(210 25% 90%) }
-  .ctasub { font-size: 13px; color: hsl(215 15% 46%) }
-  .chat { margin: 2.5em 0; max-width: 44em; display: flex; flex-direction: column; gap: .5em }
-  .msg { padding: .75em 1.05em; font-size: 15px; line-height: 1.5; max-width: 88% }
-  .you { background: hsl(210 20% 94%); align-self: flex-start; border-radius: 18px 18px 18px 4px }
-  .ai { background: hsl(215 60% 22%); color: #fff; align-self: flex-end; border-radius: 18px 18px 4px 18px }
-  .ai b { color: #fff }
-  .ell { text-align: center; color: hsl(215 15% 46%); font-size: 18px; letter-spacing: .3em }
-  h2 { font-family: 'IBM Plex Sans', sans-serif; font-weight:700; letter-spacing: -.02em; font-size: 26px; margin: 2.2em 0 .8em }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px }
-  .card { background: #fff; border: 1px solid hsl(215 25% 88%); border-radius: 8px; padding: 1.3em 1.4em; box-shadow: none }
-  .card b { display: block; margin-bottom: .35em; color: hsl(215 40% 16%); font-family: 'IBM Plex Sans', sans-serif; font-size: 17px }
-  .card p { font-size: 14px; color: hsl(215 20% 36%) }
-  .yours { background: #fff; border: 1px solid hsl(215 25% 88%); border-radius: 8px; padding: 1.4em 1.5em; margin-top: 2.2em; box-shadow: none }
-  .yours ul { margin: .5em 0 0; padding-left: 1.3em; font-size: 14.5px; color: hsl(215 20% 36%) }
-  .yours li { margin-bottom: .3em }
-  .step { display: flex; gap: 14px; margin-top: 1.6em }
-  .step .n { flex: none; width: 30px; height: 30px; border-radius: 50%; background: hsl(215 60% 22%); font-family: 'IBM Plex Sans', sans-serif; color: #fff; text-align: center; line-height: 28px; font-weight: 700 }
-  .step p { font-size: 14.5px; color: hsl(215 20% 36%); margin-top: .3em }
-  code { background: hsl(210 20% 94%); padding: .15em .45em; border-radius: 5px; font-size: 13px; font-family: ui-monospace, monospace }
-  .mock { background: #23262b; border: 1px solid #3a3e45; border-radius: 6px; padding: .9em 1em; margin-top: .7em; max-width: 34em }
-  .mocklabel { font-size: 12px; color: #9aa0a6 }
-  .mockfield { background: #2b2f35; border: 1px solid #3a3e45; border-radius: 8px; padding: .45em .8em; color: #e8eaed; font-family: ui-monospace, monospace; font-size: 13px; overflow-wrap: anywhere; margin-top: .25em }
-  .foot { margin-top: 3.5em; padding-top: 1.5em; border-top: 1px solid hsl(215 25% 88%); font-size: 13.5px; color: hsl(215 15% 46%) }
-  .foot a { color: hsl(215 60% 22%) }
+.phero{display:grid;grid-template-columns:1.05fr 1fr;gap:56px;align-items:center;padding:36px 0 0}
+.phero h1{margin:0 0 22px} .phero .lede{margin:0 0 28px}
+.feat .card{padding:28px 28px 26px} .feat h3{margin:0 0 8px} .feat .card p{margin:0;color:var(--ink2);font-size:16px}
+.howto{counter-reset:s;display:grid;gap:18px}
+.howto .card{display:grid;grid-template-columns:56px 1fr;gap:18px;padding:26px 28px}
+.howto .card::before{counter-increment:s;content:counter(s);display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--green);color:#fff;font:700 19px var(--sans)}
+.howto h3{margin:6px 0 8px;font-size:22px} .howto p{margin:0;color:var(--ink2)}
+.field{margin-top:14px;display:grid;gap:8px;max-width:520px}
+.field span{font:700 12px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.field code{display:block;font:14.5px var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px 14px;color:var(--ink)}
+.yours{background:var(--green-soft);border-radius:28px;padding:40px 44px}
+.yours ul{margin:18px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:16px 32px}
+.yours li{color:var(--ink2)} .yours li b{display:block;color:var(--ink);font:600 19px var(--serif);margin-bottom:2px}
+.also{margin-top:26px;color:var(--ink2);font-size:16px}
+@media (max-width:980px){ .phero{grid-template-columns:1fr;gap:36px} .yours{padding:30px 24px} .yours ul{grid-template-columns:1fr} .howto .card{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="mark"><a href="/"><svg class="wv" width="16" height="18" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".3"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span><svg class="wv" width="16" height="18" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19" opacity=".3"/></svg></a> <span>· solo</span></div>
+  <nav class="top">
+    <a class="mark" href="/"><svg width="18" height="21" viewBox="0 0 22 26" fill="none" stroke="#1E7A4C" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".35"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".65"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span></a>
+    <div class="links"><a href="/hostel">Mac &amp; iPhone</a><a class="on" href="/solo">Invoicing</a><a href="/hunt">Job hunt</a><a href="/docs">Docs</a><a href="/notes">Notes</a></div>
+    <div class="auth"><a class="btn line small" href="/auth/google">Sign in</a><a class="btn solid small" href="/app?demo=solo">Try it now</a></div>
+  </nav>
 
-  <h1>Invoices, kept by conversation.</h1>
-  <p class="sub">A free invoice generator for freelancers who work with Claude. You talk; it asks
-  for exactly what it needs, one question at a time; you get back a clean, immutable invoice with
-  a link to send your client. Ahead of the work, partial, or after — your agreement, your call.</p>
+  <header class="phero">
+    <div>
+      <span class="kicker">Invoicing for freelancers</span>
+      <h1>Invoices, <span class="hl">kept by conversation.</span></h1>
+      <p class="lede">Say what you did and for whom. It asks for exactly what it needs, one question at a time, shows you every number, and hands back a clean invoice with a link and a PDF to send your client.</p>
+      <div class="ctas">
+        <a class="btn solid" href="/auth/google?next=solo">Start free with Google</a>
+        <a class="btn line" href="/app?demo=solo">See it working first</a>
+      </div>
+      <p class="fine" data-who>The demo is a live sandbox with a freelancer's books already in it, no account needed. No credit card, no trial clock; export or delete everything, any time.</p>
+    </div>
+    <div class="replay" aria-label="A conversation that ends in an issued invoice">
+      <div class="cap"><span>A first invoice</span><span>Crankk Inc</span></div>
+      <div class="r you"><span class="say">let's create an invoice</span></div>
+      <div class="r ai"><span class="who ai">Claude</span><span class="say">Happy to. You haven't set your company details yet. What's your company or trading name?</span></div>
+      <div class="r you"><span class="say">Crankk Inc</span></div>
+      <div class="r ai"><span class="who ai">Claude</span><span class="say">Saved. Now the client: who are we invoicing, and what terms did you agree on?</span></div>
+      <div class="r ai"><span class="who ai">Claude</span><span class="say">Here's the draft: 17 h consulting × $250 + workshop day $1,200 = <b>$5,450.00, due Oct 2 (net 30)</b>. Issue it? Once issued it never changes; a mistake becomes a void and a fresh invoice, on the record.</span></div>
+      <div class="r you"><span class="say">go</span></div>
+      <div class="r ai"><span class="call"><b>solo_issue_invoice</b> INV-0001 · $5,450.00 <span class="ok">ok</span></span><span class="say">Issued: <b>INV-0001</b>. Your document is at saybooks.io/doc/…, with the PDF beside it.</span></div>
+    </div>
+  </header>
 
-  <a class="cta" href="/auth/google?next=solo">Start free with Google →</a>
-  <a class="cta ghost" href="/app?demo=solo">See it working first</a>
-  <div class="ctasub">The demo is a live sandbox with a freelancer's books already in it — no account needed. No credit card, no trial clock; export or delete everything, any time.</div>
+  <section class="feat">
+    <span class="kicker">Why these invoices are worth keeping</span>
+    <h2>Done properly, without the paperwork</h2>
+    <p class="sub">The things your accountant wishes you did, done for you by default.</p>
+    <div class="grid2">
+      <div class="card"><h3>Issued means issued</h3><p>An issued invoice never changes. Fixing a mistake is a void with a reason and a fresh invoice: the number stays burned and the history stays honest.</p></div>
+      <div class="card"><h3>Your details, frozen in time</h3><p>Your name, address and payment instructions freeze onto each invoice when it is issued. Change banks next year and last year's invoices still say what they said. Currency, tax scheme and numbering are yours: NZD with GST, EUR with VAT, USD with none.</p></div>
+      <div class="card"><h3>An agent that can't make things up</h3><p>It never invents an amount, a rate or a date; it asks you. Everything it does lands in an audit trail you can read, refusals included.</p></div>
+      <div class="card"><h3>Who owes what, honestly</h3><p>Payments are recorded as they arrive. Money not yet matched to an invoice is a visible state, never silently matched. Outstanding shows the truth, oldest first.</p></div>
+    </div>
+  </section>
 
-  <div class="chat">
-    <div class="msg you"><b>You:</b> let's create an invoice</div>
-    <div class="msg ai"><b>Claude:</b> Happy to. You haven't set your company details yet — what's your company (or trading) name?</div>
-    <div class="msg you"><b>You:</b> Crankk Inc</div>
-    <div class="msg ai"><b>Claude:</b> And the address, as it should appear on the invoice?</div>
-    <div class="ell">· · ·</div>
-    <div class="msg ai"><b>Claude:</b> Saved. Now the client — who are we invoicing, and what terms did you two agree on?</div>
-    <div class="ell">· · ·</div>
-    <div class="msg ai"><b>Claude:</b> Here's the draft: 17 h consulting × $250 + workshop day $1,200 = <b>$5,450.00, due Oct 2 (net 30)</b>. Issue it? Once issued it's immutable — mistakes become void-and-reissue, on the record.</div>
-    <div class="msg you"><b>You:</b> go</div>
-    <div class="msg ai"><b>Claude:</b> Issued — <b>INV-0001</b>. Your document: <u>saybooks.io/doc/…</u> — save as PDF and send it over. I'll keep an eye on what's outstanding.</div>
-  </div>
+  <section>
+    <span class="kicker">How it works</span>
+    <h2>Three steps with Claude</h2>
+    <p class="sub">Prefer forms? The same books are in your browser, and each side picks up what the other did.</p>
+    <div class="howto">
+      <div class="card"><div><h3>Sign in</h3><p>You get your own private space for invoices. Nothing to install.</p></div></div>
+      <div class="card"><div><h3>Add Saybooks to Claude</h3><p>In the Claude app open <b>Customize, Connectors, Add</b> (or <a href="https://claude.ai/customize/connectors">claude.ai/customize/connectors</a>), paste the address below and continue. Claude sends you to sign in with Google and asks which books to open and what the agent may do. Revoke it any time under <b>Share this space</b>.</p>
+        <div class="field"><span>Name</span><code>books</code><span>Remote MCP server URL</span><code>https://saybooks.io/mcp/invoices</code></div></div></div>
+      <div class="card"><div><h3>Say: <em>let's create an invoice</em></h3><p>That's all. The agent knows this space's rules and guides you from there: company details, client, the work, every number shown before anything is issued.</p></div></div>
+    </div>
+  </section>
 
-  <h2>Why these invoices are worth keeping</h2>
-  <div class="grid">
-    <div class="card"><b>Issued means issued</b><p>An issued invoice is immutable. Fixing a mistake is a void with a reason and a fresh invoice — the number stays burned, the history stays honest. Exactly what your accountant wishes you did.</p></div>
-    <div class="card"><b>Your details, frozen in time</b><p>The seller block — your name, address, payment instructions — freezes onto each invoice at issue. Change banks next year; last year's invoices still say what they said. Your currency, tax scheme and numbering are yours to set: NZD with GST, EUR with VAT, USD with none.</p></div>
-    <div class="card"><b>An agent that can't make things up</b><p>It never invents an amount, a rate, or a date — it asks you. And everything it does lands in an audit trail you can read, refusals included.</p></div>
-    <div class="card"><b>Who owes what, honestly</b><p>Payments are recorded as they arrive — unapplied money is a real, visible state, never silently matched. Outstanding shows the truth, oldest first.</p></div>
-  </div>
-
-  <h2>How it works — three steps</h2>
-  <div class="step"><div class="n">1</div><div>
-    <b>Sign in above.</b>
-    <p>You get your own private space for invoices. Nothing to install.</p>
-  </div></div>
-  <div class="step"><div class="n">2</div><div>
-    <b>Add Saybooks to Claude.</b>
-    <p>In the Claude app: <b>Customize → Connectors → Add</b> (or open <a href="https://claude.ai/customize/connectors" style="color:inherit">claude.ai/customize/connectors</a>), paste the address below, Continue. Claude sends you to sign in with Google and asks which books to open and what the agent may do; you pick, and you're connected. Revoke it any time under <b>Share this space…</b>.</p>
-    <div class="mock"><div class="mocklabel">Name</div><div class="mockfield">books</div><div class="mocklabel" style="margin-top:8px">Remote MCP server URL</div><div class="mockfield">https://saybooks.io/mcp/invoices</div></div>
-  </div></div>
-  <div class="step"><div class="n">3</div><div>
-    <b>Open a new session and say: <code>let's create an invoice</code></b>
-    <p>That's genuinely all. The agent knows this space's rules and guides you from there — company details, client, the work, every number shown before anything is issued. Prefer forms? The same books are in your browser, and each side picks up what the other did.</p>
-  </div></div>
-
-  <div class="yours">
-    <b style="color:hsl(215 60% 22%)">Your data, actually yours</b>
-    <ul>
-      <li><b>Export</b> — one click downloads everything as JSON, audit trail included.</li>
-      <li><b>Delete</b> — one button permanently removes your space, its database, and every key.</li>
-      <li><b>Your accountant</b> — a balanced journal exports for QuickBooks/Xero; solo invoices and payments included.</li>
-      <li><b>Self-host</b> — open source (AGPL): <a href="https://github.com/alviso/saybooks" style="color:hsl(215 60% 22%)">github.com/alviso/saybooks</a>.</li>
-      <li>It produces documents and records payments. It never sends anything or moves money — you stay the only one who does.</li>
-    </ul>
-  </div>
-
-  <div class="foot">
-    Built on <a href="/">Saybooks</a> — the open-source platform where AI agents and humans share
-    one set of rules and one audit trail. Solo is its invoicing module: no orders, no credit gates —
-    just invoices, done properly. Also free: <a href="/hunt">the job-hunt tracker</a>. How it works is in the <a href="/docs">docs</a>; the rules it keeps are the <a href="/specs/solo">invoicing spec</a>.
-    Built by <a href="/about">Peter Varga</a> in Portland, Oregon, who also runs <a href="https://portlandaiworks.com/">Portland AI Works</a>.
-  </div>
+  <section>
+    <div class="yours">
+      <span class="kicker">Your data, actually yours</span>
+      <h2>Take it with you any day</h2>
+      <ul>
+        <li><b>Export</b>One click downloads everything as one file, audit trail included.</li>
+        <li><b>Delete</b>One button permanently removes your space, its database and every key.</li>
+        <li><b>Your accountant</b>Balanced journal lines export for QuickBooks Online or Xero, invoices and payments included.</li>
+        <li><b>Or keep it on your Mac</b>The same invoicing runs in <a href="/hostel">Saybooks for Mac</a>, with a model on your own machine. Move your books across any time.</li>
+      </ul>
+      <p class="also">It produces documents and records payments. It never sends anything or moves money; you stay the only one who does. The rules it keeps are the <a href="/specs/solo">invoicing spec</a>. Also free: <a href="/hunt">the job-hunt tracker</a>.</p>
+    </div>
+  </section>
 </div>
+
+<footer class="site">
+  <div class="wrap">
+    <div class="fcols">
+      <div><a class="mark" href="/"><svg width="18" height="21" viewBox="0 0 22 26" fill="none" stroke="#6BBF8C" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".35"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".65"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span></a><p>Books you keep by talking, under rules that refuse a guess, with every act on the record. Built in Portland, Oregon by <a href="/about">Peter Varga</a>.</p></div>
+      <div><b>Books</b><a href="/solo">Invoicing</a><a href="/hunt">Job hunt</a><a href="/app?demo=1">Personal finances</a><a href="/app?demo=1">Order to cash</a><a href="/app?demo=1">CRM and prospects</a><a href="/docs#ledger">Ledger hand-over</a></div>
+      <div><b>Get it</b><a href="/app?demo=1">saybooks.io</a><a href="/hostel">Mac and iPhone</a><a href="/docs#connect">Claude connector</a><a href="https://github.com/alviso/saybooks">Source code</a></div>
+      <div><b>Read</b><a href="/docs">Docs</a><a href="/specs">Specs</a><a href="/notes">Notes</a><a href="/notes/local-models">Local models</a><a href="/session/harborline">A full session</a></div>
+      <div><b>Company</b><a href="/about">About</a><a href="/privacy">Privacy</a><a href="https://portlandaiworks.com/">Portland AI Works</a><a href="mailto:hello@saybooks.io">hello@saybooks.io</a></div>
+    </div>
+    <div class="legal">Open source under AGPL-3.0. Saybooks never emails a customer, charges a card or moves money; it records what happened.</div>
+  </div>
+</footer>
 <script>(function(){try{if(/(?:^|; )sb_src=/.test(document.cookie))return;var q=new URLSearchParams(location.search);var r='';try{r=document.referrer?new URL(document.referrer).host:''}catch(e){}if(r===location.host)r='';var v={r:r,p:location.pathname+(location.search?location.search.slice(0,80):''),s:q.get('utm_source')||'',m:q.get('utm_medium')||'',c:q.get('utm_campaign')||'',t:new Date().toISOString().slice(0,10)};document.cookie='sb_src='+encodeURIComponent(JSON.stringify(v))+'; Path=/; Max-Age=2592000; SameSite=Lax'}catch(e){}})();</script>
+<script src="/site.js" defer></script>
 </body>
 </html>
-<script>(function(){fetch('/api/whoami',{credentials:'same-origin'}).then(function(r){return r.json()}).then(function(d){if(!d||!d.user)return;var sp=d.spaces||[];var by=function(k){return sp.find(function(s){return (s.kind||null)===k})};var full=by(null),solo=by('solo'),hunt=by('hunt');var first=sp[0];var open=function(s){return '/app?ws='+encodeURIComponent(s.ws)};
-document.querySelectorAll('a[href="/auth/google"]').forEach(function(a){if(a.classList.contains('line')&&!a.classList.contains('small')){a.textContent='Try the demo';a.href='/app?demo=1';return}a.textContent='Open my books';a.href=first?open(first):'/app'});
-document.querySelectorAll('a[href="/app?demo=1"]').forEach(function(a){if(a.classList.contains('box')){if(full){a.href=open(full);var g=a.querySelector('.go');if(g)g.textContent='Open my books →'}return}if(a.classList.contains('solid')){a.href=first?open(first):'/app';a.textContent='Open my books'}else{a.textContent='Try the demo';}});
-document.querySelectorAll('a[href="/auth/google?next=solo"],a.box[href="/solo"]').forEach(function(a){if(solo){a.href=open(solo);var g=a.querySelector('.go');if(g)g.textContent='Open my invoices →';else a.textContent='Open my invoices →'}});
-document.querySelectorAll('a[href="/auth/google?next=hunt"],a.box[href="/hunt"]').forEach(function(a){if(hunt){a.href=open(hunt);var g=a.querySelector('.go');if(g)g.textContent='Open my hunt →';else a.textContent='Open my hunt →'}});
-document.querySelectorAll('.fine,.ctasub').forEach(function(f){if(/demo gives you|live sandbox/.test(f.textContent))f.innerHTML='Signed in as '+String(d.user.email).replace(/[<>&]/g,'')+' · <a href="/auth/logout" style="color:inherit">sign out</a>'});
-}).catch(function(){})})();</script>

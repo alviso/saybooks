@@ -285,12 +285,12 @@ const server = http.createServer(async (req, res) => {
       const areas = fs.readdirSync(path.join(__dirname, 'specs')).filter(a => fs.existsSync(path.join(__dirname, 'specs', a, 'spec.md'))).sort();
       const mtime = (f) => { try { return fs.statSync(f).mtime.toISOString().slice(0, 10); } catch { return new Date().toISOString().slice(0, 10); } };
       const pages = [
-        ['/', mtime(path.join(UI, 'landing.html')), 'weekly', '1.0', 'What Saybooks is, what it refuses to do, and the four kinds of books it keeps.'],
+        ['/', mtime(path.join(UI, 'landing.html')), 'weekly', '1.0', 'What Saybooks is: books you keep by talking, under rules that refuse a guess, on saybooks.io with Claude or entirely on your Mac.'],
         ['/solo', mtime(path.join(UI, 'solo.html')), 'weekly', '0.9', 'Free invoicing for freelancers who work with Claude: describe the work, get a numbered invoice, a link and a PDF.'],
         ['/hunt', mtime(path.join(UI, 'hunt.html')), 'weekly', '0.9', 'Free job-hunt tracker for people running their search with Claude: postings, applications, interviews, a duplicate guard.'],
         ['/docs', mtime(path.join(UI, 'docs.html')), 'weekly', '0.8', 'Connecting Claude, keys and roles, spaces and modules, documents, the ledger bridge, export and delete, self-hosting.'],
         ['/about', mtime(path.join(UI, 'about.html')), 'monthly', '0.5', 'Who builds Saybooks and why: Peter Varga, thirty years of enterprise software, now in Portland.'],
-        ['/hostel', mtime(path.join(UI, 'hostel.html')), 'weekly', '0.8', 'hostel: a Mac app where a model on your own machine keeps your books through Saybooks. Download, requirements, what stays on the Mac.'],
+        ['/hostel', mtime(path.join(UI, 'hostel.html')), 'weekly', '0.8', 'Saybooks for Mac and iPhone (the Mac app is called hostel): a model on your own Mac keeps your books, and the iPhone asks from anywhere, sealed through your own iCloud. Download, requirements, what stays on the Mac.'],
         ['/notes', mtime(path.join(UI, 'notes.html')), 'weekly', '0.6', 'Notes from building Saybooks, with the numbers in them.'],
         ['/notes/local-models', mtime(path.join(UI, 'notes-local-models.html')), 'monthly', '0.7', 'Smart model, average MCP. Small model, smart MCP: a 26B local model keeping the books on a laptop, and the six fixes it forced in the tools.'],
         ['/specs', mtime(path.join(__dirname, 'specs')), 'weekly', '0.8', 'Every rule the system enforces, written down and executed: acts, invariants, scenarios, last conformance run.'],
@@ -300,7 +300,7 @@ const server = http.createServer(async (req, res) => {
       // llms.txt: the same map, in the plainest form a reader can take. No marketing sentence
       // that is not also true on the page it points at.
       if (p === '/llms.txt') {
-        const txt = `# Saybooks\n\n> Open-source books an AI agent can keep: invoicing, order to cash and CRM, a job hunt, personal finances from bank statements. One command registry derives the agent's tools, the web workbench, the rules it cannot break and the audit trail, so a click and a sentence are the same event. Connected to Claude over MCP. Free to use, AGPL, self-hostable.\n\n## Pages\n\n` +
+        const txt = `# Saybooks\n\n> Open-source books an AI agent can keep: invoicing, order to cash and CRM, a job hunt, personal finances from bank statements. One command registry derives the agent's tools, the web workbench, the rules it cannot break and the audit trail, so a click and a sentence are the same event. Two homes for the same books: saybooks.io, connected to Claude over MCP, or Saybooks for Mac and iPhone, where a model on your own Mac keeps them and the iPhone asks through your own iCloud, sealed. Books move between the two as one export file. Free to use, AGPL, self-hostable.\n\n## Pages\n\n` +
           pages.map(([u, d, , , blurb]) => `- [${origin}${u}](${origin}${u}): ${blurb} Updated ${d}.`).join('\n') +
           `\n\n## What it will not do\n\n- It never emails a customer, never charges a card, never ships anything. It records what happened.\n- It never invents a purchase order, a check number, a tracking number or a date. Empty beats guessed.\n- An issued invoice is immutable; corrections are credit notes.\n- A refusal names the business reason, and is written to the same log as the action that succeeded.\n\n## Source\n\n- [https://github.com/alviso/saybooks](https://github.com/alviso/saybooks): the whole thing, AGPL-3.0.\n- Built by Peter Varga, [https://portlandaiworks.com/](https://portlandaiworks.com/).\n`;
         return send(res, 200, txt, 'text/plain; charset=utf-8');
@@ -600,6 +600,32 @@ const server = http.createServer(async (req, res) => {
         return send(res, 200, JSON.stringify(dump, null, 1), 'application/json; charset=utf-8',
           { 'content-disposition': `attachment; filename="saybooks-export-${ws}-${new Date().toISOString().slice(0, 10)}.json"` });
       });
+    }
+    // Bring books in from an export: the other half of /api/export, so books move between
+    // saybooks.io and a Mac in either direction. Hosted: always into a NEW space the person
+    // owns. Local: into the named books (?ws=, hostel's are "main") when they are empty.
+    if (req.method === 'POST' && p === '/api/space/import' && (!DEMO || entry.user)) {
+      const chunks = []; let size = 0, over = false;
+      req.on('data', c => { size += c.length; if (size > 80 * 1024 * 1024) over = true; else chunks.push(c); });
+      req.on('end', () => {
+        if (over) return send(res, 413, { error: 'That export is over 80 MB, which is more than this door takes. Write to hello@saybooks.io and we will move it with you.' });
+        let dump; try { dump = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { return send(res, 400, { error: 'That file is not JSON. Use the file that "Export these books" gives you.' }); }
+        const RS = require('./src/restore.js');
+        try {
+          if (DEMO) {
+            const used = RS.modulesUsed(dump, R.MODULES);
+            const mounts = used.length ? used : R.MODULES.map(m => m.name).filter(m => m !== 'core');
+            const kind = mounts.length === 1 ? ({ solo: 'solo', jobhunt: 'hunt' }[mounts[0]] || null) : null;
+            const name = String(url.searchParams.get('name') || `${dump.workspace || 'Imported'} books`).trim().slice(0, 60);
+            const sp = users.createSpace(entry.user.id, name, undefined, kind, mounts);
+            try { const out = RS.restoreInto(sp.ws, dump, entry.user.email || entry.user.name || 'owner'); return send(res, 200, { ws: sp.ws, name: sp.display_name, mounts, ...out }); }
+            catch (e) { try { users.deleteSpace(sp.ws, entry.user.id); } catch {} try { wsp.destroy(sp.ws); } catch {} throw e; }
+          }
+          const out = RS.restoreInto(ws, dump, member.name);
+          return send(res, 200, { ws, ...out });
+        } catch (e) { return send(res, e.status || 500, { error: e.message }); }
+      });
+      return undefined;
     }
     // Permanent space deletion — the other half of "your data is yours". Owner only, and the
     // workspace database, capability tokens, and space rows all go together.
