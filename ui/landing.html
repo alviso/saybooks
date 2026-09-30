@@ -25,12 +25,18 @@
 .replay-note{font-size:14.5px;color:var(--ink3);margin:14px 4px 0}
 .works{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
 
-.hstage{position:relative;height:600px}
-.hstage .blob{position:absolute;inset:40px 0 30px 40px;background:var(--green-soft);border-radius:44% 56% 48% 52% / 52% 44% 56% 48%}
-.hstage .phone{position:absolute;max-width:none;width:270px}
-.hstage .p1{left:60px;top:0;transform:rotate(-5deg)}
-.hstage .p2{right:10px;top:70px;transform:rotate(5deg)}
-.hstage .chip{position:absolute;left:0;bottom:22px;background:#fff;border-radius:14px;padding:12px 16px;box-shadow:var(--shadow),0 0 0 1px var(--line);font:500 14px/1.4 var(--mono);color:#7C2415;border-left:5px solid var(--tomato);white-space:nowrap}
+.hstage{position:relative;height:630px}
+.hstage .blob{position:absolute;inset:70px -20px 10px 60px;background:var(--green-soft);border-radius:44% 56% 48% 52% / 52% 44% 56% 48%}
+.hstage .win{position:absolute;left:0;top:20px;width:100%;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 30px 60px -30px rgba(20,30,20,.45),0 0 0 1px var(--line)}
+.hstage .win .bar{height:32px;display:flex;align-items:center;gap:7px;padding:0 12px;background:#F2EEE6;border-bottom:1px solid var(--line)}
+.hstage .win .bar i{width:11px;height:11px;border-radius:50%;display:block}
+.hstage .win .url{margin:0 auto;transform:translateX(-24px);background:#fff;border-radius:7px;font:500 12px var(--sans);color:var(--ink3);padding:3px 34px}
+.hstage .win img{width:100%;height:auto}
+.hstage .phone{position:absolute;max-width:none;width:215px;padding:8px;border-radius:38px}
+.hstage .phone img{border-radius:31px}
+.hstage .p1{left:39%;top:150px;transform:rotate(-4deg)}
+.hstage .p2{right:-14px;top:196px;transform:rotate(5deg)}
+.hstage .chip{position:absolute;left:0;bottom:34px;background:#fff;border-radius:14px;padding:12px 16px;box-shadow:var(--shadow),0 0 0 1px var(--line);font:500 14px/1.4 var(--mono);color:#7C2415;border-left:5px solid var(--tomato);white-space:nowrap;z-index:3}
 .hstage .chip b{color:var(--tomato);font-weight:800;letter-spacing:.06em;margin-right:8px}
 .proof{display:grid;grid-template-columns:1fr 1.05fr;gap:56px;align-items:start}
 .proof .sub{max-width:30em}
@@ -102,10 +108,12 @@
 .close{text-align:center;padding:110px 0 0} .close p{color:var(--ink2);max-width:34em;margin:18px auto 28px;font-size:18px} .close .ctas{justify-content:center}
 @media (max-width:980px){
   .hero{grid-template-columns:1fr;gap:36px;padding-top:16px}
-  .hstage{height:470px;max-width:420px;margin:0 auto;width:100%}
-  .hstage .phone{width:200px}
-  .hstage .p1{left:10px}
-  .hstage .p2{right:10px;top:60px}
+  .hstage{height:440px;max-width:440px;margin:0 auto;width:100%}
+  .hstage .blob{inset:60px 0 10px 30px}
+  .hstage .phone{width:150px;padding:6px;border-radius:28px}
+  .hstage .phone img{border-radius:23px}
+  .hstage .p1{left:30%;top:95px}
+  .hstage .p2{right:6px;top:130px}
   .hstage .chip{bottom:0;font-size:12.5px;max-width:300px;white-space:normal}
   .proof{grid-template-columns:1fr;gap:28px}
   .fork{grid-template-columns:1fr}
@@ -139,6 +147,7 @@
     </div>
     <div class="hstage" aria-label="Saybooks on iPhone: the overview of the books, and the model asking before it adds a customer">
       <div class="blob"></div>
+      <div class="win"><div class="bar"><i style="background:#FF5F57"></i><i style="background:#FEBC2E"></i><i style="background:#28C840"></i><span class="url">saybooks.io/app</span></div><img src="/workbench.png" alt="Saybooks in the browser: the personal finances overview of the demo books" width="1300" height="812"></div>
       <div class="phone p1"><img src="/phone-overview.png" alt="Saybooks on iPhone: spending this month, money owed, rows to review and subscriptions" width="506" height="1100"></div>
       <div class="phone p2"><img src="/phone-approval.png" alt="Saybooks on iPhone: the model asks to add a new customer, with Decline and Allow" width="506" height="1100"></div>
       <div class="chip"><b>REFUSED</b>Only a draft can be edited; INV-0001 is issued.</div>
