@@ -438,16 +438,11 @@ const server = http.createServer(async (req, res) => {
     else {
       const signedIn = !!u;
       return send(res, signedIn ? 403 : 401, `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Saybooks — a private space</title><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"><style>
-  body{font:16px/1.55 'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif;color:hsl(215 40% 16%);background:hsl(210 20% 98%);display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
-  .wrap{max-width:560px;padding:2em} .mark{font-weight:700;letter-spacing:.14em;font-size:14px}
-  h1{font-weight:700;letter-spacing:-.015em;font-size:26px;margin:.6em 0 .4em} p{color:hsl(215 20% 36%);margin:0 0 1.4em}
-  a.btn{display:inline-block;background:hsl(215 60% 22%);color:#fff;text-decoration:none;font-weight:600;padding:11px 20px;border-radius:6px}
-  .back{margin-top:2em;font-size:13px} .back a{color:hsl(215 15% 46%)}</style></head><body><div class="wrap">
-  <div class="mark">SAYBOOKS</div>
+<title>Saybooks · a private space</title><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,500..700,100,0&family=Figtree:wght@400;500;600;700;800&display=swap"><link rel="stylesheet" href="/site.css"><style>body{display:flex;min-height:100vh;align-items:center;justify-content:center}.door-wrap{max-width:760px;padding:40px 24px}.door-wrap h1{font-size:clamp(34px,5vw,48px);margin:26px 0 26px}.door-wrap .lede{margin:0 0 30px}.doors{display:grid;grid-template-columns:1fr 1fr;gap:18px}a.door{display:block;text-decoration:none;color:inherit;padding:24px 26px;transition:transform .15s ease,border-color .15s ease}a.door:hover{transform:translateY(-2px);border-color:var(--green);color:inherit}a.door b{display:block;font:600 22px var(--serif);margin-bottom:8px;color:var(--ink)}a.door.in b{color:var(--green)}a.door span{font-size:15.5px;color:var(--ink2)}.back{margin-top:30px;font-size:15px}.back a{color:var(--ink3)}@media(max-width:640px){.doors{grid-template-columns:1fr}}</style></head><body><div class="door-wrap">
+  <a class="mark" href="/"><svg width="18" height="21" viewBox="0 0 22 26" fill="none" stroke="#1E7A4C" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".35"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".65"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span></a>
   ${signedIn
-    ? `<h1>You're not a member of this space.</h1><p>The link points to a private space that ${u.email} has no role in. Ask its owner for an invitation, or open your own books.</p><a class="btn" href="/app">Open my books</a>`
-    : `<h1>This link opens a private space.</h1><p>Sign in with the Google account that has access, and you'll land in it.</p><a class="btn" href="/auth/google?ws=${encodeURIComponent(wsParam)}">Sign in with Google →</a>`}
+    ? `<h1>You're not a member of this space.</h1><p>The link points to a private space that ${u.email} has no role in. Ask its owner for an invitation, or open your own books.</p><a class="btn solid" href="/app">Open my books</a>`
+    : `<h1>This link opens a private space.</h1><p class="lede">Sign in with the Google account that has access, and you'll land in it.</p><a class="btn solid" href="/auth/google?ws=${encodeURIComponent(wsParam)}">Sign in with Google</a>`}
   <div class="back"><a href="/">← saybooks.io</a></div>
 </div></body></html>`, 'text/html; charset=utf-8');
     }
@@ -463,22 +458,12 @@ const server = http.createServer(async (req, res) => {
       && !url.searchParams.get('join') && !url.searchParams.get('ws') && !url.searchParams.has('demo')
       && !/(?:^|;\s*)otc_ws=/.test(req.headers.cookie || '')) {
     return send(res, 200, `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Saybooks — whose books?</title><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"><style>
-  body{font:16px/1.55 'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif;color:hsl(215 40% 16%);background:hsl(210 20% 98%);display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
-  .wrap{max-width:700px;padding:2em}
-  .mark{font-family:'IBM Plex Sans',sans-serif;font-weight:700;letter-spacing:.06em;font-size:14px} .tag{color:hsl(215 15% 46%);font-size:13px;margin-bottom:2.4em}
-  h1{font-family:'IBM Plex Sans',sans-serif;font-weight:700;letter-spacing:-.02em;font-size:30px;margin:.2em 0 1.1em}
-  .doors{display:flex;gap:16px;flex-wrap:wrap}
-  a.door{flex:1;min-width:250px;text-decoration:none;color:inherit;border-radius:8px;padding:1.3em 1.4em;background:#fff;border:1px solid hsl(215 25% 88%)}
-  a.door:hover{border-color:hsl(215 60% 22%)} a.door b{display:block;margin-bottom:.4em;font-family:'IBM Plex Sans',sans-serif;font-size:18px;font-weight:700}
-  a.door span{font-size:13.5px;color:hsl(215 20% 36%)}
-  .in b{color:hsl(215 60% 22%)} .back{margin-top:2.2em;font-size:13px}
-  .back a{color:hsl(215 15% 46%)}</style></head><body><div class="wrap">
-  <div class="mark" style="display:flex;align-items:center;gap:7px"><svg class="wv" width="16" height="18" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".3"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span><svg class="wv" width="16" height="18" viewBox="0 0 22 26" fill="none" stroke="hsl(215 60% 22%)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".6"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19" opacity=".3"/></svg></div><div class="tag">the books you can talk to — that stay books</div>
+<title>Saybooks · whose books?</title><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,500..700,100,0&family=Figtree:wght@400;500;600;700;800&display=swap"><link rel="stylesheet" href="/site.css"><style>body{display:flex;min-height:100vh;align-items:center;justify-content:center}.door-wrap{max-width:760px;padding:40px 24px}.door-wrap h1{font-size:clamp(34px,5vw,48px);margin:26px 0 26px}.door-wrap .lede{margin:0 0 30px}.doors{display:grid;grid-template-columns:1fr 1fr;gap:18px}a.door{display:block;text-decoration:none;color:inherit;padding:24px 26px;transition:transform .15s ease,border-color .15s ease}a.door:hover{transform:translateY(-2px);border-color:var(--green);color:inherit}a.door b{display:block;font:600 22px var(--serif);margin-bottom:8px;color:var(--ink)}a.door.in b{color:var(--green)}a.door span{font-size:15.5px;color:var(--ink2)}.back{margin-top:30px;font-size:15px}.back a{color:var(--ink3)}@media(max-width:640px){.doors{grid-template-columns:1fr}}</style></head><body><div class="door-wrap">
+  <a class="mark" href="/"><svg width="18" height="21" viewBox="0 0 22 26" fill="none" stroke="#1E7A4C" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".35"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".65"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span></a>
   <h1>Whose books are these?</h1>
   <div class="doors">
-    <a class="door in" href="/auth/google"><b>Sign in with Google →</b><span>Your own space: named, persistent, private. Invite people by email, mint keys for agents — every act on the record.</span></a>
-    <a class="door" href="/app?demo=1"><b>Try the demo</b><span>A private sandbox seeded with example data, swept after 24 hours. No account — and if you sign in later, you keep it.</span></a>
+    <a class="door card in" href="/auth/google"><b>Sign in with Google</b><span>Your own space: named, persistent, private. Invite people by email and mint keys for agents, with every act on the record.</span></a>
+    <a class="door card" href="/app?demo=1"><b>Try the demo</b><span>A private sandbox with example books, swept after 24 hours. No account needed, and if you sign in later, you keep it.</span></a>
   </div>
   <div class="back"><a href="/">← saybooks.io</a></div>
 </div></body></html>`, 'text/html; charset=utf-8');
