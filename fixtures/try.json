@@ -812,7 +812,7 @@
     {
      "transaction_id": "T-0007",
      "status": "transfer",
-     "category": "Business Checking"
+     "category": "Business Checking ending 4410"
     },
     {
      "transaction_id": "T-0008",
@@ -890,7 +890,9 @@
   },
   "August install for Northwind",
   "claude",
-  "agent"
+  "agent",
+  null,
+  "-45d"
  ],
  [
   "solo_issue_invoice",
@@ -899,7 +901,9 @@
   },
   "Sam confirmed the numbers",
   "claude",
-  "agent"
+  "agent",
+  null,
+  "-45d"
  ],
  [
   "solo_record_payment",
@@ -911,7 +915,9 @@
   },
   "partial payment arrived",
   "sam",
-  "human"
+  "human",
+  null,
+  "-38d"
  ],
  [
   "solo_apply_payment",
@@ -921,7 +927,9 @@
   },
   "applied to the August invoice",
   "sam",
-  "human"
+  "human",
+  null,
+  "-38d"
  ],
  [
   "solo_draft_invoice",
@@ -937,6 +945,248 @@
    ]
   },
   "September visit, not issued yet",
+  "claude",
+  "agent"
+ ],
+ [
+  "purch_add_rule",
+  {
+   "label": "Denver trade show",
+   "category": "travel",
+   "from": "{{today-26}}",
+   "to": "{{today-22}}",
+   "reason": "Sam: away at the Denver trade show that week, everything on the trip is travel"
+  },
+  "said before the trip",
+  "claude",
+  "agent"
+ ],
+ [
+  "purch_import_statement",
+  {
+   "name": "checking-last-month.csv",
+   "hash": "checking-4410-demo",
+   "kind": "bank",
+   "account": "Business Checking ending 4410",
+   "currency": "USD",
+   "period_start": "{{today-40}}",
+   "period_end": "{{today-10}}",
+   "opening_balance": 1850000,
+   "closing_balance": 1230740,
+   "row_count": 8,
+   "rows": [
+    {
+     "date": "{{today-38}}",
+     "amount": 100000,
+     "description": "DEPOSIT NORTHWIND ACH",
+     "row_index": 1
+    },
+    {
+     "date": "{{today-36}}",
+     "amount": -320000,
+     "description": "OAKLAND WAREHOUSE RENT",
+     "row_index": 2
+    },
+    {
+     "date": "{{today-30}}",
+     "amount": -21430,
+     "description": "PG&E WEB ONLINE",
+     "row_index": 3
+    },
+    {
+     "date": "{{today-25}}",
+     "amount": -48700,
+     "description": "UNITED AIRLINES 0162",
+     "row_index": 4
+    },
+    {
+     "date": "{{today-24}}",
+     "amount": -61250,
+     "description": "HYATT REGENCY DENVER",
+     "row_index": 5
+    },
+    {
+     "date": "{{today-23}}",
+     "amount": -3880,
+     "description": "UBER *TRIP",
+     "row_index": 6
+    },
+    {
+     "date": "{{today-15}}",
+     "amount": -200000,
+     "description": "TRANSFER TO SAVINGS",
+     "row_index": 7
+    },
+    {
+     "date": "{{today-12}}",
+     "amount": -64000,
+     "description": "BRIGHT STUDIO",
+     "row_index": 8
+    }
+   ]
+  },
+  "Sam's checking statement for last month",
+  "claude",
+  "agent"
+ ],
+ [
+  "purch_review_batch",
+  {
+   "rows": [
+    {
+     "transaction_id": "T-0010",
+     "status": "transfer"
+    },
+    {
+     "transaction_id": "T-0011",
+     "status": "purchase",
+     "category": "rent",
+     "vendor": "Oakland Warehouse LLC"
+    },
+    {
+     "transaction_id": "T-0012",
+     "status": "purchase",
+     "category": "utilities",
+     "vendor": "PG&E"
+    },
+    {
+     "transaction_id": "T-0016",
+     "status": "transfer",
+     "category": "Savings"
+    }
+   ],
+   "reason": "Sam confirmed; the Northwind deposit is the payment already recorded on their invoice"
+  },
+  "the easy rows first; the Denver trip waits on the rule",
+  "claude",
+  "agent"
+ ],
+ [
+  "purch_add_bill",
+  {
+   "vendor": "PG&E",
+   "number": "7710-0925",
+   "bill_date": "{{today-12}}",
+   "due_date": "{{today-3}}",
+   "amount": 23810,
+   "currency": "USD",
+   "category": "utilities",
+   "file_name": "pge-statement.pdf",
+   "reason": "emailed by PG&E"
+  },
+  "the power bill",
+  "claude",
+  "agent"
+ ],
+ [
+  "purch_add_bill",
+  {
+   "vendor": "Oakland Warehouse LLC",
+   "number": "OW-1124",
+   "bill_date": "{{today-6}}",
+   "due_date": "{{today+9}}",
+   "amount": 320000,
+   "currency": "USD",
+   "category": "rent",
+   "file_name": "rent-invoice.pdf"
+  },
+  "next month's rent",
+  "claude",
+  "agent"
+ ],
+ [
+  "purch_approve_bill",
+  {
+   "bill_id": "B-0002",
+   "pay_by": "{{today+7}}",
+   "note": "pay it the week before it is due, as always"
+  },
+  "Sam approves the rent",
+  "sam",
+  "human"
+ ],
+ [
+  "purch_add_bill",
+  {
+   "vendor": "Uline",
+   "number": "U-55812",
+   "bill_date": "{{today-2}}",
+   "terms_days": 30,
+   "amount": 48760,
+   "currency": "USD",
+   "category": "supplies",
+   "file_name": "uline-U-55812.pdf"
+  },
+  "shelving and tape",
+  "claude",
+  "agent"
+ ],
+ [
+  "purch_add_bill",
+  {
+   "vendor": "Bright Studio",
+   "number": "BS-0331",
+   "bill_date": "{{today-40}}",
+   "due_date": "{{today-10}}",
+   "amount": 64000,
+   "currency": "USD",
+   "category": "contractor"
+  },
+  "the new logo",
+  "claude",
+  "agent"
+ ],
+ [
+  "purch_record_bill_payment",
+  {
+   "bill_id": "B-0004",
+   "paid_at": "{{today-12}}",
+   "method": "bank_transfer",
+   "transaction_id": "T-0017"
+  },
+  "Sam paid it from checking",
+  "sam",
+  "human"
+ ],
+ [
+  "solo_draft_invoice",
+  {
+   "customer_id": "C-0001",
+   "due_in_days": 30,
+   "subject": "Racking inspection",
+   "lines": [
+    {
+     "description": "Annual racking inspection and report",
+     "qty": 1,
+     "rate": 85000
+    }
+   ]
+  },
+  "the inspection in early September",
+  "claude",
+  "agent",
+  null,
+  "-45d"
+ ],
+ [
+  "solo_issue_invoice",
+  {
+   "invoice_id": "INV-0003"
+  },
+  "Sam confirmed the numbers",
+  "claude",
+  "agent",
+  null,
+  "-45d"
+ ],
+ [
+  "solo_draft_reminder",
+  {
+   "invoice_id": "INV-0003",
+   "subject": "A reminder about invoice INV-0003",
+   "body": "Hi Northwind team,\n\nA quick reminder that invoice INV-0003 for the racking inspection, $850.00, is now past its due date. If it is already on its way, thank you, and please ignore this.\n\nThe invoice and a PDF are at the link in our original email.\n\nThanks,\nSam"
+  },
+  "Sam asked for a friendly nudge",
   "claude",
   "agent"
  ]

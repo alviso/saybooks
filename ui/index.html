@@ -168,6 +168,8 @@
   a { color:var(--accent) }
   .top .who { font:500 13.5px var(--display); padding:0; background:none }
   dialog { max-height:94vh } dialog .help { max-height:18vh; overflow:auto }
+  main table td:first-child { white-space:nowrap }
+  table.tx td:nth-child(2) { white-space:nowrap }
   table.audit td:first-child { white-space:nowrap; color:var(--dim); font-variant-numeric:tabular-nums }
   table.audit td:nth-child(3) { font:500 13px var(--mono) } table.audit td:nth-child(4) { white-space:nowrap }
 </style>
@@ -1791,7 +1793,7 @@ async function renderPage() {
     const tx = await api('purch_transactions', { limit: 500 });
     if (!tx.count) { main.append($('<div class="card doc" style="max-width:560px">No rows yet — import a statement.</div>')); return; }
     main.append($(`<div class="sub" style="margin:0 0 10px">${tx.count} rows · ${tx.unreviewed} unreviewed${tx.suggested ? ` · ${tx.suggested} suggested by a rule` : ''} · spending ${Object.values(tx.spend_by_currency).map(x => x.amount_display).join(' · ') || '—'}</div>`));
-    const t = $('<table><thead><tr><th>Row</th><th>Date</th><th>Description</th><th>Vendor</th><th>Category</th><th>Status</th><th class="num">Amount</th><th>Receipt</th></tr></thead><tbody></tbody></table>');
+    const t = $('<table class="tx"><thead><tr><th>Row</th><th>Date</th><th>Description</th><th>Vendor</th><th>Category</th><th>Status</th><th class="num">Amount</th><th>Receipt</th></tr></thead><tbody></tbody></table>');
     rowsInto(t, tx.items, r => `<td>${r.id}</td><td style="font-size:12px">${r.date}</td><td>${r.description}</td><td>${r.vendor || ''}</td><td>${r.category || (r.suggested ? `<span class="pill sugg" title="Suggested by ${esc(r.suggested.rule_label)} (${r.suggested.rule_id}); confirm in review">${esc(r.suggested.category)}?</span>` : '')}</td><td><span class="pill ${r.status}">${r.status}</span></td><td class="num" style="${r.amount > 0 ? 'color:var(--ok, #3E6B2B)' : ''}">${r.amount_display}</td><td>${r.has_receipt ? '✓' : ''}</td>`, 'purch_transaction');
     main.append(t);
   }
