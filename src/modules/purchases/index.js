@@ -89,7 +89,7 @@ Money is integer minor units; sums are per currency and never cross.`,
       add_rule: 'purch_add_rule', end_rule: 'purch_end_rule', accept_suggestions: 'purch_accept_suggestions', rules: 'purch_rules',
     },
   },
-  api: { views: V, journalLines: V.journalLines, journalOmitted: V.journalOmitted, mappableKeys: V.mappableKeys },
+  api: { views: V, journalLines: V.journalLines, journalOmitted: V.journalOmitted, mappableKeys: V.mappableKeys, statementAccounts: V.statementAccounts },
 });
 
 R.defineSubject('purch_transaction', { load: (id) => V.transactionView(id) });

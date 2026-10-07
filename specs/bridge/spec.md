@@ -1,6 +1,8 @@
 # bridge — The Ledger Bridge · Area Specification
 
-**Status: 0.2.** The hand-over to the ledger of record.
+**Status: 0.3.** The hand-over to the ledger of record. 0.3 adds preliminary financials: a profit
+and loss and a balance sheet derived from the same journal, for the person and their
+accountant to look at before the close.
 
 Saybooks owns operational truth and derives balanced journal lines from it (`core_journal`).
 The LEDGER OF RECORD — QuickBooks Online, Xero, an accountant's own system — owns the chart
@@ -72,10 +74,11 @@ we say out loud we have not crossed.
 
 ## 6. The acts
 
-Writes (2): map_account, export. Reads (3): accounts (our accounts, which the books use, how
+Writes (2): map_account, export. Reads (4): accounts (our accounts, which the books use, how
 each is mapped, which formats are ready), preview (the period in the target's shape with its
 totals and anything unmapped; records nothing), exports (what has been handed over, through
-when). Environment: core's journal derivation, and whatever module produced the facts.
+when), financials (a preliminary profit and loss for a period and a balance sheet at its end,
+with what they leave out). Environment: core's journal derivation, and whatever module produced the facts.
 
 ## 7. Invariants
 
@@ -102,6 +105,16 @@ when). Environment: core's journal derivation, and whatever module produced the 
 - **B-11** Whatever does not post is named, every time. The preview and the hand-over both list
   the statement rows left out, with their value, because the ledger's bank balance will differ
   from the statement by exactly that much until they are dealt with.
+- **B-12** Preliminary statements are derived on request and never stored: a profit and loss for
+  the period and a balance sheet at its end, one currency at a time, for a period that must be
+  named. The balance sheet balances by construction: each statement account starts from the
+  printed opening balance of its first statement (opening balance equity, as a bookkeeper
+  would) and is checked against its latest printed closing balance, and the result says
+  whether it ties. Transfers are placed by the person's own word for where the money went
+  (another statement account, savings, an owner draw, a loan); a word the books cannot place is
+  shown as unclassified and asked about, never guessed. The statements say on their face that
+  they are preliminary and what they leave out: rows not reviewed, rows left out on purpose,
+  an account that does not tie, the adjustments only the accountant makes.
 - **B-9** Every write is a logged act with an actor; refusals are logged too.
 
 ## 8. Conformance (scenarios)
@@ -113,7 +126,11 @@ a second period continues from the last hand-over without a start date, a re-exp
 already sent is allowed and says so, and the plain CSV needs no chart at all · 03 the spending
 side: a card statement imported and reviewed; categories and the card account are mapped;
 a transfer posts nothing and an unreviewed row is reported as left out; the file carries the
-expense against the card.
+expense against the card · 04 preliminary financials: refused without a period and for a period
+that is not one; an issued invoice partly paid and a checking statement with software, a fee, a
+transfer to savings, an owner draw and the client's payment; the profit and loss, a balance
+sheet that balances and a checking account that ties to its statement; a later row left
+unreviewed is named and the account no longer ties, while the statements still balance.
 
 ## 9. Deferred — with reasons
 
@@ -129,7 +146,8 @@ expense against the card.
 
 ---
 
-*Change log: 0.0-sketch (2026-08) — a goal on the record. 0.2 (2026-09-10) — the spending side:
+*Change log: 0.3 (2026-10-07) — preliminary financials, from Aryeh Munk's phase 1 list ("Please
+generate preliminary Q1 financials"). 0.0-sketch (2026-08) — a goal on the record. 0.2 (2026-09-10) — the spending side:
 categories and statement accounts are mapped the same way, purchases contributes its own
 postings, transfers post nothing and unreviewed rows are reported rather than dropped in
 silence. 0.1 (2026-09-10) — built: the account

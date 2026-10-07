@@ -67,3 +67,25 @@ read({
     return { ...v, exports: v.exports.map(r => ({ ...r, csv_url: CFG.absolute(`/journal/${wsp.currentName()}/${r.token}.csv`) })) };
   },
 });
+
+defineCommand({
+  intent: 'read', scope: 'collection',
+  name: 'bridge_financials',
+  title: 'Preliminary financials',
+  group: 'Ledger read',
+  summary: 'A profit and loss for a period and a balance sheet at its end, derived from the books and marked preliminary, with everything they leave out said on their face.',
+  doctrine: `For "how did we do this quarter", "generate preliminary Q1 financials", or a number for
+the accountant before the close. Pass the period as a quarter (2026-Q1), a month (2026-09), a
+year, or from and to. Say "preliminary" when you present it, and read the notes out: rows not
+reviewed yet are not in the figures, and a transfer account the books cannot classify is a
+question for the person (savings, owner draw, or a loan or card). Do not round, restate or
+"fix" the figures; if they look wrong, the fix is in the books (review the rows, name the
+transfer), and the statements follow. One currency at a time.`,
+  args: {
+    period: f.text('A quarter (2026-Q1), a month (2026-09) or a year (2026).'),
+    from: f.date('Start of a custom period (with to).'),
+    to: f.date('End of a custom period; the balance sheet is as of this date.'),
+    currency: f.text('Which currency (ISO 4217), when the books hold more than one.'),
+  },
+  handler: (a) => V.financials(a),
+});

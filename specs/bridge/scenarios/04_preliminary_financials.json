@@ -1,0 +1,62 @@
+{
+  "name": "preliminary financials, said on their face",
+  "spec": "bridge@0.3",
+  "notes": "B-12 a profit and loss and a balance sheet derived from the journal: balanced by construction, the checking account tied to its statement, and what is left out named.",
+  "env": [
+    ["set_company_profile", { "name": "Vega Consulting", "address": "12 Oak Lane, Portland, OR 97205", "country": "US", "currency": "USD", "payment_instructions": "ACH to First Federal 026009593 / 5550123." }, "the seller block"],
+    ["create_customer", { "name": "Meridian Logistics", "email": "ap@meridian.example", "terms": "net30", "address": "400 Harbor Blvd, Suite 210, Tacoma, WA 98402" }, "the client"]
+  ],
+  "steps": [
+    { "act": "financials", "args": {}, "expect": { "refused": "need a period" }, "notes": "B-12 a statement is about a period" },
+    { "act": "financials", "args": { "period": "2026-Q5" }, "expect": { "refused": "is not a period" } },
+    { "act": "draft_invoice", "args": { "customer": "C-0001", "due_in_days": 30, "lines": [ { "description": "Consulting", "qty": 12, "rate": 25000 } ] }, "expect": { "ok": true } },
+    { "act": "issue_invoice", "args": { "invoice": "INV-0001" }, "expect": { "ok": true } },
+    { "act": "record_payment", "args": { "customer": "C-0001", "amount": 200000, "method": "bank", "reference": "MER-1" }, "expect": { "ok": true } },
+    { "act": "apply_payment", "args": { "payment": "P-0001", "invoice": "INV-0001" }, "expect": { "ok": true } },
+    {
+      "act": "import_statement",
+      "args": {
+        "name": "checking-2026-10.csv", "hash": "bridge-fin-checking-2026-10", "kind": "bank", "account": "Business Checking 8827", "currency": "USD",
+        "period_start": "2026-10-01", "period_end": "2026-10-31", "opening_balance": 1000000, "closing_balance": 1042501, "row_count": 5,
+        "rows": [
+          { "date": "2026-10-02", "amount": -5999, "description": "ADOBE", "row_index": 1 },
+          { "date": "2026-10-03", "amount": -1500, "description": "MONTHLY FEE", "row_index": 2 },
+          { "date": "2026-10-04", "amount": -100000, "description": "TRANSFER TO SAVINGS", "row_index": 3 },
+          { "date": "2026-10-05", "amount": -50000, "description": "OWNER DRAW", "row_index": 4 },
+          { "date": "2026-10-06", "amount": 200000, "description": "MERIDIAN LOGISTICS", "row_index": 5 }
+        ]
+      },
+      "expect": { "ok": true, "include": { "rows_in": 5 } }
+    },
+    {
+      "act": "review_batch",
+      "args": { "rows": [
+        { "transaction_id": "T-0001", "status": "purchase", "category": "software", "vendor": "Adobe" },
+        { "transaction_id": "T-0002", "status": "fee" },
+        { "transaction_id": "T-0003", "status": "transfer", "category": "Savings" },
+        { "transaction_id": "T-0004", "status": "transfer", "category": "Owner draw" },
+        { "transaction_id": "T-0005", "status": "transfer" }
+      ], "reason": "confirmed; the Meridian deposit is the payment already recorded" },
+      "expect": { "ok": true, "include": { "reviewed": 5 } }
+    },
+    {
+      "act": "financials", "args": { "from": "2000-01-01", "to": "2099-12-31" },
+      "expect": { "ok": true, "include": { "balanced": true, "income_total": 300000, "expense_total": 7499, "net_income": 292501, "total_assets": 1242501, "total_liabilities": 0, "unreviewed_in_period": 0 } },
+      "notes": "B-12 revenue 3,000.00 less software and the fee; checking 10,425.01 ties to its statement with the invoice payment counted where it landed; savings an asset, the owner draw against equity"
+    },
+    {
+      "act": "import_statement",
+      "args": {
+        "name": "checking-2026-11.csv", "hash": "bridge-fin-checking-2026-11", "kind": "bank", "account": "Business Checking 8827", "currency": "USD",
+        "period_start": "2026-11-01", "period_end": "2026-11-30", "opening_balance": 1042501, "closing_balance": 1040501, "row_count": 1,
+        "rows": [ { "date": "2026-11-03", "amount": -2000, "description": "BLUE BOTTLE COFFEE", "row_index": 1 } ]
+      },
+      "expect": { "ok": true }
+    },
+    {
+      "act": "financials", "args": { "from": "2000-01-01", "to": "2099-12-31" },
+      "expect": { "ok": true, "include": { "balanced": true, "net_income": 292501, "unreviewed_in_period": 1 } },
+      "notes": "B-12 an unreviewed row is named, not counted; the checking account no longer ties and says so, and the statements still balance"
+    }
+  ]
+}

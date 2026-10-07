@@ -152,6 +152,13 @@
   .pill.shipped, .pill.went, .pill.closed, .pill.paid, .pill.accepted, .pill.active, .pill.purchase, .pill.matched, .pill.won { background:var(--tint); color:var(--accent2) }
   .pill.lapsed, .pill.missed, .pill.unreviewed, .pill.researching { background:var(--sun-soft); color:#7A5A00 }
   .pill.draft { background:#EFEBE3; color:#5D6472 }
+  .fingrid { display:grid; grid-template-columns:1fr 1fr; gap:18px; max-width:1180px; margin-bottom:18px } @media (max-width:1000px) { .fingrid { grid-template-columns:1fr } }
+  .fingrid .card { margin:0 } .card h3.finh, .finh { font:700 12px var(--display); letter-spacing:.08em; text-transform:uppercase; color:var(--dim); margin:18px 0 6px }
+  table.fin { box-shadow:none; border:none; border-radius:0; background:none } table.fin td { padding:7px 4px; border-bottom:1px solid #F1ECE2 } table.fin tbody tr:hover { background:none }
+  table.fin tr.tot td { font-weight:700; border-bottom:none; border-top:1.5px solid var(--line) }
+  .finnet { display:flex; justify-content:space-between; align-items:baseline; margin-top:16px; padding:12px 14px; border-radius:12px; background:var(--tint) } .finnet b { font:600 22px var(--serif) } .finnet.bad { background:var(--alert); color:var(--warn) }
+  .finnotes { max-width:1180px } .finnotes ul { margin:10px 0 0; padding-left:20px; color:var(--mid) } .finnotes li { margin:0 0 6px }
+  @media print { .top, nav.rail, .tabs, .acts, #tip { display:none !important } body { display:block; height:auto; background:#fff } .shell { display:block } main { padding:0; overflow:visible } .card { box-shadow:none } }
   .pill.sugg { background:transparent; color:var(--accent2); box-shadow:inset 0 0 0 1.5px var(--leaf); border:none }
   .who.human { background:var(--sky); color:var(--sky-ink) }
   .connect { border-radius:14px; border-left-color:var(--agent) }
@@ -225,7 +232,7 @@ const NAV = [
   { key: 'pros', label: 'Prospects', prefix: 'pros_', tabs: [['prospulls', 'Pulls'], ['prosrows', 'Staged rows']] },
   { key: 'hunt', label: 'Job hunt', prefix: 'hunt_', tabs: [['huntdue', 'Due'], ['huntpipeline', 'Pipeline'], ['huntcontacts', 'Contacts'], ['huntresumes', 'Resumes']] },
   { key: 'purch', label: 'Personal finances', prefix: 'purch_', tabs: [['purchover', 'Overview'], ['purchtx', 'Transactions'], ['purchrules', 'Rules'], ['purchsubs', 'Subscriptions'], ['purchrec', 'Receipts'], ['purchsrc', 'Statements']] },
-  { key: 'bridge', label: 'Ledger', prefix: 'bridge_', tabs: [['journal', 'Journal'], ['bridgeexport', 'Export'], ['bridgeaccounts', 'Account map'], ['bridgeexports', 'Hand-overs']] },
+  { key: 'bridge', label: 'Ledger', prefix: 'bridge_', tabs: [['bridgefin', 'Financials'], ['journal', 'Journal'], ['bridgeexport', 'Export'], ['bridgeaccounts', 'Account map'], ['bridgeexports', 'Hand-overs']] },
   { sep: true },
   { key: 'company', label: 'Company', tabs: [['company', 'Company']], when: () => REG.commands.some(c => c.name.startsWith('o2c_') || c.name.startsWith('solo_')) },
   { key: 'audit', label: 'Audit trail', tabs: [['audit', 'Audit trail']] },
@@ -1777,6 +1784,39 @@ async function renderPage() {
     const t = $('<table><thead><tr><th>Id</th><th>File</th><th>Account</th><th>Period</th><th class="num">Opening</th><th class="num">Closing</th><th class="num">Rows</th><th>Imported by</th></tr></thead><tbody></tbody></table>');
     rowsInto(t, s.items, x => `<td>${x.id}</td><td>${x.name}</td><td>${x.account || ''}</td><td style="font-size:12px">${x.period_start} – ${x.period_end}</td><td class="num">${x.opening_display}</td><td class="num">${x.closing_display}</td><td class="num">${x.rows_in}${x.rows_skipped ? ` <span style="color:var(--dim)">(+${x.rows_skipped} skipped)</span>` : ''}</td><td style="font-size:12px">${x.imported_by}</td>`, 'purch_source');
     main.append(t);
+  }
+  if (view === 'bridgefin') {
+    head('Preliminary financials', 'A profit and loss for the period and a balance sheet at its end, derived from these books. For you and your accountant to look at before the close; not a filing.');
+    // Default to the last quarter that has ended; the person can pick another.
+    const now = new Date(); const qNow = Math.floor(now.getUTCMonth() / 3) + 1;
+    const lastQ = qNow === 1 ? `${now.getUTCFullYear() - 1}-Q4` : `${now.getUTCFullYear()}-Q${qNow - 1}`;
+    window.finPeriod = window.finPeriod || lastQ;
+    const opts = []; for (let y = now.getUTCFullYear(); y >= now.getUTCFullYear() - 2; y--) { for (let q = 4; q >= 1; q--) { if (y === now.getUTCFullYear() && q > qNow) continue; opts.push([`${y}-Q${q}`, `Q${q} ${y}${y === now.getUTCFullYear() && q === qNow ? ' (to date)' : ''}`]); } opts.push([String(y), `All of ${y}`]); }
+    const bar = $(`<div class="acts" style="margin:0 0 16px;align-items:center"><select id="finPer" style="width:auto;min-width:200px">${opts.map(([v, l]) => `<option value="${v}" ${v === window.finPeriod ? 'selected' : ''}>${l}</option>`).join('')}</select><button id="finPrint">Print</button></div>`);
+    bar.querySelector('#finPer').onchange = (e) => { window.finChosen = true; window.finPeriod = e.target.value; render(); };
+    bar.querySelector('#finPrint').onclick = () => window.print();
+    main.append(bar);
+    let f;
+    try { f = await api('bridge_financials', { period: window.finPeriod }); }
+    catch (e) { main.append($(`<div class="card doc" style="max-width:640px">${esc(e.message || String(e))}</div>`)); return; }
+    // First open: if the last finished quarter is empty, show this quarter so far instead.
+    if (!window.finChosen && /^Nothing happened/.test(f.notes[0] || '') && window.finPeriod === lastQ) { window.finChosen = true; window.finPeriod = `${now.getUTCFullYear()}-Q${qNow}`; return render(); }
+    const rows = (xs, total, label) => `<table class="fin"><tbody>${xs.map(x => `<tr><td>${esc(x.account)}${x.unclassified ? ' <span class="pill lapsed">to classify</span>' : ''}</td><td class="num">${x.display}</td></tr>`).join('') || '<tr><td style="color:var(--dim)">None</td><td></td></tr>'}<tr class="tot"><td>${label}</td><td class="num">${total}</td></tr></tbody></table>`;
+    const pl = f.profit_and_loss, bs = f.balance_sheet;
+    const grid = $(`<div class="fingrid">
+      <div class="card"><div class="crumbs">Profit and loss · ${esc(f.period)}</div>
+        <h3 class="finh">Income</h3>${rows(pl.income, pl.income_total, 'Total income')}
+        <h3 class="finh">Expenses</h3>${rows(pl.expenses, pl.expense_total, 'Total expenses')}
+        <div class="finnet"><span>Net ${f.net_income < 0 ? 'loss' : 'income'}</span><b>${pl.net_income}</b></div></div>
+      <div class="card"><div class="crumbs">Balance sheet · as of ${f.to}</div>
+        <h3 class="finh">Assets</h3>${rows(bs.assets, bs.total_assets, 'Total assets')}
+        <h3 class="finh">Liabilities</h3>${rows(bs.liabilities, bs.total_liabilities, 'Total liabilities')}
+        <h3 class="finh">Equity</h3>${rows(bs.equity, bs.total_equity, 'Total equity')}
+        <div class="finnet ${f.balanced ? '' : 'bad'}"><span>${f.balanced ? 'Balances' : 'Does not balance'}</span><b>${bs.total_assets} = ${bs.total_liabilities} + ${bs.total_equity}</b></div></div>
+    </div>`);
+    main.append(grid);
+    const ties = (f.ties || []).map(t => `<li><b>${esc(t.account)}</b>: ${t.ties ? `ties to the statement through ${t.statement_through}` : esc(t.note)}</li>`).join('');
+    main.append($(`<div class="card finnotes"><span class="pill sugg">Preliminary</span><ul>${f.notes.map(n => `<li>${esc(n)}</li>`).join('')}${ties}</ul></div>`));
   }
   if (view === 'bridgeaccounts') {
     head('Account map', "Our derivation accounts, and what each is called in the ledger of record. The codes and names come from the accountant, never from us.");

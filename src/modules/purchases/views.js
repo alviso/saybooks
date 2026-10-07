@@ -244,15 +244,15 @@ function journalLines({ from, to } = {}) {
       // (a customer payment against an invoice) stays out without being counted twice.
       const cat = (t.category || '').trim();
       if (!cat) continue;
-      const other = { account: cat, map: { kind: 'category', key: cat } };
+      const other = { account: cat, map: { kind: 'category', key: cat, role: 'transfer' } };
       out.push({ date: t.date, memo: `Transfer · ${t.description}`, customer: null, currency: t.currency, source: t.id,
         lines: t.amount < 0 ? [{ ...other, debit: amount }, { ...paidFrom, credit: amount }] : [{ ...paidFrom, debit: amount }, { ...other, credit: amount }] });
     } else if (t.status === 'income') {
       const cat = (t.category || '').trim();
       const legs = splitsOf(t.id);
       const credits = legs.length
-        ? legs.map(l => ({ account: l.category, map: { kind: 'category', key: l.category }, credit: l.amount }))
-        : [{ account: cat || 'Uncategorised income', map: { kind: 'category', key: cat || '(uncategorised)' }, credit: amount }];
+        ? legs.map(l => ({ account: l.category, map: { kind: 'category', key: l.category, role: 'income' }, credit: l.amount }))
+        : [{ account: cat || 'Uncategorised income', map: { kind: 'category', key: cat || '(uncategorised)', role: 'income' }, credit: amount }];
       out.push({ date: t.date, memo: `Received · ${who}`, customer: t.vendor || null, currency: t.currency, source: t.id,
         lines: [{ ...paidFrom, debit: amount }, ...credits] });
     } else {
@@ -260,8 +260,8 @@ function journalLines({ from, to } = {}) {
       const legs = splitsOf(t.id);
       const cat = (t.category || '').trim();
       const debits = legs.length
-        ? legs.map(l => ({ account: l.category, map: { kind: 'category', key: l.category }, debit: l.amount }))
-        : [{ account: cat || 'Uncategorised spending', map: { kind: 'category', key: cat || '(uncategorised)' }, debit: amount }];
+        ? legs.map(l => ({ account: l.category, map: { kind: 'category', key: l.category, role: 'expense' }, debit: l.amount }))
+        : [{ account: cat || 'Uncategorised spending', map: { kind: 'category', key: cat || '(uncategorised)', role: 'expense' }, debit: amount }];
       out.push({ date: t.date, memo: `${who}${t.ref ? ' · ' + t.ref : ''}`, customer: t.vendor || null, currency: t.currency, source: t.id,
         lines: [...debits, { ...paidFrom, credit: amount }] });
     }
@@ -274,6 +274,26 @@ function journalLines({ from, to } = {}) {
  * these out would break the one control an accountant has: the ledger's bank balance tying to
  * the statement. So they are named, with their value, every time.
  */
+/**
+ * The statement accounts as the statements print them: for each account, the opening balance
+ * of its earliest statement and the closing balance of every statement, in signed minor units
+ * (money in positive; a card owing money is negative). The journal only holds movements since
+ * the first import, so preliminary statements take the starting point from here (bridge B-12).
+ */
+function statementAccounts() {
+  let rows = [];
+  try { rows = db().prepare('SELECT * FROM purch_source ORDER BY period_start, id').all(); } catch { return []; }
+  const by = {};
+  for (const s of rows) {
+    const account = (s.account || `${s.kind || 'account'} (unnamed)`).trim();
+    const k = `${account}|${s.currency}`;
+    if (!by[k]) by[k] = { account, currency: s.currency, kind: s.kind, first_start: s.period_start, opening: s.opening_balance, statements: [] };
+    by[k].kind = s.kind || by[k].kind;
+    by[k].statements.push({ id: s.id, period_start: s.period_start, period_end: s.period_end, closing: s.closing_balance });
+  }
+  return Object.values(by);
+}
+
 function journalOmitted({ from, to } = {}) {
   try {
     const w = ["(t.status = 'unreviewed' OR (t.status = 'transfer' AND COALESCE(TRIM(t.category), '') = '') OR t.status = 'ignored')"]; const args = [];
@@ -304,4 +324,4 @@ function mappableKeys() {
   return { categories: [...new Set(cats.map(c => c.k))].sort(), sources: [...new Set(srcs.map(s => (s.k || `${s.kind} (unnamed)`).trim()))].sort() };
 }
 
-module.exports = { activeRules, ruleMatches, suggestionFor, ruleView, rules, windowText, splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };
+module.exports = { statementAccounts, activeRules, ruleMatches, suggestionFor, ruleView, rules, windowText, splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };

@@ -137,4 +137,150 @@ function build(format, from, to, currency) {
   return { journal, missing, f, rows, content: csvOf(f.columns, rows) };
 }
 
-module.exports = { ACCOUNTS, KINDS, FORMATS, mapping, mappable, hintOf, mapKey, omitted, readiness, accountsView, exportsView, lastThrough, build, csvOf, entryNo };
+// ---------------------------------------------------------------- preliminary financials (B-12)
+const { Rejected } = require('../../registry.js');
+const KIND_OF = Object.fromEntries(ACCOUNTS.map(a => [a.account, a.kind]));
+const lastDay = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+/** "2026-Q3", "2026-09", "2026", or from/to. A statement needs a period to be about. */
+function periodOf(a) {
+  const named = namedPeriod(a);
+  // A named period that has not ended yet runs to today: a balance sheet dated in the future
+  // would show a day nobody has seen.
+  const now = H.today();
+  if (named && named.to > now && named.from <= now) return { ...named, to: now, label: `${named.label} to date` };
+  if (named) return named;
+  return customPeriod(a);
+}
+function namedPeriod(a) {
+  const p = String(a.period || '').trim().toUpperCase();
+  let m;
+  if ((m = /^(\d{4})-Q([1-4])$/.exec(p))) { const y = +m[1], q = +m[2], m1 = (q - 1) * 3 + 1, m3 = q * 3; return { from: `${y}-${String(m1).padStart(2, '0')}-01`, to: `${y}-${String(m3).padStart(2, '0')}-${lastDay(y, m3)}`, label: `Q${q} ${y}` }; }
+  if ((m = /^(\d{4})-(\d{2})$/.exec(p)) && +m[2] >= 1 && +m[2] <= 12) { const y = +m[1], mo = +m[2]; return { from: `${p}-01`, to: `${p}-${lastDay(y, mo)}`, label: new Date(Date.UTC(y, mo - 1, 1)).toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }) }; }
+  if ((m = /^(\d{4})$/.exec(p))) return { from: `${p}-01-01`, to: `${p}-12-31`, label: p };
+  if (p) throw new Rejected(`"${a.period}" is not a period. Use a quarter (2026-Q3), a month (2026-09), a year (2026), or from and to.`);
+  return null;
+}
+function customPeriod(a) {
+  if (a.from || a.to) {
+    const from = a.from || null, to = a.to || null;
+    if (!to) throw new Rejected('A period needs an end: pass to (YYYY-MM-DD), or a quarter, month or year as period.');
+    if (from && to < from) throw new Rejected(`The period ends before it starts: ${to} is before ${from}.`);
+    return { from, to, label: from ? `${from} to ${to}` : `through ${to}` };
+  }
+  throw new Rejected('Preliminary statements need a period: a quarter (2026-Q3), a month (2026-09), a year (2026), or from and to.');
+}
+/** Where a transfer went, from the person's own word for it. Unclear words stay unclear. */
+function transferKind(name, statementNames) {
+  const n = String(name || '').toLowerCase();
+  if (statementNames.has(n)) return 'statement';
+  if (/draw|owner|distribution|personal/.test(n)) return 'equity';
+  if (/saving|brokerage|invest|deposit|reserve/.test(n)) return 'asset';
+  if (/loan|mortgage|credit line|line of credit/.test(n)) return 'liability';
+  return 'unclassified';
+}
+function financials(a) {
+  const per = periodOf(a);
+  const stmts = [];
+  for (const m of require('../../registry.js').MODULES) if (m.api && typeof m.api.statementAccounts === 'function') stmts.push(...(m.api.statementAccounts() || []));
+  const all = core().journal({ to: per.to });
+  let cur = a.currency ? String(a.currency).trim().toUpperCase() : null;
+  const curs = [...new Set([...all.currencies, ...stmts.filter(s => s.first_start <= per.to).map(s => s.currency)])];
+  if (!cur) {
+    if (curs.length > 1) throw new Rejected(`These books hold ${curs.join(' and ')}. Preliminary statements are one currency at a time: pass currency.`);
+    cur = curs[0] || (H.locale().currency || 'USD');
+  }
+  const mine = stmts.filter(s => s.currency === cur && s.first_start <= per.to);
+  const stmtNames = new Set(mine.map(s => s.account.toLowerCase()));
+  const banks = mine.filter(s => s.kind !== 'card');
+  // Money received against invoices posts to Cash; it landed in the bank. With exactly one bank
+  // account on record, Cash is that account, so the bank figure can tie to its statement.
+  const foldCash = banks.length === 1 ? banks[0].account : null;
+  const classify = (l) => {
+    const h = l.map || { kind: 'derivation', key: l.account };
+    if (h.kind === 'source') return { kind: 'statement', name: l.account };
+    if (h.kind === 'category') {
+      if (h.role === 'expense') return { kind: 'expense', name: l.account };
+      if (h.role === 'income') return { kind: 'income', name: l.account };
+      const k = transferKind(l.account, stmtNames);
+      return { kind: k, name: k === 'statement' ? mine.find(s => s.account.toLowerCase() === l.account.toLowerCase()).account : l.account };
+    }
+    if (l.account === 'Cash' && foldCash) return { kind: 'statement', name: foldCash, folded: true };
+    return { kind: KIND_OF[l.account] || 'unclassified', name: l.account };
+  };
+  const tally = (entries) => {
+    const acc = {};
+    for (const e of entries) for (const l of e.lines) {
+      const c = classify(l); const k = `${c.kind}|${c.name}`;
+      acc[k] = acc[k] || { account: c.name, kind: c.kind, d: 0 };
+      acc[k].d += (l.debit || 0) - (l.credit || 0);
+    }
+    return Object.values(acc);
+  };
+  const D = (cur2, entries) => tally(entries.filter(e => e.currency === cur2));
+  const line = (account, amount) => ({ account, amount, display: money(amount, cur) });
+  const sum = (xs) => xs.reduce((n, x) => n + x.amount, 0);
+
+  // Profit and loss: the period's own entries.
+  const inPeriod = all.entries.filter(e => e.currency === cur && (!per.from || e.date >= per.from));
+  const pl = tally(inPeriod);
+  const income = pl.filter(x => x.kind === 'income').map(x => line(x.account, -x.d)).filter(x => x.amount).sort((x, y) => y.amount - x.amount);
+  const expenses = pl.filter(x => x.kind === 'expense').map(x => line(x.account, x.d)).filter(x => x.amount).sort((x, y) => y.amount - x.amount);
+  const incomeTotal = sum(income), expenseTotal = sum(expenses), net = incomeTotal - expenseTotal;
+
+  // Balance sheet: everything through the period's end, plus each statement account's opening
+  // balance as the books' starting point (opening balance equity, as a bookkeeper would).
+  const bs = D(cur, all.entries);
+  const get = (kind, name) => bs.find(x => x.kind === kind && x.account === name) || { d: 0 };
+  const assets = [], liabilities = [], equity = [], unclassified = [], ties = [];
+  let opening = 0;
+  for (const s of mine) {
+    const books = s.opening + get('statement', s.account).d;
+    opening += s.opening;
+    const last = s.statements.filter(x => x.period_end <= per.to).pop();
+    if (last) {
+      const at = s.opening + D(cur, all.entries.filter(e => e.date <= last.period_end)).filter(x => x.kind === 'statement' && x.account === s.account).reduce((n, x) => n + x.d, 0);
+      ties.push({ account: s.account, statement_through: last.period_end, printed: last.closing, books: at, ties: at === last.closing,
+        note: at === last.closing ? `Ties to the statement through ${last.period_end}.` : `Differs from the statement through ${last.period_end} by ${money(last.closing - at, cur)}: usually rows not reviewed yet, or a transfer with no other side named.` });
+    }
+    if (books >= 0) assets.push(line(s.account, books)); else liabilities.push(line(s.account, -books));
+  }
+  for (const x of bs) {
+    if (x.kind === 'statement' || x.kind === 'income' || x.kind === 'expense') continue;
+    if (x.kind === 'asset') { if (x.d) assets.push(line(x.account, x.d)); }
+    else if (x.kind === 'liability') { if (x.d) liabilities.push(line(x.account, -x.d)); }
+    else if (x.kind === 'equity') { if (x.d) equity.push(line(x.account, -x.d)); }
+    else if (x.d) { unclassified.push(x.account); if (x.d > 0) assets.push({ ...line(x.account, x.d), unclassified: true }); else liabilities.push({ ...line(x.account, -x.d), unclassified: true }); }
+  }
+  const earned = bs.filter(x => x.kind === 'income').reduce((n, x) => n - x.d, 0) - bs.filter(x => x.kind === 'expense').reduce((n, x) => n + x.d, 0);
+  if (opening) equity.unshift(line('Opening balances (from the first statements)', opening));
+  equity.push(line('Earnings to date', earned));
+  const totalA = sum(assets), totalL = sum(liabilities), totalE = sum(equity);
+
+  // What these figures leave out, said on their face (B-11, B-12).
+  const left = omitted(per.from, per.to);
+  const leftHere = left.rows.filter(r => (r.currency || cur) === cur);
+  const unreviewed = leftHere.filter(r => r.status === 'unreviewed');
+  const notes = ['Preliminary: derived from the operational record for the person and their accountant to review. Not a filing, and not the ledger of record.',
+    'Invoices count as revenue when issued; spending and income count on the date the statement shows them.'];
+  if (unreviewed.length) notes.push(`${unreviewed.length} statement row${unreviewed.length > 1 ? 's' : ''} in the period ${unreviewed.length > 1 ? 'are' : 'is'} not reviewed yet (${money(unreviewed.reduce((n, r) => n + r.amount, 0), cur)} net) and ${unreviewed.length > 1 ? 'are' : 'is'} not in these figures.`);
+  const otherLeft = leftHere.length - unreviewed.length;
+  if (otherLeft) notes.push(`${otherLeft} other row${otherLeft > 1 ? 's' : ''} left out on purpose, ${money(leftHere.filter(r => r.status !== 'unreviewed').reduce((n, r) => n + r.amount, 0), cur)} net: rows marked ignored, and transfers with no other side named. That is right for the second half of a payment between two of your own accounts, and for a client payment already recorded against its invoice, so neither is counted twice.`);
+  if (!inPeriod.length && !mine.length) notes.unshift(`Nothing happened in these books in ${per.label}.`);
+  for (const u of unclassified) notes.push(`"${u}" is where transfers went, but not what it is. Ask: savings (an asset), an owner draw (equity), or a loan or card (a liability)?`);
+  const cashLines = all.entries.some(e => e.currency === cur && e.lines.some(l => l.account === 'Cash' && !l.map));
+  if (foldCash && cashLines) notes.push(`Payments recorded against invoices are counted in ${foldCash}, where they landed.`);
+  else if (bs.some(x => x.kind === 'asset' && x.account === 'Cash' && x.d)) notes.push('Cash is money recorded as received against invoices; the accountant maps it to the bank account it went into.');
+  for (const t of ties) if (!t.ties) notes.push(`${t.account}: ${t.note}`);
+  notes.push('Not included: cost of goods, inventory, depreciation, accruals and other adjustments the accountant makes at the close.');
+
+  return {
+    preliminary: true, period: per.label, from: per.from, to: per.to, currency: cur,
+    income_total: incomeTotal, expense_total: expenseTotal, net_income: net,
+    total_assets: totalA, total_liabilities: totalL, total_equity: totalE, balanced: totalA === totalL + totalE,
+    profit_and_loss: { income, income_total: money(incomeTotal, cur), expenses, expense_total: money(expenseTotal, cur), net_income: money(net, cur) },
+    balance_sheet: { as_of: per.to, assets, total_assets: money(totalA, cur), liabilities, total_liabilities: money(totalL, cur), equity, total_equity: money(totalE, cur) },
+    ties, unreviewed_in_period: unreviewed.length, unclassified, notes,
+  };
+}
+
+module.exports = { financials, periodOf, ACCOUNTS, KINDS, FORMATS, mapping, mappable, hintOf, mapKey, omitted, readiness, accountsView, exportsView, lastThrough, build, csvOf, entryNo };

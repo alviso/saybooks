@@ -45,11 +45,11 @@ format, so month-end is a diff rather than a re-key.
 Nothing here posts to the ledger. A correction after an export is a fresh export of the
 affected period; the record shows both, with what changed.`,
   implements: {
-    area: 'bridge', spec: '0.2',
+    area: 'bridge', spec: '0.3',
     argmap: { export: 'export_id' },
     acts: {
       map_account: 'bridge_map_account', export: 'bridge_export',
-      accounts: 'bridge_accounts', preview: 'bridge_preview', exports: 'bridge_exports',
+      accounts: 'bridge_accounts', preview: 'bridge_preview', exports: 'bridge_exports', financials: 'bridge_financials',
     },
   },
   api: { views: V },

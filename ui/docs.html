@@ -66,7 +66,7 @@
     "args": ["/path/to/saybooks/mcp-server.js"],
     "env": { "SAYBOOKS_WORKSPACE": "main", "SAYBOOKS_MODULES": "core,solo", "SAYBOOKS_ACTOR": "gemma-4" }
 } } }</code></pre>
-      Use the absolute path to <code>node</code>. <code>SAYBOOKS_MODULES</code> picks the tools the model sees: <code>core,solo</code> is 35 tools for invoicing, <code>core,purchases</code> 53 for statements; all eight modules is 149 and too many for a small model. <code>SAYBOOKS_ACTOR</code> is the name on the audit trail.</li>
+      Use the absolute path to <code>node</code>. <code>SAYBOOKS_MODULES</code> picks the tools the model sees: <code>core,solo</code> is 35 tools for invoicing, <code>core,purchases</code> 53 for statements; all eight modules is 150 and too many for a small model. <code>SAYBOOKS_ACTOR</code> is the name on the audit trail.</li>
     <li><b>Load the model with one concurrent slot and a 32k context.</b> LM Studio defaults to four slots and reserves a full context cache for each; on a 32 GB machine that is the difference between quick and swapping.</li>
     <li><b>Talk plainly.</b> "Set up my company: Vega Consulting, US, USD, not registered for sales tax." "Add a client, Meridian Logistics, net 30." "Invoice them for 12 hours at $250 and issue it." Paste a statement and say "here is my September card statement."</li>
   </ol>
@@ -123,6 +123,7 @@
     <li><b>One line, several things.</b> A payroll run is wages, employer taxes and the processor's fee; a warehouse trip is supplies and groceries. Split the row into parts that add to it exactly, and the ledger sees one posting per part against the one bank line. The row itself never moves: the statement said what it said.</li>
     <li><b>Every statement row posts, or is named.</b> A transfer says where the money went (savings, an owner draw, the card being paid off) and posts against it, so the ledger's bank balance keeps tying to the statement. Whatever does not post, a row nobody has reviewed, or a receipt already recorded against an invoice here, is listed with its value, every time, because that is exactly the difference the accountant would otherwise have to hunt for.</li>
     <li>One currency per hand-over. A period holding two is refused until you name one.</li>
+    <li><b>Preliminary financials before the close.</b> Ask "how did we do last quarter?" or open <b>Ledger, Financials</b>: a profit and loss for the period and a balance sheet at its end, derived from the same journal. Each bank or card account starts from the opening balance its first statement printed and is checked against its latest closing balance, so you see whether it ties. The page says what it leaves out (rows not reviewed yet, transfers it cannot place) and is marked preliminary, because the accountant's adjustments still come after. A quarter, a month or a year that has not ended runs to today.</li>
   </ul>
   <p class="note">The column layouts follow each product's published import template. If your import wants a column spelt differently, tell us and it is a one-line change: the formats are a table in <a href="https://github.com/alviso/saybooks/blob/main/src/modules/bridge/views.js">src/modules/bridge/views.js</a>.</p>
 

@@ -1,6 +1,6 @@
 {
   "area": "bridge",
-  "spec": "0.2",
+  "spec": "0.3",
   "doc": "spec.md",
   "acts": {
     "map_account": {
@@ -28,6 +28,10 @@
       ]
     },
     "exports": {
+      "kind": "read",
+      "required": []
+    },
+    "financials": {
       "kind": "read",
       "required": []
     }
@@ -76,6 +80,10 @@
     {
       "id": "B-11",
       "title": "An unreviewed row posts nothing and is reported as left out, in the preview and on the hand-over."
+    },
+    {
+      "id": "B-12",
+      "title": "Preliminary statements are derived on request and never stored, balance by construction from the statements' printed openings, say whether each statement account ties, and name on their face what they leave out."
     }
   ]
 }
