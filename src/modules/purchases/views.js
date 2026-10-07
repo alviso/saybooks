@@ -12,12 +12,54 @@ const spendOf = (rows) => {   // negative amounts are spending; report it as a p
 const vendorName = (id) => (id && get('purch_vendor', id) || {}).name || null;
 const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 
+// ---------------------------------------------------------------- standing rules (P-11)
+const SPENDING_STATUSES = new Set(['purchase', 'recurring']);
+const activeRules = () => { try { return db().prepare("SELECT r.*, v.name AS vendor FROM purch_rule r LEFT JOIN purch_vendor v ON v.id = r.vendor_id WHERE r.state = 'active' ORDER BY r.created_at DESC, r.id DESC").all(); } catch { return []; } };
+/** Does a rule speak about this row? Window, currency, vendor, words, and the sign: a rule
+    that suggests spending never suggests it for money in, and income never for money out. */
+function ruleMatches(r, t) {
+  if (r.date_from && t.date < r.date_from) return false;
+  if (r.date_to && t.date > r.date_to) return false;
+  if (r.currency && r.currency !== t.currency) return false;
+  if (r.vendor_id && r.vendor_id !== t.vendor_id) return false;
+  if (r.match && !String(t.description || '').toLowerCase().includes(r.match.toLowerCase())) return false;
+  if (SPENDING_STATUSES.has(r.status) && t.amount > 0) return false;
+  if (r.status === 'income' && t.amount < 0) return false;
+  return true;
+}
+/** The most specific active rule wins: words to match, then a vendor, then the narrowest
+    window, then the newest. Other matching rules that say something different are listed. */
+function suggestionFor(t, rules = activeRules()) {
+  if (t.status !== 'unreviewed') return null;
+  const hits = rules.filter(r => ruleMatches(r, t));
+  if (!hits.length) return null;
+  const span = (r) => (r.date_from && r.date_to) ? (Date.parse(r.date_to) - Date.parse(r.date_from)) : Infinity;
+  hits.sort((a, b) => (!!b.match - !!a.match) || (!!b.vendor_id - !!a.vendor_id) || (span(a) - span(b)) || (a.created_at < b.created_at ? 1 : -1));
+  const w = hits[0];
+  const others = hits.slice(1).filter(r => r.category.toLowerCase() !== w.category.toLowerCase() || r.status !== w.status);
+  return { status: w.status, category: w.category, rule_id: w.id, rule_label: w.label, ...(others.length ? { also: others.map(r => `${r.id} ${r.label}: ${r.category}`) } : {}) };
+}
+function ruleView(id) {
+  const r = need('purch_rule', id, 'rule');
+  const rules = activeRules();
+  const rows = r.state === 'active' ? db().prepare("SELECT * FROM purch_transaction WHERE status = 'unreviewed' ORDER BY date, id").all()
+    .filter(t => { const s = suggestionFor(t, rules); return s && s.rule_id === r.id; }) : [];
+  return { ...r, name: r.label, stage: r.state, vendor: vendorName(r.vendor_id), window: windowText(r), suggesting: rows.length,
+    rows: rows.map(t => ({ id: t.id, date: t.date, description: t.description, amount: t.amount, currency: t.currency, amount_display: money(t.amount, t.currency) })) };
+}
+const windowText = (r) => r.date_from && r.date_to ? `${r.date_from} to ${r.date_to}` : r.date_from ? `from ${r.date_from}` : r.date_to ? `until ${r.date_to}` : 'any date';
+function rules({ include_ended } = {}) {
+  let all = []; try { all = db().prepare(`SELECT * FROM purch_rule ${include_ended ? '' : "WHERE state = 'active'"} ORDER BY state, created_at DESC, id DESC`).all(); } catch { return { count: 0, active: 0, suggesting: 0, items: [] }; }
+  const items = all.map(r => { const v = ruleView(r.id); delete v.rows; return v; });
+  return { count: items.length, active: items.filter(i => i.state === 'active').length, suggesting: items.reduce((n, i) => n + i.suggesting, 0), items };
+}
+
 function transactionView(id) {
   const t = need('purch_transaction', id, 'transaction');
   const receipt = db().prepare('SELECT id, name, total, date FROM purch_receipt WHERE transaction_id = ?').get(id) || null;
   const split = splitsOf(id).map(l => ({ ...l, amount_display: money(l.amount, t.currency) }));
   return { ...t, vendor: vendorName(t.vendor_id), amount_display: money(t.amount, t.currency), spend: t.amount < 0 ? -t.amount : 0, receipt,
-    split, split_into: split.length, source_name: (get('purch_source', t.source_id) || {}).name || null };
+    split, split_into: split.length, source_name: (get('purch_source', t.source_id) || {}).name || null, suggested: suggestionFor(t) };
 }
 function receiptView(id) {
   const r = need('purch_receipt', id, 'receipt');
@@ -96,9 +138,10 @@ function transactions({ from, to, status, source_id, vendor, category, limit } =
   if (vendor) { where.push('v.name = ? COLLATE NOCASE'); args.push(vendor); }
   const rows = db().prepare(`SELECT t.*, v.name AS vendor, r.id AS receipt_id FROM purch_transaction t LEFT JOIN purch_vendor v ON v.id = t.vendor_id LEFT JOIN purch_receipt r ON r.transaction_id = t.id
     ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY t.date DESC, t.id DESC LIMIT ?`).all(...args, limit || 500);
-  const items = rows.map(r => ({ ...r, amount_display: money(r.amount, r.currency), has_receipt: !!r.receipt_id }));
+  const rl = activeRules();
+  const items = rows.map(r => ({ ...r, amount_display: money(r.amount, r.currency), has_receipt: !!r.receipt_id, suggested: suggestionFor(r, rl) }));
   const unreviewed = items.filter(i => i.status === 'unreviewed').length;
-  return { count: items.length, unreviewed, items, spend_by_currency: spendOf(items.filter(i => i.status === 'purchase' || i.status === 'recurring' || (i.status === 'unreviewed' && i.amount < 0))) };
+  return { count: items.length, unreviewed, suggested: items.filter(i => i.suggested).length, items, spend_by_currency: spendOf(items.filter(i => i.status === 'purchase' || i.status === 'recurring' || (i.status === 'unreviewed' && i.amount < 0))) };
 }
 
 function purchases(opts = {}) {
@@ -130,7 +173,7 @@ function sources() {
 function sourceView(id) {
   const s = need('purch_source', id, 'source');
   const rows = db().prepare('SELECT t.*, v.name AS vendor FROM purch_transaction t LEFT JOIN purch_vendor v ON v.id = t.vendor_id WHERE t.source_id = ? ORDER BY t.row_index').all(id)
-    .map(r => ({ ...r, amount_display: money(r.amount, r.currency) }));
+    .map(r => ({ ...r, amount_display: money(r.amount, r.currency), suggested: suggestionFor(r) }));
   return { ...s, opening_display: money(s.opening_balance, s.currency), closing_display: money(s.closing_balance, s.currency), reconciled: true, rows, unreviewed: rows.filter(r => r.status === 'unreviewed').length };
 }
 
@@ -157,7 +200,8 @@ function vocabulary() {
     .map(v => ({ ...v, aliases: db().prepare('SELECT alias FROM purch_vendor_alias WHERE vendor_id = ?').all(v.id).map(a => a.alias) }));
   const subs = db().prepare("SELECT s.id, v.name AS vendor, s.cadence, s.amount, s.currency, s.status FROM purch_subscription s JOIN purch_vendor v ON v.id = s.vendor_id ORDER BY v.name").all();
   const unreviewed = db().prepare("SELECT COUNT(*) n FROM purch_transaction WHERE status = 'unreviewed'").get().n;
-  return { statuses, cadences: ['weekly', 'monthly', 'yearly'], categories, vendors, subscriptions: subs, unreviewed,
+  const standing = activeRules().map(r => ({ id: r.id, label: r.label, category: r.category, status: r.status, window: windowText(r), match: r.match || null, vendor: r.vendor || null }));
+  return { statuses, cadences: ['weekly', 'monthly', 'yearly'], categories, vendors, subscriptions: subs, rules: standing, unreviewed,
     note: categories.length ? 'Propose from these categories and vendors first; a new word is fine when nothing fits, but say it is new.' : 'No categories yet — propose plain words and let the person rename them before writing.' };
 }
 
@@ -260,4 +304,4 @@ function mappableKeys() {
   return { categories: [...new Set(cats.map(c => c.k))].sort(), sources: [...new Set(srcs.map(s => (s.k || `${s.kind} (unnamed)`).trim()))].sort() };
 }
 
-module.exports = { splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };
+module.exports = { activeRules, ruleMatches, suggestionFor, ruleView, rules, windowText, splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };

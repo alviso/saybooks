@@ -152,6 +152,7 @@
   .pill.shipped, .pill.went, .pill.closed, .pill.paid, .pill.accepted, .pill.active, .pill.purchase, .pill.matched, .pill.won { background:var(--tint); color:var(--accent2) }
   .pill.lapsed, .pill.missed, .pill.unreviewed, .pill.researching { background:var(--sun-soft); color:#7A5A00 }
   .pill.draft { background:#EFEBE3; color:#5D6472 }
+  .pill.sugg { background:transparent; color:var(--accent2); box-shadow:inset 0 0 0 1.5px var(--leaf); border:none }
   .who.human { background:var(--sky); color:var(--sky-ink) }
   .connect { border-radius:14px; border-left-color:var(--agent) }
   .modico { width:40px; height:40px; border-radius:12px; background:var(--tint); color:var(--accent); display:grid; place-items:center; flex:none }
@@ -223,7 +224,7 @@ const NAV = [
   { key: 'crm', label: 'CRM', prefix: 'crm_', tabs: [['today', 'Today'], ['campaigns', 'Campaigns'], ['accounts', 'Accounts'], ['crmcontacts', 'Contacts'], ['crmdrafts', 'Drafts'], ['crmcal', 'Calendar'], ['crmpipeline', 'Pipeline'], ['network', 'Network'], ['crmactivity', 'Activity']] },
   { key: 'pros', label: 'Prospects', prefix: 'pros_', tabs: [['prospulls', 'Pulls'], ['prosrows', 'Staged rows']] },
   { key: 'hunt', label: 'Job hunt', prefix: 'hunt_', tabs: [['huntdue', 'Due'], ['huntpipeline', 'Pipeline'], ['huntcontacts', 'Contacts'], ['huntresumes', 'Resumes']] },
-  { key: 'purch', label: 'Personal finances', prefix: 'purch_', tabs: [['purchover', 'Overview'], ['purchtx', 'Transactions'], ['purchsubs', 'Subscriptions'], ['purchrec', 'Receipts'], ['purchsrc', 'Statements']] },
+  { key: 'purch', label: 'Personal finances', prefix: 'purch_', tabs: [['purchover', 'Overview'], ['purchtx', 'Transactions'], ['purchrules', 'Rules'], ['purchsubs', 'Subscriptions'], ['purchrec', 'Receipts'], ['purchsrc', 'Statements']] },
   { key: 'bridge', label: 'Ledger', prefix: 'bridge_', tabs: [['journal', 'Journal'], ['bridgeexport', 'Export'], ['bridgeaccounts', 'Account map'], ['bridgeexports', 'Hand-overs']] },
   { sep: true },
   { key: 'company', label: 'Company', tabs: [['company', 'Company']], when: () => REG.commands.some(c => c.name.startsWith('o2c_') || c.name.startsWith('solo_')) },
@@ -448,7 +449,7 @@ async function detail(type, id) {
   const wrap = $('<div></div>');
   const idArg = type === 'solo_invoice' ? 'invoice_id' : type === 'crm_contact' ? 'contact_id' : type.startsWith('purch_') ? type.slice(6) + '_id' : type + '_id';
   const [entity, na] = await Promise.all([
-    api({ order:'o2c_get_order', customer: cmd('o2c_get_customer') ? 'o2c_get_customer' : 'core_get_customer', invoice:'o2c_get_invoice', account:'crm_get_account', campaign:'crm_get_campaign', posting:'hunt_get_posting', contact:'hunt_get_contact', resume:'hunt_get_resume', solo_invoice:'solo_get_invoice', purch_transaction:'purch_get_transaction', purch_receipt:'purch_get_receipt', purch_subscription:'purch_get_subscription', purch_source:'purch_source', crm_contact:'crm_get_contact' }[type],
+    api({ order:'o2c_get_order', customer: cmd('o2c_get_customer') ? 'o2c_get_customer' : 'core_get_customer', invoice:'o2c_get_invoice', account:'crm_get_account', campaign:'crm_get_campaign', posting:'hunt_get_posting', contact:'hunt_get_contact', resume:'hunt_get_resume', solo_invoice:'solo_get_invoice', purch_transaction:'purch_get_transaction', purch_receipt:'purch_get_receipt', purch_subscription:'purch_get_subscription', purch_rule:'purch_get_rule', purch_source:'purch_source', crm_contact:'crm_get_contact' }[type],
         { [idArg]: id }),
     fetch(wsUrl(`/api/next-actions?type=${type}&id=${id}`)).then(r => r.json()),
   ]);
@@ -473,6 +474,8 @@ async function detail(type, id) {
     ? { Vendor: entity.vendor ?? '—', Date: entity.date, Total: entity.total_display, File: entity.name, Matched: entity.transaction_id ?? 'no', ...(entity.note ? { Note: entity.note } : {}) }
     : type === 'purch_subscription'
     ? { Vendor: entity.vendor, Cadence: entity.cadence, Expected: entity.amount_display, Status: entity.derived_status, 'Matched periods': entity.matched_periods, 'Missed periods': entity.missed_periods, 'Next expected': entity.next_expected ?? '—', 'Last charge': entity.last_charge ? `${entity.last_charge.date} (${entity.last_charge.transaction_id})` : '—', ...(entity.cancel_reason ? { Cancelled: entity.cancel_reason } : {}) }
+    : type === 'purch_rule'
+    ? { Suggests: `${entity.category} (${entity.status})`, When: entity.window, 'Words to match': entity.match ?? '—', Vendor: entity.vendor ?? '—', 'Suggesting for': `${entity.suggesting} unreviewed row${entity.suggesting === 1 ? '' : 's'}`, State: entity.state === 'ended' ? `ended ${String(entity.ended_at || '').slice(0, 10)}: ${entity.end_reason || ''}` : 'active', ...(entity.reason ? { 'What was said': entity.reason } : {}) }
     : type === 'purch_source'
     ? { Account: entity.account ?? '—', Kind: entity.kind, Period: `${entity.period_start} – ${entity.period_end}`, Opening: entity.opening_display, Closing: entity.closing_display, Rows: `${entity.rows_in} in${entity.rows_skipped ? `, ${entity.rows_skipped} skipped` : ''}`, Unreviewed: entity.unreviewed, 'Imported by': entity.imported_by, Hash: `<code style="font-size:11px">${entity.hash}</code>` }
     : type === 'crm_contact'
@@ -741,6 +744,10 @@ async function detail(type, id) {
     const t = $('<table><thead><tr><th>Part</th><th>Category</th><th class="num">Amount</th><th>Note</th></tr></thead><tbody></tbody></table>');
     entity.split.forEach((l, i) => t.querySelector('tbody').append($(`<tr><td>${i + 1}</td><td>${l.category}</td><td class="num">${l.amount_display}</td><td style="color:var(--dim)">${l.note || ''}</td></tr>`)));
     wrap.append($('<div class="sub" style="margin-top:14px">Split into ' + entity.split.length + ' parts — the row itself is unchanged</div>'), t);
+  }
+  if (type === 'purch_rule' && entity.rows && entity.rows.length) {
+    const t = $('<table><thead><tr><th>Row</th><th>Date</th><th>Description</th><th class="num">Amount</th></tr></thead><tbody></tbody></table>');
+    wrap.append($('<div class="sub" style="margin-top:14px">Waiting for your confirmation: suggested as ' + esc(entity.category) + '</div>'), fillRows(t, entity.rows, r => `<td>${r.id}</td><td>${r.date}</td><td>${esc(r.description)}</td><td class="num">${r.amount_display}</td>`, 'purch_transaction'));
   }
   if (type === 'purch_subscription' && entity.periods) {
     const t = $('<table><thead><tr><th>Expected</th><th>Result</th><th>Charged on</th><th class="num">Amount</th></tr></thead><tbody></tbody></table>');
@@ -1727,9 +1734,19 @@ async function renderPage() {
     const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('purch_source').forEach(b => bar.append(b)); main.append(bar);
     const tx = await api('purch_transactions', { limit: 500 });
     if (!tx.count) { main.append($('<div class="card doc" style="max-width:560px">No rows yet — import a statement.</div>')); return; }
-    main.append($(`<div class="sub" style="margin:0 0 10px">${tx.count} rows · ${tx.unreviewed} unreviewed · spending ${Object.values(tx.spend_by_currency).map(x => x.amount_display).join(' · ') || '—'}</div>`));
+    main.append($(`<div class="sub" style="margin:0 0 10px">${tx.count} rows · ${tx.unreviewed} unreviewed${tx.suggested ? ` · ${tx.suggested} suggested by a rule` : ''} · spending ${Object.values(tx.spend_by_currency).map(x => x.amount_display).join(' · ') || '—'}</div>`));
     const t = $('<table><thead><tr><th>Row</th><th>Date</th><th>Description</th><th>Vendor</th><th>Category</th><th>Status</th><th class="num">Amount</th><th>Receipt</th></tr></thead><tbody></tbody></table>');
-    rowsInto(t, tx.items, r => `<td>${r.id}</td><td style="font-size:12px">${r.date}</td><td>${r.description}</td><td>${r.vendor || ''}</td><td>${r.category || ''}</td><td><span class="pill ${r.status}">${r.status}</span></td><td class="num" style="${r.amount > 0 ? 'color:var(--ok, #3E6B2B)' : ''}">${r.amount_display}</td><td>${r.has_receipt ? '✓' : ''}</td>`, 'purch_transaction');
+    rowsInto(t, tx.items, r => `<td>${r.id}</td><td style="font-size:12px">${r.date}</td><td>${r.description}</td><td>${r.vendor || ''}</td><td>${r.category || (r.suggested ? `<span class="pill sugg" title="Suggested by ${esc(r.suggested.rule_label)} (${r.suggested.rule_id}); confirm in review">${esc(r.suggested.category)}?</span>` : '')}</td><td><span class="pill ${r.status}">${r.status}</span></td><td class="num" style="${r.amount > 0 ? 'color:var(--ok, #3E6B2B)' : ''}">${r.amount_display}</td><td>${r.has_receipt ? '✓' : ''}</td>`, 'purch_transaction');
+    main.append(t);
+  }
+  if (view === 'purchrules') {
+    head('Standing rules', 'What you said ahead of time, like "the next five days are the Texas conference, book it to travel". A rule suggests; nothing is booked until you confirm.');
+    const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('purch_rule').forEach(b => bar.append(b)); main.append(bar);
+    const rl = await api('purch_rules', { include_ended: true });
+    if (!rl.count) { main.append($('<div class="card doc" style="max-width:620px">No rules yet. Tell your agent something like "I\'m at the Texas conference the next five days, book it to travel", or press Add standing rule.</div>')); return; }
+    main.append($(`<div class="sub" style="margin:0 0 10px">${rl.active} active · suggesting for ${rl.suggesting} unreviewed row${rl.suggesting === 1 ? '' : 's'}</div>`));
+    const t = $('<table><thead><tr><th>Rule</th><th>Name</th><th>Suggests</th><th>When</th><th>Words</th><th class="num">Suggesting</th><th>State</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, rl.items, r => `<td>${r.id}</td><td>${esc(r.label)}</td><td><span class="pill sugg">${esc(r.category)}</span> <span style="color:var(--dim);font-size:12px">${r.status}</span></td><td style="font-size:12.5px">${r.window}</td><td style="font-size:12.5px">${esc(r.match || r.vendor || '')}</td><td class="num">${r.suggesting}</td><td><span class="pill ${r.state === 'active' ? 'active' : 'draft'}">${r.state}</span></td>`, 'purch_rule');
     main.append(t);
   }
   if (view === 'purchsubs') {

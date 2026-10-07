@@ -1,6 +1,6 @@
 {
   "area": "purchases",
-  "spec": "0.3",
+  "spec": "0.4",
   "doc": "spec.md",
   "acts": {
     "import_statement": {
@@ -127,6 +127,30 @@
       "required": [
         "transaction"
       ]
+    },
+    "add_rule": {
+      "kind": "write",
+      "required": [
+        "label",
+        "category"
+      ]
+    },
+    "end_rule": {
+      "kind": "write",
+      "required": [
+        "rule",
+        "reason"
+      ]
+    },
+    "accept_suggestions": {
+      "kind": "write",
+      "required": [
+        "reason"
+      ]
+    },
+    "rules": {
+      "kind": "read",
+      "required": []
     }
   },
   "invariants": [
@@ -165,6 +189,10 @@
     {
       "id": "P-9",
       "title": "Files never live here: a source or a receipt is its hash, its metadata and what was read."
+    },
+    {
+      "id": "P-11",
+      "title": "A standing rule suggests and never books: matching rows stay unreviewed with the suggestion until a reasoned review confirms them; ending a rule removes its suggestions and changes no reviewed row."
     }
   ]
 }

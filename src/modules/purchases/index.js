@@ -11,13 +11,14 @@ const H = require('../../db.js');
 
 const mod = R.defineModule({
   name: 'purchases', prefix: 'purch',
-  tables: ['purch_source', 'purch_vendor', 'purch_vendor_alias', 'purch_transaction', 'purch_split', 'purch_receipt', 'purch_subscription'],
-  ids: { source: 'SRC-0001', transaction: 'T-0001', vendor: 'V-0001', receipt: 'R-0001', subscription: 'SUB-0001' },
+  tables: ['purch_source', 'purch_vendor', 'purch_vendor_alias', 'purch_transaction', 'purch_split', 'purch_receipt', 'purch_subscription', 'purch_rule'],
+  ids: { source: 'SRC-0001', transaction: 'T-0001', vendor: 'V-0001', receipt: 'R-0001', subscription: 'SUB-0001', rule: 'RL-0001' },
   lifecycles: {
     source: 'imported whole (reconciled to its control totals) — immutable; the same hash never twice',
     transaction: 'unreviewed -> purchase | recurring | transfer | income | fee | ignored (a reasoned act; amount and date never change) -> optionally split into legs that add to it exactly',
     subscription: 'active (declared) -> cancelled (reasoned); lapsed is DERIVED from two missed periods, never stored',
     receipt: 'unmatched -> matched to exactly one transaction (reasoned) -> unmatched again (reasoned)',
+    rule: 'active (suggests a category on matching unreviewed rows) -> ended (reasoned); it never books a row',
   },
   rules: [
     'A statement is accepted whole or not at all: rows must reconcile to the printed opening balance, closing balance and row count.',
@@ -26,6 +27,7 @@ const mod = R.defineModule({
     'Category, vendor and status are empty until an act with a reason sets them.',
     'A subscription is declared, then confirmed by the record; a missing charge shows as missed, never assumed.',
     'Files never live here — a source or a receipt is its hash and its facts.',
+    'A standing rule suggests, never books: matching rows stay unreviewed until a person confirms them.',
   ],
   doctrine: `AGENT FIRST. You read the file — bank statement, card statement, receipt photo —
 and hand over what it says. The module checks it and keeps it. Nothing here parses.
@@ -64,20 +66,27 @@ Receipts: purch_add_receipt with what the receipt says (vendor, date, total, cur
 file's name and hash; candidates come back. purch_match_receipt is a reasoned act and is
 refused when the total does not fit — say why if it truly does (override).
 
+Standing rules: when the person says something ahead of time ("the next five days are the Texas
+conference, book it to travel"), record it with purch_add_rule, real dates in place of relative
+ones. Matching rows then carry a suggestion (purch_transactions shows it as suggested; the
+import result counts them). A rule never books: propose its suggestions with the rest of the
+review, and once the person confirms, write them with purch_accept_suggestions or in the batch.
+
 Subscriptions: purch_declare_subscription from a charge you have seen; the record then
 confirms it month by month. A missed period is shown, never assumed; two make it lapsed.
 Money is integer minor units; sums are per currency and never cross.`,
   env_acts: { import_statement: 'purch_import_statement', review_batch: 'purch_review_batch', review_transaction: 'purch_review_transaction', set_vendor: 'purch_set_vendor' },
   env_argmap: { transaction: 'transaction_id' },
   implements: {
-    area: 'purchases', spec: '0.3',
-    argmap: { transaction: 'transaction_id', receipt: 'receipt_id', subscription: 'subscription_id', source: 'source_id' },
+    area: 'purchases', spec: '0.4',
+    argmap: { transaction: 'transaction_id', receipt: 'receipt_id', subscription: 'subscription_id', source: 'source_id', rule: 'rule_id' },
     acts: {
       import_statement: 'purch_import_statement', discard_source: 'purch_discard_source', review_transaction: 'purch_review_transaction', review_batch: 'purch_review_batch', split_transaction: 'purch_split_transaction', set_vendor: 'purch_set_vendor', vocabulary: 'purch_vocabulary', rename_category: 'purch_rename_category',
       add_receipt: 'purch_add_receipt', match_receipt: 'purch_match_receipt', unmatch_receipt: 'purch_unmatch_receipt',
       declare_subscription: 'purch_declare_subscription', cancel_subscription: 'purch_cancel_subscription',
       sources: 'purch_sources', source: 'purch_source', transactions: 'purch_transactions', purchases: 'purch_purchases',
       subscriptions: 'purch_subscriptions', receipts: 'purch_receipts', spend: 'purch_spend',
+      add_rule: 'purch_add_rule', end_rule: 'purch_end_rule', accept_suggestions: 'purch_accept_suggestions', rules: 'purch_rules',
     },
   },
   api: { views: V, journalLines: V.journalLines, journalOmitted: V.journalOmitted, mappableKeys: V.mappableKeys },
@@ -87,6 +96,7 @@ R.defineSubject('purch_transaction', { load: (id) => V.transactionView(id) });
 R.defineSubject('purch_receipt', { load: (id) => V.receiptView(id) });
 R.defineSubject('purch_subscription', { load: (id) => V.subscriptionView(id) });
 R.defineSubject('purch_source', { load: (id) => H.need('purch_source', id, 'source') });
+R.defineSubject('purch_rule', { load: (id) => H.need('purch_rule', id, 'rule') });
 
 R.inModule(mod, () => {
   require('./commands/import.js');
@@ -94,6 +104,7 @@ R.inModule(mod, () => {
   require('./commands/split.js');
   require('./commands/receipts.js');
   require('./commands/subscriptions.js');
+  require('./commands/rules.js');
   require('./commands/reads.js');
 });
 

@@ -1,7 +1,8 @@
 # purchases — What You Buy · Area Specification
 
-**Status: 0.3.** A spec on the record before a line of module code, so the shape can be
-argued with. 0.3 makes the statement's own lines the normal path of import_statement.
+**Status: 0.4.** A spec on the record before a line of module code, so the shape can be
+argued with. 0.3 makes the statement's own lines the normal path of import_statement. 0.4 adds
+standing rules: what the person says ahead of time, kept as suggestions, never as bookings.
 
 ## 1. Calibration: who this is for
 
@@ -40,20 +41,29 @@ forecasts, advice, tax treatment of purchases, paying anything.
   expected amount and currency, tolerance, start. Status: active | cancelled | lapsed.
   Confirmed by matches: each period either has a matching purchase, or shows as missed.
   Lapsed is derived (two periods missed), never asserted; cancelled is an act with a reason.
+- **rule** — something the person said ahead of time ("the next five days are the Texas
+  conference, book it to travel"): a label, the category and status it suggests, and what it
+  matches (a date window, words the statement line contains, a vendor, a currency; at least
+  one of window, words or vendor). Status: active | ended, ending is an act with a reason. A
+  rule never books a row: it suggests, and the suggestion is computed when rows are read, so
+  ending a rule removes its suggestions and leaves every reviewed row as the person confirmed it.
 - **receipt** — an attachment the person gave the agent: file name, hash, vendor, date, total,
   currency. Matched to at most one transaction, by an act with a reason; unmatched is a
   visible state, not an error.
 
 ## 4. The acts
 
-Writes (12): import_statement, split_transaction (one row broken into legs that add to it
+Writes (15): import_statement, split_transaction (one row broken into legs that add to it
 exactly), rename_category (one word changed on every row that
 carries it), discard_source (a wrong read thrown out whole, with a
 reason, its hash freed), review_transaction, review_batch (many rows, one reasoned
 act, validated whole), set_vendor, add_receipt, match_receipt, declare_subscription,
-cancel_subscription, unmatch_receipt. Reads (8): vocabulary (the statuses with their meaning,
-the person's categories and vendors — what an agent proposes from), sources, transactions,
-purchases, subscriptions, receipts, spend, source.
+cancel_subscription, unmatch_receipt, add_rule (a standing rule, with its window, words or
+vendor), end_rule (with a reason), accept_suggestions (confirm what rules suggest, one reasoned
+act, rows the person rejects left out). Reads (9): vocabulary (the statuses with their meaning,
+the person's categories, vendors and active rules — what an agent proposes from), sources,
+transactions (each unreviewed row with the suggestion a rule makes for it), purchases,
+subscriptions, receipts, spend, source, rules.
 
 ## 5. Invariants
 
@@ -76,6 +86,14 @@ purchases, subscriptions, receipts, spend, source.
 - **P-10** One row may break into several categories, and the legs must add to the row exactly
   or the split is refused with the gap named. The row's own amount, date and provenance never
   move: the statement said what it said, and a breakdown is an annotation on top of it.
+- **P-11** A standing rule suggests and never books. A row a rule matches stays unreviewed and
+  carries the suggestion, the rule's name and id, until a review act confirms it; accepting is
+  a review, so it carries a reason and follows the person's confirmation. A rule suggesting
+  spending never suggests it for money in, nor income for money out. The most specific rule
+  wins (words, then vendor, then the narrowest window), and other matching rules that say
+  something different are listed with the suggestion. Ending a rule removes its suggestions and
+  changes no reviewed row. A rule must narrow something: one that would match every row is
+  refused, as is a window that ends before it starts.
 - **P-6** A subscription is declared, then confirmed by the record: a period with no
   matching purchase is shown as missed — but only once a statement covering that period has
   been read; before that it is "no statement yet". Two missed periods make it lapsed. A vendor
@@ -110,7 +128,10 @@ rows already present skipped and listed, new rows in · 03 subscriptions: declar
 purchase, confirmed by the next month's charge, missed when it does not come, lapsed after
 two · 04 receipts: added, matched with a reason, a mismatched total refused, unmatched shown ·
 05 splitting: a payroll line broken into wages, employer taxes and the processor's fee; legs
-that do not add up refused with the gap named; the row itself unchanged.
+that do not add up refused with the gap named; the row itself unchanged · 08 standing rules:
+a conference rule recorded before the statement, the statement's rows in the window suggested
+as travel (a refund in the same window not), the suggestions accepted in one act, a second
+accept refused, a rule that narrows nothing refused, the rule ended.
 
 ## 9. Deferred — with reasons
 
@@ -124,7 +145,9 @@ that do not add up refused with the gap named; the row itself unchanged.
 
 ---
 
-*Change log: 0.2 (2026-09-10) — splitting one row into legs that add to it exactly, for payroll
+*Change log: 0.4 (2026-10-07) — standing rules, from Aryeh Munk's phase 1 list ("I am
+traveling these next 5 days for conference, book to Texas conference"), kept as suggestions
+so P-5 still holds. 0.2 (2026-09-10) — splitting one row into legs that add to it exactly, for payroll
 runs and mixed receipts, prompted by a demo session pointing out that one lump to one account
 would annoy a bookkeeper. 0.1-draft (2026-09-06) — drafted from Peter's and Pavan's "my purchases" idea,
 with the agent-first import discipline agreed the same day: no parsers, batch-or-nothing,

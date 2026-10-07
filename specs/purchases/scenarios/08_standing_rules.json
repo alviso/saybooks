@@ -1,0 +1,63 @@
+{
+  "name": "standing rules: said ahead, suggested, confirmed",
+  "spec": "purchases@0.4",
+  "notes": "P-11 a rule suggests and never books; the rows stay unreviewed until a reasoned act confirms them, money in is never suggested as spending, and ending a rule changes no reviewed row.",
+  "env": [],
+  "steps": [
+    {
+      "act": "add_rule",
+      "args": { "label": "Texas conference", "category": "travel", "from": "2026-10-05", "to": "2026-10-09", "reason": "traveling the next five days for the conference" },
+      "expect": { "ok": true, "include": { "suggesting": 0 } },
+      "notes": "recorded before any statement: nothing to suggest yet"
+    },
+    {
+      "act": "add_rule",
+      "args": { "label": "everything", "category": "misc" },
+      "expect": { "refused": "matches every row" },
+      "notes": "P-11 a rule must narrow something"
+    },
+    {
+      "act": "add_rule",
+      "args": { "label": "backwards", "category": "travel", "from": "2026-10-09", "to": "2026-10-05" },
+      "expect": { "refused": "ends before it starts" }
+    },
+    {
+      "act": "import_statement",
+      "args": {
+        "name": "october-card.csv", "hash": "rules-demo-2026-10", "kind": "card", "account": "Visa 4421", "currency": "USD",
+        "period_start": "2026-10-01", "period_end": "2026-10-15", "opening_balance": 0, "closing_balance": -116090, "row_count": 4,
+        "rows": [
+          { "date": "2026-10-05", "amount": -48700, "description": "UNITED AIRLINES 0162", "row_index": 1, "raw": "2026-10-05,UNITED AIRLINES 0162,-487.00" },
+          { "date": "2026-10-06", "amount": -61250, "description": "MARRIOTT AUSTIN DT", "row_index": 2, "raw": "2026-10-06,MARRIOTT AUSTIN DT,-612.50" },
+          { "date": "2026-10-07", "amount": 2500, "description": "AMAZON REFUND", "row_index": 3, "raw": "2026-10-07,AMAZON REFUND,25.00" },
+          { "date": "2026-10-12", "amount": -8640, "description": "SAFEWAY #1290", "row_index": 4, "raw": "2026-10-12,SAFEWAY #1290,-86.40" }
+        ]
+      },
+      "expect": { "ok": true, "include": { "rows_in": 4, "suggested_by_rules": 2 } },
+      "notes": "P-11 the two charges in the window are suggested as travel; the refund in the same window is money in and is not; the grocery run is outside it"
+    },
+    {
+      "act": "rules",
+      "args": {},
+      "expect": { "ok": true, "include": { "active": 1, "suggesting": 2 } }
+    },
+    {
+      "act": "accept_suggestions",
+      "args": { "rule": "RL-0001", "reason": "confirmed: both were the conference trip" },
+      "expect": { "ok": true, "include": { "reviewed": 2, "still_unreviewed": 2 } },
+      "notes": "P-11 accepting is a reasoned review act"
+    },
+    {
+      "act": "accept_suggestions",
+      "args": { "rule": "RL-0001", "reason": "again" },
+      "expect": { "refused": "suggesting nothing" },
+      "notes": "nothing left to accept: the rows it matched are reviewed"
+    },
+    {
+      "act": "end_rule",
+      "args": { "rule": "RL-0001", "reason": "the conference is over" },
+      "expect": { "ok": true, "include": { "ended": true } },
+      "notes": "P-11 ending changes no reviewed row"
+    }
+  ]
+}

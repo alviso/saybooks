@@ -212,12 +212,17 @@ Nothing is categorised here; review follows.`,
       n++;
     });
     db.prepare('UPDATE purch_source SET rows_in = ?, rows_skipped = ? WHERE id = ?').run(n, skipped.length, id);
-    const ids = db.prepare('SELECT id, row_index, date, amount, description FROM purch_transaction WHERE source_id = ? ORDER BY row_index').all(id);
-    return { source: id, name: a.name, hash, currency: cur, reconciled: true, rows_in: n, rows_skipped: skipped.length, skipped,
+    const ids = db.prepare('SELECT id, row_index, date, amount, description, vendor_id FROM purch_transaction WHERE source_id = ? ORDER BY row_index').all(id);
+    // Standing rules the person set ahead of time (P-11): count what they now suggest, so the
+    // review starts from them. A suggestion is not a review; the rows stay unreviewed.
+    const rl = V.activeRules();
+    const suggested = ids.map(t => ({ t, s: V.suggestionFor({ ...t, status: 'unreviewed', currency: cur }, rl) })).filter(x => x.s);
+    const ruleNote = suggested.length ? ` ${suggested.length} row${suggested.length > 1 ? 's' : ''} match${suggested.length > 1 ? '' : 'es'} a standing rule (${[...new Set(suggested.map(x => `${x.s.rule_label}: ${x.s.category}`))].join('; ')}); propose those with the rest and confirm with the person.` : '';
+    return { source: id, name: a.name, hash, currency: cur, reconciled: true, rows_in: n, rows_skipped: skipped.length, skipped, suggested_by_rules: suggested.length,
       // The ids the review step needs, so nobody has to guess them or fetch them again.
-      transactions: ids.map(t => ({ id: t.id, row_index: t.row_index, date: t.date, amount: t.amount, description: t.description })),
+      transactions: ids.map(t => { const sg = suggested.find(x => x.t.id === t.id); return { id: t.id, row_index: t.row_index, date: t.date, amount: t.amount, description: t.description, ...(sg ? { suggested: sg.s } : {}) }; }),
       spend: H.money(-rows.filter(r => r.amount < 0).reduce((s, r) => s + r.amount, 0), cur), money_in: H.money(rows.filter(r => r.amount > 0).reduce((s, r) => s + r.amount, 0), cur),
-      note: `Accepted whole: ${rows.length} rows reconcile to ${H.money(a.opening_balance, cur)} → ${H.money(a.closing_balance, cur)}.${skipped.length ? ` ${skipped.length} already on record, skipped (listed).` : ''} NEXT: read purch_vocabulary (the statuses and the person's own categories and vendors), propose a status, a category and a vendor for every row listed here, show the person the whole table, and once they have answered write it in one purch_review_batch with their confirmation as the reason. A row marked recurring must carry its vendor.` };
+      note: `Accepted whole: ${rows.length} rows reconcile to ${H.money(a.opening_balance, cur)} → ${H.money(a.closing_balance, cur)}.${skipped.length ? ` ${skipped.length} already on record, skipped (listed).` : ''}${ruleNote} NEXT: read purch_vocabulary (the statuses and the person's own categories and vendors), propose a status, a category and a vendor for every row listed here, show the person the whole table, and once they have answered write it in one purch_review_batch with their confirmation as the reason. A row marked recurring must carry its vendor.` };
   },
 });
 
