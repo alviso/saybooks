@@ -115,7 +115,7 @@
       "act": "preview",
       "args": {
         "format": "csv",
-        "to": "2026-12-31"
+        "to": "2099-12-31"
       },
       "expect": {
         "ok": true,
@@ -129,7 +129,7 @@
       "act": "export",
       "args": {
         "format": "qbo",
-        "to": "2026-12-31",
+        "to": "2099-12-31",
         "reason": "August for their QuickBooks"
       },
       "expect": {
@@ -222,7 +222,7 @@
       "act": "preview",
       "args": {
         "format": "qbo",
-        "to": "2026-12-31"
+        "to": "2099-12-31"
       },
       "expect": {
         "ok": true,
@@ -237,7 +237,7 @@
       "act": "export",
       "args": {
         "format": "qbo",
-        "to": "2026-12-31",
+        "to": "2099-12-31",
         "reason": "August for their QuickBooks"
       },
       "expect": {

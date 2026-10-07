@@ -78,7 +78,7 @@
       "act": "export",
       "args": {
         "format": "xero",
-        "to": "2026-09-30",
+        "to": "2099-12-31",
         "reason": "September"
       },
       "expect": {
@@ -92,7 +92,7 @@
       "act": "export",
       "args": {
         "format": "xero",
-        "to": "2026-09-30",
+        "to": "2099-12-31",
         "reason": "sent it twice by mistake"
       },
       "expect": {
@@ -105,7 +105,7 @@
       "args": {
         "format": "xero",
         "from": "2026-01-01",
-        "to": "2026-09-30",
+        "to": "2099-12-31",
         "reason": "their import failed, sending again"
       },
       "expect": {
@@ -120,7 +120,7 @@
       "act": "export",
       "args": {
         "format": "csv",
-        "to": "2026-09-30",
+        "to": "2099-12-31",
         "reason": "a copy for the workpapers"
       },
       "expect": {
