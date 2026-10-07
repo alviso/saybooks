@@ -174,7 +174,7 @@ function transferKind(name, statementNames) {
   const n = String(name || '').toLowerCase();
   if (statementNames.has(n)) return 'statement';
   if (/draw|owner|distribution|personal/.test(n)) return 'equity';
-  if (/saving|brokerage|invest|deposit|reserve/.test(n)) return 'asset';
+  if (/saving|brokerage|invest|deposit|reserve|checking|current account|bank/.test(n)) return 'asset';
   if (/loan|mortgage|credit line|line of credit/.test(n)) return 'liability';
   return 'unclassified';
 }
@@ -195,6 +195,7 @@ function financials(a) {
   // Money received against invoices posts to Cash; it landed in the bank. With exactly one bank
   // account on record, Cash is that account, so the bank figure can tie to its statement.
   const foldCash = banks.length === 1 ? banks[0].account : null;
+  const partial = new Set();   // accounts known only from transfers into or out of them
   const classify = (l) => {
     const h = l.map || { kind: 'derivation', key: l.account };
     if (h.kind === 'source') return { kind: 'statement', name: l.account };
@@ -202,6 +203,7 @@ function financials(a) {
       if (h.role === 'expense') return { kind: 'expense', name: l.account };
       if (h.role === 'income') return { kind: 'income', name: l.account };
       const k = transferKind(l.account, stmtNames);
+      if (k === 'asset' || k === 'liability') partial.add(l.account);
       return { kind: k, name: k === 'statement' ? mine.find(s => s.account.toLowerCase() === l.account.toLowerCase()).account : l.account };
     }
     if (l.account === 'Cash' && foldCash) return { kind: 'statement', name: foldCash, folded: true };
@@ -270,6 +272,7 @@ function financials(a) {
   const cashLines = all.entries.some(e => e.currency === cur && e.lines.some(l => l.account === 'Cash' && !l.map));
   if (foldCash && cashLines) notes.push(`Payments recorded against invoices are counted in ${foldCash}, where they landed.`);
   else if (bs.some(x => x.kind === 'asset' && x.account === 'Cash' && x.d)) notes.push('Cash is money recorded as received against invoices; the accountant maps it to the bank account it went into.');
+  for (const n of partial) if (bs.some(x => x.account === n && x.d)) notes.push(`${n} holds only the transfers recorded against it here; import its statements and it starts from its real balance.`);
   for (const t of ties) if (!t.ties) notes.push(`${t.account}: ${t.note}`);
   notes.push('Not included: cost of goods, inventory, depreciation, accruals and other adjustments the accountant makes at the close.');
 

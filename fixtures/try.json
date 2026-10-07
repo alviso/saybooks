@@ -811,7 +811,8 @@
     },
     {
      "transaction_id": "T-0007",
-     "status": "transfer"
+     "status": "transfer",
+     "category": "Business Checking"
     },
     {
      "transaction_id": "T-0008",
