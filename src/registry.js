@@ -302,7 +302,8 @@ function execute(name, args = {}, ctx = {}) {
   const argReason = args && typeof args.reason === 'string' && args.reason.trim() ? args.reason.trim() : null;
   const who = { actor: ctx.actor || 'unknown', actor_kind: ctx.actor_kind || 'human', session: ctx.session || null, reason: ctx.reason || argReason || null, modules: ctx.modules || null };
   const role = ctx.role || 'owner';
-  const at = new Date().toISOString();
+  // When a scenario or a fixture sets the day (H.withClock), acts are stamped on that day too.
+  const at = require('./db.js').clockStamp() || new Date().toISOString();
 
   return wsp.use(ctx.workspace, () => {
     const db = wsp.db();

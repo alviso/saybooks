@@ -235,12 +235,16 @@ function financials(a) {
   const get = (kind, name) => bs.find(x => x.kind === kind && x.account === name) || { d: 0 };
   const assets = [], liabilities = [], equity = [], unclassified = [], ties = [];
   let opening = 0;
+  // Movements dated before an account's first statement are already inside that statement's
+  // printed opening balance: they count toward opening balance equity, not on top of it.
+  const moved = (s, test) => D(cur, all.entries.filter(test)).filter(x => x.kind === 'statement' && x.account === s.account).reduce((n, x) => n + x.d, 0);
   for (const s of mine) {
-    const books = s.opening + get('statement', s.account).d;
-    opening += s.opening;
+    const before = moved(s, e => e.date < s.first_start);
+    const books = s.opening + get('statement', s.account).d - before;
+    opening += s.opening - before;
     const last = s.statements.filter(x => x.period_end <= per.to).pop();
     if (last) {
-      const at = s.opening + D(cur, all.entries.filter(e => e.date <= last.period_end)).filter(x => x.kind === 'statement' && x.account === s.account).reduce((n, x) => n + x.d, 0);
+      const at = s.opening + moved(s, e => e.date >= s.first_start && e.date <= last.period_end);
       ties.push({ account: s.account, statement_through: last.period_end, printed: last.closing, books: at, ties: at === last.closing,
         note: at === last.closing ? `Ties to the statement through ${last.period_end}.` : `Differs from the statement through ${last.period_end} by ${money(last.closing - at, cur)}: usually rows not reviewed yet, or a transfer with no other side named.` });
     }

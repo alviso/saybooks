@@ -77,7 +77,7 @@ function walkPlan(area, file) {
     const entry = table[st.act];
     return { phase, act: st.act, command: entry ? entry.command : null,
       args: entry ? mapArgs(st.args || {}, entry.argmap) : (st.args || {}),
-      expect: st.expect || { ok: true }, notes: st.notes || null };
+      expect: st.expect || { ok: true }, notes: st.notes || null, ...(st.today ? { today: st.today } : {}) };
   };
   const steps = [
     ...(scenario.env || []).map(e => mk('env')(e)),
@@ -115,7 +115,7 @@ function walkStep(area, file, index, ws, { actor = 'walkthrough' } = {}) {
   const plan = walkPlan(area, file);
   if (index < 0 || index >= plan.steps.length) throw new Error(`step ${index} out of range 0..${plan.steps.length - 1}`);
   if (index === 0) wsp.wipe(ws);
-  const row = require('./db.js').withClock(loadScenario(area, file).today, () => judge(plan.steps[index],
+  const row = require('./db.js').withClock(plan.steps[index].today || loadScenario(area, file).today, () => judge(plan.steps[index],
     { workspace: ws, actor, actor_kind: 'agent', session: `walk:${file}` }));
   return { file, name: plan.name, index, total: plan.steps.length, done: index === plan.steps.length - 1, ...row };
 }
@@ -132,7 +132,8 @@ function runScenario(area, file, { actor = 'conformance', wsSuffix = '' } = {}) 
   let pass = true;
   require('./db.js').withClock(scenario.today, () => {
     for (const step of plan.steps) {
-      const row = judge(step, ctx);
+      // A step may run on an earlier day than the scenario's (an invoice issued six weeks back).
+      const row = step.today ? require('./db.js').withClock(step.today, () => judge(step, ctx)) : judge(step, ctx);
       if (!row.pass) pass = false;
       evidence.push(row);
     }

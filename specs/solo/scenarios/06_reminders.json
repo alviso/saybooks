@@ -2,38 +2,269 @@
   "name": "reminders: drafted, checked, sent by a person",
   "spec": "solo@0.3",
   "today": "2099-01-15",
-  "notes": "S-13 a reminder is a draft the freelancer sends; its figures are the invoice's own, and a send is recorded only with the day it went. The scenario's clock stands at 2099-01-15, so an invoice issued now is overdue.",
+  "notes": "S-13 a reminder is a draft the freelancer sends; its figures are the invoice's own, and a send is recorded only with the day it went. The scenario's clock stands at 2099-01-15; the invoice was issued on 2098-12-01 on net 30, so it is two weeks overdue.",
   "env": [
-    ["set_company_profile", { "name": "Vega Consulting", "address": "12 Oak Lane, Portland, OR 97205", "country": "US", "currency": "USD", "tax_registered": false, "payment_instructions": "ACH to First Federal 026009593 / 5550123." }, "the seller block"],
-    ["create_customer", { "name": "Meridian Logistics", "email": "ap@meridian.example", "terms": "net30", "address": "400 Harbor Blvd, Suite 210, Tacoma, WA 98402" }, "the client"]
+    [
+      "set_company_profile",
+      {
+        "name": "Vega Consulting",
+        "address": "12 Oak Lane, Portland, OR 97205",
+        "country": "US",
+        "currency": "USD",
+        "tax_registered": false,
+        "payment_instructions": "ACH to First Federal 026009593 / 5550123."
+      },
+      "the seller block"
+    ],
+    [
+      "create_customer",
+      {
+        "name": "Meridian Logistics",
+        "email": "ap@meridian.example",
+        "terms": "net30",
+        "address": "400 Harbor Blvd, Suite 210, Tacoma, WA 98402"
+      },
+      "the client"
+    ]
   ],
   "steps": [
-    { "act": "draft_invoice", "args": { "customer": "C-0001", "lines": [ { "description": "Consulting", "qty": 4, "rate": 25000 } ] }, "expect": { "ok": true } },
-    { "act": "issue_invoice", "args": { "invoice": "INV-0001" }, "expect": { "ok": true } },
-    { "act": "record_payment", "args": { "customer": "C-0001", "amount": 40000, "method": "bank", "reference": "MER-7" }, "expect": { "ok": true } },
-    { "act": "apply_payment", "args": { "payment": "P-0001", "invoice": "INV-0001" }, "expect": { "ok": true } },
-    { "act": "draft_invoice", "args": { "customer": "C-0001", "lines": [ { "description": "Workshop", "qty": 1, "rate": 120000 } ] }, "expect": { "ok": true } },
-    { "act": "draft_reminder", "args": { "invoice": "INV-0002", "subject": "INV-0002", "body": "INV-0002 has $1,200.00 open." },
-      "expect": { "refused": "only an issued invoice" }, "notes": "S-13 a draft is not owed yet" },
-    { "act": "draft_reminder", "args": { "invoice": "INV-0001", "subject": "Overdue: INV-0001", "body": "Hi, INV-0001 has $600.00 open, plus a $25.00 late fee." },
-      "expect": { "refused": "never add a fee" }, "notes": "S-13 no amount the invoice does not have" },
-    { "act": "draft_reminder", "args": { "invoice": "INV-0001", "subject": "Overdue: INV-0001", "body": "Hi, just a nudge on INV-0001 when you get a moment." },
-      "expect": { "refused": "Say what is owed" } },
-    { "act": "draft_reminder", "args": { "invoice": "INV-0001", "subject": "Overdue: INV-0001", "body": "Hi [client name], INV-0001 has $600.00 open." },
-      "expect": { "refused": "placeholder" } },
-    { "act": "draft_reminder", "args": { "invoice": "INV-0001", "subject": "A quick reminder about INV-0001", "body": "Hi Meridian team,\n\nA quick reminder that invoice INV-0001 has $600.00 still open of $1,000.00, after your payment of $400.00. Thank you for that. Could you let me know when to expect the rest?\n\nThanks,\nPeter" },
-      "expect": { "ok": true, "include": { "status": "draft", "stage": 1 } }, "notes": "S-13 the open amount, the total and what was paid are the invoice's own figures" },
-    { "act": "draft_reminder", "args": { "invoice": "INV-0001", "subject": "INV-0001", "body": "INV-0001 has $600.00 open." },
-      "expect": { "refused": "already waiting" } },
-    { "act": "reminder_outcome", "args": { "reminder": "REM-0001", "outcome": "sent" }, "expect": { "refused": "Say when it went" } },
-    { "act": "reminder_outcome", "args": { "reminder": "REM-0001", "outcome": "sent", "sent_at": "2099-01-20" }, "expect": { "refused": "has not happened yet" } },
-    { "act": "reminder_outcome", "args": { "reminder": "REM-0001", "outcome": "sent", "sent_at": "2099-01-14" }, "expect": { "ok": true, "include": { "status": "sent", "sent_at": "2099-01-14" } } },
-    { "act": "draft_reminder", "args": { "invoice": "INV-0001", "subject": "Following up on INV-0001", "body": "Following up on INV-0001: $600.00 is still open." },
-      "expect": { "refused": "less than 7 days" }, "notes": "S-13 another within the week needs a reason" },
-    { "act": "draft_reminder", "args": { "invoice": "INV-0001", "subject": "Following up on INV-0001", "body": "Following up on INV-0001: $600.00 is still open.", "soon_because": "their AP closes the month on Friday" },
-      "expect": { "ok": true, "include": { "stage": 2 } } },
-    { "act": "reminder_outcome", "args": { "reminder": "REM-0002", "outcome": "discarded" }, "expect": { "refused": "needs a reason" } },
-    { "act": "reminder_outcome", "args": { "reminder": "REM-0002", "outcome": "discarded", "reason": "they called and paid by card" }, "expect": { "ok": true, "include": { "status": "discarded" } } },
-    { "act": "reminders", "args": {}, "expect": { "ok": true, "include": { "count": 2, "drafts": 0 } } }
+    {
+      "act": "draft_invoice",
+      "args": {
+        "customer": "C-0001",
+        "lines": [
+          {
+            "description": "Consulting",
+            "qty": 4,
+            "rate": 25000
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      },
+      "today": "2098-12-01"
+    },
+    {
+      "act": "issue_invoice",
+      "args": {
+        "invoice": "INV-0001"
+      },
+      "expect": {
+        "ok": true
+      },
+      "today": "2098-12-01"
+    },
+    {
+      "act": "record_payment",
+      "args": {
+        "customer": "C-0001",
+        "amount": 40000,
+        "method": "bank",
+        "reference": "MER-7"
+      },
+      "expect": {
+        "ok": true
+      },
+      "today": "2098-12-01"
+    },
+    {
+      "act": "apply_payment",
+      "args": {
+        "payment": "P-0001",
+        "invoice": "INV-0001"
+      },
+      "expect": {
+        "ok": true
+      },
+      "today": "2098-12-01"
+    },
+    {
+      "act": "draft_invoice",
+      "args": {
+        "customer": "C-0001",
+        "lines": [
+          {
+            "description": "Workshop",
+            "qty": 1,
+            "rate": 120000
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "act": "draft_reminder",
+      "args": {
+        "invoice": "INV-0002",
+        "subject": "INV-0002",
+        "body": "INV-0002 has $1,200.00 open."
+      },
+      "expect": {
+        "refused": "only an issued invoice"
+      },
+      "notes": "S-13 a draft is not owed yet"
+    },
+    {
+      "act": "draft_reminder",
+      "args": {
+        "invoice": "INV-0001",
+        "subject": "Overdue: INV-0001",
+        "body": "Hi, INV-0001 has $600.00 open, plus a $25.00 late fee."
+      },
+      "expect": {
+        "refused": "never add a fee"
+      },
+      "notes": "S-13 no amount the invoice does not have"
+    },
+    {
+      "act": "draft_reminder",
+      "args": {
+        "invoice": "INV-0001",
+        "subject": "Overdue: INV-0001",
+        "body": "Hi, just a nudge on INV-0001 when you get a moment."
+      },
+      "expect": {
+        "refused": "Say what is owed"
+      }
+    },
+    {
+      "act": "draft_reminder",
+      "args": {
+        "invoice": "INV-0001",
+        "subject": "Overdue: INV-0001",
+        "body": "Hi [client name], INV-0001 has $600.00 open."
+      },
+      "expect": {
+        "refused": "placeholder"
+      }
+    },
+    {
+      "act": "draft_reminder",
+      "args": {
+        "invoice": "INV-0001",
+        "subject": "A quick reminder about INV-0001",
+        "body": "Hi Meridian team,\n\nA quick reminder that invoice INV-0001 has $600.00 still open of $1,000.00, after your payment of $400.00. Thank you for that. Could you let me know when to expect the rest?\n\nThanks,\nPeter"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "draft",
+          "stage": 1
+        }
+      },
+      "notes": "S-13 the open amount, the total and what was paid are the invoice's own figures"
+    },
+    {
+      "act": "draft_reminder",
+      "args": {
+        "invoice": "INV-0001",
+        "subject": "INV-0001",
+        "body": "INV-0001 has $600.00 open."
+      },
+      "expect": {
+        "refused": "already waiting"
+      }
+    },
+    {
+      "act": "reminder_outcome",
+      "args": {
+        "reminder": "REM-0001",
+        "outcome": "sent"
+      },
+      "expect": {
+        "refused": "Say when it went"
+      }
+    },
+    {
+      "act": "reminder_outcome",
+      "args": {
+        "reminder": "REM-0001",
+        "outcome": "sent",
+        "sent_at": "2099-01-20"
+      },
+      "expect": {
+        "refused": "has not happened yet"
+      }
+    },
+    {
+      "act": "reminder_outcome",
+      "args": {
+        "reminder": "REM-0001",
+        "outcome": "sent",
+        "sent_at": "2099-01-15"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "sent",
+          "sent_at": "2099-01-15"
+        }
+      }
+    },
+    {
+      "act": "draft_reminder",
+      "args": {
+        "invoice": "INV-0001",
+        "subject": "Following up on INV-0001",
+        "body": "Following up on INV-0001: $600.00 is still open."
+      },
+      "expect": {
+        "refused": "less than 7 days"
+      },
+      "notes": "S-13 another within the week needs a reason"
+    },
+    {
+      "act": "draft_reminder",
+      "args": {
+        "invoice": "INV-0001",
+        "subject": "Following up on INV-0001",
+        "body": "Following up on INV-0001: $600.00 is still open.",
+        "soon_because": "their AP closes the month on Friday"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "stage": 2
+        }
+      }
+    },
+    {
+      "act": "reminder_outcome",
+      "args": {
+        "reminder": "REM-0002",
+        "outcome": "discarded"
+      },
+      "expect": {
+        "refused": "needs a reason"
+      }
+    },
+    {
+      "act": "reminder_outcome",
+      "args": {
+        "reminder": "REM-0002",
+        "outcome": "discarded",
+        "reason": "they called and paid by card"
+      },
+      "expect": {
+        "ok": true,
+        "include": {
+          "status": "discarded"
+        }
+      }
+    },
+    {
+      "act": "reminders",
+      "args": {},
+      "expect": {
+        "ok": true,
+        "include": {
+          "count": 2,
+          "drafts": 0
+        }
+      }
+    }
   ]
 }

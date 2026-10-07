@@ -19,12 +19,21 @@ function load(name, workspace, opts = {}) {
   const { execute, byName } = require('./registry.js');
   // A space that carries only some modules replays only their steps (core always).
   const allow = opts.mounts ? new Set(['core', ...opts.mounts]) : null;
+  const H = require('./db.js');
+  // Dates relative to the day the fixture is loaded, so sample books stay current: "{{today}}",
+  // "{{today-12}}", "{{today+30}}". A seventh element, "-45d", runs that step as if it were that
+  // many days ago (an invoice issued six weeks back is overdue today, as it would be for real).
+  const realToday = H.today();
+  const rel = (v, base) => typeof v === 'string' ? v.replace(/\{\{today([+-]\d+)?\}\}/g, (_, d) => H.addDays(base, d ? Number(d) : 0))
+    : Array.isArray(v) ? v.map(x => rel(x, base)) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, rel(x, base)])) : v;
   let n = 0;
-  for (const [command, args, reason, actor, actor_kind, expect] of steps) {
+  for (const [command, args, reason, actor, actor_kind, expect, when] of steps) {
     if (allow && byName[command] && !allow.has(byName[command].module)) continue;
+    const m = /^([+-]\d+)d$/.exec(when || '');
+    const day = m ? H.addDays(realToday, Number(m[1])) : null;
     try {
-      execute(command, args || {}, { workspace, actor: actor || 'fixture', actor_kind: actor_kind || 'human',
-        session: `fixture:${name}`, reason: reason || `fixture ${name}` });
+      H.withClock(day, () => execute(command, rel(args || {}, realToday), { workspace, actor: actor || 'fixture', actor_kind: actor_kind || 'human',
+        session: `fixture:${name}`, reason: reason || `fixture ${name}` }));
       if (expect === 'refused') throw new Error(`fixture ${name}: ${command} was expected to be refused but succeeded`);
     } catch (e) {
       // A step marked expect:'refused' is PART of the story — the refusal lands in the
