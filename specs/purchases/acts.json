@@ -1,6 +1,6 @@
 {
   "area": "purchases",
-  "spec": "0.4",
+  "spec": "0.5",
   "doc": "spec.md",
   "acts": {
     "import_statement": {
@@ -151,6 +151,42 @@
     "rules": {
       "kind": "read",
       "required": []
+    },
+    "add_bill": {
+      "kind": "write",
+      "required": [
+        "vendor",
+        "bill_date",
+        "amount"
+      ]
+    },
+    "approve_bill": {
+      "kind": "write",
+      "required": [
+        "bill"
+      ]
+    },
+    "record_bill_payment": {
+      "kind": "write",
+      "required": [
+        "bill",
+        "paid_at"
+      ]
+    },
+    "reject_bill": {
+      "kind": "write",
+      "required": [
+        "bill",
+        "reason"
+      ]
+    },
+    "bills": {
+      "kind": "read",
+      "required": []
+    },
+    "payables": {
+      "kind": "read",
+      "required": []
     }
   },
   "invariants": [
@@ -193,6 +229,10 @@
     {
       "id": "P-11",
       "title": "A standing rule suggests and never books: matching rows stay unreviewed with the suggestion until a reasoned review confirms them; ending a rule removes its suggestions and changes no reviewed row."
+    },
+    {
+      "id": "P-12",
+      "title": "A bill is a record, never a payment: only a person approves paying it, a payment is recorded after it happened and by an agent only for an approved bill, a linked statement row must match it, and the same bill is refused twice."
     }
   ]
 }

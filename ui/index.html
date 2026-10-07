@@ -232,7 +232,7 @@ const NAV = [
   { key: 'crm', label: 'CRM', prefix: 'crm_', tabs: [['today', 'Today'], ['campaigns', 'Campaigns'], ['accounts', 'Accounts'], ['crmcontacts', 'Contacts'], ['crmdrafts', 'Drafts'], ['crmcal', 'Calendar'], ['crmpipeline', 'Pipeline'], ['network', 'Network'], ['crmactivity', 'Activity']] },
   { key: 'pros', label: 'Prospects', prefix: 'pros_', tabs: [['prospulls', 'Pulls'], ['prosrows', 'Staged rows']] },
   { key: 'hunt', label: 'Job hunt', prefix: 'hunt_', tabs: [['huntdue', 'Due'], ['huntpipeline', 'Pipeline'], ['huntcontacts', 'Contacts'], ['huntresumes', 'Resumes']] },
-  { key: 'purch', label: 'Personal finances', prefix: 'purch_', tabs: [['purchover', 'Overview'], ['purchtx', 'Transactions'], ['purchrules', 'Rules'], ['purchsubs', 'Subscriptions'], ['purchrec', 'Receipts'], ['purchsrc', 'Statements']] },
+  { key: 'purch', label: 'Personal finances', prefix: 'purch_', tabs: [['purchover', 'Overview'], ['purchtx', 'Transactions'], ['purchbills', 'Bills'], ['purchrules', 'Rules'], ['purchsubs', 'Subscriptions'], ['purchrec', 'Receipts'], ['purchsrc', 'Statements']] },
   { key: 'bridge', label: 'Ledger', prefix: 'bridge_', tabs: [['bridgefin', 'Financials'], ['journal', 'Journal'], ['bridgeexport', 'Export'], ['bridgeaccounts', 'Account map'], ['bridgeexports', 'Hand-overs']] },
   { sep: true },
   { key: 'company', label: 'Company', tabs: [['company', 'Company']], when: () => REG.commands.some(c => c.name.startsWith('o2c_') || c.name.startsWith('solo_')) },
@@ -457,7 +457,7 @@ async function detail(type, id) {
   const wrap = $('<div></div>');
   const idArg = type === 'solo_invoice' ? 'invoice_id' : type === 'crm_contact' ? 'contact_id' : type.startsWith('purch_') ? type.slice(6) + '_id' : type + '_id';
   const [entity, na] = await Promise.all([
-    api({ order:'o2c_get_order', customer: cmd('o2c_get_customer') ? 'o2c_get_customer' : 'core_get_customer', invoice:'o2c_get_invoice', account:'crm_get_account', campaign:'crm_get_campaign', posting:'hunt_get_posting', contact:'hunt_get_contact', resume:'hunt_get_resume', solo_invoice:'solo_get_invoice', purch_transaction:'purch_get_transaction', purch_receipt:'purch_get_receipt', purch_subscription:'purch_get_subscription', purch_rule:'purch_get_rule', purch_source:'purch_source', crm_contact:'crm_get_contact' }[type],
+    api({ order:'o2c_get_order', customer: cmd('o2c_get_customer') ? 'o2c_get_customer' : 'core_get_customer', invoice:'o2c_get_invoice', account:'crm_get_account', campaign:'crm_get_campaign', posting:'hunt_get_posting', contact:'hunt_get_contact', resume:'hunt_get_resume', solo_invoice:'solo_get_invoice', purch_transaction:'purch_get_transaction', purch_receipt:'purch_get_receipt', purch_subscription:'purch_get_subscription', purch_rule:'purch_get_rule', purch_bill:'purch_get_bill', purch_source:'purch_source', crm_contact:'crm_get_contact' }[type],
         { [idArg]: id }),
     fetch(wsUrl(`/api/next-actions?type=${type}&id=${id}`)).then(r => r.json()),
   ]);
@@ -482,6 +482,11 @@ async function detail(type, id) {
     ? { Vendor: entity.vendor ?? '—', Date: entity.date, Total: entity.total_display, File: entity.name, Matched: entity.transaction_id ?? 'no', ...(entity.note ? { Note: entity.note } : {}) }
     : type === 'purch_subscription'
     ? { Vendor: entity.vendor, Cadence: entity.cadence, Expected: entity.amount_display, Status: entity.derived_status, 'Matched periods': entity.matched_periods, 'Missed periods': entity.missed_periods, 'Next expected': entity.next_expected ?? '—', 'Last charge': entity.last_charge ? `${entity.last_charge.date} (${entity.last_charge.transaction_id})` : '—', ...(entity.cancel_reason ? { Cancelled: entity.cancel_reason } : {}) }
+    : type === 'purch_bill'
+    ? { Vendor: entity.vendor, 'Their number': entity.number ?? '—', 'Bill date': entity.bill_date, Due: `${entity.due_date}${entity.overdue ? ` <span style="color:var(--warn);font-weight:600">overdue</span>` : entity.due_in_days != null ? ` · in ${entity.due_in_days} day${entity.due_in_days === 1 ? '' : 's'}` : ''}`, Amount: entity.amount_display, Category: entity.category ?? '—',
+        ...(entity.approved_by ? { Approved: `${esc(entity.approved_by)} on ${String(entity.approved_at).slice(0, 10)}${entity.pay_by ? `, pay by ${entity.pay_by}` : ''}` } : {}),
+        ...(entity.paid_at ? { Paid: `${entity.paid_at}${entity.paid_method ? ` · ${entity.paid_method.replace('_', ' ')}` : ''}${entity.paid_reference ? ` · ${esc(entity.paid_reference)}` : ''}${entity.transaction_id ? ` · statement row ${entity.transaction_id}` : ''}` } : {}),
+        ...(entity.reject_reason ? { Rejected: esc(entity.reject_reason) } : {}), ...(entity.approval_note ? { Note: esc(entity.approval_note) } : {}), ...(entity.file_name ? { File: esc(entity.file_name) } : {}) }
     : type === 'purch_rule'
     ? { Suggests: `${entity.category} (${entity.status})`, When: entity.window, 'Words to match': entity.match ?? '—', Vendor: entity.vendor ?? '—', 'Suggesting for': `${entity.suggesting} unreviewed row${entity.suggesting === 1 ? '' : 's'}`, State: entity.state === 'ended' ? `ended ${String(entity.ended_at || '').slice(0, 10)}: ${entity.end_reason || ''}` : 'active', ...(entity.reason ? { 'What was said': entity.reason } : {}) }
     : type === 'purch_source'
@@ -1788,6 +1793,26 @@ async function renderPage() {
     main.append($(`<div class="sub" style="margin:0 0 10px">${tx.count} rows · ${tx.unreviewed} unreviewed${tx.suggested ? ` · ${tx.suggested} suggested by a rule` : ''} · spending ${Object.values(tx.spend_by_currency).map(x => x.amount_display).join(' · ') || '—'}</div>`));
     const t = $('<table><thead><tr><th>Row</th><th>Date</th><th>Description</th><th>Vendor</th><th>Category</th><th>Status</th><th class="num">Amount</th><th>Receipt</th></tr></thead><tbody></tbody></table>');
     rowsInto(t, tx.items, r => `<td>${r.id}</td><td style="font-size:12px">${r.date}</td><td>${r.description}</td><td>${r.vendor || ''}</td><td>${r.category || (r.suggested ? `<span class="pill sugg" title="Suggested by ${esc(r.suggested.rule_label)} (${r.suggested.rule_id}); confirm in review">${esc(r.suggested.category)}?</span>` : '')}</td><td><span class="pill ${r.status}">${r.status}</span></td><td class="num" style="${r.amount > 0 ? 'color:var(--ok, #3E6B2B)' : ''}">${r.amount_display}</td><td>${r.has_receipt ? '✓' : ''}</td>`, 'purch_transaction');
+    main.append(t);
+  }
+  if (view === 'purchbills') {
+    head('Bills', 'What vendors say you owe. Your agent prepares them; you approve paying them; your bank pays. Nothing here moves money.');
+    const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('purch_bill').forEach(b => bar.append(b)); main.append(bar);
+    const [bl, pay] = await Promise.all([api('purch_bills', {}), api('purch_payables', {})]);
+    const cur = Object.values(pay.by_currency || {});
+    if (cur.length) {
+      const tiles = $('<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;max-width:1180px;margin-bottom:14px"></div>');
+      for (const c of cur) {
+        tiles.append($(`<div class="tile"><div class="k">Overdue · ${c.currency}</div><div class="v" style="${c.overdue ? 'color:var(--warn)' : ''}">${c.overdue_display}</div></div>`));
+        tiles.append($(`<div class="tile"><div class="k">Due within 30 days</div><div class="v">${c.due_within_30_display}</div><div class="s">${c.next_7_days_display} of it this week</div></div>`));
+        tiles.append($(`<div class="tile"><div class="k">In the bank</div><div class="v">${c.cash_on_hand_display ?? '—'}</div><div class="s">${c.cash_as_of ? `latest statement, ${c.cash_as_of}` : 'no bank statement yet'}</div></div>`));
+        tiles.append($(`<div class="tile"><div class="k">After the next 30 days</div><div class="v" style="${c.after_due_within_30 < 0 ? 'color:var(--warn)' : ''}">${c.after_due_within_30_display ?? '—'}</div></div>`));
+      }
+      main.append(tiles, $(`<div class="sub" style="margin:0 0 14px">${esc(pay.note)}</div>`));
+    }
+    if (!bl.count) { main.append($('<div class="card doc" style="max-width:640px">No bills yet. Hand your agent a vendor\'s invoice and say "add this bill", or press Add a bill.</div>')); return; }
+    const t = $('<table><thead><tr><th>Bill</th><th>Vendor</th><th>Their number</th><th>Due</th><th class="num">Amount</th><th>Category</th><th>Status</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, bl.items, r => `<td>${r.id}</td><td>${esc(r.vendor || '')}</td><td>${esc(r.number || '')}</td><td style="font-size:12.5px;${r.overdue ? 'color:var(--warn);font-weight:600' : ''}">${r.due_date}${r.overdue ? ' · overdue' : ''}</td><td class="num">${r.amount_display}</td><td>${esc(r.category || '')}</td><td><span class="pill ${r.status === 'open' ? 'unreviewed' : r.status === 'approved' ? 'issued' : r.status === 'paid' ? 'paid' : 'void'}">${r.status === 'open' ? 'waiting for approval' : r.status}</span></td>`, 'purch_bill');
     main.append(t);
   }
   if (view === 'purchrules') {

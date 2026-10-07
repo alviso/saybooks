@@ -70,6 +70,7 @@ R.execute('pros_promote', { campaign_id: 'CAM-0001', row_ids: [{ row_id: 1 }] },
 R.execute('purch_import_statement', { name: 'aug.csv', hash: 'sha256:smokestmt0001', kind: 'card', currency: 'USD', period_start: '2026-08-01', period_end: '2026-08-31', opening_balance: 0, closing_balance: -5000, row_count: 2,
   rows: [{ date: '2026-08-03', amount: -3000, description: 'COFFEE CO' }, { date: '2026-08-10', amount: -2000, description: 'RENT' }] }, a);
 R.execute('purch_add_rule', { label: 'Coffee runs', category: 'meals', match: 'coffee', reason: 'every coffee is a client meeting' }, a);
+R.execute('purch_add_bill', { vendor: 'Acme Supply', number: 'A-1', bill_date: '2026-09-01', due_date: '2026-09-30', amount: 12500, currency: 'USD', category: 'supplies' }, a);
 R.execute('hunt_add_posting', { company: 'Vega', title: 'Staff Engineer', source: 'direct', url: 'https://example.com/j' }, h);
 `;
 
@@ -147,6 +148,7 @@ const DETAILS = [
   ['purch_transaction', '(await api("purch_transactions",{limit:1})).items?.[0]?.id'],
   ['purch_source', '(await api("purch_sources",{})).items?.[0]?.id'],
   ['purch_rule', '(await api("purch_rules",{})).items?.[0]?.id'],
+  ['purch_bill', '(await api("purch_bills",{})).items?.[0]?.id'],
   ['posting', '(await api("hunt_pipeline",{}))[0]?.id'],
 ];
 let dbad = 0, dseen = 0;

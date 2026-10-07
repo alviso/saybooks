@@ -66,7 +66,7 @@
     "args": ["/path/to/saybooks/mcp-server.js"],
     "env": { "SAYBOOKS_WORKSPACE": "main", "SAYBOOKS_MODULES": "core,solo", "SAYBOOKS_ACTOR": "gemma-4" }
 } } }</code></pre>
-      Use the absolute path to <code>node</code>. <code>SAYBOOKS_MODULES</code> picks the tools the model sees: <code>core,solo</code> is 35 tools for invoicing, <code>core,purchases</code> 53 for statements; all eight modules is 154 and too many for a small model. <code>SAYBOOKS_ACTOR</code> is the name on the audit trail.</li>
+      Use the absolute path to <code>node</code>. <code>SAYBOOKS_MODULES</code> picks the tools the model sees: <code>core,solo</code> is 35 tools for invoicing, <code>core,purchases</code> 60 for statements; all eight modules is 161 and too many for a small model. <code>SAYBOOKS_ACTOR</code> is the name on the audit trail.</li>
     <li><b>Load the model with one concurrent slot and a 32k context.</b> LM Studio defaults to four slots and reserves a full context cache for each; on a 32 GB machine that is the difference between quick and swapping.</li>
     <li><b>Talk plainly.</b> "Set up my company: Vega Consulting, US, USD, not registered for sales tax." "Add a client, Meridian Logistics, net 30." "Invoice them for 12 hours at $250 and issue it." Paste a statement and say "here is my September card statement."</li>
   </ol>
@@ -113,6 +113,7 @@
     <li><b>Subscriptions</b> are declared by you and confirmed by the record. A period with no charge shows as missed; two in a row make it lapsed. Cancelled is something you say.</li>
     <li><b>Receipts</b> are what the receipt says plus the file's hash; the file stays with you. Matching to a row is a reasoned act, refused when the total does not fit.</li>
     <li><b>Charts</b> count reviewed purchases only, per currency, with no conversion.</li>
+      <li><b>Bills, prepared for your approval.</b> Hand your agent a vendor's invoice and say "add this bill". It records the vendor, their number, the dates and the amount as printed, and refuses the same bill forwarded twice. Only you approve paying it: the approval is refused to any agent, whatever its role. You pay from your bank, then record the payment with the day it went, linked to the statement row that shows it. <b>Personal finances, Bills</b> shows what is overdue and due within 30 days against the cash on your latest bank statement. Nothing here moves money.</li>
   </ul>
   <h2 id="ledger">Your accountant's ledger</h2>
   <p>Saybooks keeps the operational record; QuickBooks, Xero or your accountant's own system stays the ledger of record. The <b>Ledger</b> pages hand one to the other. The journal is derived from what happened, never posted or stored, so it is always current.</p>
@@ -146,7 +147,7 @@
 <pre><code>git clone https://github.com/alviso/saybooks.git
 cd saybooks && npm ci
 node server.js            # workbench at http://127.0.0.1:8140, one local workspace, you are the owner
-npm test                  # the 23-gate contract and every conformance scenario</code></pre>
+npm test                  # the 24-gate contract and every conformance scenario</code></pre>
   <p>Environment: <code>SAYBOOKS_PORT</code> (default 8140); <code>SAYBOOKS_DEMO=1</code> turns on the hosted mode with sandboxes, Google sign-in and the public pages; <code>SAYBOOKS_PUBLIC_URL</code> is the origin printed into document links; <code>SAYBOOKS_ADMIN</code> is the Google account allowed to open <code>/admin</code>. Google sign-in needs OAuth client credentials; see <code>src/auth.js</code>. A <code>Dockerfile</code> is included and is what runs saybooks.io.</p>
   <p>Local MCP for development: <code>node mcp-server.js</code> speaks stdio. Over HTTP, each key's URL is its own endpoint; a sandbox's bare id is a key too.</p>
 

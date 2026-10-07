@@ -60,7 +60,7 @@ specs/<area>/scenarios/    executable conformance scenarios (refusals are contra
 src/conformance.js         replays scenarios through the real registry; keeps evidence
 server.js                  workbench + hosted demo + MCP + OAuth (all one registry)
 mcp-server.js              stdio MCP for local development
-test/contract.test.js      the 23-gate contract (see below)
+test/contract.test.js      the 24-gate contract (see below)
 test/smoke.mjs             every workbench view and detail panel rendered in headless Chrome
 test/local/                plain-language scripts run against a local model, checked in the database
 ```
@@ -73,13 +73,13 @@ their permissions. Every write carries a reason; reads are never logged.
 **Money** is integer minor units everywhere, with a currency; sums are per currency and never
 cross. Nothing is invented: a missing amount, date or name is asked for, never guessed.
 
-## The 23-gate contract
+## The 24-gate contract
 
 Every module — present and future — is held to: MCP/UI parity · namespace prefixes ·
 doctrine on every write · guards declared · table ownership (no cross-module writes) ·
 a tool budget · module mounts · one-sentence rule · audit behavior · fixture replay ·
 **spec conformance** (an implementation claiming an area must map every act and pass every
-scenario) · **permissions** (unpermissioned commands do not ship) · **spec version** (a module implements the version its acts file declares) · **human-only** (a field or a whole act a person must do, refused to agents whatever their role) · **the door** (staged rows are judged by an agent and promoted only by a person) · **the claim gate** (what a campaign may say is a person's to set, and holds on edit).
+scenario) · **permissions** (unpermissioned commands do not ship) · **spec version** (a module implements the version its acts file declares) · **human-only** (a field or a whole act a person must do, refused to agents whatever their role) · **the door** (staged rows are judged by an agent and promoted only by a person) · **the claim gate** (what a campaign may say is a person's to set, and holds on edit) · **bills** (only a person approves paying one; a payment is recorded after it happened, against a statement row that matches it).
 
 The endgame is competing implementations of the same area, certified by replaying the same
 scenario files — the spec speaks in acts, not commands, so any conforming module runs them.
@@ -88,7 +88,7 @@ scenario files — the spec speaks in acts, not commands, so any conforming modu
 
 ```bash
 npm install
-npm test          # the 23 gates
+npm test          # the 24 gates
 npm run smoke     # every workbench view and panel, in headless Chrome
 npm run local -- --model <id> --script plain-invoicing --instructions off   # a local model, plain prompts
 npm run demo      # a full quote-to-cash run, human and agent interleaved
@@ -112,8 +112,8 @@ a full statement cycle from plain sentences, no coaching. In LM Studio's `mcp.js
 } } }
 ```
 
-`SAYBOOKS_MODULES` picks the tools the model sees (`core,solo` is 35 tools; `core,purchases` 53;
-all eight modules is 154 and too many for a small model). Load the model with one concurrent slot.
+`SAYBOOKS_MODULES` picks the tools the model sees (`core,solo` is 35 tools; `core,purchases` 60;
+all eight modules is 161 and too many for a small model). Load the model with one concurrent slot.
 What that took, and the six fixes it forced in the tools, is in
 [saybooks.io/notes/local-models](https://saybooks.io/notes/local-models); the plain-language
 harness that measures it is `npm run local`.

@@ -12,6 +12,62 @@ const spendOf = (rows) => {   // negative amounts are spending; report it as a p
 const vendorName = (id) => (id && get('purch_vendor', id) || {}).name || null;
 const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 
+// ---------------------------------------------------------------- bills (P-12)
+const OPEN_BILL = ['open', 'approved'];
+function billView(id) {
+  const b = need('purch_bill', id, 'bill');
+  const days = b.due_date ? Math.floor((Date.parse(b.due_date) - Date.parse(today())) / 864e5) : null;
+  return { ...b, name: `${vendorName(b.vendor_id) || 'Bill'}${b.number ? ' ' + b.number : ''}`, vendor: vendorName(b.vendor_id), amount_display: money(b.amount, b.currency),
+    due_in_days: OPEN_BILL.includes(b.status) ? days : null, overdue: OPEN_BILL.includes(b.status) && days < 0 };
+}
+function bills({ status } = {}) {
+  let rows = [];
+  try { rows = db().prepare(`SELECT id FROM purch_bill ${status ? 'WHERE status = ?' : ''} ORDER BY CASE status WHEN 'open' THEN 0 WHEN 'approved' THEN 1 WHEN 'paid' THEN 2 ELSE 3 END, due_date, id`).all(...(status ? [status] : [])); } catch { return { count: 0, items: [] }; }
+  const items = rows.map(r => billView(r.id));
+  return { count: items.length, open: items.filter(i => i.status === 'open').length, approved: items.filter(i => i.status === 'approved').length, items };
+}
+/** What is coming due against what the latest statements say there is. Cash is each bank
+    account's printed closing balance on its latest statement, dated, never projected. */
+function payables({ as_of } = {}) {
+  const at = as_of || today();
+  let open = [];
+  try { open = db().prepare(`SELECT id FROM purch_bill WHERE status IN ('open','approved') ORDER BY due_date, id`).all().map(r => billView(r.id)); } catch { open = []; }
+  const days = (b) => Math.floor((Date.parse(b.due_date) - Date.parse(at)) / 864e5);
+  const buckets = { overdue: [], next_7_days: [], next_30_days: [], later: [] };
+  for (const b of open) { const d = days(b); (d < 0 ? buckets.overdue : d <= 7 ? buckets.next_7_days : d <= 30 ? buckets.next_30_days : buckets.later).push(b); }
+  const curs = [...new Set(open.map(b => b.currency))];
+  const cash = {};
+  for (const a of statementAccounts()) {
+    if (a.kind === 'card') continue;
+    const last = a.statements.filter(x => x.period_end <= at).pop(); if (!last) continue;
+    cash[a.currency] = cash[a.currency] || { currency: a.currency, amount: 0, accounts: [] };
+    cash[a.currency].amount += last.closing; cash[a.currency].accounts.push({ account: a.account, closing: last.closing, as_of: last.period_end });
+  }
+  const by = {};
+  for (const c of new Set([...curs, ...Object.keys(cash)])) {
+    const sumOf = (xs) => xs.filter(b => b.currency === c).reduce((n, b) => n + b.amount, 0);
+    const due30 = sumOf(buckets.overdue) + sumOf(buckets.next_7_days) + sumOf(buckets.next_30_days);
+    const onHand = cash[c] ? cash[c].amount : null;
+    by[c] = { currency: c, overdue: sumOf(buckets.overdue), next_7_days: sumOf(buckets.next_7_days), next_30_days: sumOf(buckets.next_30_days), later: sumOf(buckets.later),
+      due_within_30: due30, cash_on_hand: onHand, cash_as_of: cash[c] ? cash[c].accounts.map(x => x.as_of).sort()[0] : null,
+      after_due_within_30: onHand == null ? null : onHand - due30 };
+    for (const k of ['overdue', 'next_7_days', 'next_30_days', 'later', 'due_within_30', 'cash_on_hand', 'after_due_within_30']) if (by[c][k] != null) by[c][`${k}_display`] = money(by[c][k], c);
+  }
+  const lines = Object.values(by).map(x => x.cash_on_hand == null
+    ? `${x.due_within_30_display} due within 30 days in ${x.currency}; no bank statement on record to set it against.`
+    : `${x.due_within_30_display} due within 30 days against ${x.cash_on_hand_display} in the bank as of ${x.cash_as_of}, leaving ${x.after_due_within_30_display}.${x.after_due_within_30 < 0 ? ' That is short: the bills due first, or money coming in, decide which can wait.' : ''}`);
+  return { as_of: at, open_count: open.length, overdue_count: buckets.overdue.length, by_currency: by,
+    buckets: Object.fromEntries(Object.entries(buckets).map(([k, v]) => [k, v.map(b => ({ id: b.id, vendor: b.vendor, number: b.number, due_date: b.due_date, amount_display: b.amount_display, status: b.status }))])),
+    note: open.length ? lines.join(' ') : 'No bills waiting to be paid.' };
+}
+/** Bills received by a date and not paid by it, for the financials' notes (cash basis). */
+function unpaidBills({ as_of, currency } = {}) {
+  try {
+    const rows = db().prepare(`SELECT amount, currency FROM purch_bill WHERE bill_date <= ? AND status <> 'rejected' AND (paid_at IS NULL OR paid_at > ?) ${currency ? 'AND currency = ?' : ''}`).all(as_of, as_of, ...(currency ? [currency] : []));
+    return { count: rows.length, amount: rows.reduce((n, r) => n + r.amount, 0) };
+  } catch { return { count: 0, amount: 0 }; }
+}
+
 // ---------------------------------------------------------------- standing rules (P-11)
 const SPENDING_STATUSES = new Set(['purchase', 'recurring']);
 const activeRules = () => { try { return db().prepare("SELECT r.*, v.name AS vendor FROM purch_rule r LEFT JOIN purch_vendor v ON v.id = r.vendor_id WHERE r.state = 'active' ORDER BY r.created_at DESC, r.id DESC").all(); } catch { return []; } };
@@ -324,4 +380,4 @@ function mappableKeys() {
   return { categories: [...new Set(cats.map(c => c.k))].sort(), sources: [...new Set(srcs.map(s => (s.k || `${s.kind} (unnamed)`).trim()))].sort() };
 }
 
-module.exports = { statementAccounts, activeRules, ruleMatches, suggestionFor, ruleView, rules, windowText, splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };
+module.exports = { billView, bills, payables, unpaidBills, statementAccounts, activeRules, ruleMatches, suggestionFor, ruleView, rules, windowText, splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };

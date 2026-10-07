@@ -1,0 +1,34 @@
+{
+  "name": "bills: prepared here, approved by a person",
+  "spec": "purchases@0.5",
+  "today": "2026-10-10",
+  "notes": "P-12 a bill is a record, never a payment: the agent records it, a person approves it, the bank pays it, and the record follows. The person's half lives in contract gate 24, because scenarios run as an agent.",
+  "env": [],
+  "steps": [
+    {
+      "act": "import_statement",
+      "args": {
+        "name": "checking-2026-09.csv", "hash": "bills-checking-2026-09", "kind": "bank", "account": "Business Checking 8827", "currency": "USD",
+        "period_start": "2026-09-01", "period_end": "2026-09-30", "opening_balance": 400000, "closing_balance": 380000, "row_count": 1,
+        "rows": [ { "date": "2026-09-12", "amount": -20000, "description": "OFFICE DEPOT", "row_index": 1 } ]
+      },
+      "expect": { "ok": true }, "notes": "a bank statement, so what is due can be set against cash"
+    },
+    { "act": "add_bill", "args": { "vendor": "Acme Supply", "number": "A-1001", "bill_date": "2026-10-01", "due_date": "2026-10-15", "amount": 125000, "currency": "USD", "category": "supplies", "reason": "emailed by Acme on the 1st" },
+      "expect": { "ok": true, "include": { "status": "open" } } },
+    { "act": "add_bill", "args": { "vendor": "acme supply", "number": "a-1001", "bill_date": "2026-10-01", "due_date": "2026-10-15", "amount": 125000, "currency": "USD" },
+      "expect": { "refused": "already on record" }, "notes": "P-12 a bill forwarded twice is one bill" },
+    { "act": "add_bill", "args": { "vendor": "Northwest Rentals", "number": "NW-77", "bill_date": "2026-10-05", "due_date": "2026-09-30", "amount": 180000, "currency": "USD" },
+      "expect": { "refused": "before its own date" } },
+    { "act": "add_bill", "args": { "vendor": "Northwest Rentals", "number": "NW-77", "bill_date": "2026-10-05", "amount": 180000, "currency": "USD" },
+      "expect": { "refused": "Say when it is due" }, "notes": "never a guessed due date" },
+    { "act": "add_bill", "args": { "vendor": "Northwest Rentals", "number": "NW-77", "bill_date": "2026-10-05", "terms_days": 30, "amount": 180000, "currency": "USD", "category": "rent" },
+      "expect": { "ok": true, "include": { "due_date": "2026-11-04" } } },
+    { "act": "approve_bill", "args": { "bill": "B-0001" }, "expect": { "refused": "person's act" }, "notes": "P-12 approving payment is a person's act, refused to an agent whatever its role" },
+    { "act": "record_bill_payment", "args": { "bill": "B-0001", "paid_at": "2026-10-09" }, "expect": { "refused": "not approved" }, "notes": "P-12 an agent records payment only for an approved bill" },
+    { "act": "payables", "args": {}, "expect": { "ok": true, "include": { "open_count": 2 } }, "notes": "Acme's 1,250.00 is due within the week, Northwest's 1,800.00 within the month, against 3,800.00 on the September statement" },
+    { "act": "reject_bill", "args": { "bill": "B-0002" }, "expect": { "refused": "required" } },
+    { "act": "reject_bill", "args": { "bill": "B-0002", "reason": "billed for October twice; their accounts team is reissuing" }, "expect": { "ok": true, "include": { "status": "rejected" } } },
+    { "act": "bills", "args": {}, "expect": { "ok": true, "include": { "count": 2, "open": 1 } } }
+  ]
+}

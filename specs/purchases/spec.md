@@ -1,8 +1,9 @@
 # purchases — What You Buy · Area Specification
 
-**Status: 0.4.** A spec on the record before a line of module code, so the shape can be
+**Status: 0.5.** A spec on the record before a line of module code, so the shape can be
 argued with. 0.3 makes the statement's own lines the normal path of import_statement. 0.4 adds
-standing rules: what the person says ahead of time, kept as suggestions, never as bookings.
+standing rules: what the person says ahead of time, kept as suggestions, never as bookings. 0.5
+adds bills: what vendors say is owed, prepared here, approved by a person, paid in their bank.
 
 ## 1. Calibration: who this is for
 
@@ -47,23 +48,31 @@ forecasts, advice, tax treatment of purchases, paying anything.
   one of window, words or vendor). Status: active | ended, ending is an act with a reason. A
   rule never books a row: it suggests, and the suggestion is computed when rows are read, so
   ending a rule removes its suggestions and leaves every reviewed row as the person confirmed it.
+- **bill** — what a vendor says the person owes: the vendor, their invoice number, the bill
+  and due dates, the amount and currency as printed, a category in the person's words, the file
+  it came from (name and hash; the file stays with the person). open → approved (a person only,
+  optionally with a pay-by date) → paid (recorded after the fact with the day it went and how,
+  linked to the statement row that shows it) | rejected (with a reason). A bill is a record,
+  never a payment.
 - **receipt** — an attachment the person gave the agent: file name, hash, vendor, date, total,
   currency. Matched to at most one transaction, by an act with a reason; unmatched is a
   visible state, not an error.
 
 ## 4. The acts
 
-Writes (15): import_statement, split_transaction (one row broken into legs that add to it
+Writes (19): import_statement, split_transaction (one row broken into legs that add to it
 exactly), rename_category (one word changed on every row that
 carries it), discard_source (a wrong read thrown out whole, with a
 reason, its hash freed), review_transaction, review_batch (many rows, one reasoned
 act, validated whole), set_vendor, add_receipt, match_receipt, declare_subscription,
 cancel_subscription, unmatch_receipt, add_rule (a standing rule, with its window, words or
 vendor), end_rule (with a reason), accept_suggestions (confirm what rules suggest, one reasoned
-act, rows the person rejects left out). Reads (9): vocabulary (the statuses with their meaning,
+act, rows the person rejects left out), add_bill, approve_bill (a person only),
+record_bill_payment, reject_bill. Reads (11): vocabulary (the statuses with their meaning,
 the person's categories, vendors and active rules — what an agent proposes from), sources,
 transactions (each unreviewed row with the suggestion a rule makes for it), purchases,
-subscriptions, receipts, spend, source, rules.
+subscriptions, receipts, spend, source, rules, bills, payables (open bills by when they fall
+due, set against the cash on the latest bank statements).
 
 ## 5. Invariants
 
@@ -94,6 +103,15 @@ subscriptions, receipts, spend, source, rules.
   something different are listed with the suggestion. Ending a rule removes its suggestions and
   changes no reviewed row. A rule must narrow something: one that would match every row is
   refused, as is a window that ends before it starts.
+- **P-12** A bill is a record, never a payment: nothing here pays anything. Approving payment is
+  a person's act, refused to an agent whatever its role. A payment is recorded only after it
+  happened, with the day it went (never in the future), and an agent records one only for an
+  approved bill; a person recording it approves it in the same act. A linked statement row must
+  be money out, in the bill's currency, for the bill's amount, and pays one bill only; an
+  unreviewed row is reviewed as the bill says. The same vendor and invoice number is refused a
+  second time, as is a bill with no number that matches another's vendor, amount and date. A
+  bill due before its own date is refused. Bills count on a cash basis: the statement row that
+  paid one reaches the books, and bills unpaid at a date are named beside the statements.
 - **P-6** A subscription is declared, then confirmed by the record: a period with no
   matching purchase is shown as missed — but only once a statement covering that period has
   been read; before that it is "no statement yet". Two missed periods make it lapsed. A vendor
@@ -131,7 +149,10 @@ two · 04 receipts: added, matched with a reason, a mismatched total refused, un
 that do not add up refused with the gap named; the row itself unchanged · 08 standing rules:
 a conference rule recorded before the statement, the statement's rows in the window suggested
 as travel (a refund in the same window not), the suggestions accepted in one act, a second
-accept refused, a rule that narrows nothing refused, the rule ended.
+accept refused, a rule that narrows nothing refused, the rule ended · 09 bills: a vendor's
+bill recorded, the same one forwarded twice refused, one due before its date refused, one with
+no due date and no terms refused; approval refused to the agent; a payment refused before
+approval; what is coming due set against the latest statement; a bill rejected with a reason.
 
 ## 9. Deferred — with reasons
 
@@ -145,7 +166,9 @@ accept refused, a rule that narrows nothing refused, the rule ended.
 
 ---
 
-*Change log: 0.4 (2026-10-07) — standing rules, from Aryeh Munk's phase 1 list ("I am
+*Change log: 0.5 (2026-10-07) — bills prepared for approval, from Aryeh Munk's phase 1 list
+("Enable AI to make payments, process invoices"), reshaped so nothing pays: the agent prepares,
+a person approves, the bank pays, the record follows. 0.4 (2026-10-07) — standing rules, from Aryeh Munk's phase 1 list ("I am
 traveling these next 5 days for conference, book to Texas conference"), kept as suggestions
 so P-5 still holds. 0.2 (2026-09-10) — splitting one row into legs that add to it exactly, for payroll
 runs and mixed receipts, prompted by a demo session pointing out that one lump to one account

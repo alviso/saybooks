@@ -22,6 +22,8 @@
  *                    rows, only a person promotes them, and the verdict becomes the why_them
  *  15. claim gate     a person says what a campaign may claim; the gate holds on the create
  *                    path and the edit path alike, and a sent draft stops being editable
+ *  16. bills         only a person approves paying a bill; an agent records the payment once
+ *                    approved, against a statement row that must match it, never twice
  *
  * A PR that adds a hand-written form, a prefix-less command, or a cross-module UPDATE
  * fails here, not in review.
@@ -367,6 +369,36 @@ for (const tag of R.PERMISSIONS) {
   assert.strictEqual(state.status, 'approaching', 'a first send moves the account to approaching');
   assert.strictEqual(state.state.contacts_written_to.length, 1, 'derived state must know who has been written to');
   ok('drafts: a person sets what may be said, the gate holds on create and on edit, a sent draft is the record');
+}
+
+// ------------------------------------------------- 16. bills: a person approves, the bank pays
+// The scenarios watch an agent get refused approval (P-12); the person's half lives here.
+{
+  const asAgent = { ...human, actor_kind: 'agent', role: 'owner' };
+  execute('purch_import_statement', { name: 'g16.csv', hash: 'sha256:gate16checking', kind: 'bank', account: 'Gate16 Checking', currency: 'USD',
+    period_start: '2026-09-01', period_end: '2026-09-30', opening_balance: 500000, closing_balance: 374000, row_count: 2,
+    rows: [{ date: '2026-09-20', amount: -125000, description: 'ACH GATE16 SUPPLY', row_index: 1 }, { date: '2026-09-25', amount: -1000, description: 'SOMETHING ELSE', row_index: 2 }] }, human);
+  const txs = wsp.use(WS, () => H.db().prepare("SELECT id, amount FROM purch_transaction WHERE description = 'ACH GATE16 SUPPLY'").get());
+  const b = execute('purch_add_bill', { vendor: 'Gate16 Supply', number: 'G16-1', bill_date: '2026-09-01', due_date: '2026-09-30', amount: 125000, currency: 'USD', category: 'supplies' }, asAgent);
+  let denied = null;
+  try { execute('purch_approve_bill', { bill_id: b.id }, asAgent); } catch (e) { denied = e.message; }
+  assert.ok(denied && /person's act/.test(denied), 'an agent must not approve paying a bill, even as owner');
+  assert.strictEqual(wsp.use(WS, () => H.db().prepare('SELECT status FROM purch_bill WHERE id = ?').get(b.id).status), 'open', 'the refused approval must not land');
+  execute('purch_approve_bill', { bill_id: b.id, note: 'pay it' }, human);
+  let wrong = null;
+  try { execute('purch_record_bill_payment', { bill_id: b.id, paid_at: '2026-09-20', transaction_id: wsp.use(WS, () => H.db().prepare("SELECT id FROM purch_transaction WHERE description = 'SOMETHING ELSE'").get().id) }, asAgent); } catch (e) { wrong = e.message; }
+  assert.ok(wrong, 'a statement row that does not match the bill must be refused');
+  const paid = execute('purch_record_bill_payment', { bill_id: b.id, paid_at: '2026-09-20', method: 'bank_transfer', transaction_id: txs.id }, asAgent);
+  assert.strictEqual(paid.status, 'paid', 'an agent records the payment of an approved bill');
+  const row = wsp.use(WS, () => H.db().prepare('SELECT status, category FROM purch_transaction WHERE id = ?').get(txs.id));
+  assert.deepStrictEqual([row.status, row.category], ['purchase', 'supplies'], 'the unreviewed row that paid the bill is reviewed as the bill says');
+  const b2 = execute('purch_add_bill', { vendor: 'Gate16 Supply', number: 'G16-2', bill_date: '2026-09-02', due_date: '2026-09-30', amount: 125000, currency: 'USD' }, asAgent);
+  let twice = null;
+  try { execute('purch_record_bill_payment', { bill_id: b2.id, paid_at: '2026-09-20', transaction_id: txs.id }, human); } catch (e) { twice = e.message; }
+  assert.ok(twice && /already pays/.test(twice), 'one statement row pays one bill');
+  const direct = execute('purch_record_bill_payment', { bill_id: b2.id, paid_at: '2026-09-21', method: 'card' }, human);
+  assert.ok(direct.status === 'paid' && direct.approved_by === 'test', 'a person recording a payment approves it in the same act');
+  ok('bills: only a person approves paying, a payment needs approval and a matching row, one row pays one bill');
 }
 
 console.log(`\n${n} contract checks passed across ${MODULES.length} modules, ${COMMANDS.length} commands.`);

@@ -274,6 +274,9 @@ function financials(a) {
   else if (bs.some(x => x.kind === 'asset' && x.account === 'Cash' && x.d)) notes.push('Cash is money recorded as received against invoices; the accountant maps it to the bank account it went into.');
   for (const n of partial) if (bs.some(x => x.account === n && x.d)) notes.push(`${n} holds only the transfers recorded against it here; import its statements and it starts from its real balance.`);
   for (const t of ties) if (!t.ties) notes.push(`${t.account}: ${t.note}`);
+  let unpaid = { count: 0, amount: 0 };
+  for (const m of require('../../registry.js').MODULES) if (m.api && typeof m.api.unpaidBills === 'function') { const u = m.api.unpaidBills({ as_of: per.to, currency: cur }); unpaid.count += u.count; unpaid.amount += u.amount; }
+  if (unpaid.count) notes.push(`${unpaid.count} bill${unpaid.count > 1 ? 's' : ''} received by ${per.to} and not paid by then (${money(unpaid.amount, cur)}) ${unpaid.count > 1 ? 'are' : 'is'} not in these figures: bills count when the payment shows on a statement. The accountant books them as payable at the close.`);
   notes.push('Not included: cost of goods, inventory, depreciation, accruals and other adjustments the accountant makes at the close.');
 
   return {
