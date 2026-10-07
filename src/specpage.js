@@ -127,12 +127,12 @@ ${invariants}`, `Every rule Saybooks enforces, written down and executed: ${tota
 /** One sentence per area, for the index. What it governs, in the words a person would use. */
 const BLURB = {
   o2c: 'Quotes, orders, shipments, invoices, receivables and credit: the order-to-cash cycle of a small business, with a credit gate the agent cannot talk past.',
-  solo: 'A freelancer\'s invoicing: numbered invoices with a link and a PDF, any currency, your tax scheme, payments and what is still open. Issued means issued.',
+  solo: 'A freelancer\'s invoicing: numbered invoices with a link and a PDF, any currency, your tax scheme, payments and what is still open, and reminders for overdue ones that the person sends. Issued means issued.',
   crm: 'Relationship pursuit: campaigns with a goal, accounts that earned their place, contacts with sources or recorded as gaps, drafts the agent writes and a person sends, events with the page their date came from.',
   prospect: 'The holding area in front of the CRM: bought or scraped rows the agent stages and judges, that only a person promotes.',
   jobhunt: 'A job search as a system of record: postings, applications, interviews, recruiters, a duplicate guard, and one next action per pursuit.',
-  purchases: 'Bank and card statements and receipts the agent read: rows with provenance, accepted whole or not at all, reviewed in the person\'s own words, subscriptions and spend.',
-  bridge: 'The hand-over to the accountant: map their chart once, export a period as QuickBooks Online or Xero journal lines, keep what went and when.',
+  purchases: 'Bank and card statements and receipts the agent read: rows with provenance, accepted whole or not at all, reviewed in the person\'s own words; standing rules that suggest, subscriptions and spend, and bills only a person approves paying.',
+  bridge: 'The hand-over to the accountant: map their chart once, export a period as QuickBooks Online or Xero journal lines, keep what went and when; and preliminary financials before the close.',
   p2p: 'Procure-to-pay, specified ahead of any implementation: purchase orders, receipts against them, supplier invoices matched three ways, payment runs.',
 };
 

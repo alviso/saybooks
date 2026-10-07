@@ -286,7 +286,7 @@ const server = http.createServer(async (req, res) => {
       const mtime = (f) => { try { return fs.statSync(f).mtime.toISOString().slice(0, 10); } catch { return new Date().toISOString().slice(0, 10); } };
       const pages = [
         ['/', mtime(path.join(UI, 'landing.html')), 'weekly', '1.0', 'What Saybooks is: books you keep by talking, under rules that refuse a guess, on saybooks.io with Claude or entirely on your Mac.'],
-        ['/solo', mtime(path.join(UI, 'solo.html')), 'weekly', '0.9', 'Free invoicing for freelancers who work with Claude: describe the work, get a numbered invoice, a link and a PDF.'],
+        ['/solo', mtime(path.join(UI, 'solo.html')), 'weekly', '0.9', 'Free invoicing for freelancers who work with Claude: describe the work, get a numbered invoice, a link and a PDF; reminders for overdue ones, sent by you.'],
         ['/hunt', mtime(path.join(UI, 'hunt.html')), 'weekly', '0.9', 'Free job-hunt tracker for people running their search with Claude: postings, applications, interviews, a duplicate guard.'],
         ['/docs', mtime(path.join(UI, 'docs.html')), 'weekly', '0.8', 'Connecting Claude, keys and roles, spaces and modules, documents, the ledger bridge, export and delete, self-hosting.'],
         ['/about', mtime(path.join(UI, 'about.html')), 'monthly', '0.5', 'Who builds Saybooks and why: Peter Varga, thirty years of enterprise software, now in Portland.'],
