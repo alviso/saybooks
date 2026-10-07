@@ -113,7 +113,7 @@ a full statement cycle from plain sentences, no coaching. In LM Studio's `mcp.js
 ```
 
 `SAYBOOKS_MODULES` picks the tools the model sees (`core,solo` is 35 tools; `core,purchases` 53;
-all eight modules is 150 and too many for a small model). Load the model with one concurrent slot.
+all eight modules is 154 and too many for a small model). Load the model with one concurrent slot.
 What that took, and the six fixes it forced in the tools, is in
 [saybooks.io/notes/local-models](https://saybooks.io/notes/local-models); the plain-language
 harness that measures it is `npm run local`.

@@ -1,6 +1,7 @@
 # solo — Freelancer Invoicing · Area Specification
 
-**Status: 0.2.** The fourth area, deliberately tiny.
+**Status: 0.3.** The fourth area, deliberately tiny. 0.3 adds payment reminders: drafts for an
+overdue invoice that the freelancer sends from their own mailbox.
 
 Solo is NOT o2c-lite — it is a different calibration, extracted from a different life. o2c
 bills what shipped because a warehouse must; a freelancer has no warehouse, no fulfilment, and
@@ -50,11 +51,18 @@ authority), currency conversion, recurring invoices, sending anything anywhere.
   readable and printable, stamped VOID, because a record you cannot read is not a record;
   `open` is 0 on a void invoice so no reader has to remember the status.
 
+- **reminder** — a payment reminder for an overdue invoice: a subject and a body the agent
+  drafts in the freelancer's voice, its stage (first, second, final, from how many already
+  went), the open amount it was written against. draft → sent (with the day it actually went,
+  from the person) | discarded (with a reason). Saybooks never sends it; mailto opens it in the
+  freelancer's own mail, addressed and filled in.
+
 ## 4. The acts
 
-Writes (6): draft_invoice, update_draft, issue_invoice, void_invoice, record_payment,
-apply_payment. Reads (5): invoice, document, outstanding, statement, setup (0.2: what the company profile
-still needs and the next question, in order). Environment (core, existing): create_customer,
+Writes (8): draft_invoice, update_draft, issue_invoice, void_invoice, record_payment,
+apply_payment, draft_reminder, reminder_outcome. Reads (6): invoice, document, outstanding
+(0.3: with reminders sent, the last one's date and the next stage), statement, setup (0.2: what
+the company profile still needs and the next question, in order), reminders. Environment (core, existing): create_customer,
 update_customer, set_company_profile.
 
 ## 5. Invariants
@@ -86,6 +94,14 @@ update_customer, set_company_profile.
 - **S-12** Numbers follow the company's format — a sequence token, optionally a year token
   that restarts the sequence each year — and remain sequential and never reused within it (S-4).
 
+- **S-13** A reminder is a draft a person sends. Only an issued invoice past its due date with
+  money open gets one, and one draft per invoice waits at a time. Its figures are the invoice's
+  own: it names the invoice and the amount open, and any other amount it mentions must be the
+  invoice's total or what was paid, so no fee or interest nobody agreed can appear; a placeholder
+  is refused. A send is recorded only as the person reports it, with the day it went, which
+  cannot be in the future or before the draft. Another reminder within seven days of the last
+  one sent needs a reason. Saybooks never sends it (S-7).
+
 ## 6. Required read models
 
 invoice (the whole document: lines, seller and bill-to snapshots, applied/open, the doc link),
@@ -111,7 +127,11 @@ profile, default tax on every line with one zero-rated line, TAX INVOICE at issu
 NZD · 04 unregistered business with USD and CZK: taxed line refused, unknown currency refused,
 F-{NNN} numbering, a USD payment refused against the CZK invoice, the CZK one applied ·
 05 guided setup: a fresh space, setup names each next question in order, tax must be answered,
-ready after the six required facts, first invoice issued.
+ready after the six required facts, first invoice issued · 06 reminders: an invoice partly
+paid and overdue; a reminder on a draft refused; a late fee, a missing amount and a
+placeholder refused; the first reminder drafted, a second draft refused while it waits; a send
+refused without its date and for a date not yet come; recorded as sent; another within the week
+refused, then drafted with a reason; a discard refused without a reason, then discarded.
 
 ## 9. Deferred — with reasons
 
@@ -126,6 +146,7 @@ ready after the six required facts, first invoice issued.
 
 ---
 
-*Change log: 0.1-draft (2026-09-02) — drafted with Peter's refocus from an o2c door to a
+*Change log: 0.3 (2026-10-07) — payment reminders as drafts the freelancer sends, from Aryeh
+Munk's phase 1 list ("Follow up with customers AR"). 0.1-draft (2026-09-02) — drafted with Peter's refocus from an o2c door to a
 freelancer invoice generator; the interactive-guide doctrine and S-5 came from that
 conversation. 0.1.1 (2026-09-04) — client address + tax id, bill-to block frozen at issue, preview link from the first draft (DRAFT-stamped), document read returning the rendered page and the PDF; void invoices stay readable (VOID-stamped) with open = 0. 0.2 (2026-09-05) — company country, currency set with per-invoice currency, tax scheme with registration (S-10, S-11), numbering format (S-12), per-line refs and a subject line; prompted by a New Zealand freelancer's sample invoice and Peter's CZK/USD billing.*

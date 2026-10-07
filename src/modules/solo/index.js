@@ -14,17 +14,19 @@ const V = require('./views.js');
 
 const mod = R.defineModule({
   name: 'solo', prefix: 'solo',
-  tables: ['solo_invoice', 'solo_invoice_line', 'solo_payment', 'solo_payment_application'],
-  ids: { invoice: 'INV-0001', payment: 'P-0001' },
+  tables: ['solo_invoice', 'solo_invoice_line', 'solo_payment', 'solo_payment_application', 'solo_reminder'],
+  ids: { invoice: 'INV-0001', payment: 'P-0001', reminder: 'REM-0001' },
   lifecycles: {
     invoice: 'draft (editable) -> issued (immutable; seller frozen, doc link minted) -> paid | void (reasoned, number burned)',
     payment: 'recorded (unapplied is a valid state) -> applied to invoices, bounded both sides',
+    reminder: 'draft (for an overdue invoice; the person sends it from their mailbox) -> sent (with the day it went) | discarded (reasoned)',
   },
   rules: [
     'Invoice timing is the client agreement — ahead, partial, or after; recorded, never gatekept.',
     'Issued invoices are immutable; mistakes are void-and-reissue on the record.',
     'The seller block freezes at issuance; no profile means issuing is refused with the guide sentence.',
     'Documents are produced, never sent; payments are recorded, never moved.',
+    'A payment reminder is a draft a person sends; its figures are the invoice\'s own.',
     'An invoice carries one currency from the company\'s set; cash never crosses currencies.',
     'Tax follows the company\'s scheme: unregistered businesses cannot tax a line; registered ones default every line to their rate and print TAX INVOICE.',
   ],
@@ -53,18 +55,25 @@ ONE question at a time:
   only when the company bills in several; ask about tax only to confirm the company's
   scheme (registered? default rate?) the first time — the owner sets it once under Company.
   Never put tax on a line for an unregistered business; the write is refused anyway.
-Never invent an amount, a rate, a date, or terms (S-6).`,
+Never invent an amount, a rate, a date, or terms (S-6).
+
+OVERDUE: solo_outstanding shows days_overdue, how many reminders went and the next stage. When
+the person wants to chase one, draft it with solo_draft_reminder in their voice, show it, and
+let them send it from their own mailbox (the result carries a mailto link). When they say it
+went, record it with solo_reminder_outcome and the day it went. Never a fee or interest nobody
+agreed; never a send nobody told you about (S-13).`,
   env_acts: { draft_invoice: 'solo_draft_invoice', issue_invoice: 'solo_issue_invoice', record_payment: 'solo_record_payment', apply_payment: 'solo_apply_payment' },
   env_argmap: { customer: 'customer_id', invoice: 'invoice_id', payment: 'payment_id' },
   implements: {
-    area: 'solo', spec: '0.2',
-    argmap: { customer: 'customer_id', invoice: 'invoice_id', payment: 'payment_id' },
+    area: 'solo', spec: '0.3',
+    argmap: { customer: 'customer_id', invoice: 'invoice_id', payment: 'payment_id', reminder: 'reminder_id' },
     acts: {
       draft_invoice: 'solo_draft_invoice', update_draft: 'solo_update_draft',
       issue_invoice: 'solo_issue_invoice', void_invoice: 'solo_void_invoice',
       record_payment: 'solo_record_payment', apply_payment: 'solo_apply_payment',
       invoice: 'solo_get_invoice', document: 'solo_get_document', outstanding: 'solo_outstanding', statement: 'solo_statement',
       setup: 'core_setup_status',
+      draft_reminder: 'solo_draft_reminder', reminder_outcome: 'solo_reminder_outcome', reminders: 'solo_reminders',
     },
   },
   search: (like) => ({
@@ -77,7 +86,9 @@ Never invent an amount, a rate, a date, or terms (S-6).`,
 R.inModule(mod, () => {
   require('./commands/invoices.js');
   require('./commands/reads.js');
+  require('./commands/reminders.js');
 });
+R.defineSubject('solo_reminder', { load: (id) => H.need('solo_reminder', id, 'reminder') });
 
 R.defineSubject('solo_invoice', {
   load: V.invoiceView,

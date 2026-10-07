@@ -1,6 +1,6 @@
 {
   "area": "solo",
-  "spec": "0.2",
+  "spec": "0.3",
   "doc": "spec.md",
   "acts": {
     "draft_invoice": {
@@ -66,6 +66,25 @@
       ]
     },
     "setup": {
+      "kind": "read",
+      "required": []
+    },
+    "draft_reminder": {
+      "kind": "write",
+      "required": [
+        "invoice",
+        "subject",
+        "body"
+      ]
+    },
+    "reminder_outcome": {
+      "kind": "write",
+      "required": [
+        "reminder",
+        "outcome"
+      ]
+    },
+    "reminders": {
       "kind": "read",
       "required": []
     }
@@ -135,6 +154,10 @@
     {
       "id": "S-12",
       "title": "Numbers follow the company's format (sequence token, optional year token) and stay sequential and never reused within it."
+    },
+    {
+      "id": "S-13",
+      "title": "A reminder is a draft a person sends: only for an overdue invoice with money open, one waiting at a time, its figures the invoice's own, a send recorded only with the day it went, another within seven days only with a reason."
     }
   ]
 }

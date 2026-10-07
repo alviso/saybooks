@@ -66,7 +66,7 @@
     "args": ["/path/to/saybooks/mcp-server.js"],
     "env": { "SAYBOOKS_WORKSPACE": "main", "SAYBOOKS_MODULES": "core,solo", "SAYBOOKS_ACTOR": "gemma-4" }
 } } }</code></pre>
-      Use the absolute path to <code>node</code>. <code>SAYBOOKS_MODULES</code> picks the tools the model sees: <code>core,solo</code> is 35 tools for invoicing, <code>core,purchases</code> 53 for statements; all eight modules is 150 and too many for a small model. <code>SAYBOOKS_ACTOR</code> is the name on the audit trail.</li>
+      Use the absolute path to <code>node</code>. <code>SAYBOOKS_MODULES</code> picks the tools the model sees: <code>core,solo</code> is 35 tools for invoicing, <code>core,purchases</code> 53 for statements; all eight modules is 154 and too many for a small model. <code>SAYBOOKS_ACTOR</code> is the name on the audit trail.</li>
     <li><b>Load the model with one concurrent slot and a 32k context.</b> LM Studio defaults to four slots and reserves a full context cache for each; on a 32 GB machine that is the difference between quick and swapping.</li>
     <li><b>Talk plainly.</b> "Set up my company: Vega Consulting, US, USD, not registered for sales tax." "Add a client, Meridian Logistics, net 30." "Invoice them for 12 hours at $250 and issue it." Paste a statement and say "here is my September card statement."</li>
   </ol>
@@ -103,6 +103,7 @@
     <li>A voided invoice stays readable and printable, stamped <b>VOID</b>, with the reason at the foot. The number is never reused.</li>
     <li>Your logo prints on every document. Set it under <b>Company</b>, from a file or a public image URL.</li>
     <li><b>Currency, tax and numbering come from the company profile.</b> Name the country (dates and amounts print the way people there write them), the currencies you bill in with a default, and your tax scheme: the tax's name, the default rate, and whether you are registered. Each invoice carries one currency from that set; a payment settles only invoices in its own currency. Not registered: no line can carry tax. Registered: every line gets the default rate unless you set a line to 0, the document says <b>TAX INVOICE</b> and prints your tax id under its own caption (GST No., VAT ID). The number format is yours too: <code>INV-{NNNN}</code> by default, <code>INV-{YYYY}-{NNN}</code> to restart each year.</li>
+      <li><b>Reminders for overdue invoices.</b> Ask your agent to chase an invoice, or open it and press <b>Draft a reminder</b>. The reminder is a draft in your voice: it must name the invoice and the amount open, and any other figure in it has to be the invoice's own, so a late fee nobody agreed can never slip in. Open it in your own mail (it arrives addressed and filled in), send it, and mark it sent with the day it went. Saybooks never sends it. Another reminder within a week of the last one asks for your reason. <b>Invoicing, Reminders</b> keeps what is waiting and what went.</li>
   </ul>
 
   <h2 id="purchases">Purchases</h2>

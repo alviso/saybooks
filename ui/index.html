@@ -159,6 +159,7 @@
   .finnet { display:flex; justify-content:space-between; align-items:baseline; margin-top:16px; padding:12px 14px; border-radius:12px; background:var(--tint) } .finnet b { font:600 22px var(--serif) } .finnet.bad { background:var(--alert); color:var(--warn) }
   .finnotes { max-width:1180px } .finnotes ul { margin:10px 0 0; padding-left:20px; color:var(--mid) } .finnotes li { margin:0 0 6px }
   @media print { .top, nav.rail, .tabs, .acts, #tip { display:none !important } body { display:block; height:auto; background:#fff } .shell { display:block } main { padding:0; overflow:visible } .card { box-shadow:none } }
+  a.btnlike { display:inline-flex; align-items:center; font:600 13.5px var(--display); padding:8px 15px; border-radius:9px; border:1px solid var(--line); background:var(--panel); color:var(--ink); text-decoration:none } a.btnlike:hover { background:var(--tint2) }
   .pill.sugg { background:transparent; color:var(--accent2); box-shadow:inset 0 0 0 1.5px var(--leaf); border:none }
   .who.human { background:var(--sky); color:var(--sky-ink) }
   .connect { border-radius:14px; border-left-color:var(--agent) }
@@ -226,7 +227,7 @@ const ICONS = {
 const NAV = [
   { key: 'home', label: 'Home', tabs: [['home', 'Home']] },
   { key: 'newspace', label: 'New space', tabs: [['newspace', 'New space']], when: () => REG.user, hidden: true },
-  { key: 'solo', label: 'Invoicing', prefix: 'solo_', tabs: [['soloinv', 'Invoices'], ['soloout', 'Outstanding'], ['soloclients', 'Clients']] },
+  { key: 'solo', label: 'Invoicing', prefix: 'solo_', tabs: [['soloinv', 'Invoices'], ['soloout', 'Outstanding'], ['soloremind', 'Reminders'], ['soloclients', 'Clients']] },
   { key: 'o2c', label: 'Orders', prefix: 'o2c_', tabs: [['orders', 'Orders'], ['customers', 'Customers'], ['items', 'Items'], ['ar', 'AR aging'], ['cash', 'Unapplied cash']] },
   { key: 'crm', label: 'CRM', prefix: 'crm_', tabs: [['today', 'Today'], ['campaigns', 'Campaigns'], ['accounts', 'Accounts'], ['crmcontacts', 'Contacts'], ['crmdrafts', 'Drafts'], ['crmcal', 'Calendar'], ['crmpipeline', 'Pipeline'], ['network', 'Network'], ['crmactivity', 'Activity']] },
   { key: 'pros', label: 'Prospects', prefix: 'pros_', tabs: [['prospulls', 'Pulls'], ['prosrows', 'Staged rows']] },
@@ -739,6 +740,11 @@ async function detail(type, id) {
       if (entity.pdf_path) { const pb = $('<button>Download PDF</button>'); pb.onclick = () => window.open(entity.pdf_path, '_blank'); bar2.append(pb); }
     }
     wrap.append(bar2);
+    if (entity.reminders && entity.reminders.length) {
+      const rt = $('<table style="margin-bottom:14px"><thead><tr><th>Reminder</th><th>Stage</th><th>Status</th><th>Subject</th></tr></thead><tbody></tbody></table>');
+      for (const r of entity.reminders) rt.querySelector('tbody').append($(`<tr style="cursor:default"><td>${r.id}</td><td>${['', 'first', 'second'][r.stage] || 'final'}</td><td><span class="pill ${r.status === 'sent' ? 'sent' : r.status === 'draft' ? 'unreviewed' : 'draft'}">${r.status}${r.sent_at ? ' ' + r.sent_at : ''}</span></td><td>${esc(r.subject)}</td></tr>`));
+      wrap.append($('<div class="sub" style="margin:0 0 6px">Payment reminders</div>'), rt);
+    }
     const showRef = entity.lines.some(l => l.ref), showTax = entity.tax_registered || entity.tax_total > 0;
     const lt = $(`<table><thead><tr>${showRef ? '<th>Ref</th>' : ''}<th>Description</th><th class="num">Qty</th><th class="num">Rate</th>${showTax ? `<th class="num">${entity.tax_label || 'Tax'}</th>` : ''}<th class="num">Amount</th></tr></thead><tbody></tbody></table>`);
     for (const l of entity.lines) lt.querySelector('tbody').append($(
@@ -1554,9 +1560,47 @@ async function renderPage() {
     const o = await api('solo_outstanding', {});
     if (!o.count) { main.append($('<div class="card doc" style="max-width:560px">Nothing outstanding — everyone has paid up.</div>')); return; }
     main.append($(`<div class="sub" style="margin:0 0 10px">${o.count} open · total ${o.total_open_display} · as of ${o.as_of}</div>`));
-    const t = $('<table><thead><tr><th>Invoice</th><th>Client</th><th class="num">Open</th><th>Due</th><th class="num">Days overdue</th></tr></thead><tbody></tbody></table>');
+    const t = $('<table><thead><tr><th>Invoice</th><th>Client</th><th class="num">Open</th><th>Due</th><th class="num">Days overdue</th><th>Reminders</th></tr></thead><tbody></tbody></table>');
     rowsInto(t, o.invoices, r => `<td>${r.id}</td><td>${r.customer_name}</td><td class="num">${r.open_display}</td>
-      <td style="font-size:12px">${r.due_at || '—'}</td><td class="num" style="${r.days_overdue > 0 ? 'color:var(--warn);font-weight:600' : 'color:var(--dim)'}">${r.days_overdue || ''}</td>`, 'solo_invoice');
+      <td style="font-size:12px">${r.due_at || '—'}</td><td class="num" style="${r.days_overdue > 0 ? 'color:var(--warn);font-weight:600' : 'color:var(--dim)'}">${r.days_overdue || ''}</td>
+      <td style="font-size:12.5px">${r.reminder_draft ? `<span class="pill unreviewed">${r.reminder_draft} waiting</span>` : r.reminders_sent ? `${r.reminders_sent} sent, last ${r.last_reminded_at}` : r.days_overdue > 0 ? `<span style="color:var(--dim)">none yet · open the invoice to draft one</span>` : ''}</td>`, 'solo_invoice');
+  }
+  if (view === 'soloremind') {
+    head('Reminders', 'Payment reminders for overdue invoices. Written here, sent by you from your own mail; nothing here sends anything.');
+    const st = window.__remStatus || 'draft';
+    const bar = $('<div class="acts"></div>');
+    for (const [k, label] of [['draft', 'Waiting'], ['sent', 'Sent'], ['discarded', 'Discarded']]) {
+      const b = $(`<button class="${k === st ? 'on' : ''}">${label}</button>`); b.onclick = () => { window.__remStatus = k; render(); }; bar.append(b);
+    }
+    main.append(bar);
+    const d = await api('solo_reminders', { status: st });
+    if (!d.items.length) {
+      main.append($(`<div class="card doc" style="max-width:640px;margin-top:14px">${st === 'draft' ? 'Nothing waiting. Open an overdue invoice from Outstanding and press Draft a reminder, or ask your agent to chase it.' : st === 'sent' ? 'No reminder recorded as sent yet. When you send one, mark it sent here or tell your agent.' : 'Nothing discarded.'}</div>`));
+      return;
+    }
+    for (const x of d.items) {
+      const card = $(`<div class="card" style="margin:14px 0 0;max-width:900px">
+        <div class="sub" style="margin:0 0 4px"><a href="#" data-inv>${esc(x.invoice_id)}</a> · ${esc(x.customer_name || '')} · ${x.stage_name} reminder · ${x.days_overdue} days overdue when drafted · ${x.open_now_display ?? ''} open now${x.sent_at ? ` · sent ${x.sent_at}` : ''}</div>
+        <div style="font-size:12.5px;color:var(--dim);margin:0 0 6px">${x.to_email ? `To ${esc(x.to_email)}` : '<span style="color:var(--warn)">This client has no email on record; add one under Clients, or copy the text.</span>'}</div>
+        ${x.stale ? `<div class="doc" style="color:var(--warn);font-size:13px;margin:0 0 6px">${esc(x.stale)}</div>` : ''}
+        <div style="font-weight:600;margin:6px 0 2px">${esc(x.subject)}</div>
+        <div style="white-space:pre-wrap;margin:6px 0 10px">${esc(x.body)}</div>
+        ${x.discard_reason ? `<div class="doc" style="font-size:13px"><b>Discarded:</b> ${esc(x.discard_reason)}</div>` : ''}
+        ${x.soon_because ? `<div class="doc" style="font-size:13px"><b>Sent within the week because:</b> ${esc(x.soon_because)}</div>` : ''}
+        <div class="acts remacts" style="margin-top:10px"></div>
+        <div style="font-size:12px;color:var(--dim);margin-top:8px">${x.id} · drafted by ${esc(x.created_by || '')} on ${String(x.created_at).slice(0, 10)}</div></div>`);
+      const acts = card.querySelector('.remacts');
+      if (x.status === 'draft') {
+        if (x.mailto) { const m = $(`<a class="btnlike" href="${x.mailto}">Open in email</a>`); acts.append(m); }
+        const copy = $('<button type="button">Copy text</button>');
+        copy.onclick = async () => { try { await navigator.clipboard.writeText(`${x.subject}\n\n${x.body}`); copy.textContent = 'Copied ✓'; } catch { copy.textContent = 'Select it by hand'; } setTimeout(() => copy.textContent = 'Copy text', 1600); };
+        const disc = $('<button type="button">Discard…</button>'); disc.onclick = () => openForm(cmd('solo_reminder_outcome'), { reminder_id: x.id, outcome: 'discarded' });
+        const sent = $('<button class="primary" type="button">Mark sent…</button>'); sent.onclick = () => openForm(cmd('solo_reminder_outcome'), { reminder_id: x.id, outcome: 'sent', sent_at: new Date().toISOString().slice(0, 10) });
+        acts.append(copy, disc, sent);
+      } else acts.remove();
+      card.querySelector('[data-inv]').onclick = (e) => { e.preventDefault(); selected = { type: 'solo_invoice', id: x.invoice_id }; render(); };
+      main.append(card);
+    }
   }
   if (view === 'soloclients') {
     head('Clients', 'Terms live in your agreement with each client — recorded here, never enforced.');

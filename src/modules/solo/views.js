@@ -37,6 +37,7 @@ function invoiceView(id) {
     customer: cust, customer_as_issued: !!csnap, customer_name: cust.name, customer_email: cust.email,
     subtotal_display: m(inv.subtotal), tax_display: m(inv.tax_total), total_display: m(inv.total),
     applied, applied_display: m(applied),
+    ...reminderState(id), reminders: remindersOf(id).map(r => ({ id: r.id, stage: r.stage, status: r.status, sent_at: r.sent_at, subject: r.subject, created_at: r.created_at })),
     // Nothing on a void invoice is collectible: open is 0 here so no reader has to remember the status.
     open, open_display: m(open),
     tax_label: (seller && seller.tax_label) || loc.tax_label || 'Tax', tax_registered: taxRegistered,
@@ -74,9 +75,45 @@ function outstanding() {
   const withDays = rows.map(r => ({
     ...r, open_display: money(r.open, r.currency), total_display: money(r.total, r.currency),
     days_overdue: r.due_at && r.due_at < t ? Math.floor((Date.parse(t) - Date.parse(r.due_at)) / 864e5) : 0,
+    ...reminderState(r.id),
   }));
   const sums = sumByCurrency(withDays, 'open');
   return { as_of: t, invoices: withDays, count: withDays.length, total_open: sums.total, total_open_display: sums.total_display, by_currency: sums.by };
+}
+
+// ---------------------------------------------------------------- reminders (S-13)
+const STAGE = (n) => n <= 1 ? 'first' : n === 2 ? 'second' : 'final';
+const invOpen = (id) => { const i = get('solo_invoice', id); if (!i) return null;
+  const paid = db().prepare('SELECT COALESCE(SUM(amount),0) s FROM solo_payment_application WHERE invoice_id = ?').get(id).s;
+  return { ...i, open: i.total - paid, paid }; };
+const daysOver = (due) => due && due < today() ? Math.floor((Date.parse(today()) - Date.parse(due)) / 864e5) : 0;
+function remindersOf(invoiceId) { try { return db().prepare('SELECT * FROM solo_reminder WHERE invoice_id = ? ORDER BY created_at, id').all(invoiceId); } catch { return []; } }
+function mailtoOf(r, email) {
+  if (!email) return null;
+  return `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(r.subject)}&body=${encodeURIComponent(r.body)}`;
+}
+function reminderView(id) {
+  const r = need('solo_reminder', id, 'reminder');
+  const inv = invOpen(r.invoice_id) || {};
+  const c = get('customer', r.customer_id) || {};
+  const stale = r.status === 'draft' && (inv.status !== 'issued' || inv.open <= 0)
+    ? `${r.invoice_id} is ${inv.status === 'void' ? 'void' : 'paid'} now; discard this reminder rather than send it.` : null;
+  return { ...r, stage_name: STAGE(r.stage), customer_name: c.name || null, to_email: c.email || null, invoice_status: inv.status || null,
+    open_now: inv.open ?? null, open_now_display: inv.open != null ? money(inv.open, r.currency) : null, open_at_draft_display: money(r.open_at_draft, r.currency),
+    mailto: r.status === 'draft' ? mailtoOf(r, c.email) : null, stale };
+}
+function reminders({ status } = {}) {
+  let rows = [];
+  try { rows = db().prepare(`SELECT id FROM solo_reminder ${status ? 'WHERE status = ?' : ''} ORDER BY CASE status WHEN 'draft' THEN 0 ELSE 1 END, created_at DESC, id DESC`).all(...(status ? [status] : [])); } catch { return { count: 0, drafts: 0, items: [] }; }
+  const items = rows.map(r => reminderView(r.id));
+  return { count: items.length, drafts: items.filter(i => i.status === 'draft').length, items };
+}
+/** Where an invoice stands on reminders: how many went, when the last one did, any draft waiting. */
+function reminderState(invoiceId) {
+  const rs = remindersOf(invoiceId);
+  const sent = rs.filter(r => r.status === 'sent');
+  const draft = rs.find(r => r.status === 'draft');
+  return { reminders_sent: sent.length, last_reminded_at: sent.length ? sent.map(r => r.sent_at).sort().pop() : null, reminder_draft: draft ? draft.id : null, next_stage: STAGE(sent.length + 1) };
 }
 
 function statement(customerId) {
@@ -98,4 +135,4 @@ function statement(customerId) {
            closing_balance_by_currency: closing };
 }
 
-module.exports = { invoiceView, outstanding, statement, invoiceApplied, paymentUnapplied };
+module.exports = { reminderView, reminders, reminderState, remindersOf, invOpen, daysOver, STAGE, invoiceView, outstanding, statement, invoiceApplied, paymentUnapplied };
