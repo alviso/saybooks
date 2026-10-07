@@ -7,7 +7,11 @@
 const wsp = require('./workspace.js');
 
 const db = wsp.db;
-const today = () => new Date().toISOString().slice(0, 10);
+// A scenario can say what day it is (conformance only): "overdue" needs an invoice whose due
+// date has passed, and every invoice is issued today. Synchronous runs set it and reset it.
+let CLOCK = process.env.SAYBOOKS_TODAY || null;   // local runs may also start the clock elsewhere
+const today = () => CLOCK || new Date().toISOString().slice(0, 10);
+const withClock = (day, fn) => { if (!day) return fn(); const prev = CLOCK; CLOCK = day; try { return fn(); } finally { CLOCK = prev; } };
 const addDays = (iso, n) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * 864e5).toISOString().slice(0, 10);
 // Payment terms: "immediate", or "netN" for any whole number of days (net7, net15, net30, net60,
 // net45...). The four common ones were once the whole list; a customer on net 7 is not unusual.
@@ -71,4 +75,4 @@ const auditTrail = (limit = 50, subjectId = null) => db().prepare(`
   SELECT * FROM command_log ${subjectId ? 'WHERE subject_id = ?' : ''} ORDER BY id DESC LIMIT ?`)
   .all(...(subjectId ? [subjectId, limit] : [limit]));
 
-module.exports = { db, today, addDays, TERMS, TERMS_RE, termsDays, normTerms, money, fmtDate, locale, CUR_RE, nextId, get, need, auditTrail };
+module.exports = { db, today, withClock, addDays, TERMS, TERMS_RE, termsDays, normTerms, money, fmtDate, locale, CUR_RE, nextId, get, need, auditTrail };

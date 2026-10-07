@@ -115,8 +115,8 @@ function walkStep(area, file, index, ws, { actor = 'walkthrough' } = {}) {
   const plan = walkPlan(area, file);
   if (index < 0 || index >= plan.steps.length) throw new Error(`step ${index} out of range 0..${plan.steps.length - 1}`);
   if (index === 0) wsp.wipe(ws);
-  const row = judge(plan.steps[index],
-    { workspace: ws, actor, actor_kind: 'agent', session: `walk:${file}` });
+  const row = require('./db.js').withClock(loadScenario(area, file).today, () => judge(plan.steps[index],
+    { workspace: ws, actor, actor_kind: 'agent', session: `walk:${file}` }));
   return { file, name: plan.name, index, total: plan.steps.length, done: index === plan.steps.length - 1, ...row };
 }
 
@@ -130,11 +130,13 @@ function runScenario(area, file, { actor = 'conformance', wsSuffix = '' } = {}) 
   const plan = walkPlan(area, file);
   const evidence = [];
   let pass = true;
-  for (const step of plan.steps) {
-    const row = judge(step, ctx);
-    if (!row.pass) pass = false;
-    evidence.push(row);
-  }
+  require('./db.js').withClock(scenario.today, () => {
+    for (const step of plan.steps) {
+      const row = judge(step, ctx);
+      if (!row.pass) pass = false;
+      evidence.push(row);
+    }
+  });
 
   return { file, name: scenario.name, spec: scenario.spec, notes: scenario.notes || null,
     workspace: ws, ran_at: new Date().toISOString(), pass, steps: evidence };

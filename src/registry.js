@@ -99,6 +99,13 @@ function defineModule(manifest) {
 
 /** Subjects power availableFor()/next_actions and are declared by the module that owns the
  *  entity's read model — no central hand-maintained map to drift. */
+/** The audit row's subject: the argument named after the subject, in full (solo_invoice_id)
+ *  or without the module prefix (invoice_id), the way commands usually name it. */
+function subjectIdOf(cmd, args) {
+  if (!cmd.subject || !args) return null;
+  const short = cmd.subject.includes('_') ? cmd.subject.split('_').slice(1).join('_') : null;
+  return args[`${cmd.subject}_id`] || (short && args[`${short}_id`]) || null;
+}
 function defineSubject(type, { load, ctx }) {
   if (SUBJECTS[type]) throw new Error(`duplicate subject ${type}`);
   SUBJECTS[type] = { load, ctx: ctx || (() => ({})), module: definingModule ? definingModule.name : null };
@@ -327,7 +334,7 @@ function execute(name, args = {}, ctx = {}) {
       db.prepare(`INSERT INTO command_log (at, command, actor_kind, actor, session, reason, subject_type, subject_id, args_json, ok, result_json)
                   VALUES (?,?,?,?,?,?,?,?,?,1,?)`)
         .run(at, name, who.actor_kind, who.actor, who.session, who.reason, cmd.subject || null,
-             String(args[`${cmd.subject}_id`] || (result && result.id) || ''), JSON.stringify(logArgs(cmd, args)), JSON.stringify(result));
+             String(subjectIdOf(cmd, args) || (result && result.id) || ''), JSON.stringify(logArgs(cmd, args)), JSON.stringify(result));
       return result;
     });
 
@@ -338,7 +345,7 @@ function execute(name, args = {}, ctx = {}) {
       db.prepare(`INSERT INTO command_log (at, command, actor_kind, actor, session, reason, subject_type, subject_id, args_json, ok, error)
                   VALUES (?,?,?,?,?,?,?,?,?,0,?)`)
         .run(at, name, who.actor_kind, who.actor, who.session, who.reason, cmd.subject || null,
-             String(args[`${cmd.subject}_id`] || ''), JSON.stringify(logArgs(cmd, args)), e.message);
+             String(subjectIdOf(cmd, args) || ''), JSON.stringify(logArgs(cmd, args)), e.message);
       throw e;
     }
   });
