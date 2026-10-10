@@ -2285,7 +2285,12 @@ ${r.actual}</div>`));
 }
 
 const boot = async () => {
-  REG = await fetch(wsUrl('/api/registry')).then(r => r.json());
+  // An invite link (?join=<member key>) goes to the server once, on this first call, which pins
+  // the key in the cookie; then it leaves the address bar so the key is not left lying around.
+  const join = new URLSearchParams(location.search).get('join');
+  const regUrl = wsUrl('/api/registry');
+  REG = await fetch(join ? regUrl + (regUrl.includes('?') ? '&' : '?') + 'join=' + encodeURIComponent(join) : regUrl).then(r => r.json());
+  if (join) { const q = new URLSearchParams(location.search); q.delete('join'); history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash); }
   const has = (prefix) => REG.commands.some(c => c.name.startsWith(prefix));
   // A view that does not exist in this space lands on the first module that does.
   if (!navFor(view) || (navFor(view).prefix && !has(navFor(view).prefix)) || (navFor(view).when && !navFor(view).when())) view = firstView();

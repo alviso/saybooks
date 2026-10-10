@@ -745,7 +745,7 @@ const server = http.createServer(async (req, res) => {
           // Binary attachments are for agents; the workbench has the links. Report what was rendered, not the bytes.
           if (result && result._attachments) {
             const { _attachments, ...rest } = result;
-            rest.attachments = _attachments.map(x => ({ kind: x.kind, mime: x.mime, name: x.name, bytes: Math.floor(x.data.length * 3 / 4) }));
+            rest.attachments = _attachments.map(x => ({ kind: x.kind, mime: x.mime, name: x.name, ...(x.data ? { bytes: Math.floor(x.data.length * 3 / 4) } : { uri: x.uri }) }));
             return send(res, 200, { ok: true, result: rest });
           }
           return send(res, 200, { ok: true, result });
