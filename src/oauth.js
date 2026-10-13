@@ -193,6 +193,22 @@ function resourceFilter(resource) {
 const isResourcePath = (p) => RESOURCE_RE.test(p);
 const spaceMatches = (s, f) => !f ? true : f.ws ? s.ws === f.ws : ('kind' in f) ? ((s.kind || null) === f.kind) : true;
 
+// ---------------------------------------------------------------- where a code goes
+// Anyone can register a client: that is how an assistant connects without asking first, and
+// a code only ever goes to a redirect its client registered. So the person deciding has to see
+// that destination. The consent page names it, and flags a host Saybooks doesn't recognize,
+// because a client's name is whatever the client says it is.
+const KNOWN_HOSTS = ['claude.ai', 'claude.com', 'chatgpt.com'];
+const LOOPBACK = new Set(['127.0.0.1', 'localhost', '[::1]', '::1']);
+/** { label, kind }: kind is 'known' (a listed host), 'local' (this device only) or 'unknown'. */
+function destinationOf(redirectUri) {
+  let u; try { u = new URL(redirectUri); } catch { return { label: 'an address Saybooks cannot read', kind: 'unknown' }; }
+  if (u.protocol === 'http:' && LOOPBACK.has(u.hostname)) return { label: 'an app on this computer', kind: 'local' };
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return { label: `an app on this device (${u.protocol}//)`, kind: 'local' };
+  const known = u.protocol === 'https:' && KNOWN_HOSTS.some(h => u.hostname === h || u.hostname.endsWith('.' + h));
+  return { label: u.hostname, kind: known ? 'known' : 'unknown' };
+}
+
 // ---------------------------------------------------------------- consent page (ours)
 const PAGE = (title, body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} — Saybooks</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"><style>
@@ -203,6 +219,8 @@ label{display:block;font-weight:600;font-size:14px;margin:14px 0 4px} select,inp
 .row{display:flex;gap:10px;margin-top:22px} button{font:600 15px 'IBM Plex Sans',sans-serif;padding:11px 18px;border-radius:6px;border:1px solid hsl(215 25% 88%);background:#fff;color:hsl(215 60% 22%);cursor:pointer}
 button.primary{background:hsl(215 60% 22%);color:#fff;border-color:hsl(215 60% 22%)} .fine{font-size:13px;color:hsl(215 15% 46%);margin-top:16px}
 .who{background:#fff;border:1px solid hsl(215 25% 88%);border-radius:8px;padding:12px 14px;font-size:14.5px;margin-bottom:6px} .who b{display:block;font-size:16px}
+.who .to{display:block;margin-top:6px;font-size:13.5px;color:hsl(215 20% 36%)} .who .to strong{color:hsl(215 40% 16%)}
+.warn{background:hsl(0 80% 97%);border:1px solid hsl(0 60% 86%);color:hsl(0 55% 30%);border-radius:8px;padding:10px 14px;font-size:14px;margin:10px 0 14px}
 </style></head><body><div class="wrap"><div class="mark">SAYBOOKS</div>${body}</div></body></html>`;
 
 async function consentGet(req, res, url, user) {
@@ -217,18 +235,20 @@ async function consentGet(req, res, url, user) {
     const what = filter.ws ? 'that space' : filter.label ? `${filter.label === 'books' ? 'full' : filter.label} books` : 'books';
     return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(PAGE('No matching space', `<h1>You have no ${esc(what)} yet.</h1><p>${filter.ws ? 'You are not a member of the space this connector points at. Ask its owner for an invitation, or connect to one of your own spaces through ' + '<a href="/docs#connect">another address</a>.' : 'Open ' + door + ' once to create it, then connect again.'}</p>`));
   }
+  const dest = destinationOf(p.redirectUri), unknown = dest.kind === 'unknown';
   const opts = spaces.map(s => `<option value="${esc(s.ws)}">${esc(s.display_name)}${s.kind ? ` · ${esc(s.kind)}` : ''} (${esc(s.role)})</option>`).join('');
   const body = `<h1>Let ${esc(client.client_name || 'this app')} into your books?</h1>
-  <div class="who"><b>${esc(client.client_name || pend.client_id)}</b>${client.client_uri ? `<span>${esc(client.client_uri)}</span>` : ''}</div>
-  <p>It will act as your delegate through a key minted for it, under the role you pick — owner by default, so it can also set up the company profile with you — and every action it takes lands in that space's audit trail under its own name. You can revoke the key at any time from <b>Share this space…</b>.${filter.label ? ` This connector is the <b>${esc(filter.label)}</b> door, so only ${esc(filter.label)} spaces are offered.` : filter.ws ? ' This connector points at one specific space.' : ''}</p>
+  <div class="who"><b>${esc(client.client_name || pend.client_id)}</b>${client.client_uri ? `<span>${esc(client.client_uri)}</span>` : ''}<span class="to">Access goes to <strong>${esc(dest.label)}</strong></span></div>
+  ${unknown ? `<div class="warn"><b>Saybooks doesn't recognize this app.</b> Any app can call itself anything, so check where the access goes. If you didn't just connect it yourself, choose Deny.</div>` : ''}
+  <p>It will act as your delegate through a key minted for it, under the role you pick. ${unknown ? 'Read only is preselected because Saybooks doesn\'t recognize the app.' : 'Owner is preselected, so it can also set up the company profile with you.'} Every action it takes lands in that space's audit trail under its own name, and you can revoke the key at any time from <b>Share this space…</b>.${filter.label ? ` This connector is the <b>${esc(filter.label)}</b> door, so only ${esc(filter.label)} spaces are offered.` : filter.ws ? ' This connector points at one specific space.' : ''}</p>
   <form method="post" action="/oauth/consent">
     <input type="hidden" name="pend" value="${esc(pend.id)}">
     <label for="ws">Which books</label><select id="ws" name="ws">${opts}</select>
     <label for="role">What it may do</label><select id="role" name="role">
-      <option value="owner" selected>owner — everything you can do, company profile included (your delegate)</option>
+      <option value="owner"${unknown ? '' : ' selected'}>owner — everything you can do, company profile included (your delegate)</option>
       <option value="controller">controller — every business act, no invitations, deletions or company profile</option>
       <option value="clerk">clerk — day-to-day writes, no credit authority</option>
-      <option value="viewer">viewer — read only</option>
+      <option value="viewer"${unknown ? ' selected' : ''}>viewer — read only</option>
     </select>
     <label for="name">Name in the audit log</label><input id="name" name="name" value="${esc((client.client_name || 'agent').replace(/[^a-z0-9 ._-]/gi, '').slice(0, 30) || 'agent')}" maxlength="40">
     <div class="row"><button class="primary" name="decision" value="allow">Allow</button><button name="decision" value="deny">Deny</button></div>
@@ -294,4 +314,4 @@ function handle(req, res, publicUrl) { if (!app) build(publicUrl); return app(re
 
 function sweep() { const t = now(); db().prepare('DELETE FROM oauth_pending WHERE expires_at < ?').run(t); db().prepare('DELETE FROM oauth_code WHERE expires_at < ?').run(t); db().prepare('DELETE FROM oauth_token WHERE expires_at < ?').run(t); }
 
-module.exports = { provider, clientsStore, handles, handle, memberForBearer, consentGet, consentPost, sweep, isResourcePath, resourceFilter };
+module.exports = { provider, clientsStore, handles, handle, memberForBearer, consentGet, consentPost, sweep, isResourcePath, resourceFilter, destinationOf };
