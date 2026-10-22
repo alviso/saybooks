@@ -1,5 +1,5 @@
-# Saybooks hosted demo. node:20-slim (glibc) so better-sqlite3 uses its prebuilt binding.
-FROM node:20-slim
+# Saybooks hosted demo. node:22-slim (glibc) so better-sqlite3 uses its prebuilt binding.
+FROM node:22.23.4-slim
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
