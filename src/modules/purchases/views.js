@@ -60,12 +60,28 @@ function payables({ as_of } = {}) {
     buckets: Object.fromEntries(Object.entries(buckets).map(([k, v]) => [k, v.map(b => ({ id: b.id, vendor: b.vendor, number: b.number, due_date: b.due_date, amount_display: b.amount_display, status: b.status }))])),
     note: open.length ? lines.join(' ') : 'No bills waiting to be paid.' };
 }
-/** Bills received by a date and not paid by it, for the financials' notes (cash basis). */
+/** Bills received by a date and not paid by it, for the financials' notes (cash basis). A bill
+    another area keeps on the accrual basis (a bill on a purchase order) is already in the
+    figures, as goods received or accounts payable, so it is not counted here. */
 function unpaidBills({ as_of, currency } = {}) {
   try {
-    const rows = db().prepare(`SELECT amount, currency FROM purch_bill WHERE bill_date <= ? AND status <> 'rejected' AND (paid_at IS NULL OR paid_at > ?) ${currency ? 'AND currency = ?' : ''}`).all(as_of, as_of, ...(currency ? [currency] : []));
+    const rows = db().prepare(`SELECT id, amount, currency FROM purch_bill WHERE bill_date <= ? AND status <> 'rejected' AND (paid_at IS NULL OR paid_at > ?) ${currency ? 'AND currency = ?' : ''}`).all(as_of, as_of, ...(currency ? [currency] : []))
+      .filter(r => !onAccrual(r.id));
     return { count: rows.length, amount: rows.reduce((n, r) => n + r.amount, 0) };
   } catch { return { count: 0, amount: 0 }; }
+}
+/** Other areas may hold a bill to a condition before a person approves it (p2p's 3-way match):
+    the first one that says no gives its sentence; null when nothing holds it. */
+function approvalHold(billId) {
+  for (const m of require('../../registry.js').MODULES) {
+    if (m.api && typeof m.api.billApprovalHold === 'function') { const why = m.api.billApprovalHold(billId); if (why) return why; }
+  }
+  return null;
+}
+/** Is this bill kept on the accrual basis by another area (posted to Accounts Payable when approved)? */
+function onAccrual(billId) {
+  for (const m of require('../../registry.js').MODULES) if (m.api && typeof m.api.billOnAccrual === 'function' && m.api.billOnAccrual(billId)) return true;
+  return false;
 }
 
 // ---------------------------------------------------------------- standing rules (P-11)
@@ -283,6 +299,10 @@ function journalLines({ from, to } = {}) {
       WHERE t.status IN ('purchase','recurring','fee','income','transfer') ORDER BY t.date, t.id`).all();
   } catch { return []; }
   const out = [];
+  // A row that paid a bill kept on the accrual basis (a bill on a purchase order) clears
+  // Accounts Payable: the spending was booked when the bill was approved, not again here.
+  const paysAccrued = new Map();
+  try { for (const b of db().prepare('SELECT id, transaction_id FROM purch_bill WHERE transaction_id IS NOT NULL').all()) if (onAccrual(b.id)) paysAccrued.set(b.transaction_id, b.id); } catch { /* no bills yet */ }
   for (const t of rows) {
     if (!inRange(t.date)) continue;
     const acct = (t.source_account || `${t.source_kind || 'account'} (unnamed)`).trim();
@@ -311,6 +331,9 @@ function journalLines({ from, to } = {}) {
         : [{ account: cat || 'Uncategorised income', map: { kind: 'category', key: cat || '(uncategorised)', role: 'income' }, credit: amount }];
       out.push({ date: t.date, memo: `Received · ${who}`, customer: t.vendor || null, currency: t.currency, source: t.id,
         lines: [{ ...paidFrom, debit: amount }, ...credits] });
+    } else if (paysAccrued.has(t.id) && t.amount < 0) {
+      out.push({ date: t.date, memo: `Paid ${paysAccrued.get(t.id)} · ${who}`, customer: t.vendor || null, currency: t.currency, source: t.id,
+        lines: [{ account: 'Accounts Payable', debit: amount }, { ...paidFrom, credit: amount }] });
     } else {
       // A split row posts one leg per part, all against the one account the money moved on.
       const legs = splitsOf(t.id);
@@ -380,4 +403,4 @@ function mappableKeys() {
   return { categories: [...new Set(cats.map(c => c.k))].sort(), sources: [...new Set(srcs.map(s => (s.k || `${s.kind} (unnamed)`).trim()))].sort() };
 }
 
-module.exports = { billView, bills, payables, unpaidBills, statementAccounts, activeRules, ruleMatches, suggestionFor, ruleView, rules, windowText, splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };
+module.exports = { billView, bills, payables, unpaidBills, approvalHold, onAccrual, statementAccounts, activeRules, ruleMatches, suggestionFor, ruleView, rules, windowText, splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };

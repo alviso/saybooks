@@ -25,6 +25,13 @@ const ACCOUNTS = [
   { account: 'Bad Debt Expense', kind: 'expense', when: 'a balance is written off' },
   { account: 'Bank Fees', kind: 'expense', when: 'a bank or card fee on an imported statement' },
 ];
+/** Our fixed accounts plus the ones other areas post to (p2p: Inventory, GRNI, Accounts Payable,
+    Purchase Price Variance), each declared by the area that posts it. */
+function accounts() {
+  const out = [...ACCOUNTS];
+  for (const m of require('../../registry.js').MODULES) for (const a of (m.api && m.api.derivationAccounts) || []) if (!out.some(x => x.account === a.account)) out.push(a);
+  return out;
+}
 /** Categories and statement accounts are the person's words, not ours: they are mapped the same way. */
 const KINDS = ['derivation', 'category', 'source'];
 const hintOf = (l) => l.map || { kind: 'derivation', key: l.account };
@@ -81,7 +88,7 @@ function mappable() {
   const purch = require('../../registry.js').MODULES.find(m => m.name === 'purchases');
   const extra = purch && purch.api && purch.api.mappableKeys ? purch.api.mappableKeys() : { categories: [], sources: [] };
   return {
-    derivation: ACCOUNTS.map(a => ({ ...a, key: a.account, used: used.derivation.has(a.account) })),
+    derivation: accounts().map(a => ({ ...a, key: a.account, used: used.derivation.has(a.account) })),
     category: [...new Set([...used.category, ...extra.categories])].sort().map(k => ({ key: k, account: k, used: used.category.has(k), when: 'spending or income reviewed under this word' })),
     source: [...new Set([...used.source, ...extra.sources])].sort().map(k => ({ key: k, account: k, used: used.source.has(k), when: 'the account a statement was imported from' })),
   };
@@ -139,7 +146,7 @@ function build(format, from, to, currency) {
 
 // ---------------------------------------------------------------- preliminary financials (B-12)
 const { Rejected } = require('../../registry.js');
-const KIND_OF = Object.fromEntries(ACCOUNTS.map(a => [a.account, a.kind]));
+const kindOf = (account) => (accounts().find(a => a.account === account) || {}).kind;
 const lastDay = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
 /** "2026-Q3", "2026-09", "2026", or from/to. A statement needs a period to be about. */
 function periodOf(a) {
@@ -207,7 +214,7 @@ function financials(a) {
       return { kind: k, name: k === 'statement' ? mine.find(s => s.account.toLowerCase() === l.account.toLowerCase()).account : l.account };
     }
     if (l.account === 'Cash' && foldCash) return { kind: 'statement', name: foldCash, folded: true };
-    return { kind: KIND_OF[l.account] || 'unclassified', name: l.account };
+    return { kind: kindOf(l.account) || 'unclassified', name: l.account };
   };
   const tally = (entries) => {
     const acc = {};
@@ -293,4 +300,4 @@ function financials(a) {
   };
 }
 
-module.exports = { financials, periodOf, ACCOUNTS, KINDS, FORMATS, mapping, mappable, hintOf, mapKey, omitted, readiness, accountsView, exportsView, lastThrough, build, csvOf, entryNo };
+module.exports = { financials, periodOf, ACCOUNTS, accounts, KINDS, FORMATS, mapping, mappable, hintOf, mapKey, omitted, readiness, accountsView, exportsView, lastThrough, build, csvOf, entryNo };

@@ -71,6 +71,12 @@ R.execute('purch_import_statement', { name: 'aug.csv', hash: 'sha256:smokestmt00
   rows: [{ date: '2026-08-03', amount: -3000, description: 'COFFEE CO' }, { date: '2026-08-10', amount: -2000, description: 'RENT' }] }, a);
 R.execute('purch_add_rule', { label: 'Coffee runs', category: 'meals', match: 'coffee', reason: 'every coffee is a client meeting' }, a);
 R.execute('purch_add_bill', { vendor: 'Acme Supply', number: 'A-1', bill_date: '2026-09-01', due_date: '2026-09-30', amount: 12500, currency: 'USD', category: 'supplies' }, a);
+R.execute('core_create_item', { sku: 'SMK-SH', name: 'Smoke shelving', unit_price: 18900, on_hand: 0 }, h);
+R.execute('core_create_item', { sku: 'SMK-FRT', name: 'Smoke freight', unit_price: 0, stocked: false }, h);
+const po = R.execute('p2p_create_po', { vendor: 'Smoke Steel', lines: [{ item_id: 'SMK-SH', qty: 10, unit_price: 8500 }, { item_id: 'SMK-FRT', qty: 1, unit_price: 5000 }] }, a);
+R.execute('p2p_issue_po', { po_id: po.id }, a);
+R.execute('p2p_receive_goods', { po_id: po.id, lines: [{ item_id: 'SMK-SH', qty: 6 }], received_at: '2026-09-10', reference: 'PS-1' }, a);
+R.execute('p2p_record_vendor_bill', { po_id: po.id, number: 'SM-1', bill_date: '2026-09-11', terms_days: 30, lines: [{ item_id: 'SMK-SH', qty: 6, unit_price: 9000 }, { item_id: 'SMK-FRT', qty: 1, unit_price: 5000 }] }, a);
 R.execute('hunt_add_posting', { company: 'Vega', title: 'Staff Engineer', source: 'direct', url: 'https://example.com/j' }, h);
 `;
 
@@ -149,6 +155,8 @@ const DETAILS = [
   ['purch_source', '(await api("purch_sources",{})).items?.[0]?.id'],
   ['purch_rule', '(await api("purch_rules",{})).items?.[0]?.id'],
   ['purch_bill', '(await api("purch_bills",{})).items?.[0]?.id'],
+  ['purch_bill', '(await api("purch_bills",{})).items?.find(b => /^On PO-/.test(b.description || ""))?.id'],
+  ['p2p_po', '(await api("p2p_pos",{})).items?.[0]?.id'],
   ['posting', '(await api("hunt_pipeline",{}))[0]?.id'],
 ];
 let dbad = 0, dseen = 0;

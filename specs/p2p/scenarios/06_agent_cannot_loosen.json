@@ -1,0 +1,50 @@
+{
+ "name": "the agent cannot loosen the match",
+ "spec": "p2p@0.2",
+ "today": "2099-03-10",
+ "notes": "P2P-6: the tolerance is a person's act, whatever the agent's role; the refusal is logged.",
+ "env": [
+  [
+   "create_item",
+   {
+    "sku": "SH-48",
+    "name": "Steel shelving unit 48in",
+    "unit_price": 18900,
+    "on_hand": 0
+   },
+   "a stocked item Sam resells"
+  ],
+  [
+   "create_item",
+   {
+    "sku": "BR-12",
+    "name": "Wall bracket 12in",
+    "unit_price": 1200,
+    "on_hand": 0
+   },
+   "another stocked item"
+  ],
+  [
+   "create_item",
+   {
+    "sku": "FRT",
+    "name": "Freight",
+    "unit_price": 0,
+    "stocked": false
+   },
+   "a service: nothing arrives, nothing is counted"
+  ]
+ ],
+ "steps": [
+  {
+   "act": "set_match_tolerance",
+   "args": {
+    "price_pct": 10,
+    "reason": "the vendor raised prices"
+   },
+   "expect": {
+    "refused": "person's act"
+   }
+  }
+ ]
+}

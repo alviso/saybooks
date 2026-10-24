@@ -1,0 +1,174 @@
+{
+ "name": "a draft is cancelled; an order with goods is not",
+ "spec": "p2p@0.2",
+ "today": "2099-03-10",
+ "notes": "The order lifecycle: cancelling needs a reason and is refused once anything has arrived; bills are recorded only against an issued order.",
+ "env": [
+  [
+   "create_item",
+   {
+    "sku": "SH-48",
+    "name": "Steel shelving unit 48in",
+    "unit_price": 18900,
+    "on_hand": 0
+   },
+   "a stocked item Sam resells"
+  ],
+  [
+   "create_item",
+   {
+    "sku": "BR-12",
+    "name": "Wall bracket 12in",
+    "unit_price": 1200,
+    "on_hand": 0
+   },
+   "another stocked item"
+  ],
+  [
+   "create_item",
+   {
+    "sku": "FRT",
+    "name": "Freight",
+    "unit_price": 0,
+    "stocked": false
+   },
+   "a service: nothing arrives, nothing is counted"
+  ]
+ ],
+ "steps": [
+  {
+   "act": "create_po",
+   "args": {
+    "vendor": "Pacific Steel Supply",
+    "lines": [
+     {
+      "item_id": "SH-48",
+      "qty": 12,
+      "unit_price": 8500
+     },
+     {
+      "item_id": "BR-12",
+      "qty": 50,
+      "unit_price": 400
+     },
+     {
+      "item_id": "FRT",
+      "qty": 1,
+      "unit_price": 12000
+     }
+    ],
+    "expected_date": "2099-03-08",
+    "vendor_ref": "Q-2207"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "record_vendor_bill",
+   "args": {
+    "po": "PO-0001",
+    "number": "INV-1",
+    "bill_date": "2099-03-09",
+    "terms_days": 30,
+    "category": "freight",
+    "lines": [
+     {
+      "item_id": "SH-48",
+      "qty": 12,
+      "unit_price": 8500
+     },
+     {
+      "item_id": "BR-12",
+      "qty": 50,
+      "unit_price": 400
+     },
+     {
+      "item_id": "FRT",
+      "qty": 1,
+      "unit_price": 12000
+     }
+    ]
+   },
+   "expect": {
+    "refused": "against an issued order"
+   },
+   "notes": "a draft has nothing to match against"
+  },
+  {
+   "act": "cancel_po",
+   "args": {
+    "po": "PO-0001",
+    "reason": "ordered from another vendor"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "status": "cancelled"
+    }
+   }
+  },
+  {
+   "act": "create_po",
+   "args": {
+    "vendor": "Pacific Steel Supply",
+    "lines": [
+     {
+      "item_id": "SH-48",
+      "qty": 12,
+      "unit_price": 8500
+     },
+     {
+      "item_id": "BR-12",
+      "qty": 50,
+      "unit_price": 400
+     },
+     {
+      "item_id": "FRT",
+      "qty": 1,
+      "unit_price": 12000
+     }
+    ],
+    "expected_date": "2099-03-08",
+    "vendor_ref": "Q-2207"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "issue_po",
+   "args": {
+    "po": "PO-0002"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "receive_goods",
+   "args": {
+    "po": "PO-0002",
+    "lines": [
+     {
+      "item_id": "SH-48",
+      "qty": 4
+     }
+    ]
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "cancel_po",
+   "args": {
+    "po": "PO-0002",
+    "reason": "changed our mind"
+   },
+   "expect": {
+    "refused": "Close the rest short"
+   }
+  }
+ ]
+}

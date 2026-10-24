@@ -24,6 +24,9 @@
  *                    path and the edit path alike, and a sent draft stops being editable
  *  16. bills         only a person approves paying a bill; an agent records the payment once
  *                    approved, against a statement row that must match it, never twice
+ *  17. 3-way match   a bill on a purchase order is approved only when it matches what was
+ *                    ordered and received; loosening the match is a person's act; receipts,
+ *                    approval and payment post balanced through GRNI and accounts payable
  *
  * A PR that adds a hand-written form, a prefix-less command, or a cross-module UPDATE
  * fails here, not in review.
@@ -399,6 +402,49 @@ for (const tag of R.PERMISSIONS) {
   const direct = execute('purch_record_bill_payment', { bill_id: b2.id, paid_at: '2026-09-21', method: 'card' }, human);
   assert.ok(direct.status === 'paid' && direct.approved_by === 'test', 'a person recording a payment approves it in the same act');
   ok('bills: only a person approves paying, a payment needs approval and a matching row, one row pays one bill');
+}
+
+// ------------------------------------------ 17. 3-way match: the person's approval is held to it
+// The scenarios run as an agent, which is refused approval before the match is even asked; here a
+// person is refused by the match itself, with its numbers, and allowed once the bill matches.
+{
+  const asAgent = { ...human, actor_kind: 'agent', role: 'owner' };
+  execute('core_create_item', { sku: 'G17-SH', name: 'Gate17 shelving', unit_price: 18900, on_hand: 0 }, human);
+  execute('core_create_item', { sku: 'G17-FRT', name: 'Gate17 freight', unit_price: 0, stocked: false }, human);
+  const po = execute('p2p_create_po', { vendor: 'Gate17 Steel', lines: [{ item_id: 'G17-SH', qty: 10, unit_price: 8500 }, { item_id: 'G17-FRT', qty: 1, unit_price: 5000 }] }, asAgent);
+  execute('p2p_issue_po', { po_id: po.id }, asAgent);
+  const before = wsp.use(WS, () => H.db().prepare("SELECT on_hand FROM item WHERE id = 'G17-SH'").get().on_hand);
+  execute('p2p_receive_goods', { po_id: po.id, lines: [{ item_id: 'G17-SH', qty: 10 }], received_at: '2026-09-10' }, asAgent);
+  assert.strictEqual(wsp.use(WS, () => H.db().prepare("SELECT on_hand FROM item WHERE id = 'G17-SH'").get().on_hand), before + 10, 'a receipt raises stock through core');
+  const high = execute('p2p_record_vendor_bill', { po_id: po.id, number: 'G17-1', bill_date: '2026-09-11', terms_days: 30,
+    lines: [{ item_id: 'G17-SH', qty: 10, unit_price: 9000 }, { item_id: 'G17-FRT', qty: 1, unit_price: 5000 }] }, asAgent);
+  let held = null;
+  try { execute('purch_approve_bill', { bill_id: high.id }, human); } catch (e) { held = e.message; }
+  assert.ok(held && /does not match/.test(held) && /\$90\.00/.test(held) && /\$85\.00/.test(held), 'a person approving a bill over the order is refused with the numbers');
+  const tip = wsp.use(WS, () => R.nextActions('purch_bill', high.id, 'owner')).actions.find(a => a.command === 'purch_approve_bill');
+  assert.ok(tip && !tip.available && tip.reason === wsp.use(WS, () => require('../src/modules/purchases/views.js').approvalHold(high.id)), 'the greyed button says the same sentence the refusal does');
+  let loosen = null;
+  try { execute('p2p_set_match_tolerance', { price_pct: 10, reason: 'agent tries' }, asAgent); } catch (e) { loosen = e.message; }
+  assert.ok(loosen && /person's act/.test(loosen), 'an agent never loosens the match');
+  execute('p2p_set_match_tolerance', { price_pct: 6, reason: 'Gate17 Steel adds a fuel surcharge; agreed by phone' }, human);
+  const approved = execute('purch_approve_bill', { bill_id: high.id }, human);
+  assert.strictEqual(approved.status, 'approved', 'within a tolerance a person set, the bill is approved');
+  execute('p2p_set_match_tolerance', { price_pct: 0, reason: 'back to exact prices' }, human);
+  const j = execute('core_journal', { from: '2026-09-10', to: '2026-09-11' }, human);
+  assert.ok(j.balanced, 'the journal balances with receipts and an approved bill on an order');
+  const acct = (name) => j.entries.flatMap(e => e.lines).filter(l => l.account === name).reduce((n, l) => n + (l.debit || 0) - (l.credit || 0), 0);
+  assert.strictEqual(acct('Goods Received Not Invoiced'), 0, 'approving the bill clears what the receipt put into GRNI');
+  assert.strictEqual(acct('Purchase Price Variance'), 5000, 'the price difference posts to its own account, never averaged into stock');
+  assert.strictEqual(acct('Accounts Payable'), -90000 - 5000, 'the approved bill is owed in accounts payable');
+  execute('purch_import_statement', { name: 'g17.csv', hash: 'sha256:gate17checking', kind: 'bank', account: 'Gate17 Checking', currency: 'USD',
+    period_start: '2026-09-01', period_end: '2026-09-30', opening_balance: 500000, closing_balance: 405000, row_count: 1,
+    rows: [{ date: '2026-09-25', amount: -95000, description: 'ACH GATE17 STEEL', row_index: 1 }] }, human);
+  const tx = wsp.use(WS, () => H.db().prepare("SELECT id FROM purch_transaction WHERE description = 'ACH GATE17 STEEL'").get().id);
+  execute('purch_record_bill_payment', { bill_id: high.id, paid_at: '2026-09-25', transaction_id: tx }, asAgent);
+  const j2 = execute('core_journal', { from: '2026-09-25', to: '2026-09-25' }, human);
+  const pay = j2.entries.find(e => e.lines.some(l => l.account === 'Gate17 Checking'));
+  assert.ok(pay && pay.lines.some(l => l.account === 'Accounts Payable' && l.debit === 95000), 'the statement row that paid a bill on an order clears accounts payable, not spending again');
+  ok('3-way match: a person is held to it, an agent cannot loosen it, and receipt, approval and payment post balanced');
 }
 
 console.log(`\n${n} contract checks passed across ${MODULES.length} modules, ${COMMANDS.length} commands.`);

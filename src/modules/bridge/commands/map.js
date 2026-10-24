@@ -31,7 +31,7 @@ Changing a mapping never rewrites a hand-over that already went out.`,
   handler(a, { db, at }) {
     const kind = a.kind || 'derivation';
     if (!V.KINDS.includes(kind)) throw new Rejected(`kind must be one of ${V.KINDS.join(', ')}.`);
-    if (kind === 'derivation' && !V.ACCOUNTS.some(x => x.account === a.account)) throw new Rejected(`${a.account} is not one of our derivation accounts. They are: ${V.ACCOUNTS.map(x => x.account).join(', ')}. A spending category or a statement account is mapped with kind "category" or "source".`);
+    if (kind === 'derivation' && !V.accounts().some(x => x.account === a.account)) throw new Rejected(`${a.account} is not one of our derivation accounts. They are: ${V.accounts().map(x => x.account).join(', ')}. A spending category or a statement account is mapped with kind "category" or "source".`);
     if (kind !== 'derivation') {
       const known = V.mappable()[kind].map(x => x.key);
       if (!known.includes(a.account)) throw new Rejected(`There is no ${kind} "${a.account}" in these books. ${known.length ? `The ones on record are: ${known.join(', ')}.` : 'Nothing has been reviewed under one yet.'}`);

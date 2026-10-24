@@ -1,0 +1,152 @@
+{
+ "name": "part arrives, the rest is closed short",
+ "spec": "p2p@0.2",
+ "today": "2099-03-10",
+ "notes": "P2P-14 and the order lifecycle: partly received is derived; what arrived stays received and billable after the rest is closed short.",
+ "env": [
+  [
+   "create_item",
+   {
+    "sku": "SH-48",
+    "name": "Steel shelving unit 48in",
+    "unit_price": 18900,
+    "on_hand": 0
+   },
+   "a stocked item Sam resells"
+  ],
+  [
+   "create_item",
+   {
+    "sku": "BR-12",
+    "name": "Wall bracket 12in",
+    "unit_price": 1200,
+    "on_hand": 0
+   },
+   "another stocked item"
+  ],
+  [
+   "create_item",
+   {
+    "sku": "FRT",
+    "name": "Freight",
+    "unit_price": 0,
+    "stocked": false
+   },
+   "a service: nothing arrives, nothing is counted"
+  ]
+ ],
+ "steps": [
+  {
+   "act": "create_po",
+   "args": {
+    "vendor": "Pacific Steel Supply",
+    "lines": [
+     {
+      "item_id": "SH-48",
+      "qty": 12,
+      "unit_price": 8500
+     },
+     {
+      "item_id": "BR-12",
+      "qty": 50,
+      "unit_price": 400
+     },
+     {
+      "item_id": "FRT",
+      "qty": 1,
+      "unit_price": 12000
+     }
+    ],
+    "expected_date": "2099-03-08",
+    "vendor_ref": "Q-2207"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "issue_po",
+   "args": {
+    "po": "PO-0001"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "receive_goods",
+   "args": {
+    "po": "PO-0001",
+    "lines": [
+     {
+      "item_id": "SH-48",
+      "qty": 12
+     },
+     {
+      "item_id": "BR-12",
+      "qty": 30
+     }
+    ],
+    "reference": "PS-7781"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "still_to_receive": 20
+    }
+   }
+  },
+  {
+   "act": "po",
+   "args": {
+    "po": "PO-0001"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "state": "partly received",
+     "to_receive": 20
+    }
+   }
+  },
+  {
+   "act": "unbilled_receipts",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "count": 2
+    }
+   }
+  },
+  {
+   "act": "close_po_short",
+   "args": {
+    "po": "PO-0001",
+    "reason": "Pacific is out of brackets until December"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "status": "closed_short"
+    }
+   }
+  },
+  {
+   "act": "receive_goods",
+   "args": {
+    "po": "PO-0001",
+    "lines": [
+     {
+      "item_id": "BR-12",
+      "qty": 20
+     }
+    ]
+   },
+   "expect": {
+    "refused": "closed_short"
+   },
+   "notes": "nothing more arrives on a closed order"
+  }
+ ]
+}

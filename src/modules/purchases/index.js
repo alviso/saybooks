@@ -82,8 +82,9 @@ it went and link the statement row that shows it. Nothing here pays anything.
 Subscriptions: purch_declare_subscription from a charge you have seen; the record then
 confirms it month by month. A missed period is shown, never assumed; two make it lapsed.
 Money is integer minor units; sums are per currency and never cross.`,
-  env_acts: { import_statement: 'purch_import_statement', review_batch: 'purch_review_batch', review_transaction: 'purch_review_transaction', set_vendor: 'purch_set_vendor' },
-  env_argmap: { transaction: 'transaction_id' },
+  env_acts: { import_statement: 'purch_import_statement', review_batch: 'purch_review_batch', review_transaction: 'purch_review_transaction', set_vendor: 'purch_set_vendor',
+              approve_bill: 'purch_approve_bill', reject_bill: 'purch_reject_bill', record_bill_payment: 'purch_record_bill_payment' },
+  env_argmap: { transaction: 'transaction_id', bill: 'bill_id' },
   implements: {
     area: 'purchases', spec: '0.5',
     argmap: { transaction: 'transaction_id', receipt: 'receipt_id', subscription: 'subscription_id', source: 'source_id', rule: 'rule_id', bill: 'bill_id' },
@@ -117,5 +118,7 @@ R.inModule(mod, () => {
   require('./commands/bills.js');
   require('./commands/reads.js');
 });
+// The one door to recording a bill, for the p2p area's bill on an order.
+Object.assign(mod.api, require('./commands/bills.js'));
 
 module.exports = mod;

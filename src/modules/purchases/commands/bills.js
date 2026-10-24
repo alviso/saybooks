@@ -14,6 +14,44 @@ const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const METHODS = ['bank_transfer', 'card', 'check', 'cash', 'direct_debit', 'other'];
 const isDate = (k, v) => { if (v && !ISO.test(v)) throw new Rejected(`${k} must be a date as YYYY-MM-DD; got "${v}".`); };
 
+/** A vendor by name, created on first use: one vendor list for bills with and without an order. */
+function vendorFor(db, name, at) {
+  const n = String(name || '').trim(); if (!n) throw new Rejected('A vendor needs a name.');
+  const v = db.prepare('SELECT * FROM purch_vendor WHERE name = ? COLLATE NOCASE').get(n);
+  if (v) return v;
+  const id = H.nextId('V', 'purch_vendor');
+  db.prepare('INSERT INTO purch_vendor (id,name,created_at) VALUES (?,?,?)').run(id, n, at);
+  return { id, name: n };
+}
+
+/** Recording a bill as printed, with its guards: the command below, and the p2p area's bill on an
+    order, go through this one door (the module api), so the duplicate guard has one place. */
+function addBill(db, a, { at, actor }) {
+  const name = String(a.vendor || '').trim(); if (!name) throw new Rejected('A bill needs the vendor\'s name.');
+  isDate('bill_date', a.bill_date); isDate('due_date', a.due_date);
+  if (!(a.amount > 0)) throw new Rejected('The amount is what the bill says is due, as a positive number of cents (125000 for $1,250.00).');
+  let due = a.due_date || null;
+  if (!due && a.terms_days != null) { if (a.terms_days < 0 || a.terms_days > 365) throw new Rejected('terms_days is 0 to 365.'); due = H.addDays(a.bill_date, a.terms_days); }
+  if (!due) throw new Rejected('Say when it is due: due_date as printed, or terms_days when the bill gives days instead of a date. If it prints neither, ask the person rather than guess.');
+  if (due < a.bill_date) throw new Rejected(`The bill is due (${due}) before its own date (${a.bill_date}). Read the dates again.`);
+  const cur = (a.currency ? String(a.currency).trim().toUpperCase() : (H.locale().currency || 'USD'));
+  if (!/^[A-Z]{3}$/.test(cur)) throw new Rejected(`"${a.currency}" is not a currency code; use three letters, as printed (USD, EUR).`);
+  const v = vendorFor(db, name, at);
+  const number = a.number && String(a.number).trim() ? String(a.number).trim() : null;
+  if (number) {
+    const dup = db.prepare('SELECT id, status FROM purch_bill WHERE vendor_id = ? AND number = ? COLLATE NOCASE').get(v.id, number);
+    if (dup) throw new Rejected(`${v.name} ${number} is already on record as ${dup.id} (${dup.status}). A bill forwarded twice is still one bill.`);
+  } else {
+    const twin = db.prepare("SELECT id FROM purch_bill WHERE vendor_id = ? AND amount = ? AND bill_date = ? AND status <> 'rejected'").get(v.id, a.amount, a.bill_date);
+    if (twin) throw new Rejected(`This looks like ${twin.id}: same vendor, amount and date. If it really is another bill, record its number.`);
+  }
+  const id = H.nextId('B', 'purch_bill');
+  db.prepare(`INSERT INTO purch_bill (id,vendor_id,number,bill_date,due_date,amount,currency,category,description,file_name,file_hash,status,created_by,created_at,updated_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,'open',?,?,?)`).run(id, v.id, number, a.bill_date, due, a.amount, cur, a.category ? String(a.category).trim() : null,
+    a.description || null, a.file_name || null, a.file_hash || null, actor || null, at, at);
+  return V.billView(id);
+}
+
 defineCommand({
   name: 'purch_add_bill',
   permission: 'cash.write',
@@ -42,30 +80,7 @@ bank. purch_payables shows what is coming due against the cash on their latest s
     reason: f.text('Where it came from: "emailed by Acme on the 3rd".'),
   },
   handler(a, { db, at, actor }) {
-    const name = String(a.vendor || '').trim(); if (!name) throw new Rejected('A bill needs the vendor\'s name.');
-    isDate('bill_date', a.bill_date); isDate('due_date', a.due_date);
-    if (!(a.amount > 0)) throw new Rejected('The amount is what the bill says is due, as a positive number of cents (125000 for $1,250.00).');
-    let due = a.due_date || null;
-    if (!due && a.terms_days != null) { if (a.terms_days < 0 || a.terms_days > 365) throw new Rejected('terms_days is 0 to 365.'); due = H.addDays(a.bill_date, a.terms_days); }
-    if (!due) throw new Rejected('Say when it is due: due_date as printed, or terms_days when the bill gives days instead of a date. If it prints neither, ask the person rather than guess.');
-    if (due < a.bill_date) throw new Rejected(`The bill is due (${due}) before its own date (${a.bill_date}). Read the dates again.`);
-    const cur = (a.currency ? String(a.currency).trim().toUpperCase() : (H.locale().currency || 'USD'));
-    if (!/^[A-Z]{3}$/.test(cur)) throw new Rejected(`"${a.currency}" is not a currency code; use three letters, as printed (USD, EUR).`);
-    let v = db.prepare('SELECT * FROM purch_vendor WHERE name = ? COLLATE NOCASE').get(name);
-    if (!v) { const vid = H.nextId('V', 'purch_vendor'); db.prepare('INSERT INTO purch_vendor (id,name,created_at) VALUES (?,?,?)').run(vid, name, at); v = { id: vid, name }; }
-    const number = a.number && String(a.number).trim() ? String(a.number).trim() : null;
-    if (number) {
-      const dup = db.prepare('SELECT id, status FROM purch_bill WHERE vendor_id = ? AND number = ? COLLATE NOCASE').get(v.id, number);
-      if (dup) throw new Rejected(`${v.name} ${number} is already on record as ${dup.id} (${dup.status}). A bill forwarded twice is still one bill.`);
-    } else {
-      const twin = db.prepare("SELECT id FROM purch_bill WHERE vendor_id = ? AND amount = ? AND bill_date = ? AND status <> 'rejected'").get(v.id, a.amount, a.bill_date);
-      if (twin) throw new Rejected(`This looks like ${twin.id}: same vendor, amount and date. If it really is another bill, record its number.`);
-    }
-    const id = H.nextId('B', 'purch_bill');
-    db.prepare(`INSERT INTO purch_bill (id,vendor_id,number,bill_date,due_date,amount,currency,category,description,file_name,file_hash,status,created_by,created_at,updated_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,'open',?,?,?)`).run(id, v.id, number, a.bill_date, due, a.amount, cur, a.category ? String(a.category).trim() : null,
-      a.description || null, a.file_name || null, a.file_hash || null, actor || null, at, at);
-    const b = V.billView(id);
+    const b = addBill(db, a, { at, actor });
     return { ...b, note: `Recorded ${b.name}: ${b.amount_display}, due ${b.due_date}. It waits for a person to approve paying it; nothing is paid from here.` };
   },
 });
@@ -78,7 +93,10 @@ defineCommand({
   summary: 'A person approves paying a bill, optionally by a date. Approval is not payment: the money moves in their bank.',
   doctrine: 'Refused to you whatever your role. Show the person the bill and what is due around it (purch_payables), and let them approve it in the app.',
   effects: ['bill approved for payment'],
-  guards: [ (b) => b.status === 'open' || `${b.id} is ${b.status}; only an open bill waits for approval.` ],
+  guards: [
+    (b) => b.status === 'open' || `${b.id} is ${b.status}; only an open bill waits for approval.`,
+    (b) => V.approvalHold(b.id) || true,
+  ],
   args: {
     bill_id: { ...f.text('The bill, e.g. B-0001.'), required: true },
     pay_by: f.date('When to pay it by. Defaults to its due date.'),
@@ -87,6 +105,7 @@ defineCommand({
   handler(a, { db, at, actor }) {
     const b = H.need('purch_bill', a.bill_id, 'bill');
     if (b.status !== 'open') throw new Rejected(`${b.id} is ${b.status}; only an open bill waits for approval.`);
+    const hold = V.approvalHold(b.id); if (hold) throw new Rejected(hold);
     isDate('pay_by', a.pay_by);
     db.prepare("UPDATE purch_bill SET status = 'approved', approved_by = ?, approved_at = ?, pay_by = ?, approval_note = ?, updated_at = ? WHERE id = ?")
       .run(actor || null, at, a.pay_by || b.due_date, a.note || null, at, b.id);
@@ -119,6 +138,7 @@ currency must match and it must be money out. An unreviewed row is reviewed as t
     if (!['open', 'approved'].includes(b.status)) throw new Rejected(`${b.id} is ${b.status}.`);
     if (b.status === 'open' && actor_kind === 'agent')
       throw new Rejected(`${b.id} is not approved. A person approves paying a bill (purch_approve_bill), or records the payment themselves; ask them.`);
+    if (b.status === 'open') { const hold = V.approvalHold(b.id); if (hold) throw new Rejected(hold); }   // recording it approves it, so the same holds apply
     isDate('paid_at', a.paid_at);
     if (a.paid_at > H.today()) throw new Rejected(`${a.paid_at} has not happened yet. Record a payment once it has gone.`);
     let tx = null;
@@ -169,3 +189,5 @@ read({ name: 'purch_bills', title: 'Bills', summary: 'Bills on record: open ones
 read({ name: 'purch_get_bill', title: 'Bill', summary: 'One bill with its approval and payment.', args: { bill_id: { ...f.text('e.g. B-0001.'), required: true } }, handler: (a) => V.billView(a.bill_id) });
 read({ name: 'purch_payables', title: 'What is coming due', summary: 'Bills waiting to be paid by when they are due (overdue, next 7 days, next 30, later), set against the cash on the latest bank statements.',
   args: { as_of: f.date('Evaluate as of this date. Defaults to today.') }, handler: (a) => V.payables(a) });
+
+module.exports = { addBill, vendorFor };

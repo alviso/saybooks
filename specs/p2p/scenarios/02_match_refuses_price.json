@@ -1,0 +1,230 @@
+{
+ "name": "the match refuses a bill priced over the order",
+ "spec": "p2p@0.2",
+ "today": "2099-03-10",
+ "notes": "P2P-3/8: a bill that charges more than the order is recorded (the bill exists) and shown not to match, with the numbers. The corrected bill matches. The old one is rejected with a reason.",
+ "env": [
+  [
+   "create_item",
+   {
+    "sku": "SH-48",
+    "name": "Steel shelving unit 48in",
+    "unit_price": 18900,
+    "on_hand": 0
+   },
+   "a stocked item Sam resells"
+  ],
+  [
+   "create_item",
+   {
+    "sku": "BR-12",
+    "name": "Wall bracket 12in",
+    "unit_price": 1200,
+    "on_hand": 0
+   },
+   "another stocked item"
+  ],
+  [
+   "create_item",
+   {
+    "sku": "FRT",
+    "name": "Freight",
+    "unit_price": 0,
+    "stocked": false
+   },
+   "a service: nothing arrives, nothing is counted"
+  ]
+ ],
+ "steps": [
+  {
+   "act": "create_po",
+   "args": {
+    "vendor": "Pacific Steel Supply",
+    "lines": [
+     {
+      "item_id": "SH-48",
+      "qty": 12,
+      "unit_price": 8500
+     },
+     {
+      "item_id": "BR-12",
+      "qty": 50,
+      "unit_price": 400
+     },
+     {
+      "item_id": "FRT",
+      "qty": 1,
+      "unit_price": 12000
+     }
+    ],
+    "expected_date": "2099-03-08",
+    "vendor_ref": "Q-2207"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "issue_po",
+   "args": {
+    "po": "PO-0001"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "receive_goods",
+   "args": {
+    "po": "PO-0001",
+    "lines": [
+     {
+      "item_id": "SH-48",
+      "qty": 12
+     },
+     {
+      "item_id": "BR-12",
+      "qty": 50
+     }
+    ]
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "record_vendor_bill",
+   "args": {
+    "po": "PO-0001",
+    "number": "INV-5520",
+    "bill_date": "2099-03-09",
+    "terms_days": 30,
+    "category": "freight",
+    "lines": [
+     {
+      "item_id": "SH-48",
+      "qty": 12,
+      "unit_price": 9200
+     },
+     {
+      "item_id": "BR-12",
+      "qty": 50,
+      "unit_price": 400
+     },
+     {
+      "item_id": "FRT",
+      "qty": 1,
+      "unit_price": 12000
+     }
+    ]
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "status": "open"
+    }
+   },
+   "notes": "recording is never refused for a mismatch"
+  },
+  {
+   "act": "bill_match",
+   "args": {
+    "bill": "B-0001"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "ok": false
+    }
+   },
+   "notes": "P2P-3 shelving billed at $92.00 against $85.00 on the order"
+  },
+  {
+   "act": "record_vendor_bill",
+   "args": {
+    "po": "PO-0001",
+    "number": "INV-5520",
+    "bill_date": "2099-03-09",
+    "terms_days": 30,
+    "category": "freight",
+    "lines": [
+     {
+      "item_id": "SH-48",
+      "qty": 12,
+      "unit_price": 8500
+     },
+     {
+      "item_id": "BR-12",
+      "qty": 50,
+      "unit_price": 400
+     },
+     {
+      "item_id": "FRT",
+      "qty": 1,
+      "unit_price": 12000
+     }
+    ]
+   },
+   "expect": {
+    "refused": "already on record"
+   },
+   "notes": "P2P-10 the corrected bill needs its own number; the same number is one bill"
+  },
+  {
+   "act": "reject_bill",
+   "args": {
+    "bill": "B-0001",
+    "reason": "Pacific sent a corrected invoice at the quoted price"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "status": "rejected"
+    }
+   }
+  },
+  {
+   "act": "record_vendor_bill",
+   "args": {
+    "po": "PO-0001",
+    "number": "INV-5520-C",
+    "bill_date": "2099-03-09",
+    "terms_days": 30,
+    "category": "freight",
+    "lines": [
+     {
+      "item_id": "SH-48",
+      "qty": 12,
+      "unit_price": 8500
+     },
+     {
+      "item_id": "BR-12",
+      "qty": 50,
+      "unit_price": 400
+     },
+     {
+      "item_id": "FRT",
+      "qty": 1,
+      "unit_price": 12000
+     }
+    ]
+   },
+   "expect": {
+    "ok": true
+   },
+   "notes": "the corrected bill, as printed"
+  },
+  {
+   "act": "bill_match",
+   "args": {
+    "bill": "B-0002"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "ok": true
+    }
+   }
+  }
+ ]
+}
