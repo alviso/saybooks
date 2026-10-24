@@ -348,12 +348,44 @@
   "human"
  ],
  [
-  "core_receive_stock",
+  "p2p_create_po",
   {
-   "item_id": "WIDGET-B",
-   "qty": 10
+   "vendor": "Pacific Widget Works",
+   "lines": [
+    {
+     "item_id": "WIDGET-B",
+     "qty": 10,
+     "unit_price": 4600
+    }
+   ],
+   "vendor_ref": "PW-Q-301"
   },
-  "container landed — 10 more B",
+  "10 more type B, at Pacific's price",
+  "claude",
+  "agent"
+ ],
+ [
+  "p2p_issue_po",
+  {
+   "po_id": "PO-0001"
+  },
+  "Sam sent it",
+  "sam",
+  "human"
+ ],
+ [
+  "p2p_receive_goods",
+  {
+   "po_id": "PO-0001",
+   "lines": [
+    {
+     "item_id": "WIDGET-B",
+     "qty": 10
+    }
+   ],
+   "reference": "PW-1907"
+  },
+  "container landed: 10 more B",
   "sam",
   "human"
  ],
@@ -1193,7 +1225,7 @@
  [
   "p2p_issue_po",
   {
-   "po_id": "PO-0001"
+   "po_id": "PO-0002"
   },
   "Sam emailed it to Bay Gasket",
   "sam",
@@ -1204,7 +1236,7 @@
  [
   "p2p_receive_goods",
   {
-   "po_id": "PO-0001",
+   "po_id": "PO-0002",
    "lines": [
     {
      "item_id": "GASKET-T",
@@ -1226,7 +1258,7 @@
  [
   "p2p_record_vendor_bill",
   {
-   "po_id": "PO-0001",
+   "po_id": "PO-0002",
    "number": "BG-2290",
    "bill_date": "{{today-13}}",
    "terms_days": 30,
@@ -1267,6 +1299,39 @@
   "human",
   null,
   "-12d"
+ ],
+ [
+  "inv_set_opening_cost",
+  {
+   "item_id": "WIDGET-A",
+   "unit_cost": 7400,
+   "reason": "Bay Gasket's last invoice before these books"
+  },
+  "what the opening stock cost",
+  "sam",
+  "human"
+ ],
+ [
+  "inv_set_opening_cost",
+  {
+   "item_id": "WIDGET-B",
+   "unit_cost": 4600,
+   "reason": "Pacific Widget Works' last invoice before these books"
+  },
+  "what the opening stock cost",
+  "sam",
+  "human"
+ ],
+ [
+  "inv_set_opening_cost",
+  {
+   "item_id": "GASKET-T",
+   "unit_cost": 2100,
+   "reason": "Bay Gasket's quote BG-Q-118"
+  },
+  "what the opening stock cost",
+  "sam",
+  "human"
  ],
  [
   "solo_draft_invoice",
