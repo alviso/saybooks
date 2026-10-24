@@ -6,7 +6,7 @@
 <title>Saybooks docs · connect Claude, keys and roles, documents, export</title><link rel="canonical" href="https://saybooks.io/docs"><meta property="og:title" content="Saybooks docs"><meta property="og:url" content="https://saybooks.io/docs"><meta property="og:image" content="https://saybooks.io/card.png?v=3">
 <meta name="description" content="How to connect Claude to your Saybooks books, what keys and roles mean, how documents, export and delete work, and how to run it yourself.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Using Saybooks","url":"https://saybooks.io/docs","dateModified":"2026-09-12","inLanguage":"en","author":{"@type":"Person","name":"Peter Varga","url":"https://portlandaiworks.com/"},"publisher":{"@type":"Organization","name":"Saybooks","url":"https://saybooks.io/"},"about":"Connecting Claude to Saybooks over MCP, keys and roles, spaces and modules, documents, the ledger hand-over to QuickBooks Online and Xero, export and self-hosting."}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Using Saybooks","url":"https://saybooks.io/docs","dateModified":"2026-10-24","inLanguage":"en","author":{"@type":"Person","name":"Peter Varga","url":"https://portlandaiworks.com/"},"publisher":{"@type":"Organization","name":"Saybooks","url":"https://saybooks.io/"},"about":"Connecting Claude to Saybooks over MCP, keys and roles, spaces and modules, documents, the ledger hand-over to QuickBooks Online and Xero, export and self-hosting."}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Does Saybooks send my invoices or take payments?","acceptedAnswer":{"@type":"Answer","text":"No. It produces documents and records payments you received. It never emails anyone, never charges a card, never moves money. You send the link or the PDF yourself."}},{"@type":"Question","name":"Does it sync with QuickBooks Online or Xero?","acceptedAnswer":{"@type":"Answer","text":"It hands over, rather than syncing. The Ledger pages export a period as a Xero manual journal, QuickBooks Online journal entries, or plain CSV, mapped to your accountant's own chart of accounts, and every hand-over keeps its control totals and the exact file. Nothing is posted into your ledger over an API, and nothing is read back out of it."}},{"@type":"Question","name":"What currencies does it handle?","acceptedAnswer":{"@type":"Answer","text":"Any currency your company declares, and each invoice carries its own. What it does not do is convert between them: a period holding two currencies comes back grouped by currency rather than translated, and a ledger hand-over covering two is refused until you name one."}},{"@type":"Question","name":"Can I use it without an AI agent?","acceptedAnswer":{"@type":"Answer","text":"Yes. Every command has a screen in the web workbench, and a click and a sentence to Claude are the same event, logged and refused the same way. The agent is the fast path, not the only one."}},{"@type":"Question","name":"Is it accounting software?","acceptedAnswer":{"@type":"Answer","text":"No. It keeps the operational record upstream of the ledger: quotes, orders, shipments, invoices, receivables, pipeline, and reviewed spending from your bank statements. Your accountant's system stays the ledger of record and the hand-over feeds it."}},{"@type":"Question","name":"What happens to my books if Saybooks disappears?","acceptedAnswer":{"@type":"Answer","text":"Export takes everything with you, in JSON, audit log included, any day. The code is public under the AGPL and runs on a laptop. Your data does not depend on the hosted service existing."}}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Saybooks","item":"https://saybooks.io/"},{"@type":"ListItem","position":2,"name":"Docs","item":"https://saybooks.io/docs"}]}</script>
 
@@ -25,9 +25,9 @@
 
   <div class="kicker">Documentation</div>
   <h1>Using Saybooks</h1>
-  <p class="asof" style="font-size:13px;color:var(--muted);margin:0 0 1em">Last updated 29 September 2026.</p>
+  <p class="asof" style="font-size:13px;color:var(--muted);margin:0 0 1em">Last updated 24 October 2026.</p>
   <p>Saybooks is a place Claude can keep your records, under rules it cannot break, with everything it does written down where you can check it. This page covers what a person needs: connecting Claude, what keys and roles mean, spaces and their modules, documents, personal finances, getting your data out, and running it yourself. The rules themselves are in the <a href="/specs">specs</a>.</p>
-  <div class="toc"><a href="#connect">Connect Claude</a><a href="#local">A local model</a><a href="#talk">Talking to it</a><a href="#keys">Keys and roles</a><a href="#spaces">Spaces</a><a href="#documents">Documents</a> <a href="#ledger">Ledger</a><a href="#refusals">Refusals</a><a href="#data">Export and delete</a><a href="#selfhost">Run it yourself</a><a href="#faq">Questions</a></div>
+  <div class="toc"><a href="#connect">Connect Claude</a><a href="#local">A local model</a><a href="#talk">Talking to it</a><a href="#keys">Keys and roles</a><a href="#spaces">Spaces</a><a href="#documents">Documents</a><a href="#purchases">Purchases</a><a href="#purchasing">Purchasing</a><a href="#inventory">Inventory</a><a href="#bank">Bank</a><a href="#salestax">Sales tax</a><a href="#close">Month-end</a><a href="#ledger">Ledger</a><a href="#refusals">Refusals</a><a href="#data">Export and delete</a><a href="#selfhost">Run it yourself</a><a href="#faq">Questions</a></div>
 
   <h2 id="connect">Connect Claude</h2>
   <ol>
@@ -118,6 +118,7 @@
   </ul>
   <h2 id="purchasing">Purchasing</h2>
   <p>Full-books spaces carry a Purchasing area: what the business <b>buys on an order</b>, for stock it resells and the services bought with it. It is the mirror image of Orders: an order out to a vendor instead of in from a customer.</p>
+  <button class="demo" type="button" data-yt="67F4vLlT2jw" aria-label="Play the demo: Purchase orders and receiving"><img src="/demo-process-1.jpg" alt="" loading="lazy" width="1280" height="720"><span class="play">Watch the demo · 1:46</span></button>
   <ul>
     <li><b>Purchase orders.</b> Say "order 60 type B widgets from Pacific Widget Works at $48 each, plus their freight" and your agent drafts the order at the vendor's price. Issue it when it has gone out (Saybooks sends nothing; you do). From then on its prices are frozen: bills are matched against them.</li>
     <li><b>Goods received.</b> When a delivery arrives, tell your agent what was counted and the packing slip number. Stock goes up, and receiving more than is still open on a line is refused with the numbers. A receipt never changes afterwards. Services, like freight, are never received.</li>
@@ -127,6 +128,7 @@
   </ul>
   <h2 id="inventory">Inventory</h2>
   <p>Spaces that buy or sell stock carry an Inventory area: what is on the shelf and what it is worth. Every change to stock is kept as a move (received on an order, shipped, returned, counted), and the worth is derived from them, never typed.</p>
+  <button class="demo" type="button" data-yt="H2YEaVKmMsY" aria-label="Play the demo: Inventory and what the stock is worth"><img src="/demo-process-2.jpg" alt="" loading="lazy" width="1280" height="720"><span class="play">Watch the demo · 1:14</span></button>
   <ul>
     <li><b>The average of what you paid.</b> Each delivery received on a purchase order moves the item's average cost. When goods ship, they leave at the average of that moment, so every sale has a cost and a margin you can see under <b>Inventory, Cost of sales</b>.</li>
     <li><b>Counts, with a reason.</b> Tell your agent "I counted 345 gaskets, three were damaged in the move". The difference from the record is valued at the average and posts to Inventory Adjustments, so shrinkage is never hidden in the cost of sales.</li>
@@ -135,6 +137,7 @@
   </ul>
   <h2 id="bank">Bank reconciliation</h2>
   <p>The <b>Bank</b> pages put each bank statement against the books, the check an accountant makes first.</p>
+  <button class="demo" type="button" data-yt="_Uye50Hrl9c" aria-label="Play the demo: Reconciling the bank"><img src="/demo-process-4.jpg" alt="" loading="lazy" width="1280" height="720"><span class="play">Watch the demo · 1:20</span></button>
   <ul>
     <li><b>Every difference, named.</b> Pick the account and the statement. You see the statement's balance, the books' balance, and the items between them: payments recorded here that are not on the statement yet (a check that has not cleared), and rows on the statement that are not in the books (not reviewed yet, or a deposit nobody has tied to its payment). A difference nothing explains is shown, never absorbed.</li>
     <li><b>Deposits matched to payments.</b> A customer's payment is recorded when the remittance arrives; the bank shows it days later, sometimes as one deposit for several checks. Ask your agent to reconcile: it suggests what fits by amount, date and name, and matches with a reason. The amounts must add up exactly. A matched row posts nothing itself, because the payment already did, and it cannot be booked a second time.</li>
@@ -144,6 +147,7 @@
 
   <h2 id="salestax">Sales tax</h2>
   <p>The <b>Sales tax</b> pages turn what you invoiced into the return you file, and keep track of what you owe.</p>
+  <button class="demo" type="button" data-yt="LvVpAvyi7CQ" aria-label="Play the demo: Sales tax, from invoices to a filed return"><img src="/demo-process-5.jpg" alt="" loading="lazy" width="1280" height="720"><span class="play">Watch the demo · 1:03</span></button>
   <ul>
     <li><b>The return.</b> Pick a month or a quarter. It shows your sales, what was not taxed, the taxable sales and the tax at each rate, the tax given back on credit notes and returns, and what is due. Every figure comes from the invoices as they were issued, with the tax they charged; nothing is recomputed. A written-off invoice's tax stays due: bad-debt relief is your accountant's call.</li>
     <li><b>Filing is yours.</b> You file on the agency's site, then press <b>Record a filed return</b> with the confirmation number. An agent can prepare and read the return but never records a filing. If you filed a different amount, say why. The return is kept as it stood, with a hash.</li>
@@ -153,6 +157,7 @@
 
   <h2 id="close">Month-end close</h2>
   <p>The <b>Month-end</b> pages close the books for a period, the way your accountant would, and keep them closed.</p>
+  <button class="demo" type="button" data-yt="nG5BT1qdukM" aria-label="Play the demo: Closing the month"><img src="/demo-process-3.jpg" alt="" loading="lazy" width="1280" height="720"><span class="play">Watch the demo · 1:05</span></button>
   <ul>
     <li><b>The checklist.</b> Pick the last day of the month. It says what blocks a close (statement rows nobody has reviewed, a bank or card account that does not tie to its statement) and what is open but not blocking (bills waiting for approval, goods received and not billed, stock without a cost), each with what to do.</li>
     <li><b>Adjusting entries.</b> Accruals, depreciation, corrections: say them to your agent with the figures and a reason, or enter them yourself. Each balances and says what kind each account is. An accrual can reverse itself on the 1st of the next month, when the real bill arrives.</li>

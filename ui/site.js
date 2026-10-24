@@ -28,3 +28,14 @@
     });
   }).catch(function () {});
 })();
+
+// Demo videos: a still of our own until pressed; only then does the page load YouTube (privacy page, Third parties).
+document.querySelectorAll('button.demo[data-yt]').forEach(function (b) {
+  b.addEventListener('click', function () {
+    var id = b.getAttribute('data-yt'); if (!/^[A-Za-z0-9_-]{6,20}$/.test(id)) return;
+    var f = document.createElement('iframe');
+    f.src = 'https://www.youtube-nocookie.com/embed/' + id + '?autoplay=1&rel=0&cc_load_policy=1';
+    f.title = b.getAttribute('aria-label') || 'Saybooks demo'; f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen'; f.allowFullscreen = true;
+    var w = document.createElement('div'); w.className = 'demo'; w.appendChild(f); b.replaceWith(w);
+  });
+});

@@ -11,6 +11,10 @@ of who did what and why.
 and pick the modules your books carry. Connect Claude by adding `https://saybooks.io/mcp` as a
 connector (OAuth, no keys to paste); the same books are in the browser as ordinary pages.
 
+**Watch: [Saybooks process demos](https://www.youtube.com/playlist?list=PLPEkxX4HVTlI)**, five short
+videos recorded live against the demo books: purchase orders and receiving, inventory value, the
+month-end close, bank reconciliation, and sales tax.
+
 Thirteen modules today, every one spec-first with executable conformance scenarios:
 
 | module | for | what it keeps |

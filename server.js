@@ -810,9 +810,9 @@ const server = http.createServer(async (req, res) => {
     if (full.startsWith(UI) && fs.existsSync(full) && fs.statSync(full).isFile()) {
       const MIME = { '.html': 'text/html; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml',
                      '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.ico': 'image/x-icon',
-                     '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8', '.gif': 'image/gif', '.mp4': 'video/mp4' };
+                     '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8', '.gif': 'image/gif', '.jpg': 'image/jpeg', '.mp4': 'video/mp4' };
       // The social card may be cached hard; everything else stays no-store.
-      const headers = /\.(png|mp4)$/.test(full) ? { 'cache-control': 'public, max-age=86400' } : {};
+      const headers = /\.(png|jpg|mp4)$/.test(full) ? { 'cache-control': 'public, max-age=86400' } : {};
       // Public pages are the same bytes for everyone: let a crawler and a browser keep them a
       // few minutes. The workbench is somebody's books and stays no-store.
       const PUBLIC_PAGES = ['landing.html', 'solo.html', 'hunt.html', 'docs.html', 'about.html', 'privacy.html', 'notes.html', 'notes-local-models.html', 'hostel.html'];
