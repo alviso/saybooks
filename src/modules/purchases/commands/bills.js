@@ -125,7 +125,10 @@ statement row (transaction_id) when the payment is on an imported statement: the
 currency must match and it must be money out. An unreviewed row is reviewed as the bill says
 (purchase, its category and vendor), because the bill is the person's word for what it was.`,
   effects: ['bill marked paid', 'statement row linked and reviewed when given'],
-  guards: [ (b) => ['open', 'approved'].includes(b.status) || `${b.id} is ${b.status}.` ],
+  guards: [
+    (b) => ['open', 'approved'].includes(b.status) || `${b.id} is ${b.status}.`,
+    (b) => b.status !== 'open' || V.approvalHold(b.id) || true,   // recording it approves it
+  ],
   args: {
     bill_id: { ...f.text('The bill, e.g. B-0001.'), required: true },
     paid_at: { ...f.date('The day it was paid.'), required: true },
