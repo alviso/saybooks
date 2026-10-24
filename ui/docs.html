@@ -125,6 +125,14 @@
     <li><b>Received, not billed.</b> Goods that arrived and are not yet on an approved bill are listed with their value: you owe for them already.</li>
     <li><b>In the books.</b> A receipt debits Inventory and credits goods received not invoiced, at the order's price. Approving the bill clears that into accounts payable, with any price difference on an account of its own, and its payment clears accounts payable. A bill without an order stays as it was: it reaches the books when its payment shows on a statement.</li>
   </ul>
+  <h2 id="inventory">Inventory</h2>
+  <p>Spaces that buy or sell stock carry an Inventory area: what is on the shelf and what it is worth. Every change to stock is kept as a move (received on an order, shipped, returned, counted), and the worth is derived from them, never typed.</p>
+  <ul>
+    <li><b>The average of what you paid.</b> Each delivery received on a purchase order moves the item's average cost. When goods ship, they leave at the average of that moment, so every sale has a cost and a margin you can see under <b>Inventory, Cost of sales</b>.</li>
+    <li><b>Counts, with a reason.</b> Tell your agent "I counted 345 gaskets, three were damaged in the move". The difference from the record is valued at the average and posts to Inventory Adjustments, so shrinkage is never hidden in the cost of sales.</li>
+    <li><b>Stock from before these books.</b> What was on hand before Saybooks has no cost until you give one from a record, such as the last supplier invoice. Until then it is named with its quantity, never valued at zero in silence, and the sales of it wait. Once you give the cost, everything after it is derived.</li>
+    <li><b>Ties to the books.</b> The stock's value on any day equals Inventory in the journal for that day. Shipments post cost of goods sold, returns reverse it, counts post their difference, and opening stock posts against opening balance equity. Goods received on an order are posted by Purchasing, once.</li>
+  </ul>
   <h2 id="ledger">Your accountant's ledger</h2>
   <p>Saybooks keeps the operational record; QuickBooks, Xero or your accountant's own system stays the ledger of record. The <b>Ledger</b> pages hand one to the other. The journal is derived from what happened, never posted or stored, so it is always current.</p>
   <ul>
