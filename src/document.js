@@ -184,7 +184,10 @@ function renderDocumentPage(inv, pages) {
   const s = inv.seller;
   const draft = inv.status === 'draft', voided = inv.status === 'void';
   const base = inv.doc_path;
-  const imgs = Array.from({ length: Math.max(1, pages | 0) }, (_, i) => `<img class="pg" src="${esc(base)}/p${i + 1}.png" alt="${esc(inv.id)} page ${i + 1}" width="1240" height="${paperFor(s && s.country) === 'A4' ? 1754 : 1605}">`).join('');
+  // The images change when the invoice does (issued, paid, void): a versioned URL, so a browser that
+  // cached the draft's page a minute ago never shows it again under the issued invoice.
+  const ver = `${inv.status}-${String(inv.updated_at || '').replace(/[^0-9]/g, '')}-${inv.applied || 0}`;
+  const imgs = Array.from({ length: Math.max(1, pages | 0) }, (_, i) => `<img class="pg" src="${esc(base)}/p${i + 1}.png?v=${esc(ver)}" alt="${esc(inv.id)} page ${i + 1}" width="1240" height="${paperFor(s && s.country) === 'A4' ? 1754 : 1605}">`).join('');
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${draft ? 'DRAFT ' : ''}${esc(inv.id)} — ${esc(s ? s.name : 'Invoice')}</title><style>
     body{margin:0;background:#eef0f3;font:14px/1.5 -apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:hsl(215 40% 16%)}
     .bar{max-width:820px;margin:18px auto 0;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:0 10px}
