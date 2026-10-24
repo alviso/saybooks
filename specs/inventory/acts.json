@@ -1,0 +1,24 @@
+{
+  "area": "inventory",
+  "spec": "0.1",
+  "doc": "spec.md",
+  "acts": {
+    "set_opening_cost": { "kind": "write", "required": ["item", "unit_cost", "reason"] },
+    "count_stock": { "kind": "write", "required": ["item", "counted", "reason"] },
+    "stock": { "kind": "read", "required": [] },
+    "item_stock": { "kind": "read", "required": ["item"] },
+    "valuation": { "kind": "read", "required": [] },
+    "cost_of_sales": { "kind": "read", "required": [] }
+  },
+  "invariants": [
+    { "id": "STK-1", "title": "Money is integer cents; one currency." },
+    { "id": "STK-2", "title": "Every change to the quantity on hand is a stock move, written by core's stock door; the moves add up to on hand." },
+    { "id": "STK-3", "title": "Cost is derived (moving average), never typed, except the opening cost of stock that came in without one." },
+    { "id": "STK-4", "title": "Each unit leaves at the average of that moment; cost of goods sold is that cost, per shipment line." },
+    { "id": "STK-5", "title": "Stock without a cost is named with its quantity, never valued at zero in silence." },
+    { "id": "STK-6", "title": "A count records what was counted, with a reason; the difference is valued at the average." },
+    { "id": "STK-7", "title": "Valuation as of a date equals the journal's Inventory balance for that date." },
+    { "id": "STK-8", "title": "The journal derives balanced: shipments to cost of goods sold, counts to adjustments, opening stock to equity." },
+    { "id": "STK-9", "title": "Every write is a logged command with an actor; refusals are logged too." }
+  ]
+}

@@ -30,6 +30,7 @@ not, by how much. Recording is never refused for a mismatch; approving it is. Te
 what the match says; when it does not match, the answer is a corrected bill from the vendor (record
 it, and the person rejects the old one) or a person loosening the tolerance with a reason.`,
   effects: ['bill recorded in Bills, waiting for approval', 'its lines kept for the 3-way match'],
+  audit_subject: (r) => r.id,   // the audit row is about the bill, so the bill's own history shows it
   guards: [ (p) => ['issued', 'received', 'closed_short'].includes(p.status) || `${p.id} is ${p.status}; bills are recorded against an issued order.` ],
   args: {
     po_id:      { ...f.ref('p2p_po', 'The order the bill is for.'), required: true },

@@ -35,6 +35,9 @@ not match, say so with the numbers (p2p_bill_match) and do not suggest working a
 answer is a corrected bill from the vendor, or a person loosening the tolerance with a reason.
 p2p_unbilled_receipts lists goods received and not yet billed. Only a person approves paying a bill;
 the bank pays it; the record follows.`,
+  // Acts other areas' scenarios use to build their world (inventory receives at cost).
+  env_acts: { create_po: 'p2p_create_po', issue_po: 'p2p_issue_po', receive_goods: 'p2p_receive_goods' },
+  env_argmap: { po: 'po_id' },
   implements: {
     area: 'p2p', spec: '0.2',
     argmap: { po: 'po_id', bill: 'bill_id' },

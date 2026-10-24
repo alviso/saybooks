@@ -175,7 +175,7 @@ A receipt cannot be changed afterwards.`,
     for (const r of a.lines) {
       const l = po.lines.find(x => x.item_id === r.item_id);
       db.prepare('INSERT INTO p2p_receipt_line (receipt_id,po_line_id,item_id,qty,unit_cost) VALUES (?,?,?,?,?)').run(id, l.id, r.item_id, r.qty, l.unit_price);
-      core().adjustStock(db, r.item_id, r.qty, `${id} on ${po.id}`);   // core's single stock door
+      core().adjustStock(db, r.item_id, r.qty, `${id} on ${po.id}`, { kind: 'receipt', ref: id, date: day, unit_cost: l.unit_price });   // core's single stock door
     }
     const after = V.poView(po.id);
     if (after.lines.filter(l => l.stocked).every(l => l.received >= l.qty)) db.prepare("UPDATE p2p_po SET status = 'received', updated_at = ? WHERE id = ?").run(at, po.id);

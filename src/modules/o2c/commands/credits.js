@@ -60,7 +60,7 @@ price plus the tax as invoiced — the customer gets back what they were billed,
       const line = o.lines.find(l => l.id === r.order_line_id);
       db.prepare('INSERT INTO return_line (return_id,order_line_id,qty,restock) VALUES (?,?,?,?)')
         .run(id, r.order_line_id, r.qty, r.restock ? 1 : 0);
-      if (r.restock) { core().adjustStock(db, line.item_id, r.qty, `return ${id}`); restocked += r.qty; }
+      if (r.restock) { core().adjustStock(db, line.item_id, r.qty, `return ${id}`, { kind: 'return', ref: id }); restocked += r.qty; }
       // Credit at the price the customer was actually billed: charged price + invoiced tax rate.
       const il = db.prepare('SELECT tax_rate_bp FROM invoice_line WHERE order_line_id = ? ORDER BY id DESC LIMIT 1').get(r.order_line_id);
       const rate = il ? il.tax_rate_bp : (H.get('item', line.item_id).tax_rate_bp || 0);

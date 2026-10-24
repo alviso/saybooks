@@ -1,0 +1,112 @@
+{
+ "name": "a count records the shrinkage at the average",
+ "spec": "inventory@0.1",
+ "today": "2099-04-15",
+ "notes": "STK-6: thirty received at $48, twenty-eight counted; the two missing are $96 of Inventory Adjustments. A matching count moves nothing.",
+ "env": [
+  [
+   "create_item",
+   {
+    "sku": "WB",
+    "name": "Widget, type B",
+    "unit_price": 8000,
+    "on_hand": 0
+   },
+   "a stocked item, none on hand"
+  ]
+ ],
+ "steps": [
+  {
+   "act": "create_po",
+   "args": {
+    "vendor": "Pacific Widget Works",
+    "lines": [
+     {
+      "item_id": "WB",
+      "qty": 30,
+      "unit_price": 4800
+     }
+    ]
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "issue_po",
+   "args": {
+    "po": "PO-0001"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "receive_goods",
+   "args": {
+    "po": "PO-0001",
+    "lines": [
+     {
+      "item_id": "WB",
+      "qty": 30
+     }
+    ]
+   },
+   "expect": {
+    "ok": true
+   },
+   "notes": "30 arrive at $48.00: a costed inflow"
+  },
+  {
+   "act": "count_stock",
+   "args": {
+    "item": "WB",
+    "counted": 28,
+    "reason": "two damaged in the move"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "difference": -2,
+     "difference_value": -9600
+    }
+   }
+  },
+  {
+   "act": "count_stock",
+   "args": {
+    "item": "WB",
+    "counted": 28,
+    "reason": "recount"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "difference": 0
+    }
+   }
+  },
+  {
+   "act": "count_stock",
+   "args": {
+    "item": "WB",
+    "counted": -1,
+    "reason": "typo"
+   },
+   "expect": {
+    "refused": "zero or more"
+   }
+  },
+  {
+   "act": "valuation",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "value": 134400,
+     "ties": true
+    }
+   }
+  }
+ ]
+}

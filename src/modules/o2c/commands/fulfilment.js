@@ -55,7 +55,7 @@ difference and the open quantity is how anyone knows that.`,
       if (item.stocked && item.on_hand < r.qty) throw new Rejected(`${item.id} (${item.name}): ${item.on_hand} on hand, ${r.qty} needed. Ship ${item.on_hand} now and leave the rest open, or receive stock first.`);
       db.prepare('INSERT INTO delivery_line (delivery_id,order_line_id,qty) VALUES (?,?,?)').run(id, line.id, r.qty);
       db.prepare('UPDATE order_line SET qty_shipped = qty_shipped + ? WHERE id = ?').run(r.qty, line.id);
-      core().adjustStock(db, line.item_id, -r.qty, `shipment ${id}`);
+      core().adjustStock(db, line.item_id, -r.qty, `shipment ${id}`, { kind: 'shipment', ref: id, date: at });
     }
 
     const after = V.orderView(a.order_id);

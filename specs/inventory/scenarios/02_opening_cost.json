@@ -1,0 +1,135 @@
+{
+ "name": "stock without a cost is named until its opening cost is stated",
+ "spec": "inventory@0.1",
+ "today": "2099-04-15",
+ "notes": "STK-3/5: ten on hand before the record have no cost; a sale of them is left out of cost of goods sold, then everything derives once a person states what one was worth.",
+ "env": [
+  [
+   "create_customer",
+   {
+    "name": "Northwind Traders",
+    "terms": "net30",
+    "credit_limit": 10000000
+   },
+   "a customer to sell to"
+  ],
+  [
+   "create_item",
+   {
+    "sku": "WB",
+    "name": "Widget, type B",
+    "unit_price": 8000,
+    "on_hand": 10
+   },
+   "on hand before the record"
+  ]
+ ],
+ "steps": [
+  {
+   "act": "item_stock",
+   "args": {
+    "item": "WB"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "cost_known": false,
+     "uncosted_qty": 10
+    }
+   }
+  },
+  {
+   "act": "create_order",
+   "args": {
+    "customer": "C-0001",
+    "lines": [
+     {
+      "item_id": "WB",
+      "qty": 4
+     }
+    ]
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "confirm_order",
+   "args": {
+    "order": "SO-0001"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "ship_order",
+   "args": {
+    "order": "SO-0001"
+   },
+   "expect": {
+    "ok": true
+   },
+   "notes": "each unit leaves at the average of this moment"
+  },
+  {
+   "act": "cost_of_sales",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "count": 1,
+     "cost": 0
+    }
+   },
+   "notes": "STK-5 left out and listed, never costed at zero in silence"
+  },
+  {
+   "act": "set_opening_cost",
+   "args": {
+    "item": "WB",
+    "unit_cost": 4500
+   },
+   "expect": {
+    "refused": "reason is required"
+   }
+  },
+  {
+   "act": "set_opening_cost",
+   "args": {
+    "item": "WB",
+    "unit_cost": 4500,
+    "reason": "last Pacific invoice before the books"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "cost_known": true,
+     "value": 27000
+    }
+   }
+  },
+  {
+   "act": "cost_of_sales",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "cost": 18000,
+     "margin": 14000
+    }
+   },
+   "notes": "the earlier sale is now costed: derived, not re-entered"
+  },
+  {
+   "act": "valuation",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "ties": true
+    }
+   }
+  }
+ ]
+}

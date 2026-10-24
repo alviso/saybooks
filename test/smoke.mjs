@@ -157,6 +157,7 @@ const DETAILS = [
   ['purch_bill', '(await api("purch_bills",{})).items?.[0]?.id'],
   ['purch_bill', '(await api("purch_bills",{})).items?.find(b => /^On PO-/.test(b.description || ""))?.id'],
   ['p2p_po', '(await api("p2p_pos",{})).items?.[0]?.id'],
+  ['inv_item', '(await api("inv_stock",{})).items?.[0]?.item_id'],
   ['posting', '(await api("hunt_pipeline",{}))[0]?.id'],
 ];
 let dbad = 0, dseen = 0;

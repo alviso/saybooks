@@ -1,0 +1,145 @@
+{
+ "name": "a return comes back at the average",
+ "spec": "inventory@0.1",
+ "today": "2099-04-15",
+ "notes": "STK-4/8: twenty at $50, five shipped at $50; two come back sellable at the average, reversing their cost of goods sold.",
+ "env": [
+  [
+   "create_customer",
+   {
+    "name": "Northwind Traders",
+    "terms": "net30",
+    "credit_limit": 10000000
+   },
+   "a customer to sell to"
+  ],
+  [
+   "create_item",
+   {
+    "sku": "WB",
+    "name": "Widget, type B",
+    "unit_price": 8000,
+    "on_hand": 0
+   },
+   "a stocked item, none on hand"
+  ]
+ ],
+ "steps": [
+  {
+   "act": "create_po",
+   "args": {
+    "vendor": "Pacific Widget Works",
+    "lines": [
+     {
+      "item_id": "WB",
+      "qty": 20,
+      "unit_price": 5000
+     }
+    ]
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "issue_po",
+   "args": {
+    "po": "PO-0001"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "receive_goods",
+   "args": {
+    "po": "PO-0001",
+    "lines": [
+     {
+      "item_id": "WB",
+      "qty": 20
+     }
+    ]
+   },
+   "expect": {
+    "ok": true
+   },
+   "notes": "20 arrive at $50.00: a costed inflow"
+  },
+  {
+   "act": "create_order",
+   "args": {
+    "customer": "C-0001",
+    "lines": [
+     {
+      "item_id": "WB",
+      "qty": 5
+     }
+    ]
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "confirm_order",
+   "args": {
+    "order": "SO-0001"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "ship_order",
+   "args": {
+    "order": "SO-0001"
+   },
+   "expect": {
+    "ok": true
+   },
+   "notes": "each unit leaves at the average of this moment"
+  },
+  {
+   "act": "record_return",
+   "args": {
+    "order": "SO-0001",
+    "lines": [
+     {
+      "order_line_id": 1,
+      "qty": 2,
+      "restock": true
+     }
+    ],
+    "reason": "wrong size, unopened"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "item_stock",
+   "args": {
+    "item": "WB"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "qty": 17,
+     "average_cost": 5000,
+     "value": 85000
+    }
+   }
+  },
+  {
+   "act": "valuation",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "ties": true
+    }
+   }
+  }
+ ]
+}

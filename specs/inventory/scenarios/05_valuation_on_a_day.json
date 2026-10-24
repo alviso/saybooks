@@ -1,0 +1,101 @@
+{
+ "name": "valuation on a past day ties to the books on that day",
+ "spec": "inventory@0.1",
+ "today": "2099-04-15",
+ "notes": "STK-7: two deliveries on different days; the stock on the day between them is worth the first one, and so is Inventory in the books for that day.",
+ "env": [
+  [
+   "create_item",
+   {
+    "sku": "WB",
+    "name": "Widget, type B",
+    "unit_price": 8000,
+    "on_hand": 0
+   },
+   "a stocked item, none on hand"
+  ]
+ ],
+ "steps": [
+  {
+   "act": "create_po",
+   "args": {
+    "vendor": "Pacific Widget Works",
+    "lines": [
+     {
+      "item_id": "WB",
+      "qty": 50,
+      "unit_price": 4800
+     }
+    ]
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "issue_po",
+   "args": {
+    "po": "PO-0001"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "receive_goods",
+   "args": {
+    "po": "PO-0001",
+    "lines": [
+     {
+      "item_id": "WB",
+      "qty": 30
+     }
+    ]
+   },
+   "expect": {
+    "ok": true
+   },
+   "today": "2099-04-01"
+  },
+  {
+   "act": "receive_goods",
+   "args": {
+    "po": "PO-0001",
+    "lines": [
+     {
+      "item_id": "WB",
+      "qty": 20
+     }
+    ]
+   },
+   "expect": {
+    "ok": true
+   },
+   "today": "2099-04-10"
+  },
+  {
+   "act": "valuation",
+   "args": {
+    "as_of": "2099-04-05"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "value": 144000,
+     "ties": true
+    }
+   }
+  },
+  {
+   "act": "valuation",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "value": 240000,
+     "ties": true
+    }
+   }
+  }
+ ]
+}

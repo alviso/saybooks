@@ -14,6 +14,9 @@ const mod = R.defineModule({
   tables: ['quote', 'quote_line', 'order', 'order_line', 'delivery', 'delivery_line',
            'invoice', 'invoice_line', 'payment', 'payment_application'],
   ids: { quote: 'Q-0001', order: 'SO-0001', delivery: 'D-0001', invoice: 'INV-0001', payment: 'P-0001', credit_note: 'CN-0001', return: 'R-0001', refund: 'RF-0001' },
+  // Acts other areas' scenarios use to build their world (inventory ships against an order).
+  env_acts: { create_order: 'o2c_create_order', confirm_order: 'o2c_confirm_order', ship_order: 'o2c_ship_order', record_return: 'o2c_record_return' },
+  env_argmap: { order: 'order_id', customer: 'customer_id' },
   // The conformance contract: spec act -> command, and spec arg name -> command arg name.
   // Scenario files speak in acts; the runner translates through this map, which is also
   // what the Spec tab and core_spec_status derive implementation status from.

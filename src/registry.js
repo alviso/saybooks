@@ -335,7 +335,7 @@ function execute(name, args = {}, ctx = {}) {
       db.prepare(`INSERT INTO command_log (at, command, actor_kind, actor, session, reason, subject_type, subject_id, args_json, ok, result_json)
                   VALUES (?,?,?,?,?,?,?,?,?,1,?)`)
         .run(at, name, who.actor_kind, who.actor, who.session, who.reason, cmd.subject || null,
-             String(subjectIdOf(cmd, args) || (result && result.id) || ''), JSON.stringify(logArgs(cmd, args)), JSON.stringify(result));
+             String((cmd.audit_subject && result && cmd.audit_subject(result)) || subjectIdOf(cmd, args) || (result && result.id) || ''), JSON.stringify(logArgs(cmd, args)), JSON.stringify(result));
       return result;
     });
 

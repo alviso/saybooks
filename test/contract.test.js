@@ -27,6 +27,8 @@
  *  17. 3-way match   a bill on a purchase order is approved only when it matches what was
  *                    ordered and received; loosening the match is a person's act; receipts,
  *                    approval and payment post balanced through GRNI and accounts payable
+ *  18. stock moves   every change to on hand is a move through core's door, so the moves add
+ *                    up to on hand for every item; the stock's value ties to the books
  *
  * A PR that adds a hand-written form, a prefix-less command, or a cross-module UPDATE
  * fails here, not in review.
@@ -445,6 +447,25 @@ for (const tag of R.PERMISSIONS) {
   const pay = j2.entries.find(e => e.lines.some(l => l.account === 'Gate17 Checking'));
   assert.ok(pay && pay.lines.some(l => l.account === 'Accounts Payable' && l.debit === 95000), 'the statement row that paid a bill on an order clears accounts payable, not spending again');
   ok('3-way match: a person is held to it, an agent cannot loosen it, and receipt, approval and payment post balanced');
+}
+
+// ------------------------------------------ 18. stock moves: the record adds up to the shelf
+// Every gate above moved stock (fixtures, shipments, returns, receipts); if any path changed
+// on_hand without a move, the sums below would not match.
+{
+  const off = wsp.use(WS, () => H.db().prepare(`SELECT i.id, i.on_hand, COALESCE((SELECT SUM(qty) FROM stock_move m WHERE m.item_id = i.id), 0) moved
+    FROM item i WHERE i.stocked = 1`).all().filter(r => r.on_hand !== r.moved));
+  assert.deepStrictEqual(off, [], 'every stocked item\'s moves must add up to its quantity on hand');
+  const writers = COMMANDS.filter(c => c.module !== 'core' && /stock_move/.test(String(c.handler))).map(c => c.name);
+  assert.deepStrictEqual(writers, [], 'no area writes stock moves except through core\'s stock door');
+  execute('core_create_item', { sku: 'G18-W', name: 'Gate18 widget', unit_price: 8000, on_hand: 4 }, human);
+  execute('inv_set_opening_cost', { item_id: 'G18-W', unit_cost: 4000, reason: 'gate 18 opening' }, human);
+  execute('inv_count_stock', { item_id: 'G18-W', counted: 3, reason: 'one broken' }, human);
+  const v = execute('inv_valuation', {}, human);
+  assert.ok(v.items.find(i => i.item_id === 'G18-W' && i.value === 12000), 'three left at the $40 opening cost are worth $120');
+  const j = execute('core_journal', {}, human);
+  assert.ok(j.balanced, 'the journal balances with stock postings');
+  ok('stock moves: every move goes through core and adds up to on hand; counts value at the average; the books balance');
 }
 
 console.log(`\n${n} contract checks passed across ${MODULES.length} modules, ${COMMANDS.length} commands.`);

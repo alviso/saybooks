@@ -49,7 +49,7 @@ const seedSandbox = (name) => {
 
 // Anonymous demo sandboxes mount the business modules only — jobhunt is a personal area
 // and belongs to owned spaces (where it mounts in full, data or no data).
-const DEMO_MOUNTS = ['core', 'o2c', 'p2p', 'crm', 'prospect', 'solo', 'purchases', 'bridge'];   // the demo shows everything but the job hunt
+const DEMO_MOUNTS = ['core', 'o2c', 'p2p', 'inventory', 'crm', 'prospect', 'solo', 'purchases', 'bridge'];   // the demo shows everything but the job hunt
 const HUNT_MOUNTS = ['core', 'jobhunt'];   // the free job-hunt offering: one module + the platform
 const SOLO_MOUNTS = ['core', 'solo', 'bridge'];   // the freelancer invoice generator, and the hand-over to their accountant
 const KIND_MOUNTS = { hunt: HUNT_MOUNTS, solo: SOLO_MOUNTS };
@@ -60,6 +60,7 @@ const mountsFor = (w) => { try {
   if (sp) { const chosen = users.mountsOf(w); if (chosen) return [...new Set(['core', ...chosen,
     ...(chosen.some(m => m === 'o2c' || m === 'solo' || m === 'p2p') ? ['bridge'] : []),
     ...(chosen.includes('p2p') ? ['purchases'] : []),   // p2p's bills and vendors are the purchases area's
+    ...(chosen.some(m => m === 'o2c' || m === 'p2p') ? ['inventory'] : []),   // stock that is bought or sold has a value
     ...(chosen.includes('crm') ? ['prospect'] : [])])]; return KIND_MOUNTS[sp.kind] || null; }
   // A local server honours SAYBOOKS_MODULES the way mcp-server.js does, so a client can be handed
   // the same subset over HTTP as over stdio.
@@ -99,6 +100,7 @@ function spaceSummary(s) {
     if (mounts.includes('p2p')) { summary.pos_open = count("SELECT COUNT(*) n FROM p2p_po WHERE status IN ('draft','issued')");
       summary.units_to_receive = count(`SELECT COALESCE(SUM(MAX(l.qty - COALESCE((SELECT SUM(rl.qty) FROM p2p_receipt_line rl WHERE rl.po_line_id = l.id), 0), 0)), 0) n
         FROM p2p_po_line l JOIN p2p_po p ON p.id = l.po_id WHERE p.status = 'issued' AND l.stocked = 1`); }
+    if (mounts.includes('inventory')) { try { const st = R.MODULES.find(m => m.name === 'inventory').api.views.stock(); summary.stock_items = st.count; summary.stock_value_display = st.value_display; summary.stock_uncosted = st.uncosted_items.length; } catch { /* no stock yet */ } }
     if (mounts.includes('purchases')) { summary.transactions = count('SELECT COUNT(*) n FROM purch_transaction'); summary.unreviewed = count("SELECT COUNT(*) n FROM purch_transaction WHERE status = 'unreviewed'"); summary.subs_active = count("SELECT COUNT(*) n FROM purch_subscription WHERE status = 'active'"); }
     summary.customers = count('SELECT COUNT(*) n FROM customer');
     let last = null; try { last = H.db().prepare('SELECT at, actor, actor_kind, command FROM command_log WHERE ok = 1 ORDER BY id DESC LIMIT 1').get() || null; } catch { last = null; }
@@ -174,7 +176,7 @@ const entryOf = (req, url, allowMint = false) => {
     if (!ws) {
       const first = spaces.find(s => !s.demo) || spaces[0];
       if (first) { ws = first.ws; role = first.role; if (!sandboxExists(ws)) wsp.dbFor(ws); }
-      else { const sp = users.createSpace(user.id, 'Demo books', undefined, null, ['o2c', 'p2p', 'crm', 'solo', 'purchases'], true); seedSandbox(sp.ws); ws = sp.ws; role = 'owner'; }
+      else { const sp = users.createSpace(user.id, 'Demo books', undefined, null, ['o2c', 'p2p', 'inventory', 'crm', 'solo', 'purchases'], true); seedSandbox(sp.ws); ws = sp.ws; role = 'owner'; }
     }
     if (!/^try-/.test(ws)) users.touchLastWs(user.id, ws);
     return { ws, member: { name: user.name || user.email.split('@')[0], role, email: user.email }, user, spaces, spaceCookie: ws };

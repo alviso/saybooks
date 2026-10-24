@@ -75,6 +75,8 @@ defineCommand({
     if (a.unit_price < 0) throw new Rejected('unit_price cannot be negative.');
     db.prepare('INSERT INTO item (id,name,unit_price,on_hand,stocked,tax_rate_bp,created_at) VALUES (?,?,?,?,?,?,?)')
       .run(a.sku, a.name, a.unit_price, a.on_hand || 0, a.stocked === false ? 0 : 1, a.tax_rate_bp || 0, at);
+    // Opening stock is a move like any other, so the moves always add up to what is on hand.
+    if (a.stocked !== false && a.on_hand > 0) db.prepare("INSERT INTO stock_move (item_id,date,qty,kind,note,created_at) VALUES (?,?,?,'opening',?,?)").run(a.sku, at.slice(0, 10), a.on_hand, 'opening quantity', at);
     return H.get('item', a.sku);
   },
 });
@@ -96,7 +98,7 @@ defineCommand({
     const item = H.need('item', a.item_id, 'item');
     if (!item.stocked) throw new Rejected('This is a service item; it has no quantity on hand.');
     // Through the same door every other module uses; one rule about negative stock, one place.
-    return api().adjustStock(db, a.item_id, a.qty, a.note || 'receipt');
+    return api().adjustStock(db, a.item_id, a.qty, a.note || 'receipt', { kind: 'adjustment' });
   },
 });
 

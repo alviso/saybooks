@@ -12,7 +12,7 @@ const H = require('../../db.js');
 
 const mod = R.defineModule({
   name: 'core', prefix: 'core',
-  tables: ['customer', 'item', 'company_profile'],
+  tables: ['customer', 'item', 'company_profile', 'stock_move'],
   env_acts: { create_customer: 'core_create_customer', create_item: 'core_create_item', receive_stock: 'core_receive_stock', set_price: 'core_set_price',
               set_credit_limit: 'core_set_credit_limit', hold_customer: 'core_hold_customer', release_customer: 'core_release_customer',
               set_company_profile: 'core_set_company_profile', update_customer: 'core_update_customer' },
@@ -175,15 +175,22 @@ the next question to ask; one question at a time, written as it is answered.`,
     /**
      * The only door to on_hand. delta<0 depletes (a shipment), delta>0 receives.
      * Throws rather than going negative; service items are a no-op by design so callers
-     * do not need to special-case them.
+     * do not need to special-case them. Every move is also kept as a stock_move row:
+     * move = { kind, ref, date, unit_cost } says what it was (unit_cost only when the move
+     * knows it, as a goods receipt does).
      */
-    adjustStock(db, itemId, delta, why) {
+    adjustStock(db, itemId, delta, why, move = {}) {
       const item = H.need('item', itemId, 'item');
       if (!item.stocked) return item;
       if (item.on_hand + delta < 0) throw new R.Rejected(`${item.id} (${item.name}): ${item.on_hand} on hand, ${-delta} needed${why ? ` for ${why}` : ''}. Stock cannot go negative.`);
       db.prepare('UPDATE item SET on_hand = on_hand + ? WHERE id = ?').run(delta, itemId);
+      const day = String(move.date || H.today()).slice(0, 10);
+      db.prepare('INSERT INTO stock_move (item_id,date,qty,kind,ref,unit_cost,note,created_at) VALUES (?,?,?,?,?,?,?,?)')
+        .run(itemId, day, delta, move.kind || 'adjustment', move.ref || null, move.unit_cost ?? null, why || null, H.clockStamp() || new Date().toISOString());
       return H.get('item', itemId);
     },
+    /** An item's stock moves, oldest first: the inventory area's input. */
+    stockMoves: (itemId) => H.db().prepare(`SELECT * FROM stock_move ${itemId ? 'WHERE item_id = ?' : ''} ORDER BY date, id`).all(...(itemId ? [itemId] : [])),
   },
 });
 

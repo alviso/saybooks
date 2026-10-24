@@ -210,7 +210,7 @@ const api = async (cmd, args = {}) => {
   const r = await fetch(wsUrl('/api/cmd/' + cmd), { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(args) });
   const j = await r.json(); if (!r.ok) throw new Error(j.error); return j.result;
 };
-let REG = null, view = 'orders', selected = null, huntStage = null, journalRange = {};
+let REG = null, view = 'orders', selected = null, huntStage = null, journalRange = {}, invRange = {};
 /* The shell: one rail entry per module, tabs for its pages. Views keep their ids; only the chrome is here. */
 const ICONS = {
   home: '<svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
@@ -222,6 +222,7 @@ const ICONS = {
   pros: '<svg viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>',
   bridge: '<svg viewBox="0 0 24 24"><path d="M3 9l9-5 9 5"/><path d="M5 9v9M10 9v9M14 9v9M19 9v9M3 20h18"/></svg>',
   p2p: '<svg viewBox="0 0 24 24"><path d="M2 7h12v9H2z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="6" cy="18" r="1.7"/><circle cx="17" cy="18" r="1.7"/></svg>',
+  inv: '<svg viewBox="0 0 24 24"><path d="M3 14h8v7H3zM13 14h8v7h-8zM8 4h8v7H8z"/></svg>',
   company: '<svg viewBox="0 0 24 24"><path d="M4 21V8l8-5 8 5v13"/><path d="M9 21v-6h6v6"/></svg>',
   audit: '<svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h10"/></svg>',
   spec: '<svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M9 9h6M9 13h6M9 17h3"/></svg>',
@@ -233,6 +234,7 @@ const NAV = [
   { key: 'solo', label: 'Invoicing', prefix: 'solo_', tabs: [['soloinv', 'Invoices'], ['soloout', 'Outstanding'], ['soloremind', 'Reminders'], ['soloclients', 'Clients']] },
   { key: 'o2c', label: 'Orders', prefix: 'o2c_', tabs: [['orders', 'Orders'], ['customers', 'Customers'], ['items', 'Items'], ['ar', 'AR aging'], ['cash', 'Unapplied cash']] },
   { key: 'p2p', label: 'Purchasing', prefix: 'p2p_', tabs: [['p2ppos', 'Purchase orders'], ['p2preceived', 'Goods received'], ['p2pgrni', 'Received, not billed']] },
+  { key: 'inv', label: 'Inventory', prefix: 'inv_', tabs: [['invstock', 'Stock'], ['invmoves', 'Stock moves'], ['invcos', 'Cost of sales']] },
   { key: 'crm', label: 'CRM', prefix: 'crm_', tabs: [['today', 'Today'], ['campaigns', 'Campaigns'], ['accounts', 'Accounts'], ['crmcontacts', 'Contacts'], ['crmdrafts', 'Drafts'], ['crmcal', 'Calendar'], ['crmpipeline', 'Pipeline'], ['network', 'Network'], ['crmactivity', 'Activity']] },
   { key: 'pros', label: 'Prospects', prefix: 'pros_', tabs: [['prospulls', 'Pulls'], ['prosrows', 'Staged rows']] },
   { key: 'hunt', label: 'Job hunt', prefix: 'hunt_', tabs: [['huntdue', 'Due'], ['huntpipeline', 'Pipeline'], ['huntcontacts', 'Contacts'], ['huntresumes', 'Resumes']] },
@@ -248,6 +250,7 @@ const MODULES = [
   { name: 'solo', nav: 'solo', label: 'Invoicing', blurb: 'Invoices, clients, payments, PDFs. Say the work, get a numbered invoice.' },
   { name: 'o2c', nav: 'o2c', label: 'Order to cash', blurb: 'Quotes, orders, shipments, invoices, receivables, with a credit limit that holds.' },
   { name: 'p2p', nav: 'p2p', label: 'Purchasing', blurb: 'Purchase orders, goods received, and vendor bills matched to them before a person approves paying.' },
+  { name: 'inventory', nav: 'inv', label: 'Inventory', blurb: 'What the stock is worth: moving average cost, counts, cost of goods sold, a value that ties to the books.' },
   { name: 'crm', nav: 'crm', label: 'CRM', blurb: 'Accounts, contacts, campaigns, the pipeline that feeds the orders.' },
   { name: 'prospect', nav: 'pros', label: 'Prospects', blurb: 'Bought lists your agent judges and you promote. Nothing counts until you say so.' },
   { name: 'jobhunt', nav: 'hunt', label: 'Job hunt', blurb: 'Postings, applications, interviews, recruiters, what is due.' },
@@ -258,6 +261,7 @@ const modFacts = (name, s) => {
   if (name === 'solo' && s.invoices != null) { out.push(`${s.invoices} invoice${s.invoices === 1 ? '' : 's'}${s.drafts ? `, ${s.drafts} draft` : ''}`); if (s.open_count) out.push(`<b>${s.open_display}</b> open${s.overdue ? `, <span style="color:var(--warn)">${s.overdue} overdue</span>` : ''}`); }
   if (name === 'o2c' && s.orders_open != null) { out.push(`${s.orders_open} open order${s.orders_open === 1 ? '' : 's'}${s.orders_shipped ? `, ${s.orders_shipped} shipped` : ''}`); if (s.ar_display && s.ar_display !== '$0.00') out.push(`<b>${s.ar_display}</b> receivable`); }
   if (name === 'p2p' && s.pos_open != null) { out.push(`${s.pos_open} open purchase order${s.pos_open === 1 ? '' : 's'}${s.units_to_receive ? `, ${s.units_to_receive} unit${s.units_to_receive === 1 ? '' : 's'} to receive` : ''}`); }
+  if (name === 'inventory' && s.stock_items != null) { out.push(`${s.stock_items} stocked item${s.stock_items === 1 ? '' : 's'}`); if (s.stock_value_display) out.push(`<b>${s.stock_value_display}</b> in stock${s.stock_uncosted ? `, <span style="color:var(--warn)">${s.stock_uncosted} without a cost</span>` : ''}`); }
   if (name === 'crm' && s.accounts != null) out.push(`${s.accounts} account${s.accounts === 1 ? '' : 's'}, ${s.crm_contacts || 0} contacts`);
   if (name === 'jobhunt' && s.applications_active != null) out.push(`${s.applications_active} active application${s.applications_active === 1 ? '' : 's'} of ${s.postings || 0} postings${s.due ? `, <span style="color:var(--warn)">${s.due} due</span>` : ''}`);
   if (name === 'purchases' && s.transactions != null) { out.push(`${s.transactions} row${s.transactions === 1 ? '' : 's'} on record${s.unreviewed ? `, ${s.unreviewed} to review` : ''}`); if (s.subs_active) out.push(`${s.subs_active} subscription${s.subs_active === 1 ? '' : 's'}`); }
@@ -461,9 +465,9 @@ const newButtons = (subject) => REG.commands.filter(c => c.subject === subject &
 
 async function detail(type, id) {
   const wrap = $('<div></div>');
-  const idArg = type === 'solo_invoice' ? 'invoice_id' : type === 'crm_contact' ? 'contact_id' : type.startsWith('purch_') ? type.slice(6) + '_id' : type.startsWith('p2p_') ? type.slice(4) + '_id' : type + '_id';
+  const idArg = type === 'solo_invoice' ? 'invoice_id' : type === 'crm_contact' ? 'contact_id' : type.startsWith('purch_') ? type.slice(6) + '_id' : type.startsWith('p2p_') || type.startsWith('inv_') ? type.slice(4) + '_id' : type + '_id';
   const [entity, na] = await Promise.all([
-    api({ order:'o2c_get_order', customer: cmd('o2c_get_customer') ? 'o2c_get_customer' : 'core_get_customer', invoice:'o2c_get_invoice', account:'crm_get_account', campaign:'crm_get_campaign', posting:'hunt_get_posting', contact:'hunt_get_contact', resume:'hunt_get_resume', solo_invoice:'solo_get_invoice', purch_transaction:'purch_get_transaction', purch_receipt:'purch_get_receipt', purch_subscription:'purch_get_subscription', purch_rule:'purch_get_rule', purch_bill:'purch_get_bill', purch_source:'purch_source', p2p_po:'p2p_po', crm_contact:'crm_get_contact' }[type],
+    api({ order:'o2c_get_order', customer: cmd('o2c_get_customer') ? 'o2c_get_customer' : 'core_get_customer', invoice:'o2c_get_invoice', account:'crm_get_account', campaign:'crm_get_campaign', posting:'hunt_get_posting', contact:'hunt_get_contact', resume:'hunt_get_resume', solo_invoice:'solo_get_invoice', purch_transaction:'purch_get_transaction', purch_receipt:'purch_get_receipt', purch_subscription:'purch_get_subscription', purch_rule:'purch_get_rule', purch_bill:'purch_get_bill', purch_source:'purch_source', p2p_po:'p2p_po', inv_item:'inv_item_stock', crm_contact:'crm_get_contact' }[type],
         { [idArg]: id }),
     fetch(wsUrl(`/api/next-actions?type=${type}&id=${id}`)).then(r => r.json()),
   ]);
@@ -493,6 +497,9 @@ async function detail(type, id) {
         Expected: entity.expected_date ?? '—', ...(entity.vendor_ref ? { 'Their reference': esc(entity.vendor_ref) } : {}),
         Issued: entity.issued_at ? `${String(entity.issued_at).slice(0, 10)}${entity.issued_by ? ` by ${esc(entity.issued_by)}` : ''}` : '— (draft)',
         ...(entity.closed_reason ? { [entity.status === 'cancelled' ? 'Cancelled' : 'Closed short']: esc(entity.closed_reason) } : {}), ...(entity.note ? { Note: esc(entity.note) } : {}) }
+    : type === 'inv_item'
+    ? { 'On hand': entity.qty, 'Average cost': entity.average_cost_display ?? '<span style="color:var(--warn)">unknown</span>', Value: entity.value_display ?? `<span style="color:var(--warn)">${entity.uncosted_qty} without a cost</span>`, 'Sells at': entity.sale_price_display,
+        'Opening cost': entity.opening_cost_display ? `${entity.opening_cost_display} <span style="color:var(--dim)">${esc(entity.opening_cost_reason || '')}</span>` : '—', ...(entity.note ? { Note: esc(entity.note) } : {}) }
     : type === 'purch_bill'
     ? { Vendor: entity.vendor, 'Their number': entity.number ?? '—', 'Bill date': entity.bill_date, Due: `${entity.due_date}${entity.overdue ? ` <span style="color:var(--warn);font-weight:600">overdue</span>` : entity.due_in_days != null ? ` · in ${entity.due_in_days} day${entity.due_in_days === 1 ? '' : 's'}` : ''}`, Amount: entity.amount_display, Category: entity.category ?? '—',
         ...(entity.approved_by ? { Approved: `${esc(entity.approved_by)} on ${String(entity.approved_at).slice(0, 10)}${entity.pay_by ? `, pay by ${entity.pay_by}` : ''}` } : {}),
@@ -590,6 +597,11 @@ async function detail(type, id) {
       }
       wrap.append($('<div class="sub" style="margin-top:16px">Bills on this order</div>'), bt);
     }
+  }
+  if (type === 'inv_item') {
+    const mt = $('<table><thead><tr><th>Day</th><th>What</th><th>Reference</th><th class="num">Qty</th><th class="num">At</th><th class="num">Value</th><th class="num">On hand</th><th class="num">Average after</th></tr></thead><tbody></tbody></table>');
+    for (const m of entity.moves) mt.querySelector('tbody').append($(`<tr><td style="font-size:12.5px">${m.date}</td><td><span class="pill">${m.kind_words}</span></td><td>${esc(m.ref || '')}</td><td class="num"${m.qty < 0 ? ' style="color:var(--dim)"' : ''}>${m.qty > 0 ? '+' : ''}${m.qty}</td><td class="num">${m.unit_cost_display ?? '—'}</td><td class="num">${m.value_change_display ?? '—'}</td><td class="num">${m.qty_after}</td><td class="num">${m.average_after_display ?? '—'}</td></tr>`));
+    wrap.append($('<div class="sub" style="margin-top:16px">Stock moves, newest first: each one, and the average cost after it</div>'), mt);
   }
   if (type === 'purch_bill' && cmd('p2p_bill_match')) {
     const m = await api('p2p_bill_match', { bill_id: id }).catch(() => null);
@@ -1879,6 +1891,37 @@ async function renderPage() {
     if (!u.count) { main.append($('<div class="card doc" style="max-width:640px">Everything received is on an approved bill.</div>')); return; }
     const t = $('<table><thead><tr><th>Order</th><th>Vendor</th><th>Item</th><th class="num">Received</th><th class="num">Billed</th><th class="num">Not billed</th><th class="num">Price</th><th class="num">Value</th></tr></thead><tbody></tbody></table>');
     rowsInto(t, u.items.map(r => ({ ...r, id: r.po_id })), r => `<td>${r.po_id}</td><td>${esc(r.vendor || '')}</td><td>${esc(r.item_id)} <span style="color:var(--dim)">${esc(r.item_name || '')}</span></td><td class="num">${r.received}</td><td class="num">${r.billed}${r.waiting_on_open_bills ? ` <span style="color:var(--dim)">(+${r.waiting_on_open_bills} waiting)</span>` : ''}</td><td class="num">${r.not_billed}</td><td class="num">${r.unit_price_display}</td><td class="num">${r.value_display}</td>`, 'p2p_po');
+  }
+  if (view === 'invstock') {
+    head('Stock', 'What is on the shelf and what it is worth: the moving average of what was paid, never a typed cost.');
+    const st = await api('inv_stock', {});
+    main.append($(`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;max-width:660px;margin-bottom:14px"><div class="tile"><div class="k">Stock value</div><div class="v">${st.value_display}</div><div class="s">${st.count} stocked item${st.count === 1 ? '' : 's'}</div></div></div>`));
+    if (st.note) main.append($(`<div class="doc" style="margin:0 0 12px;color:var(--warn)">${esc(st.note)}</div>`));
+    if (!st.count) { main.append($('<div class="card doc" style="max-width:640px">No stocked items yet.</div>')); return; }
+    const t = $('<table><thead><tr><th>Item</th><th>Name</th><th class="num">On hand</th><th class="num">Average cost</th><th class="num">Value</th><th class="num">Sells at</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, st.items, r => `<td>${esc(r.item_id)}</td><td>${esc(r.item_name)}</td><td class="num">${r.qty}</td><td class="num">${r.average_cost_display ?? '<span style="color:var(--warn)">unknown</span>'}</td><td class="num">${r.value_display ?? `<span style="color:var(--warn)">${r.uncosted_qty} uncosted</span>`}</td><td class="num">${r.sale_price_display}</td>`, 'inv_item');
+  }
+  if (view === 'invmoves') {
+    head('Stock moves', 'Every change to stock, newest first: received, shipped, returned, counted. A move is never edited.');
+    const mv = await api('inv_moves', {});
+    if (!mv.count) { main.append($('<div class="card doc" style="max-width:560px">No stock has moved yet.</div>')); return; }
+    const t = $('<table><thead><tr><th>Day</th><th>Item</th><th>What</th><th>Reference</th><th class="num">Qty</th><th>Note</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, mv.items.map(m => ({ ...m, mid: m.id, id: m.item_id })), m => `<td style="font-size:12.5px">${m.date}</td><td>${esc(m.item_id)} <span style="color:var(--dim)">${esc(m.item_name || '')}</span></td><td><span class="pill">${m.kind_words}</span></td><td>${esc(m.ref || '')}</td><td class="num">${m.qty > 0 ? '+' : ''}${m.qty}</td><td style="font-size:12.5px;color:var(--dim)">${esc(m.note || '')}</td>`, 'inv_item');
+  }
+  if (view === 'invcos') {
+    head('Cost of sales', 'Each shipment: what it sold for, what it cost at the moving average of that day, and what it earned.');
+    const c = await api('inv_cost_of_sales', invRange);
+    const bar = $('<div class="acts" style="margin-bottom:14px;align-items:center"></div>');
+    const from = $(`<input type="date" value="${invRange.from || ''}">`), to = $(`<input type="date" value="${invRange.to || ''}">`);
+    const go = $('<button>Filter</button>'); go.onclick = () => { invRange = { ...(from.value && { from: from.value }), ...(to.value && { to: to.value }) }; render(); };
+    bar.append(from, to, go); main.append(bar);
+    main.append($(`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;max-width:880px;margin-bottom:14px">
+      <div class="tile"><div class="k">Sold for</div><div class="v">${c.revenue_display}</div></div><div class="tile"><div class="k">Cost of goods sold</div><div class="v">${c.cost_display}</div></div>
+      <div class="tile"><div class="k">Earned</div><div class="v">${c.margin_display}</div><div class="s">${c.margin_pct != null ? `${c.margin_pct}% of sales` : ''}</div></div></div>`));
+    if (c.left_out) main.append($(`<div class="doc" style="margin:0 0 12px;color:var(--warn)">${esc(c.left_out)}</div>`));
+    if (!c.count) { main.append($('<div class="card doc" style="max-width:560px">No shipments in this period.</div>')); return; }
+    const t = $('<table><thead><tr><th>Shipped</th><th>Delivery</th><th>Customer</th><th>Item</th><th class="num">Qty</th><th class="num">Sold for</th><th class="num">Cost</th><th class="num">Earned</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, c.lines.map(l => ({ ...l, id: l.item_id })), l => `<td style="font-size:12.5px">${l.date}</td><td>${l.delivery_id}</td><td>${esc(l.customer || '')}</td><td>${esc(l.item_id)}</td><td class="num">${l.qty}</td><td class="num">${l.revenue_display}</td><td class="num">${l.cost_display ?? '—'}</td><td class="num">${l.margin_display ?? '—'}${l.margin_pct != null ? ` <span style="color:var(--dim)">${l.margin_pct}%</span>` : ''}</td>`, 'inv_item');
   }
   if (view === 'purchrules') {
     head('Standing rules', 'What you said ahead of time, like "the next five days are the Texas conference, book it to travel". A rule suggests; nothing is booked until you confirm.');
