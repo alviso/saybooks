@@ -1149,6 +1149,126 @@
   "human"
  ],
  [
+  "core_create_item",
+  {
+   "sku": "FREIGHT-IN",
+   "name": "Inbound freight",
+   "unit_price": 0,
+   "stocked": false
+  },
+  "freight on what Sam buys: a service, never counted",
+  "sam",
+  "human"
+ ],
+ [
+  "p2p_create_po",
+  {
+   "vendor": "Bay Gasket Co.",
+   "lines": [
+    {
+     "item_id": "GASKET-T",
+     "qty": 300,
+     "unit_price": 2100
+    },
+    {
+     "item_id": "WIDGET-A",
+     "qty": 20,
+     "unit_price": 7400
+    },
+    {
+     "item_id": "FREIGHT-IN",
+     "qty": 1,
+     "unit_price": 6500
+    }
+   ],
+   "expected_date": "{{today-14}}",
+   "vendor_ref": "BG-Q-118"
+  },
+  "restocking gaskets and type A widgets, at Bay Gasket's quote",
+  "claude",
+  "agent",
+  null,
+  "-21d"
+ ],
+ [
+  "p2p_issue_po",
+  {
+   "po_id": "PO-0001"
+  },
+  "Sam emailed it to Bay Gasket",
+  "sam",
+  "human",
+  null,
+  "-21d"
+ ],
+ [
+  "p2p_receive_goods",
+  {
+   "po_id": "PO-0001",
+   "lines": [
+    {
+     "item_id": "GASKET-T",
+     "qty": 300
+    },
+    {
+     "item_id": "WIDGET-A",
+     "qty": 20
+    }
+   ],
+   "reference": "BG-5512"
+  },
+  "counted at the door",
+  "claude",
+  "agent",
+  null,
+  "-14d"
+ ],
+ [
+  "p2p_record_vendor_bill",
+  {
+   "po_id": "PO-0001",
+   "number": "BG-2290",
+   "bill_date": "{{today-13}}",
+   "terms_days": 30,
+   "category": "freight",
+   "file_name": "bay-gasket-BG-2290.pdf",
+   "lines": [
+    {
+     "item_id": "GASKET-T",
+     "qty": 300,
+     "unit_price": 2100
+    },
+    {
+     "item_id": "WIDGET-A",
+     "qty": 20,
+     "unit_price": 7400
+    },
+    {
+     "item_id": "FREIGHT-IN",
+     "qty": 1,
+     "unit_price": 6500
+    }
+   ]
+  },
+  "emailed by Bay Gasket",
+  "claude",
+  "agent",
+  null,
+  "-13d"
+ ],
+ [
+  "purch_approve_bill",
+  {
+   "bill_id": "B-0005",
+   "note": "matches the order"
+  },
+  "it matches; pay by the due date",
+  "sam",
+  "human",
+  null,
+  "-12d"
+ ],
+ [
   "solo_draft_invoice",
   {
    "customer_id": "C-0001",
