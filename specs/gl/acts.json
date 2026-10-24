@@ -1,0 +1,26 @@
+{
+  "area": "gl",
+  "spec": "0.1",
+  "doc": "spec.md",
+  "acts": {
+    "record_entry": { "kind": "write", "required": ["date", "memo", "lines", "reason"] },
+    "void_entry": { "kind": "write", "required": ["entry", "reason"] },
+    "close_period": { "kind": "write", "required": ["through", "reason"] },
+    "reopen_period": { "kind": "write", "required": ["reason"] },
+    "checklist": { "kind": "read", "required": ["through"] },
+    "entries": { "kind": "read", "required": [] },
+    "closes": { "kind": "read", "required": [] },
+    "changes": { "kind": "read", "required": [] }
+  },
+  "invariants": [
+    { "id": "GL-1", "title": "Money is integer cents; every entry balances, adjusting entries included." },
+    { "id": "GL-2", "title": "Closing and reopening are a person's acts, with a reason, refused to an agent whatever its role." },
+    { "id": "GL-3", "title": "A closed period's journal is what it was at close; its financials and hand-overs never change afterwards." },
+    { "id": "GL-4", "title": "A later change to a closed period lands as a correction on the first open day, per account, named." },
+    { "id": "GL-5", "title": "Adjusting entries are dated in an open period, balance, carry a reason and say each account's kind." },
+    { "id": "GL-6", "title": "An accrual marked to reverse reverses itself on the first day of the next month." },
+    { "id": "GL-7", "title": "A close is refused while statement rows in the period are unreviewed or an account does not tie; the rest is listed." },
+    { "id": "GL-8", "title": "Only the latest close can be reopened." },
+    { "id": "GL-9", "title": "Every write is a logged command with an actor; refusals are logged too." }
+  ]
+}

@@ -1,0 +1,101 @@
+{
+ "name": "an entry must balance and say what kind each account is",
+ "spec": "gl@0.1",
+ "today": "2099-05-10",
+ "notes": "GL-1/5: unbalanced, two-sided and kindless lines are refused with what is wrong; an entry needs a reason.",
+ "env": [],
+ "steps": [
+  {
+   "act": "record_entry",
+   "args": {
+    "date": "2099-04-30",
+    "memo": "April internet, not billed yet",
+    "reverse": true,
+    "reason": "the provider bills a month behind",
+    "lines": [
+     {
+      "account": "utilities",
+      "kind": "expense",
+      "debit": 12940
+     },
+     {
+      "account": "Accrued expenses",
+      "kind": "liability",
+      "credit": 12000
+     }
+    ]
+   },
+   "expect": {
+    "refused": "does not balance"
+   }
+  },
+  {
+   "act": "record_entry",
+   "args": {
+    "date": "2099-04-30",
+    "memo": "April internet, not billed yet",
+    "reverse": true,
+    "reason": "the provider bills a month behind",
+    "lines": [
+     {
+      "account": "utilities",
+      "kind": "expense",
+      "debit": 100,
+      "credit": 100
+     },
+     {
+      "account": "Accrued expenses",
+      "kind": "liability",
+      "credit": 0
+     }
+    ]
+   },
+   "expect": {
+    "refused": "one of them"
+   }
+  },
+  {
+   "act": "record_entry",
+   "args": {
+    "date": "2099-04-30",
+    "memo": "April internet, not billed yet",
+    "reverse": true,
+    "reason": "the provider bills a month behind",
+    "lines": [
+     {
+      "account": "utilities",
+      "kind": "cost",
+      "debit": 100
+     },
+     {
+      "account": "Accrued expenses",
+      "kind": "liability",
+      "credit": 100
+     }
+    ]
+   },
+   "expect": {
+    "refused": "kind is one of"
+   }
+  },
+  {
+   "act": "record_entry",
+   "args": {
+    "date": "2099-04-30",
+    "memo": "April internet, not billed yet",
+    "reverse": true,
+    "reason": "the provider bills a month behind",
+    "lines": [
+     {
+      "account": "utilities",
+      "kind": "expense",
+      "debit": 100
+     }
+    ]
+   },
+   "expect": {
+    "refused": "at least two lines"
+   }
+  }
+ ]
+}

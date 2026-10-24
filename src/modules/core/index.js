@@ -30,7 +30,10 @@ the next question to ask; one question at a time, written as it is answered.`,
     // Sums are per currency and never cross — the ledger of record is fed one currency at a time.
     const money = (c, cur) => H.money(c, cur || 'USD');
     const day = (d) => String(d || '').slice(0, 10);
-    const inRange = (d) => (!a.from || day(d) >= a.from) && (!a.to || day(d) <= a.to);
+    // The whole journal is derived first; the date range is applied after closed periods have
+    // been put back as they were kept (an area offering closedBooks, gl), so a correction for a
+    // closed period lands where it belongs whatever range is asked for.
+    const inRange = () => true;
     const entries = [];
     const push = (date, memo, customer, lines, cur) => {
       const dr = lines.reduce((s, l) => s + (l.debit || 0), 0);
@@ -137,18 +140,41 @@ the next question to ask; one question at a time, written as it is answered.`,
     // stitching and the balance check, never another module's tables.
     for (const m of R.MODULES) {
       if (!m.api || typeof m.api.journalLines !== 'function') continue;
-      for (const e of m.api.journalLines({ from: a.from, to: a.to })) push(e.date, e.memo, e.customer, e.lines, e.currency);
+      for (const e of m.api.journalLines({})) push(e.date, e.memo, e.customer, e.lines, e.currency);
     }
 
     entries.sort((x, y) => x.date < y.date ? -1 : x.date > y.date ? 1 : 0);
-    const kept = a.currency ? entries.filter(e => e.currency === String(a.currency).toUpperCase()) : entries;
+    let effective = entries;
+    const closer = a.raw ? null : R.MODULES.find(m => m.api && typeof m.api.closedBooks === 'function');
+    const closed = closer ? closer.api.closedBooks() : null;
+    if (closed && closed.through) {
+      // GL-3/GL-4: closed periods are what their closes kept; whatever the record now says
+      // differently about them lands, per account, as one correction on the first open day.
+      const T = closed.through;
+      const keyOf = (cur, l) => `${cur}|${l.account}|${l.map ? `${l.map.kind}|${l.map.key}|${l.map.role || ''}` : 'derivation'}`;
+      const agg = new Map();
+      const add = (e, sign) => { for (const l of e.lines) { const k = keyOf(e.currency, l); const x = agg.get(k) || { currency: e.currency, account: l.account, map: l.map, d: 0 }; x.d += sign * ((l.debit || 0) - (l.credit || 0)); agg.set(k, x); } };
+      for (const e of entries) if (e.date <= T) add(e, 1);
+      for (const e of closed.entries) add(e, -1);
+      const corrections = [];
+      for (const cur of [...new Set([...agg.values()].filter(x => x.d).map(x => x.currency))]) {
+        const lines = [...agg.values()].filter(x => x.currency === cur && x.d)
+          .map(x => ({ account: x.account, ...(x.map ? { map: x.map } : {}), ...(x.d > 0 ? { debit: x.d } : { credit: -x.d }) }))
+          .map(l => ({ ...l, currency: cur, debit_display: l.debit ? money(l.debit, cur) : '', credit_display: l.credit ? money(l.credit, cur) : '' }));
+        corrections.push({ date: H.addDays(T, 1), memo: `Changes to periods closed through ${T}`, customer: null, currency: cur, correction: true, lines });
+      }
+      const kept0 = closed.entries.map(e => ({ ...e, closed: true, lines: e.lines.map(l => ({ ...l, currency: e.currency, debit_display: l.debit ? money(l.debit, e.currency) : '', credit_display: l.credit ? money(l.credit, e.currency) : '' })) }));
+      effective = [...kept0, ...corrections, ...entries.filter(e => e.date > T)].sort((x, y) => x.date < y.date ? -1 : x.date > y.date ? 1 : 0);
+    }
+    const ranged = effective.filter(e => (!a.from || e.date >= a.from) && (!a.to || e.date <= a.to));
+    const kept = a.currency ? ranged.filter(e => e.currency === String(a.currency).toUpperCase()) : ranged;
     const debits = kept.reduce((s, e) => s + e.lines.reduce((s2, l) => s2 + (l.debit || 0), 0), 0);
     const credits = kept.reduce((s, e) => s + e.lines.reduce((s2, l) => s2 + (l.credit || 0), 0), 0);
     const by = {};
     for (const e of kept) { const c = e.currency; by[c] = by[c] || { currency: c, entries: 0, debits: 0 }; by[c].entries++; by[c].debits += e.lines.reduce((s2, l) => s2 + (l.debit || 0), 0); }
     for (const c of Object.keys(by)) by[c].debits_display = money(by[c].debits, c);
     const currencies = Object.keys(by);
-    return { from: a.from || null, to: a.to || null, currency: a.currency ? String(a.currency).toUpperCase() : null,
+    return { from: a.from || null, to: a.to || null, closed_through: closed ? closed.through : null, currency: a.currency ? String(a.currency).toUpperCase() : null,
       entry_count: kept.length, currencies, by_currency: by,
       debits, credits, debits_display: money(debits, currencies.length === 1 ? currencies[0] : 'USD'), credits_display: money(credits, currencies.length === 1 ? currencies[0] : 'USD'),
       balanced: debits === credits, entries: kept };

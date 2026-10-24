@@ -209,6 +209,7 @@ function financials(a) {
     if (h.kind === 'category') {
       if (h.role === 'expense') return { kind: 'expense', name: l.account };
       if (h.role === 'income') return { kind: 'income', name: l.account };
+      if (['asset', 'liability', 'equity'].includes(h.role)) return { kind: h.role, name: l.account };   // an adjusting entry says what kind its account is
       const k = transferKind(l.account, stmtNames);
       if (k === 'asset' || k === 'liability') partial.add(l.account);
       return { kind: k, name: k === 'statement' ? mine.find(s => s.account.toLowerCase() === l.account.toLowerCase()).account : l.account };
@@ -288,10 +289,16 @@ function financials(a) {
   let unpaid = { count: 0, amount: 0 };
   for (const m of require('../../registry.js').MODULES) if (m.api && typeof m.api.unpaidBills === 'function') { const u = m.api.unpaidBills({ as_of: per.to, currency: cur }); unpaid.count += u.count; unpaid.amount += u.amount; }
   if (unpaid.count) notes.push(`${unpaid.count} bill${unpaid.count > 1 ? 's' : ''} received by ${per.to} and not paid by then (${money(unpaid.amount, cur)}) ${unpaid.count > 1 ? 'are' : 'is'} not in these figures: bills count when the payment shows on a statement. The accountant books them as payable at the close.`);
-  notes.push('Not included: cost of goods, inventory, depreciation, accruals and other adjustments the accountant makes at the close.');
+  const loaded = (n) => require('../../registry.js').MODULES.some(m => m.name === n);
+  const closer = require('../../registry.js').MODULES.find(m => m.api && typeof m.api.closedBooks === 'function');
+  const closedTo = closer ? (closer.api.closedBooks() || {}).through : null;
+  if (closedTo && per.to <= closedTo) notes.unshift(`Closed: the books are closed through ${closedTo}, so these figures are the ones kept at the close. Later changes land in the next open period.`);
+  else if (closedTo && (!per.from || per.from <= closedTo)) notes.push(`The books are closed through ${closedTo}: that part is as it was kept at the close.`);
+  if (!loaded('gl')) notes.push(`Not included: ${loaded('inventory') ? '' : 'cost of goods, inventory, '}depreciation, accruals and other adjustments the accountant makes at the close.`);
+  else notes.push('Accruals, depreciation and other adjustments are in only as adjusting entries recorded here.');
 
   return {
-    preliminary: true, period: per.label, from: per.from, to: per.to, currency: cur,
+    preliminary: !(closedTo && per.to <= closedTo), closed_through: closedTo || null, period: per.label, from: per.from, to: per.to, currency: cur,
     income_total: incomeTotal, expense_total: expenseTotal, net_income: net,
     total_assets: totalA, total_liabilities: totalL, total_equity: totalE, balanced: totalA === totalL + totalE,
     profit_and_loss: { income, income_total: money(incomeTotal, cur), expenses, expense_total: money(expenseTotal, cur), net_income: money(net, cur) },

@@ -49,7 +49,7 @@ const seedSandbox = (name) => {
 
 // Anonymous demo sandboxes mount the business modules only — jobhunt is a personal area
 // and belongs to owned spaces (where it mounts in full, data or no data).
-const DEMO_MOUNTS = ['core', 'o2c', 'p2p', 'inventory', 'crm', 'prospect', 'solo', 'purchases', 'bridge'];   // the demo shows everything but the job hunt
+const DEMO_MOUNTS = ['core', 'o2c', 'p2p', 'inventory', 'crm', 'prospect', 'solo', 'purchases', 'bridge', 'gl'];   // the demo shows everything but the job hunt
 const HUNT_MOUNTS = ['core', 'jobhunt'];   // the free job-hunt offering: one module + the platform
 const SOLO_MOUNTS = ['core', 'solo', 'bridge'];   // the freelancer invoice generator, and the hand-over to their accountant
 const KIND_MOUNTS = { hunt: HUNT_MOUNTS, solo: SOLO_MOUNTS };
@@ -58,7 +58,7 @@ const mountsFor = (w) => { try {
   // bridge rides along wherever there is a journal to hand over: it exports what o2c and solo derive.
   // bridge rides with a journal; prospect rides with the curated list it promotes into.
   if (sp) { const chosen = users.mountsOf(w); if (chosen) return [...new Set(['core', ...chosen,
-    ...(chosen.some(m => m === 'o2c' || m === 'solo' || m === 'p2p') ? ['bridge'] : []),
+    ...(chosen.some(m => m === 'o2c' || m === 'solo' || m === 'p2p') ? ['bridge', 'gl'] : []),   // the ledger and its close
     ...(chosen.includes('p2p') ? ['purchases'] : []),   // p2p's bills and vendors are the purchases area's
     ...(chosen.some(m => m === 'o2c' || m === 'p2p') ? ['inventory'] : []),   // stock that is bought or sold has a value
     ...(chosen.includes('crm') ? ['prospect'] : [])])]; return KIND_MOUNTS[sp.kind] || null; }

@@ -29,6 +29,9 @@
  *                    approval and payment post balanced through GRNI and accounts payable
  *  18. stock moves   every change to on hand is a move through core's door, so the moves add
  *                    up to on hand for every item; the stock's value ties to the books
+ *  19. the close     a person closes the books; the closed period's figures stop moving, a later
+ *                    change lands as a correction on the first open day, and only the latest
+ *                    close reopens
  *
  * A PR that adds a hand-written form, a prefix-less command, or a cross-module UPDATE
  * fails here, not in review.
@@ -466,6 +469,40 @@ for (const tag of R.PERMISSIONS) {
   const j = execute('core_journal', {}, human);
   assert.ok(j.balanced, 'the journal balances with stock postings');
   ok('stock moves: every move goes through core and adds up to on hand; counts value at the average; the books balance');
+}
+
+// ------------------------------------------- 19. the close: frozen periods, corrections forward
+// Scenarios run as an agent and cannot close; the person's close and what it freezes live here.
+{
+  const G = 'gate19-close'; wsp.wipe(G);
+  const p19 = { workspace: G, actor: 'test', actor_kind: 'human', role: 'owner' }, a19 = { ...p19, actor_kind: 'agent' };
+  H.withClock('2026-05-10', () => {
+    execute('purch_import_statement', { name: 'g19.csv', hash: 'sha256:gate19april', kind: 'bank', account: 'G19 Checking', currency: 'USD',
+      period_start: '2026-04-01', period_end: '2026-04-30', opening_balance: 500000, closing_balance: 470000, row_count: 2,
+      rows: [{ date: '2026-04-10', amount: -20000, description: 'OFFICE DEPOT', row_index: 1 }, { date: '2026-04-20', amount: -10000, description: 'CITY POWER', row_index: 2 }] }, p19);
+    let blocked = null; try { execute('gl_close_period', { through: '2026-04-30', reason: 'April' }, p19); } catch (e) { blocked = e.message; }
+    assert.ok(blocked && /not reviewed/.test(blocked), 'unreviewed rows block the close (GL-7)');
+    execute('purch_review_transaction', { transaction_id: 'T-0001', status: 'purchase', category: 'supplies', reason: 'paper' }, p19);
+    execute('purch_review_transaction', { transaction_id: 'T-0002', status: 'purchase', category: 'utilities', reason: 'power' }, p19);
+    execute('gl_record_entry', { date: '2026-04-30', memo: 'April internet accrual', reverse: true, reason: 'billed late', lines: [{ account: 'utilities', kind: 'expense', debit: 5000 }, { account: 'Accrued expenses', kind: 'liability', credit: 5000 }] }, a19);
+    let agentClose = null; try { execute('gl_close_period', { through: '2026-04-30', reason: 'April' }, a19); } catch (e) { agentClose = e.message; }
+    assert.ok(agentClose && /person's act/.test(agentClose), 'an agent never closes the books (GL-2)');
+    const before = execute('bridge_financials', { from: '2026-04-01', to: '2026-04-30' }, p19);
+    const cl = execute('gl_close_period', { through: '2026-04-30', reason: 'April close' }, p19);
+    assert.ok(cl.hash && cl.entry_count > 0, 'a close keeps the period with its totals and hash');
+    execute('purch_review_transaction', { transaction_id: 'T-0002', status: 'purchase', category: 'rent', reason: 'that was the landlord, not power' }, p19);
+    const after = execute('bridge_financials', { from: '2026-04-01', to: '2026-04-30' }, p19);
+    assert.deepStrictEqual(after.profit_and_loss, before.profit_and_loss, 'a closed period stays as it was kept (GL-3)');
+    const ch = execute('gl_changes', {}, p19);
+    assert.ok(ch.lines.some(l => l.date === '2026-05-01' && l.account === 'rent' && l.debit === 10000) && ch.lines.some(l => l.account === 'utilities' && l.credit === 10000), 'the late change lands on the first open day, per account (GL-4)');
+    const j = execute('core_journal', {}, p19);
+    assert.ok(j.balanced && j.entries.some(e => e.date === '2026-05-01' && /^Reversal of JE-0001/.test(e.memo)), 'the accrual reverses on the 1st of the next month (GL-6), and the books balance');
+    let closedEntry = null; try { execute('gl_record_entry', { date: '2026-04-15', memo: 'late', reason: 'x', lines: [{ account: 'a', kind: 'expense', debit: 1 }, { account: 'b', kind: 'liability', credit: 1 }] }, p19); } catch (e) { closedEntry = e.message; }
+    assert.ok(closedEntry && /closed through/.test(closedEntry), 'a closed period takes no entries (GL-5)');
+    execute('gl_reopen_period', { reason: 'found a mistake' }, p19);
+    assert.strictEqual(execute('gl_changes', {}, p19).count, 0, 'reopened, the period moves with the record again and no correction is needed');
+  });
+  ok('the close: a person closes, the period stops moving, a later change lands as a correction, accruals reverse, the latest close reopens');
 }
 
 console.log(`\n${n} contract checks passed across ${MODULES.length} modules, ${COMMANDS.length} commands.`);

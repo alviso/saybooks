@@ -218,7 +218,7 @@ const formSpec = (opts = {}) => COMMANDS.filter(c => inMount(c, opts.modules)).m
     options: a.enum,
     human_only: a.human_only || undefined,
     of: a.ui.of && Object.entries(a.ui.of).map(([k, v]) => ({
-      key: k, label: v.ui.label || k.replace(/_/g, ' '), widget: v.ui.widget, entity: v.ui.entity, required: !!v.required,
+      key: k, label: v.ui.label || k.replace(/_/g, ' '), widget: v.ui.widget, entity: v.ui.entity, options: v.enum, required: !!v.required,
     })),
     hint: a.description,
     required: !!a.required,

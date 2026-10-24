@@ -1,0 +1,70 @@
+{
+ "name": "the checklist blocks a close while a row is not reviewed",
+ "spec": "gl@0.1",
+ "today": "2099-05-10",
+ "notes": "GL-7: an unreviewed statement row in the period blocks the close; once reviewed, the account ties and nothing blocks.",
+ "env": [
+  [
+   "import_statement",
+   {
+    "name": "april.csv",
+    "hash": "gl-april-checking",
+    "kind": "bank",
+    "account": "Checking 4410",
+    "currency": "USD",
+    "period_start": "2099-04-01",
+    "period_end": "2099-04-30",
+    "opening_balance": 500000,
+    "closing_balance": 480000,
+    "row_count": 1,
+    "rows": [
+     {
+      "date": "2099-04-12",
+      "amount": -20000,
+      "description": "OFFICE DEPOT",
+      "row_index": 1
+     }
+    ]
+   },
+   "April's bank statement, one row"
+  ]
+ ],
+ "steps": [
+  {
+   "act": "checklist",
+   "args": {
+    "through": "2099-04-30"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "ready": false
+    }
+   }
+  },
+  {
+   "act": "review_transaction",
+   "args": {
+    "transaction": "T-0001",
+    "status": "purchase",
+    "category": "supplies",
+    "reason": "printer paper"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "checklist",
+   "args": {
+    "through": "2099-04-30"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "ready": true
+    }
+   }
+  }
+ ]
+}

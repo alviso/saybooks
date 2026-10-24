@@ -1,0 +1,39 @@
+{
+ "name": "the agent cannot close or reopen the books",
+ "spec": "gl@0.1",
+ "today": "2099-05-10",
+ "notes": "GL-2: closing and reopening are a person's acts, whatever the agent's role; the refusals are logged.",
+ "env": [],
+ "steps": [
+  {
+   "act": "close_period",
+   "args": {
+    "through": "2099-04-30",
+    "reason": "April close"
+   },
+   "expect": {
+    "refused": "person's act"
+   }
+  },
+  {
+   "act": "reopen_period",
+   "args": {
+    "reason": "a mistake"
+   },
+   "expect": {
+    "refused": "person's act"
+   }
+  },
+  {
+   "act": "closes",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "count": 0,
+     "closed_through": null
+    }
+   }
+  }
+ ]
+}

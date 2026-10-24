@@ -1,0 +1,98 @@
+{
+ "name": "adjusting entries, and an accrual that reverses",
+ "spec": "gl@0.1",
+ "today": "2099-05-10",
+ "notes": "GL-1/5/6: an accrual dated the last day of April reverses on the 1st of May; depreciation posts as given; a voided entry stays on the record.",
+ "env": [],
+ "steps": [
+  {
+   "act": "record_entry",
+   "args": {
+    "date": "2099-04-30",
+    "memo": "April internet, not billed yet",
+    "reverse": true,
+    "reason": "the provider bills a month behind",
+    "lines": [
+     {
+      "account": "utilities",
+      "kind": "expense",
+      "debit": 12940
+     },
+     {
+      "account": "Accrued expenses",
+      "kind": "liability",
+      "credit": 12940
+     }
+    ]
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "status": "posted",
+     "reverse_on": "2099-05-01",
+     "total": 12940
+    }
+   }
+  },
+  {
+   "act": "record_entry",
+   "args": {
+    "date": "2099-04-30",
+    "memo": "Depreciation, shelving, April",
+    "reason": "$9,000 over six years, straight line",
+    "lines": [
+     {
+      "account": "Depreciation",
+      "kind": "expense",
+      "debit": 12500
+     },
+     {
+      "account": "Accumulated depreciation",
+      "kind": "asset",
+      "credit": 12500
+     }
+    ]
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "reverse_on": null,
+     "total": 12500
+    }
+   }
+  },
+  {
+   "act": "entries",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "count": 2
+    }
+   }
+  },
+  {
+   "act": "void_entry",
+   "args": {
+    "entry": "JE-0002",
+    "reason": "the accountant moved depreciation to quarterly"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "status": "voided"
+    }
+   }
+  },
+  {
+   "act": "void_entry",
+   "args": {
+    "entry": "JE-0002",
+    "reason": "again"
+   },
+   "expect": {
+    "refused": "already voided"
+   }
+  }
+ ]
+}
