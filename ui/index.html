@@ -1966,7 +1966,7 @@ async function renderPage() {
     main.append(bar);
     const line = (k, v, opts = {}) => `<tr${opts.b ? ' style="font-weight:600"' : ''}><td>${k}</td><td class="num"${opts.warn ? ' style="color:var(--warn)"' : ''}>${v}</td></tr>`;
     const eff = (t, sign) => { const v = sign * t.total; return v ? `${v > 0 ? '+' : '−'}${t.total_display.replace('-', '')}` : t.total_display; };   // each line's effect, statement to books
-    const status = r.signoff ? `<span class="pill paid">signed off</span> ${r.signoff.id} by ${esc(r.signoff.signed_by || '')} on ${String(r.signoff.signed_at).slice(0, 10)}${r.signoff.changed_since ? ' <span class="pill unreviewed">changed since</span>' : ''}`
+    const status = r.signoff ? `<span class="pill paid">signed off</span> ${r.signoff.id} by <span>${esc(r.signoff.signed_by || '')}</span> on ${String(r.signoff.signed_at).slice(0, 10)}${r.signoff.changed_since ? ' <span class="pill unreviewed">changed since</span>' : ''}`
       : r.ready ? '<span class="pill paid">ready to sign off</span> Explained to the cent.' : r.blocking.map(b => `<div style="margin:6px 0"><span class="pill void">blocks a sign-off</span> ${esc(b)}</div>`).join('');
     main.append($(`<div class="card" style="max-width:720px;margin-bottom:16px"><table class="fin" style="max-width:640px"><tbody>
       ${line(`Statement balance, ${r.through}`, r.printed_display, { b: true })}

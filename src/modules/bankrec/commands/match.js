@@ -89,7 +89,7 @@ defineCommand({
   title: 'Sign off the reconciliation', group: 'Bank reconciliation', subject: 'bankrec_signoff', scope: 'collection',
   human_only: 'A reconciliation is a person\'s word that the bank and the books were looked at and agree.',
   summary: 'Sign off an account\'s reconciliation through a statement\'s last day, with a reason. It is kept as it stands: the figures, the items and a hash.',
-  doctrine: 'Refused to you whatever your role. Prepare it (matches, reviews), show the person rec_reconciliation, and they sign it in the app.',
+  doctrine: 'A person signs this, in the app, once the reconciliation is explained to the cent. An agent prepares it (matches, reviews) and shows rec_reconciliation; it is refused the sign-off whatever its role.',
   effects: ['reconciliation signed off and kept as it stood'],
   args: {
     account: { ...f.text('The bank or card account, as the statement prints it.'), required: true },
