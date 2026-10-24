@@ -822,7 +822,7 @@ async function detail(type, id) {
     wrap.append(fillRows(t, entity.rows, r => `<td>${r.row_index}</td><td>${r.id}</td><td>${r.date}</td><td>${r.description}</td><td>${r.vendor || ''}</td><td><span class="pill ${r.status}">${r.status}</span></td><td class="num">${r.amount_display}</td>`, 'purch_transaction'));
     wrap.append($('<div class="sub" style="margin-top:14px">Rows, in the statement\'s order</div>'), t);
   }
-  if (entity.lines && type !== 'solo_invoice') {
+  if (entity.lines && type !== 'solo_invoice' && type !== 'p2p_po') {
     const t = $('<table><thead><tr><th>#</th><th>Item</th><th class="num">Qty</th><th class="num">Shipped</th><th class="num">Invoiced</th><th class="num">Price</th><th class="num">Amount</th></tr></thead><tbody></tbody></table>');
     for (const l of entity.lines) t.querySelector('tbody').append($(
       `<tr><td>${l.id}</td><td>${l.item_name}</td><td class="num">${l.qty}</td><td class="num">${l.qty_shipped ?? '—'}</td><td class="num">${l.qty_invoiced ?? '—'}</td><td class="num">${cents(l.unit_price)}</td><td class="num">${cents(l.qty*l.unit_price)}</td></tr>`));
