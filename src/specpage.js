@@ -133,7 +133,7 @@ const BLURB = {
   jobhunt: 'A job search as a system of record: postings, applications, interviews, recruiters, a duplicate guard, and one next action per pursuit.',
   purchases: 'Bank and card statements and receipts the agent read: rows with provenance, accepted whole or not at all, reviewed in the person\'s own words; standing rules that suggest, subscriptions and spend, and bills only a person approves paying.',
   bridge: 'The hand-over to the accountant: map their chart once, export a period as QuickBooks Online or Xero journal lines, keep what went and when; and preliminary financials before the close.',
-  p2p: 'Procure-to-pay, specified ahead of any implementation: purchase orders, receipts against them, supplier invoices matched three ways, payment runs.',
+  p2p: 'Procure to pay: purchase orders at the vendor\'s price, goods received against them, and vendor bills held to a 3-way match before a person approves paying. Nothing here pays anything.',
 };
 
 function renderArea(area) {
