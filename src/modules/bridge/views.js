@@ -292,7 +292,7 @@ function financials(a) {
   const loaded = (n) => require('../../registry.js').MODULES.some(m => m.name === n);
   const closer = require('../../registry.js').MODULES.find(m => m.api && typeof m.api.closedBooks === 'function');
   const closedTo = closer ? (closer.api.closedBooks() || {}).through : null;
-  if (closedTo && per.to <= closedTo) notes.unshift(`Closed: the books are closed through ${closedTo}, so these figures are the ones kept at the close. Later changes land in the next open period.`);
+  if (closedTo && per.to <= closedTo) notes[notes.findIndex(n => n.startsWith('Preliminary:'))] = `Closed: the books are closed through ${closedTo}, so these figures are the ones kept at the close. Later changes land in the next open period. Not a filing, and not the ledger of record.`;
   else if (closedTo && (!per.from || per.from <= closedTo)) notes.push(`The books are closed through ${closedTo}: that part is as it was kept at the close.`);
   if (!loaded('gl')) notes.push(`Not included: ${loaded('inventory') ? '' : 'cost of goods, inventory, '}depreciation, accruals and other adjustments the accountant makes at the close.`);
   else notes.push('Accruals, depreciation and other adjustments are in only as adjusting entries recorded here.');

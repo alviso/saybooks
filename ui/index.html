@@ -1919,7 +1919,7 @@ async function renderPage() {
       bar.append(b);
     }
     main.append(bar);
-    const card = $(`<div class="card" style="max-width:900px;margin-bottom:16px"><div style="font-weight:600;margin-bottom:6px;${c.ready ? 'color:var(--ok,#3E6B2B)' : 'color:var(--warn)'}">${esc(c.note)}</div>
+    const card = $(`<div class="card" style="max-width:900px;margin-bottom:16px"><div style="font-weight:600;margin-bottom:6px;${c.ready ? 'color:var(--ok,#3E6B2B)' : c.already_closed ? 'color:var(--ink)' : 'color:var(--warn)'}">${esc(c.note)}</div>
       ${c.closed_through ? `<div class="sub" style="margin:0 0 8px">The books are closed through ${c.closed_through}; this period starts ${c.from}.</div>` : ''}
       ${c.blocking.map(b => `<div style="margin:8px 0"><span class="pill void">blocks the close</span> ${esc(b.text)}<div class="doc" style="font-size:13px">${esc(b.fix || '')}</div></div>`).join('')}
       ${c.open.map(b => `<div style="margin:8px 0"><span class="pill">open</span> ${esc(b.text)}${b.fix ? `<div class="doc" style="font-size:13px">${esc(b.fix)}</div>` : ''}</div>`).join('')}</div>`);
@@ -2032,6 +2032,7 @@ async function renderPage() {
     // First open: if the last finished quarter is empty, show this quarter so far instead.
     if (!window.finChosen && /^Nothing happened/.test(f.notes[0] || '') && window.finPeriod === lastQ) { window.finChosen = true; window.finPeriod = `${now.getUTCFullYear()}-Q${qNow}`; return render(); }
     const rows = (xs, total, label) => `<table class="fin"><tbody>${xs.map(x => `<tr><td>${esc(x.account)}${x.unclassified ? ' <span class="pill lapsed">to classify</span>' : ''}</td><td class="num">${x.display}</td></tr>`).join('') || '<tr><td style="color:var(--dim)">None</td><td></td></tr>'}<tr class="tot"><td>${label}</td><td class="num">${total}</td></tr></tbody></table>`;
+    if (!f.preliminary) { const h2 = main.querySelector('h2'); if (h2) h2.textContent = 'Financials'; }
     const pl = f.profit_and_loss, bs = f.balance_sheet;
     const grid = $(`<div class="fingrid">
       <div class="card"><div class="crumbs">Profit and loss · ${esc(f.period)}</div>
@@ -2046,7 +2047,7 @@ async function renderPage() {
     </div>`);
     main.append(grid);
     const ties = (f.ties || []).map(t => `<li><b>${esc(t.account)}</b>: ${t.ties ? `ties to the statement through ${t.statement_through}` : esc(t.note)}</li>`).join('');
-    main.append($(`<div class="card finnotes"><span class="pill sugg">Preliminary</span><ul>${f.notes.map(n => `<li>${esc(n)}</li>`).join('')}${ties}</ul></div>`));
+    main.append($(`<div class="card finnotes">${f.preliminary ? '<span class="pill sugg">Preliminary</span>' : '<span class="pill closed">Closed</span>'}<ul>${f.notes.map(n => `<li>${esc(n)}</li>`).join('')}${ties}</ul></div>`));
   }
   if (view === 'bridgeaccounts') {
     head('Account map', "Our derivation accounts, and what each is called in the ledger of record. The codes and names come from the accountant, never from us.");

@@ -50,6 +50,8 @@ function journalLines() {
 function checklist({ through }) {
   const last = closedThrough();
   const from = last ? H.addDays(last, 1) : null;
+  if (last && through <= last) return { through, from, closed_through: last, ready: false, already_closed: true, blocking: [], open: [],
+    note: `The books are already closed through ${last}. Pick a later date to check the next close.` };
   const blocking = [], open = [];
   // Statement rows nobody has reviewed yet, dated in the period.
   try {
