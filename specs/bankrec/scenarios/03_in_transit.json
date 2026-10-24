@@ -1,0 +1,94 @@
+{
+ "name": "a payment not on the statement yet is in transit, and the account ties",
+ "spec": "bankrec@0.1",
+ "today": "2099-05-10",
+ "notes": "REC-2: the check recorded on the 28th is not on April's statement; it is named in transit and the rest ties to the cent.",
+ "env": [
+  [
+   "create_customer",
+   {
+    "name": "Acme Corp",
+    "terms": "net30",
+    "credit_limit": 1000000
+   },
+   "a customer who pays by ACH"
+  ],
+  [
+   "record_payment",
+   {
+    "customer": "C-0001",
+    "amount": 50000,
+    "method": "check",
+    "reference": "CHK-77",
+    "received_at": "2099-04-28"
+   },
+   "payment CHK-77 recorded when the remittance came"
+  ],
+  [
+   "import_statement",
+   {
+    "name": "april.csv",
+    "hash": "rec-03-april",
+    "kind": "bank",
+    "account": "Checking 4410",
+    "currency": "USD",
+    "period_start": "2099-04-01",
+    "period_end": "2099-04-30",
+    "opening_balance": 500000,
+    "closing_balance": 498500,
+    "row_count": 1,
+    "rows": [
+     {
+      "date": "2099-04-30",
+      "amount": -1500,
+      "description": "SERVICE CHARGE",
+      "row_index": 1
+     }
+    ]
+   },
+   "April's bank statement"
+  ]
+ ],
+ "steps": [
+  {
+   "act": "reconciliation",
+   "args": {
+    "account": "Checking 4410"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "ready": false
+    }
+   },
+   "notes": "the service charge is not reviewed"
+  },
+  {
+   "act": "review_transaction",
+   "args": {
+    "transaction": "T-0001",
+    "status": "fee",
+    "reason": "monthly service charge"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "reconciliation",
+   "args": {
+    "account": "Checking 4410"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "ready": true,
+     "difference": 0,
+     "books": 548500,
+     "printed": 498500
+    }
+   },
+   "notes": "REC-2: statement 4,985.00 = books 5,485.00 - 500.00 in transit"
+  }
+ ]
+}

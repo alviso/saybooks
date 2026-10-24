@@ -78,6 +78,11 @@ R.execute('p2p_issue_po', { po_id: po.id }, a);
 R.execute('p2p_receive_goods', { po_id: po.id, lines: [{ item_id: 'SMK-SH', qty: 6 }], received_at: '2026-09-10', reference: 'PS-1' }, a);
 R.execute('p2p_record_vendor_bill', { po_id: po.id, number: 'SM-1', bill_date: '2026-09-11', terms_days: 30, lines: [{ item_id: 'SMK-SH', qty: 6, unit_price: 9000 }, { item_id: 'SMK-FRT', qty: 1, unit_price: 5000 }] }, a);
 R.execute('gl_record_entry', { date: '2026-09-30', memo: 'Smoke accrual', reverse: true, reason: 'smoke', lines: [{ account: 'utilities', kind: 'expense', debit: 1000 }, { account: 'Accrued expenses', kind: 'liability', credit: 1000 }] }, a);
+const smokePay = R.execute('o2c_record_payment', { customer_id: 'C-0001', amount: 7000, method: 'ach', reference: 'SMK-ACH', received_at: '2026-09-02' }, h);
+R.execute('purch_import_statement', { name: 'sep-checking.csv', hash: 'sha256:smokestmt0002', kind: 'bank', account: 'Smoke Checking', currency: 'USD', period_start: '2026-09-01', period_end: '2026-09-30', opening_balance: 100000, closing_balance: 107000, row_count: 1,
+  rows: [{ date: '2026-09-03', amount: 7000, description: 'DEPOSIT ACH' }] }, a);
+const smokeFit = R.execute('rec_candidates', { account: 'Smoke Checking' }, a).rows[0];
+R.execute('rec_match', { transaction_id: smokeFit.transaction_id, items: [{ item: 'o2c:payment:' + smokePay.id }], reason: 'smoke: the ACH is the payment' }, a);
 R.execute('hunt_add_posting', { company: 'Vega', title: 'Staff Engineer', source: 'direct', url: 'https://example.com/j' }, h);
 `;
 
@@ -160,6 +165,7 @@ const DETAILS = [
   ['p2p_po', '(await api("p2p_pos",{})).items?.[0]?.id'],
   ['inv_item', '(await api("inv_stock",{})).items?.[0]?.item_id'],
   ['gl_entry', '(await api("gl_entries",{})).items?.[0]?.id'],
+  ['bankrec_match', '(await api("rec_matches",{})).items?.[0]?.id'],
   ['posting', '(await api("hunt_pipeline",{}))[0]?.id'],
 ];
 let dbad = 0, dseen = 0;

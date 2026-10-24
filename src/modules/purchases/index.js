@@ -98,7 +98,16 @@ Money is integer minor units; sums are per currency and never cross.`,
       add_bill: 'purch_add_bill', approve_bill: 'purch_approve_bill', record_bill_payment: 'purch_record_bill_payment', reject_bill: 'purch_reject_bill', bills: 'purch_bills', payables: 'purch_payables',
     },
   },
-  api: { views: V, journalLines: V.journalLines, journalOmitted: V.journalOmitted, mappableKeys: V.mappableKeys, statementAccounts: V.statementAccounts, unpaidBills: V.unpaidBills },
+  api: { views: V, journalLines: V.journalLines, journalOmitted: V.journalOmitted, mappableKeys: V.mappableKeys, statementAccounts: V.statementAccounts, unpaidBills: V.unpaidBills, statementRows: V.statementRows,
+    /** bankrec's door to a row it matched: reviewed as money recorded elsewhere (a transfer with no other side), and back. */
+    markRecordedElsewhere(db, txId, note, at) {
+      const t = H.need('purch_transaction', txId, 'transaction');
+      db.prepare("UPDATE purch_transaction SET status = 'transfer', category = NULL, note = ?, reviewed_at = ? WHERE id = ?").run(note, at, txId);
+      return { status: t.status, category: t.category, note: t.note, reviewed_at: t.reviewed_at };
+    },
+    restoreRow(db, txId, was) {
+      db.prepare('UPDATE purch_transaction SET status = ?, category = ?, note = ?, reviewed_at = ? WHERE id = ?').run(was.status, was.category ?? null, was.note ?? null, was.reviewed_at ?? null, txId);
+    } },
 });
 
 R.defineSubject('purch_transaction', { load: (id) => V.transactionView(id) });

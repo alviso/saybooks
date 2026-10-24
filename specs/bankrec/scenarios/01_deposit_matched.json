@@ -1,0 +1,112 @@
+{
+ "name": "a deposit is matched to the payment it is",
+ "spec": "bankrec@0.1",
+ "today": "2099-05-10",
+ "notes": "REC-3, REC-7: the deposit is suggested as the payment, matched with a reason, and then posts nothing itself; the account ties.",
+ "env": [
+  [
+   "create_customer",
+   {
+    "name": "Acme Corp",
+    "terms": "net30",
+    "credit_limit": 1000000
+   },
+   "a customer who pays by ACH"
+  ],
+  [
+   "record_payment",
+   {
+    "customer": "C-0001",
+    "amount": 100000,
+    "method": "bank",
+    "reference": "ACME-1",
+    "received_at": "2099-04-08"
+   },
+   "payment ACME-1 recorded when the remittance came"
+  ],
+  [
+   "import_statement",
+   {
+    "name": "april.csv",
+    "hash": "rec-01-april",
+    "kind": "bank",
+    "account": "Checking 4410",
+    "currency": "USD",
+    "period_start": "2099-04-01",
+    "period_end": "2099-04-30",
+    "opening_balance": 500000,
+    "closing_balance": 600000,
+    "row_count": 1,
+    "rows": [
+     {
+      "date": "2099-04-09",
+      "amount": 100000,
+      "description": "DEPOSIT ACME CORP ACH",
+      "row_index": 1
+     }
+    ]
+   },
+   "April's bank statement"
+  ]
+ ],
+ "steps": [
+  {
+   "act": "candidates",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "count": 1
+    }
+   },
+   "notes": "REC-7: a suggestion, nothing matched yet"
+  },
+  {
+   "act": "reconciliation",
+   "args": {
+    "account": "Checking 4410"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "ready": false
+    }
+   },
+   "notes": "the deposit is not in the books yet and the payment is not matched"
+  },
+  {
+   "act": "match",
+   "args": {
+    "transaction": "T-0001",
+    "items": [
+     {
+      "item": "solo:payment:P-0001"
+     }
+    ],
+    "reason": "the Acme ACH is their payment ACME-1"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "state": "matched"
+    }
+   }
+  },
+  {
+   "act": "reconciliation",
+   "args": {
+    "account": "Checking 4410"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "ready": true,
+     "difference": 0,
+     "books": 600000,
+     "matched": 1
+    }
+   },
+   "notes": "REC-2, REC-3: matched once, the books equal the statement"
+  }
+ ]
+}

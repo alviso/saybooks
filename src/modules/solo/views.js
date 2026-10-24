@@ -135,4 +135,13 @@ function statement(customerId) {
            closing_balance_by_currency: closing };
 }
 
-module.exports = { reminderView, reminders, reminderState, remindersOf, invOpen, daysOver, STAGE, invoiceView, outstanding, statement, invoiceApplied, paymentUnapplied };
+/** Payments received, for the bankrec area to match to statement rows (see o2c's cashMovements). */
+function cashMovements() {
+  try {
+    return db().prepare('SELECT p.*, c.name AS customer FROM solo_payment p LEFT JOIN customer c ON c.id = p.customer_id ORDER BY p.id').all()
+      .map(p => ({ key: `solo:payment:${p.id}`, kind: 'payment', id: p.id, date: String(p.received_at).slice(0, 10), amount: p.amount, currency: p.currency || 'USD', customer: p.customer || null, reference: p.reference || null,
+        label: `Payment ${p.id} · ${p.customer || p.customer_id}${p.reference ? ' · ' + p.reference : ''}` }));
+  } catch (e) { if (/no such table/i.test(e.message)) return []; throw e; }
+}
+
+module.exports = { cashMovements, reminderView, reminders, reminderState, remindersOf, invOpen, daysOver, STAGE, invoiceView, outstanding, statement, invoiceApplied, paymentUnapplied };

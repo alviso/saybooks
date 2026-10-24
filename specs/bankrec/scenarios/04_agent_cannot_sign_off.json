@@ -1,0 +1,77 @@
+{
+ "name": "the agent cannot sign off a reconciliation",
+ "spec": "bankrec@0.1",
+ "today": "2099-05-10",
+ "notes": "REC-5: signing off is a person's act, whatever the agent's role; the refusal is logged.",
+ "env": [
+  [
+   "import_statement",
+   {
+    "name": "april.csv",
+    "hash": "rec-04-april",
+    "kind": "bank",
+    "account": "Checking 4410",
+    "currency": "USD",
+    "period_start": "2099-04-01",
+    "period_end": "2099-04-30",
+    "opening_balance": 500000,
+    "closing_balance": 498500,
+    "row_count": 1,
+    "rows": [
+     {
+      "date": "2099-04-30",
+      "amount": -1500,
+      "description": "SERVICE CHARGE",
+      "row_index": 1
+     }
+    ]
+   },
+   "April's bank statement"
+  ],
+  [
+   "review_transaction",
+   {
+    "transaction": "T-0001",
+    "status": "fee",
+    "reason": "service charge"
+   },
+   "reviewed"
+  ]
+ ],
+ "steps": [
+  {
+   "act": "reconciliation",
+   "args": {
+    "account": "Checking 4410"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "ready": true
+    }
+   }
+  },
+  {
+   "act": "sign_off",
+   "args": {
+    "account": "Checking 4410",
+    "through": "2099-04-30",
+    "reason": "April"
+   },
+   "expect": {
+    "refused": "person's act"
+   },
+   "notes": "REC-5"
+  },
+  {
+   "act": "signoffs",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "count": 0
+    }
+   }
+  }
+ ]
+}

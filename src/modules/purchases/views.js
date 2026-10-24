@@ -368,13 +368,33 @@ function statementAccounts() {
     const k = `${account}|${s.currency}`;
     if (!by[k]) by[k] = { account, currency: s.currency, kind: s.kind, first_start: s.period_start, opening: s.opening_balance, statements: [] };
     by[k].kind = s.kind || by[k].kind;
-    by[k].statements.push({ id: s.id, period_start: s.period_start, period_end: s.period_end, closing: s.closing_balance });
+    by[k].statements.push({ id: s.id, period_start: s.period_start, period_end: s.period_end, opening: s.opening_balance, closing: s.closing_balance });
   }
   return Object.values(by);
 }
 
+/**
+ * Rows another area has tied to money already recorded in these books (bankrec's matches), as
+ * id -> what they were matched to. Such a row posts nothing (the payment did) and is not left out.
+ */
+function matchedRows() {
+  const m = new Map();
+  for (const mod of require('../../registry.js').MODULES) if (mod.api && typeof mod.api.statementRowMatches === 'function') for (const [k, v] of mod.api.statementRowMatches()) m.set(k, v);
+  return m;
+}
+const posts = (t) => ['purchase', 'recurring', 'fee', 'income'].includes(t.status) || (t.status === 'transfer' && !!String(t.category || '').trim());
+
+/** Every statement row with its account and whether it posts, for the bank reconciliation. */
+function statementRows() {
+  let rows = [];
+  try { rows = db().prepare(`SELECT t.*, s.account AS source_account, s.kind AS source_kind, s.period_end AS source_end FROM purch_transaction t JOIN purch_source s ON s.id = t.source_id ORDER BY t.date, t.id`).all(); }
+  catch (e) { if (/no such table/i.test(e.message)) return []; throw e; }
+  return rows.map(t => ({ ...t, account: (t.source_account || `${t.source_kind || 'account'} (unnamed)`).trim(), posts: posts(t), amount_display: money(t.amount, t.currency) }));
+}
+
 function journalOmitted({ from, to } = {}) {
   try {
+    const matched = matchedRows();
     const w = ["(t.status = 'unreviewed' OR (t.status = 'transfer' AND COALESCE(TRIM(t.category), '') = '') OR t.status = 'ignored')"]; const args = [];
     if (from) { w.push('t.date >= ?'); args.push(from); }
     if (to) { w.push('t.date <= ?'); args.push(to); }
@@ -383,7 +403,8 @@ function journalOmitted({ from, to } = {}) {
       .map(r => ({ ...r, amount_display: money(r.amount, r.currency),
         why: r.status === 'unreviewed' ? 'nobody has said what it is yet'
           : r.status === 'ignored' ? 'reviewed as not theirs to track'
-          : 'a transfer with no other side named — say where the money went and it posts' }));
+          : 'a transfer with no other side named — say where the money went and it posts' }))
+      .filter(r => !matched.has(r.id));
   } catch (e) {
     // No purchases tables in this space is the only expected miss; anything else is a bug and
     // must not be hidden — an export that silently reports "nothing left out" would be a lie.
@@ -403,4 +424,4 @@ function mappableKeys() {
   return { categories: [...new Set(cats.map(c => c.k))].sort(), sources: [...new Set(srcs.map(s => (s.k || `${s.kind} (unnamed)`).trim()))].sort() };
 }
 
-module.exports = { billView, bills, payables, unpaidBills, approvalHold, onAccrual, statementAccounts, activeRules, ruleMatches, suggestionFor, ruleView, rules, windowText, splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };
+module.exports = { matchedRows, statementRows, billView, bills, payables, unpaidBills, approvalHold, onAccrual, statementAccounts, activeRules, ruleMatches, suggestionFor, ruleView, rules, windowText, splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };

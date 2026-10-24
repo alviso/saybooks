@@ -19,6 +19,12 @@ function needTx(id, where = '') {
   throw new Rejected(`${where}transaction ${id} does not exist.${hint}`);
 }
 
+/** A row matched to a payment in the bank reconciliation is money already recorded here; reviewing it again would count it twice. */
+function notMatched(t, where = '') {
+  const held = V.matchedRows().get(t.id);
+  if (held) throw new Rejected(`${where}${t.id} (${t.description}) is matched to ${held} in the bank reconciliation, so it is already in the books. Unmatch it first (rec_unmatch) if the match is wrong.`);
+}
+
 const STATUSES = ['purchase', 'recurring', 'transfer', 'income', 'fee', 'ignored'];
 const SPENDING = new Set(['purchase', 'recurring']);
 const CADENCES = ['weekly', 'monthly', 'yearly'];
@@ -79,6 +85,7 @@ wrong source, re-read and re-imported.`,
   },
   handler(a, { db, at }) {
     const t = needTx(a.transaction_id);
+    notMatched(t);
     checkSign(t, a.status);
     if (a.status === 'recurring' && !(a.vendor && a.vendor.trim()) && !t.vendor_id) throw new Rejected(`${t.id} (${t.description}): a recurring charge needs its vendor named, so the subscription can be declared and confirmed. Pass vendor, the shop's name as a person would say it.`);
     db.prepare('UPDATE purch_transaction SET status = ?, category = COALESCE(?, category), note = COALESCE(?, note), reviewed_at = ? WHERE id = ?')
@@ -176,6 +183,7 @@ the batch and unreviewed, never guessed. Up to 200 rows.`,
       if (seen.has(r.transaction_id)) throw new Rejected(`Row ${i + 1}: ${r.transaction_id} appears twice in the batch.`);
       seen.add(r.transaction_id);
       const t = needTx(r.transaction_id, `Row ${i + 1}: `);
+      notMatched(t, `Row ${i + 1}: `);
       checkSign(t, r.status);
       if (r.status === 'recurring' && !(r.vendor && r.vendor.trim()) && !t.vendor_id) throw new Rejected(`${t.id} (${t.description}): a recurring charge needs its vendor named. Add vendor to that row, the shop's name as a person would say it, and send the whole batch again.`);
       return { t, r };

@@ -456,7 +456,8 @@
    "customer_id": "C-0002",
    "amount": 50000,
    "method": "check",
-   "reference": "CHK-1108"
+   "reference": "CHK-1108",
+   "received_at": "{{today-12}}"
   },
   "prepayment on account — they want headroom before the credit gate",
   "sam",
@@ -1004,8 +1005,8 @@
    "period_start": "{{today-40}}",
    "period_end": "{{today-10}}",
    "opening_balance": 1850000,
-   "closing_balance": 1230740,
-   "row_count": 8,
+   "closing_balance": 1229424,
+   "row_count": 10,
    "rows": [
     {
      "date": "{{today-38}}",
@@ -1054,6 +1055,18 @@
      "amount": -64000,
      "description": "BRIGHT STUDIO",
      "row_index": 8
+    },
+    {
+     "date": "{{today-10}}",
+     "amount": -1500,
+     "description": "MONTHLY SERVICE CHARGE",
+     "row_index": 9
+    },
+    {
+     "date": "{{today-10}}",
+     "amount": 184,
+     "description": "INTEREST PAID",
+     "row_index": 10
     }
    ]
   },

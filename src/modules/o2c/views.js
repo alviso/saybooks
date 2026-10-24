@@ -180,6 +180,23 @@ function customerStatement(customerId, from, to) {
     opening, opening_display: money(opening), lines, closing: bal, closing_display: money(bal) };
 }
 
-module.exports = { openBalance, committedValue, invoiceApplied, paymentApplied, paymentUnapplied,
+/**
+ * Money recorded here that moves through a bank account without coming from a statement: payments
+ * received (in) and refunds paid (out). The bankrec area matches them to statement rows.
+ */
+function cashMovements() {
+  const out = [];
+  try {
+    for (const p of db().prepare('SELECT p.*, c.name AS customer FROM payment p LEFT JOIN customer c ON c.id = p.customer_id ORDER BY p.id').all())
+      out.push({ key: `o2c:payment:${p.id}`, kind: 'payment', id: p.id, date: String(p.received_at).slice(0, 10), amount: p.amount, currency: 'USD', customer: p.customer || null, reference: p.reference || null,
+        label: `Payment ${p.id} · ${p.customer || p.customer_id}${p.reference ? ' · ' + p.reference : ''}` });
+    for (const r of db().prepare('SELECT * FROM refund ORDER BY id').all())
+      out.push({ key: `o2c:refund:${r.id}`, kind: 'refund', id: r.id, date: String(r.recorded_at).slice(0, 10), amount: -r.amount, currency: 'USD', customer: null, reference: r.reference || null,
+        label: `Refund ${r.id} (${r.source_type} ${r.source_id})${r.reference ? ' · ' + r.reference : ''}` });
+  } catch (e) { if (!/no such table/i.test(e.message)) throw e; }
+  return out;
+}
+
+module.exports = { cashMovements, openBalance, committedValue, invoiceApplied, paymentApplied, paymentUnapplied,
   creditApplied, creditUnapplied, creditNoteView, refunded, returnedQty,
   orderView, customerView, quoteView, invoiceView, arAging, unappliedCash, backorders, customerStatement };

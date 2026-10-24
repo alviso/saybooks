@@ -1,0 +1,109 @@
+{
+ "name": "a match that does not add up, or a row already booked, is refused",
+ "spec": "bankrec@0.1",
+ "today": "2099-05-10",
+ "notes": "REC-1, REC-4: matches are exact, and a row booked as income cannot also be a payment.",
+ "env": [
+  [
+   "create_customer",
+   {
+    "name": "Acme Corp",
+    "terms": "net30",
+    "credit_limit": 1000000
+   },
+   "a customer who pays by ACH"
+  ],
+  [
+   "record_payment",
+   {
+    "customer": "C-0001",
+    "amount": 100000,
+    "method": "bank",
+    "reference": "ACME-1",
+    "received_at": "2099-04-08"
+   },
+   "payment ACME-1 recorded when the remittance came"
+  ],
+  [
+   "record_payment",
+   {
+    "customer": "C-0001",
+    "amount": 50000,
+    "method": "check",
+    "reference": "CHK-77",
+    "received_at": "2099-04-20"
+   },
+   "payment CHK-77 recorded when the remittance came"
+  ],
+  [
+   "import_statement",
+   {
+    "name": "april.csv",
+    "hash": "rec-02-april",
+    "kind": "bank",
+    "account": "Checking 4410",
+    "currency": "USD",
+    "period_start": "2099-04-01",
+    "period_end": "2099-04-30",
+    "opening_balance": 500000,
+    "closing_balance": 600000,
+    "row_count": 1,
+    "rows": [
+     {
+      "date": "2099-04-09",
+      "amount": 100000,
+      "description": "DEPOSIT ACME CORP ACH",
+      "row_index": 1
+     }
+    ]
+   },
+   "April's bank statement"
+  ]
+ ],
+ "steps": [
+  {
+   "act": "match",
+   "args": {
+    "transaction": "T-0001",
+    "items": [
+     {
+      "item": "solo:payment:P-0002"
+     }
+    ],
+    "reason": "close enough"
+   },
+   "expect": {
+    "refused": "A match is exact"
+   },
+   "notes": "REC-1"
+  },
+  {
+   "act": "review_transaction",
+   "args": {
+    "transaction": "T-0001",
+    "status": "income",
+    "category": "sales",
+    "reason": "booked as a sale by mistake"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "match",
+   "args": {
+    "transaction": "T-0001",
+    "items": [
+     {
+      "item": "solo:payment:P-0001"
+     }
+    ],
+    "reason": "it is the Acme payment"
+   },
+   "expect": {
+    "refused": "count the money twice"
+   },
+   "notes": "REC-4"
+  }
+ ]
+}

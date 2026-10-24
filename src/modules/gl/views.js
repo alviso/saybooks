@@ -73,6 +73,15 @@ function checklist({ through }) {
   } catch { /* no bills */ }
   const p2p = area('p2p');
   if (p2p && p2p.views) { try { const g = p2p.views.unbilled(); const v = Object.values(g.by_currency)[0]; if (g.count) open.push({ item: 'grni', text: `Goods received and not billed: ${v.value_display} on ${g.count} line${g.count === 1 ? '' : 's'}. They are in the books as goods received not invoiced.` }); } catch { /* none */ } }
+  const rec = area('bankrec');
+  if (rec && rec.views) {
+    try {
+      for (const a of rec.views.accounts().items) {
+        const st = rec.reconciliationStanding(a.account, a.currency, through);
+        if (st && !st.signed) open.push({ item: 'reconciliation', account: a.account, text: `${a.account} is not signed off through ${st.through}${st.ready ? ' (it is ready to sign)' : ''}.`, fix: 'Reconcile it on the Bank page and sign it off.' });
+      }
+    } catch { /* no statements */ }
+  }
   const inv = area('inventory');
   if (inv && inv.views) { try { const s = inv.views.stock(); if (s.uncosted_items.length) open.push({ item: 'stock', text: s.note, fix: 'State the opening cost in Inventory.' }); } catch { /* none */ } }
   return { through, from, closed_through: last, ready: blocking.length === 0, blocking, open,

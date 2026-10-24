@@ -1,0 +1,24 @@
+{
+  "area": "bankrec",
+  "spec": "0.1",
+  "doc": "spec.md",
+  "acts": {
+    "match": { "kind": "write", "required": ["transaction", "items", "reason"] },
+    "unmatch": { "kind": "write", "required": ["match", "reason"] },
+    "sign_off": { "kind": "write", "required": ["account", "through", "reason"] },
+    "accounts": { "kind": "read", "required": [] },
+    "reconciliation": { "kind": "read", "required": ["account"] },
+    "candidates": { "kind": "read", "required": [] },
+    "signoffs": { "kind": "read", "required": [] }
+  },
+  "invariants": [
+    { "id": "REC-1", "title": "Money is integer cents; a match adds up to its row exactly, in the row's currency." },
+    { "id": "REC-2", "title": "Statement = books - recorded here and not on the statement + on the statement and not in the books; a leftover difference is named." },
+    { "id": "REC-3", "title": "A matched row posts nothing itself and cannot be reviewed again while matched; nothing is in two matches." },
+    { "id": "REC-4", "title": "Only a row that posts nothing can be matched; a row already booked is refused, naming what it is." },
+    { "id": "REC-5", "title": "Signing off is a person's act, refused to an agent, and refused while the difference is not zero or a row is unaccounted for." },
+    { "id": "REC-6", "title": "A sign-off keeps the reconciliation as it stood; a later change shows as changed since." },
+    { "id": "REC-7", "title": "Suggestions suggest, never match." },
+    { "id": "REC-8", "title": "Every write is a logged command with an actor; refusals are logged too." }
+  ]
+}

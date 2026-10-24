@@ -32,6 +32,9 @@
  *  19. the close     a person closes the books; the closed period's figures stop moving, a later
  *                    change lands as a correction on the first open day, and only the latest
  *                    close reopens
+ *  20. bank rec      a deposit matched to its payment is in the books once; a payment not on the
+ *                    statement yet is named in transit and the account still ties; only a person
+ *                    signs off, and a later change shows as changed since
  *
  * A PR that adds a hand-written form, a prefix-less command, or a cross-module UPDATE
  * fails here, not in review.
@@ -503,6 +506,45 @@ for (const tag of R.PERMISSIONS) {
     assert.strictEqual(execute('gl_changes', {}, p19).count, 0, 'reopened, the period moves with the record again and no correction is needed');
   });
   ok('the close: a person closes, the period stops moving, a later change lands as a correction, accruals reverse, the latest close reopens');
+}
+
+// ------------------------------------- 20. bank reconciliation: matched once, signed by a person
+// Scenarios run as an agent and cannot sign off; the person's sign-off and changed-since live here.
+{
+  const G = 'gate20-bankrec'; wsp.wipe(G);
+  const p20 = { workspace: G, actor: 'test', actor_kind: 'human', role: 'owner' }, a20 = { ...p20, actor_kind: 'agent' };
+  H.withClock('2026-05-10', () => {
+    execute('core_create_customer', { name: 'Acme Corp', terms: 'net30', credit_limit: 1000000 }, p20);
+    execute('o2c_record_payment', { customer_id: 'C-0001', amount: 100000, method: 'ach', reference: 'ACME-1', received_at: '2026-04-08' }, p20);
+    execute('o2c_record_payment', { customer_id: 'C-0001', amount: 50000, method: 'check', reference: 'CHK-77', received_at: '2026-04-28' }, p20);
+    execute('purch_import_statement', { name: 'g20.csv', hash: 'sha256:gate20april', kind: 'bank', account: 'G20 Checking', currency: 'USD',
+      period_start: '2026-04-01', period_end: '2026-04-30', opening_balance: 500000, closing_balance: 598500, row_count: 2,
+      rows: [{ date: '2026-04-09', amount: 100000, description: 'DEPOSIT ACME CORP ACH', row_index: 1 }, { date: '2026-04-30', amount: -1500, description: 'SERVICE CHARGE', row_index: 2 }] }, p20);
+    const r0 = execute('rec_reconciliation', { account: 'G20 Checking' }, a20);
+    assert.ok(!r0.ready && r0.not_in_books.count === 2, 'unreviewed rows are on the statement and not in the books, and block a sign-off');
+    const c = execute('rec_candidates', {}, a20);
+    const fit = c.rows.find(r => r.transaction_id === 'T-0001').candidates[0];
+    assert.ok(fit && fit.items[0].key === 'o2c:payment:P-0001' && /Acme/.test(fit.why), 'the deposit is suggested as the payment, by amount, date and name (REC-7)');
+    let off = null; try { execute('rec_match', { transaction_id: 'T-0001', items: [{ item: 'o2c:payment:P-0002' }], reason: 'x' }, a20); } catch (e) { off = e.message; }
+    assert.ok(off && /add up to \$500\.00/.test(off), 'a match that does not add up is refused, naming the gap (REC-1)');
+    execute('rec_match', { transaction_id: 'T-0001', items: [{ item: 'o2c:payment:P-0001' }], reason: 'the Acme ACH is their payment ACME-1' }, a20);
+    execute('purch_review_transaction', { transaction_id: 'T-0002', status: 'fee', reason: 'monthly service charge' }, a20);
+    let again = null; try { execute('purch_review_transaction', { transaction_id: 'T-0001', status: 'income', category: 'sales', reason: 'x' }, a20); } catch (e) { again = e.message; }
+    assert.ok(again && /matched to/.test(again), 'a matched row cannot be reviewed again (REC-3)');
+    const r = execute('rec_reconciliation', { account: 'G20 Checking' }, a20);
+    assert.ok(r.ready && r.difference === 0 && r.in_transit.total === 50000 && r.books === 648500, 'the check not on the statement yet is in transit and the rest ties to the cent (REC-2)');
+    assert.strictEqual(r.printed, r.books - r.in_transit.total + r.not_in_books.total + r.timing.total, 'statement = books - in transit + not in books + timing');
+    const fin = execute('bridge_financials', { from: '2026-04-01', to: '2026-04-30' }, p20);
+    assert.ok(fin.ties.every(t => t.ties), 'the account ties in the financials once the reconciliation explains it');
+    let agentOff = null; try { execute('rec_sign_off', { account: 'G20 Checking', through: '2026-04-30', reason: 'April' }, a20); } catch (e) { agentOff = e.message; }
+    assert.ok(agentOff && /person's act/.test(agentOff), 'an agent never signs off (REC-5)');
+    const so = execute('rec_sign_off', { account: 'G20 Checking', through: '2026-04-30', reason: 'April statement, checked' }, p20);
+    assert.ok(so.hash && execute('rec_signoffs', {}, p20).items[0].changed_since === false, 'the sign-off keeps the reconciliation as it stood');
+    execute('rec_unmatch', { match_id: 'BM-0001', reason: 'wrong customer after all' }, a20);
+    assert.ok(execute('rec_signoffs', {}, p20).items[0].changed_since, 'a later change shows as changed since (REC-6)');
+    assert.strictEqual(execute('purch_get_transaction', { transaction_id: 'T-0001' }, p20).status, 'unreviewed', 'unmatched, the row is back to how it was reviewed');
+  });
+  ok('bank reconciliation: a deposit is matched to its payment once, a check in transit is named, the account ties, a person signs off, a later change shows');
 }
 
 console.log(`\n${n} contract checks passed across ${MODULES.length} modules, ${COMMANDS.length} commands.`);

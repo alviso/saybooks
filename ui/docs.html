@@ -133,6 +133,15 @@
     <li><b>Stock from before these books.</b> What was on hand before Saybooks has no cost until you give one from a record, such as the last supplier invoice. Until then it is named with its quantity, never valued at zero in silence, and the sales of it wait. Once you give the cost, everything after it is derived.</li>
     <li><b>Ties to the books.</b> The stock's value on any day equals Inventory in the journal for that day. Shipments post cost of goods sold, returns reverse it, counts post their difference, and opening stock posts against opening balance equity. Goods received on an order are posted by Purchasing, once.</li>
   </ul>
+  <h2 id="bank">Bank reconciliation</h2>
+  <p>The <b>Bank</b> pages put each bank statement against the books, the check an accountant makes first.</p>
+  <ul>
+    <li><b>Every difference, named.</b> Pick the account and the statement. You see the statement's balance, the books' balance, and the items between them: payments recorded here that are not on the statement yet (a check that has not cleared), and rows on the statement that are not in the books (not reviewed yet, or a deposit nobody has tied to its payment). A difference nothing explains is shown, never absorbed.</li>
+    <li><b>Deposits matched to payments.</b> A customer's payment is recorded when the remittance arrives; the bank shows it days later, sometimes as one deposit for several checks. Ask your agent to reconcile: it suggests what fits by amount, date and name, and matches with a reason. The amounts must add up exactly. A matched row posts nothing itself, because the payment already did, and it cannot be booked a second time.</li>
+    <li><b>In transit, with an age.</b> A payment recorded here and not on the statement is normal for a few days. One older than ten days is flagged: worth checking it was really deposited.</li>
+    <li><b>Signing off is yours.</b> When everything is explained to the cent, a person signs the reconciliation off, never an agent. It is kept as it stood, with a hash; if the record changes later, it shows as changed since. The month-end checklist lists accounts not signed off yet.</li>
+  </ul>
+
   <h2 id="close">Month-end close</h2>
   <p>The <b>Month-end</b> pages close the books for a period, the way your accountant would, and keep them closed.</p>
   <ul>

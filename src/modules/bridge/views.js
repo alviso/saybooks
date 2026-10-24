@@ -246,6 +246,7 @@ function financials(a) {
   // Movements dated before an account's first statement are already inside that statement's
   // printed opening balance: they count toward opening balance equity, not on top of it.
   const moved = (s, test) => D(cur, all.entries.filter(test)).filter(x => x.kind === 'statement' && x.account === s.account).reduce((n, x) => n + x.d, 0);
+  const rec = (require('../../registry.js').MODULES.find(m => m.api && typeof m.api.reconciliationStanding === 'function') || {}).api;
   for (const s of mine) {
     const before = moved(s, e => e.date < s.first_start);
     const books = s.opening + get('statement', s.account).d - before;
@@ -253,7 +254,12 @@ function financials(a) {
     const last = s.statements.filter(x => x.period_end <= per.to).pop();
     if (last) {
       const at = s.opening + moved(s, e => e.date >= s.first_start && e.date <= last.period_end);
-      ties.push({ account: s.account, statement_through: last.period_end, printed: last.closing, books: at, ties: at === last.closing,
+      // With the bank reconciliation here, money recorded and not on the statement yet is a named,
+      // normal difference: the account ties when the reconciliation explains it to the cent.
+      const st = rec ? rec.reconciliationStanding(s.account, s.currency, last.period_end) : null;
+      if (st) ties.push({ account: s.account, statement_through: last.period_end, printed: last.closing, books: at, ties: st.ready, in_transit: st.in_transit,
+        note: st.ready ? `Ties to the statement through ${last.period_end}${st.in_transit ? `, counting ${money(st.in_transit, cur)} recorded here and not on it yet` : ''}.` : `Does not tie to the statement through ${last.period_end}: ${st.blocking.join(' ')}` });
+      else ties.push({ account: s.account, statement_through: last.period_end, printed: last.closing, books: at, ties: at === last.closing,
         note: at === last.closing ? `Ties to the statement through ${last.period_end}.` : `Differs from the statement through ${last.period_end} by ${money(last.closing - at, cur)}: usually rows not reviewed yet, or a transfer with no other side named.` });
     }
     if (books >= 0) assets.push(line(s.account, books)); else liabilities.push(line(s.account, -books));
