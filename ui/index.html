@@ -1894,8 +1894,9 @@ async function renderPage() {
   }
   if (view === 'invstock') {
     head('Stock', 'What is on the shelf and what it is worth: the moving average of what was paid, never a typed cost.');
-    const st = await api('inv_stock', {});
-    main.append($(`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;max-width:660px;margin-bottom:14px"><div class="tile"><div class="k">Stock value</div><div class="v">${st.value_display}</div><div class="s">${st.count} stocked item${st.count === 1 ? '' : 's'}</div></div></div>`));
+    const [st, val] = await Promise.all([api('inv_stock', {}), api('inv_valuation', {})]);
+    main.append($(`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;max-width:660px;margin-bottom:14px"><div class="tile"><div class="k">Stock value</div><div class="v">${st.value_display}</div><div class="s">${st.count} stocked item${st.count === 1 ? '' : 's'}</div></div>
+      <div class="tile"><div class="k">Inventory in the books</div><div class="v"${val.ties ? '' : ' style="color:var(--warn)"'}>${val.books_inventory_display}</div><div class="s">${val.ties ? 'ties to the stock, as of today' : 'does not tie: see Ledger, Journal'}</div></div></div>`));
     if (st.note) main.append($(`<div class="doc" style="margin:0 0 12px;color:var(--warn)">${esc(st.note)}</div>`));
     if (!st.count) { main.append($('<div class="card doc" style="max-width:640px">No stocked items yet.</div>')); return; }
     const t = $('<table><thead><tr><th>Item</th><th>Name</th><th class="num">On hand</th><th class="num">Average cost</th><th class="num">Value</th><th class="num">Sells at</th></tr></thead><tbody></tbody></table>');
