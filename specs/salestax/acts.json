@@ -1,0 +1,22 @@
+{
+  "area": "salestax",
+  "spec": "0.1",
+  "doc": "spec.md",
+  "acts": {
+    "return": { "kind": "read", "required": [] },
+    "liability": { "kind": "read", "required": [] },
+    "filings": { "kind": "read", "required": [] },
+    "record_filing": { "kind": "write", "required": ["period", "filed_amount", "filed_on", "reason"] },
+    "record_payment": { "kind": "write", "required": ["filing", "amount", "paid_on"] }
+  },
+  "invariants": [
+    { "id": "TAX-1", "title": "Money is integer cents; each line's tax is what the invoice charged, never recomputed." },
+    { "id": "TAX-2", "title": "Tax due is tax charged on invoices in the period less the tax inside credits raised in it; a write-off gives none back." },
+    { "id": "TAX-3", "title": "Recording a filing is a person's act, with a reason, refused to an agent whatever its role." },
+    { "id": "TAX-4", "title": "A filing keeps the return as it stood; a later change shows as changed since and is named on the next return." },
+    { "id": "TAX-5", "title": "A filed amount that differs needs a reason; an unfinished period cannot be filed; filed periods never overlap." },
+    { "id": "TAX-6", "title": "Payments are recorded, never made, never exceed what is owed, and wait in the bank reconciliation." },
+    { "id": "TAX-7", "title": "Sales Tax Payable equals tax charged less tax given back less payments; a difference is named." },
+    { "id": "TAX-8", "title": "Every write is a logged command with an actor; refusals are logged too." }
+  ]
+}

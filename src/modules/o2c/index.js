@@ -61,7 +61,7 @@ know which invoice a payment settles, leave it unapplied; that is a correct, vis
     payments: H.db().prepare('SELECT id,customer_id,amount,reference FROM payment WHERE id LIKE ? OR reference LIKE ? LIMIT 10').all(like, like),
     credit_notes: H.db().prepare('SELECT id,customer_id,kind,total,reason FROM credit_note WHERE id LIKE ? OR reason LIKE ? LIMIT 10').all(like, like),
   }),
-  api: { views: V, cashMovements: V.cashMovements },
+  api: { views: V, cashMovements: V.cashMovements, salesTaxLines: V.salesTaxLines },
 });
 
 // Subjects: the entities availableFor()/next_actions can evaluate. Declared here, by the

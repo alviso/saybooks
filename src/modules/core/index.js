@@ -88,8 +88,11 @@ the next question to ask; one question at a time, written as it is answered.`,
           { account: 'Accounts Receivable', credit: cn.total },
         ]);
       } else {
+        // The tax inside the credit is given back: it comes off the liability, not off sales.
+        const tax = cn.tax_total || 0;
         push(cn.created_at, `Credit note ${cn.id} (${cn.kind})`, cname[cn.customer_id], [
-          { account: 'Sales Returns & Allowances', debit: cn.total },
+          { account: 'Sales Returns & Allowances', debit: cn.total - tax },
+          { account: 'Sales Tax Payable', debit: tax },
           { account: 'Customer Credits', credit: cn.total },
         ]);
       }

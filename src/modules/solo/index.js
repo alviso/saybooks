@@ -80,7 +80,7 @@ agreed; never a send nobody told you about (S-13).`,
     solo_invoices: H.db().prepare(`SELECT i.id, i.status, i.total, c.name AS customer FROM solo_invoice i JOIN customer c ON c.id = i.customer_id
       WHERE i.id LIKE ? OR i.notes LIKE ? OR c.name LIKE ? LIMIT 10`).all(like, like, like),
   }),
-  api: { views: V, cashMovements: V.cashMovements },
+  api: { views: V, cashMovements: V.cashMovements, salesTaxLines: V.salesTaxLines },
 });
 
 R.inModule(mod, () => {

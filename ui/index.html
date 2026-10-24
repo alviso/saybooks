@@ -224,6 +224,7 @@ const ICONS = {
   p2p: '<svg viewBox="0 0 24 24"><path d="M2 7h12v9H2z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="6" cy="18" r="1.7"/><circle cx="17" cy="18" r="1.7"/></svg>',
   inv: '<svg viewBox="0 0 24 24"><path d="M3 14h8v7H3zM13 14h8v7h-8zM8 4h8v7H8z"/></svg>',
   rec: '<svg viewBox="0 0 24 24"><path d="M3 10l9-6 9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/></svg>',
+  tax: '<svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9.5 14.5l5-5"/><circle cx="9.5" cy="9.5" r=".8"/><circle cx="14.5" cy="14.5" r=".8"/></svg>',
   gl: '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16M9 3v4M15 3v4M8.5 15l2.5 2.5 4.5-5"/></svg>',
   company: '<svg viewBox="0 0 24 24"><path d="M4 21V8l8-5 8 5v13"/><path d="M9 21v-6h6v6"/></svg>',
   audit: '<svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h10"/></svg>',
@@ -242,6 +243,7 @@ const NAV = [
   { key: 'hunt', label: 'Job hunt', prefix: 'hunt_', tabs: [['huntdue', 'Due'], ['huntpipeline', 'Pipeline'], ['huntcontacts', 'Contacts'], ['huntresumes', 'Resumes']] },
   { key: 'purch', label: 'Personal finances', prefix: 'purch_', tabs: [['purchover', 'Overview'], ['purchtx', 'Transactions'], ['purchbills', 'Bills'], ['purchrules', 'Rules'], ['purchsubs', 'Subscriptions'], ['purchrec', 'Receipts'], ['purchsrc', 'Statements']] },
   { key: 'rec', label: 'Bank', prefix: 'rec_', tabs: [['recbank', 'Reconciliation'], ['recmatches', 'Matches'], ['recsignoffs', 'Sign-offs']] },
+  { key: 'tax', label: 'Sales tax', prefix: 'tax_', tabs: [['taxreturn', 'Return'], ['taxowed', 'Owed'], ['taxfilings', 'Filings']] },
   { key: 'gl', label: 'Month-end', prefix: 'gl_', tabs: [['glclose', 'Close'], ['glentries', 'Adjusting entries']] },
   { key: 'bridge', label: 'Ledger', prefix: 'bridge_', tabs: [['bridgefin', 'Financials'], ['journal', 'Journal'], ['bridgeexport', 'Export'], ['bridgeaccounts', 'Account map'], ['bridgeexports', 'Hand-overs']] },
   { sep: true },
@@ -474,9 +476,9 @@ const newButtons = (subject) => REG.commands.filter(c => c.subject === subject &
 
 async function detail(type, id) {
   const wrap = $('<div></div>');
-  const idArg = type === 'solo_invoice' ? 'invoice_id' : type === 'crm_contact' ? 'contact_id' : type.startsWith('purch_') ? type.slice(6) + '_id' : type.startsWith('p2p_') || type.startsWith('inv_') ? type.slice(4) + '_id' : type.startsWith('gl_') ? type.slice(3) + '_id' : type.startsWith('bankrec_') ? type.slice(8) + '_id' : type + '_id';
+  const idArg = type === 'solo_invoice' ? 'invoice_id' : type === 'crm_contact' ? 'contact_id' : type.startsWith('purch_') ? type.slice(6) + '_id' : type.startsWith('p2p_') || type.startsWith('inv_') ? type.slice(4) + '_id' : type.startsWith('gl_') ? type.slice(3) + '_id' : type.startsWith('bankrec_') ? type.slice(8) + '_id' : type.startsWith('tax_') ? type.slice(4) + '_id' : type + '_id';
   const [entity, na] = await Promise.all([
-    api({ order:'o2c_get_order', customer: cmd('o2c_get_customer') ? 'o2c_get_customer' : 'core_get_customer', invoice:'o2c_get_invoice', account:'crm_get_account', campaign:'crm_get_campaign', posting:'hunt_get_posting', contact:'hunt_get_contact', resume:'hunt_get_resume', solo_invoice:'solo_get_invoice', purch_transaction:'purch_get_transaction', purch_receipt:'purch_get_receipt', purch_subscription:'purch_get_subscription', purch_rule:'purch_get_rule', purch_bill:'purch_get_bill', purch_source:'purch_source', p2p_po:'p2p_po', inv_item:'inv_item_stock', gl_entry:'gl_entry', bankrec_match:'rec_get_match', crm_contact:'crm_get_contact' }[type],
+    api({ order:'o2c_get_order', customer: cmd('o2c_get_customer') ? 'o2c_get_customer' : 'core_get_customer', invoice:'o2c_get_invoice', account:'crm_get_account', campaign:'crm_get_campaign', posting:'hunt_get_posting', contact:'hunt_get_contact', resume:'hunt_get_resume', solo_invoice:'solo_get_invoice', purch_transaction:'purch_get_transaction', purch_receipt:'purch_get_receipt', purch_subscription:'purch_get_subscription', purch_rule:'purch_get_rule', purch_bill:'purch_get_bill', purch_source:'purch_source', p2p_po:'p2p_po', inv_item:'inv_item_stock', gl_entry:'gl_entry', bankrec_match:'rec_get_match', tax_filing:'tax_get_filing', crm_contact:'crm_get_contact' }[type],
         { [idArg]: id }),
     fetch(wsUrl(`/api/next-actions?type=${type}&id=${id}`)).then(r => r.json()),
   ]);
@@ -508,6 +510,11 @@ async function detail(type, id) {
         ...(entity.closed_reason ? { [entity.status === 'cancelled' ? 'Cancelled' : 'Closed short']: esc(entity.closed_reason) } : {}), ...(entity.note ? { Note: esc(entity.note) } : {}) }
     : type === 'gl_entry'
     ? { Date: entity.date, Amount: entity.total_display, 'Reverses on': entity.reverse_on ?? '—', Reason: esc(entity.reason || ''), By: `${esc(entity.created_by || '')} · ${String(entity.created_at || '').slice(0, 10)}`, ...(entity.voided_at ? { Voided: `${String(entity.voided_at).slice(0, 10)}: ${esc(entity.void_reason || '')}` } : {}) }
+    : type === 'tax_filing'
+    ? { Period: `${entity.period_from} to ${entity.period_to}`, Agency: esc(entity.agency || '—'), Filed: `${entity.filed_amount_display} on ${entity.filed_on}${entity.reference ? ` · confirmation ${esc(entity.reference)}` : ''}`,
+        'The return said': entity.computed_due_display, ...(entity.difference_reason ? { 'Why they differ': esc(entity.difference_reason) } : {}), Paid: entity.paid_display, 'Still to pay': entity.balance_display,
+        By: `${esc(entity.filed_by || '')} · ${String(entity.created_at || '').slice(0, 10)}`, Hash: `<code style="font-size:11px">${entity.hash}</code>`,
+        ...(entity.changed_since ? { 'Changed since': `<span style="color:var(--warn)">the record now says ${entity.change_display} different; it goes on the next return</span>` } : {}) }
     : type === 'bankrec_match'
     ? { 'Statement row': entity.row ? `${entity.row.id} · ${entity.row.date} · ${esc(entity.row.description)}` : entity.transaction_id, Account: esc(entity.row ? entity.row.account : ''), Amount: entity.row ? entity.row.amount_display : '—',
         Reason: esc(entity.reason || ''), By: `${esc(entity.created_by || '')} · ${String(entity.created_at || '').slice(0, 10)}`, ...(entity.unmatched_at ? { Unmatched: `${String(entity.unmatched_at).slice(0, 10)}: ${esc(entity.unmatch_reason || '')}` } : {}) }
@@ -616,6 +623,11 @@ async function detail(type, id) {
     const lt = $('<table><thead><tr><th>Account</th><th>Kind</th><th class="num">Debit</th><th class="num">Credit</th></tr></thead><tbody></tbody></table>');
     for (const l of entity.lines) lt.querySelector('tbody').append($(`<tr><td>${esc(l.account)}</td><td><span class="pill">${l.kind}</span></td><td class="num">${l.debit_display}</td><td class="num">${l.credit_display}</td></tr>`));
     wrap.append($('<div class="sub" style="margin-top:16px">Lines</div>'), lt);
+  }
+  if (type === 'tax_filing' && entity.payments.length) {
+    const pt = $('<table><thead><tr><th>Payment</th><th>Day</th><th class="num">Amount</th><th>Reference</th></tr></thead><tbody></tbody></table>');
+    for (const p of entity.payments) pt.querySelector('tbody').append($(`<tr><td>${p.id}</td><td>${p.paid_on}</td><td class="num">${p.amount_display}</td><td>${esc(p.reference || '')}</td></tr>`));
+    wrap.append($('<div class="sub" style="margin-top:16px">Payments</div>'), pt);
   }
   if (type === 'bankrec_match') {
     const it = $('<table><thead><tr><th>Recorded here</th><th>Day</th><th class="num">Amount</th></tr></thead><tbody></tbody></table>');
@@ -1945,6 +1957,49 @@ async function renderPage() {
       const t2 = $('<table><thead><tr><th>Lands on</th><th>Account</th><th class="num">Debit</th><th class="num">Credit</th></tr></thead><tbody></tbody></table>');
       rowsInto(t2, ch.lines, l => `<td>${l.date}</td><td>${esc(l.account)}</td><td class="num">${l.debit_display || ''}</td><td class="num">${l.credit_display || ''}</td>`, 'nolink');
     }
+  }
+  if (view === 'taxreturn') {
+    head('Sales tax return', 'The return for a period, from the invoices issued and the credits raised in it: tax as charged, never recomputed. Filing it is yours, on the agency\'s site; record it here once filed.');
+    const now = new Date(); const ym = (y, m) => `${y}-${String(m).padStart(2, '0')}`;
+    const lastMonth = now.getUTCMonth() === 0 ? ym(now.getUTCFullYear() - 1, 12) : ym(now.getUTCFullYear(), now.getUTCMonth());
+    window.taxPeriod = window.taxPeriod || lastMonth;
+    const opts = [];
+    for (let i = 0; i < 13; i++) { const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1)); opts.push([ym(d.getUTCFullYear(), d.getUTCMonth() + 1), d.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }) + (i === 0 ? ' (so far)' : '')]); }
+    for (let i = 0; i < 5; i++) { const q0 = Math.floor(now.getUTCMonth() / 3) - i; const y = now.getUTCFullYear() + Math.floor(q0 / 4), q = ((q0 % 4) + 4) % 4 + 1; opts.push([`${y}-Q${q}`, `Q${q} ${y}${i === 0 ? ' (so far)' : ''}`]); }
+    const r = await api('tax_return', { period: window.taxPeriod });
+    const bar = $(`<div class="acts" style="margin-bottom:14px;align-items:center"><select id="taxPer" style="width:auto;min-width:200px">${opts.map(([v, l]) => `<option value="${v}" ${v === window.taxPeriod ? 'selected' : ''}>${l}</option>`).join('')}</select></div>`);
+    bar.querySelector('#taxPer').onchange = (e) => { window.taxPeriod = e.target.value; render(); };
+    const fileCmd = REG.commands.find(c => c.name === 'tax_record_filing'), payCmd = REG.commands.find(c => c.name === 'tax_record_payment');
+    if (fileCmd) { const b = buttonFor(fileCmd); b.onclick = () => openForm(fileCmd, { period: window.taxPeriod, filed_amount: r.due_with_changes, filed_on: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10) }); if (r.filed) { b.disabled = true; b.title = `Filed as ${r.filed.id}.`; } else if (!r.ended) { b.disabled = true; b.title = `${r.period} has not ended yet.`; } bar.append(b); }
+    if (payCmd && r.filed && r.filed.balance > 0) { const b = buttonFor(payCmd); b.onclick = () => openForm(payCmd, { filing_id: r.filed.id, amount: r.filed.balance }); bar.append(b); }
+    main.append(bar);
+    const line = (k, v, opts = {}) => `<tr${opts.b ? ' style="font-weight:600"' : ''}><td>${k}</td><td class="num">${v}</td></tr>`;
+    const status = r.filed ? `<span class="pill paid">filed</span> ${r.filed.id}: ${r.filed.filed_amount_display} on ${r.filed.filed_on}${r.filed.agency ? ` with ${esc(r.filed.agency)}` : ''}${r.filed.reference ? `, confirmation ${esc(r.filed.reference)}` : ''}. ${r.filed.balance ? `<span class="pill unreviewed">${r.filed.balance_display} to pay</span>` : '<span class="pill paid">paid</span>'}${r.filed.changed_since ? ' <span class="pill unreviewed">changed since filed</span>' : ''}`
+      : r.ended ? (r.due ? '<span class="pill void">not filed</span>' : '<span class="pill">nothing due</span>') : '<span class="pill">so far</span> The period has not ended.';
+    main.append($(`<div class="card" style="max-width:720px;margin-bottom:16px"><div class="crumbs">${esc(r.period)}</div><table class="fin" style="max-width:640px"><tbody>
+      ${line('Sales', r.gross_display)}${line('Not taxed', r.nontaxable_display)}${line('Taxable sales', r.taxable_display, { b: true })}
+      ${r.by_rate.map(x => line(`Tax at ${x.rate} on ${x.base_display}`, x.tax_display)).join('')}
+      ${r.credits_tax ? line('Tax given back on credits and returns', `−${r.credits_tax_display}`) : ''}
+      ${line('Tax due for the period', r.due_display, { b: true })}
+      ${r.prior_changes.length ? r.prior_changes.map(c => line(`Change to ${esc(c.period)}, filed`, c.change_display)).join('') + line('Due with changes', r.due_with_changes_display, { b: true }) : ''}
+      </tbody></table><div style="margin-top:10px">${status}</div>
+      ${r.notes.length ? `<ul class="doc" style="margin:10px 0 0 18px;padding:0">${r.notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}</div>`));
+  }
+  if (view === 'taxowed') {
+    head('Sales tax owed', 'What is owed today, beside Sales Tax Payable in the books, and each month: due, filed, paid.');
+    const l = await api('tax_liability', {});
+    main.append($(`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;max-width:660px;margin-bottom:14px"><div class="tile"><div class="k">Owed now</div><div class="v">${l.owed_display}</div><div class="s">${l.charged_display} charged, ${l.given_back_display} given back, ${l.paid_display} paid</div></div>
+      <div class="tile"><div class="k">Sales Tax Payable in the books</div><div class="v"${l.ties ? '' : ' style="color:var(--warn)"'}>${l.books_display}</div><div class="s">${l.ties ? 'the same, as of today' : 'differs: an entry made to it by hand'}</div></div></div>`));
+    if (!l.months.length) { main.append($('<div class="card doc" style="max-width:600px">No tax charged yet.</div>')); return; }
+    const t = $('<table><thead><tr><th>Month</th><th class="num">Due</th><th>Filing</th><th class="num">Filed</th><th class="num">Paid</th><th>State</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, l.months.map(m => ({ ...m, id: m.filing_id })), m => `<td>${esc(m.label)}</td><td class="num">${m.due_display}</td><td>${m.filing_id || ''}</td><td class="num">${m.filed_display || ''}</td><td class="num">${m.paid_display || ''}</td><td><span class="pill ${m.state === 'filed and paid' ? 'paid' : m.state === 'not filed' ? 'void' : m.state.startsWith('changed') || m.state.startsWith('filed,') ? 'unreviewed' : ''}">${m.state}</span></td>`, 'nolink');
+  }
+  if (view === 'taxfilings') {
+    head('Filings', 'Each return a person recorded as filed, kept as it stood. A later change to a filed period shows as changed since.');
+    const fl = await api('tax_filings', {});
+    if (!fl.count) { main.append($('<div class="card doc" style="max-width:600px">Nothing filed yet. When a month is over, read its return on the Return tab, file it with the agency, and record it there.</div>')); return; }
+    const t = $('<table><thead><tr><th>Filing</th><th>Period</th><th>Agency</th><th class="num">Filed</th><th class="num">Paid</th><th>On</th><th>State</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, fl.items, x => `<td>${x.id}</td><td>${esc(x.name)}</td><td>${esc(x.agency || '')}</td><td class="num">${x.filed_amount_display}</td><td class="num">${x.paid_display}</td><td>${x.filed_on}</td><td><span class="pill ${x.balance ? 'unreviewed' : 'paid'}">${x.state}</span>${x.changed_since ? ' <span class="pill unreviewed">changed since</span>' : ''}</td>`, 'tax_filing');
   }
   if (view === 'recbank') {
     head('Bank reconciliation', 'The bank statement against the books: the statement\'s balance, the books\', and every item between them, named. Signing it off is a person\'s act.');

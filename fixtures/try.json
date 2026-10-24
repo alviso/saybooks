@@ -279,7 +279,9 @@
   },
   "taxable line — the rate is snapshotted onto each invoice line at billing",
   "sam",
-  "human"
+  "human",
+  null,
+  "-60d"
  ],
  [
   "core_create_customer",
@@ -291,7 +293,9 @@
   },
   "the roastery chain — quick payers",
   "sam",
-  "human"
+  "human",
+  null,
+  "-40d"
  ],
  [
   "o2c_create_order",
@@ -310,7 +314,9 @@
   },
   "phone order from their ops manager",
   "claude",
-  "agent"
+  "agent",
+  null,
+  "-36d"
  ],
  [
   "o2c_confirm_order",
@@ -319,7 +325,9 @@
   },
   "well inside their limit",
   "claude",
-  "agent"
+  "agent",
+  null,
+  "-36d"
  ],
  [
   "o2c_ship_order",
@@ -336,7 +344,9 @@
   },
   "B is out of stock — gaskets go now, the 8 B stay open",
   "claude",
-  "agent"
+  "agent",
+  null,
+  "-35d"
  ],
  [
   "o2c_invoice_shipped",
@@ -345,7 +355,9 @@
   },
   "first taxed invoice of the quarter",
   "sam",
-  "human"
+  "human",
+  null,
+  "-34d"
  ],
  [
   "p2p_create_po",

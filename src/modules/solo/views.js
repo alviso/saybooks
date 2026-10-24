@@ -144,4 +144,14 @@ function cashMovements() {
   } catch (e) { if (/no such table/i.test(e.message)) return []; throw e; }
 }
 
-module.exports = { cashMovements, reminderView, reminders, reminderState, remindersOf, invOpen, daysOver, STAGE, invoiceView, outstanding, statement, invoiceApplied, paymentUnapplied };
+/** For the salestax area: every line of an issued invoice with its tax as charged. Solo has no credit notes. */
+function salesTaxLines() {
+  try {
+    const lines = db().prepare(`SELECT l.*, i.issued_at, i.currency AS inv_currency, c.name AS customer FROM solo_invoice_line l JOIN solo_invoice i ON i.id = l.invoice_id
+      LEFT JOIN customer c ON c.id = i.customer_id WHERE i.status IN ('issued','paid') ORDER BY i.issued_at, l.id`).all()
+      .map(l => ({ doc: l.invoice_id, area: 'solo', date: String(l.issued_at).slice(0, 10), customer: l.customer, what: String(l.description).split('\n')[0], net: l.amount, rate_bp: l.tax_rate_bp || 0, tax: l.tax_amount || 0, currency: l.inv_currency || 'USD' }));
+    return { lines, credits: [] };
+  } catch (e) { if (/no such table/i.test(e.message)) return { lines: [], credits: [] }; throw e; }
+}
+
+module.exports = { salesTaxLines, cashMovements, reminderView, reminders, reminderState, remindersOf, invOpen, daysOver, STAGE, invoiceView, outstanding, statement, invoiceApplied, paymentUnapplied };

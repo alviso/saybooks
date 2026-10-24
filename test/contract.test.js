@@ -35,6 +35,9 @@
  *  20. bank rec      a deposit matched to its payment is in the books once; a payment not on the
  *                    statement yet is named in transit and the account still ties; only a person
  *                    signs off, and a later change shows as changed since
+ *  21. sales tax     a month's return is the tax charged less the tax credits give back; only a
+ *                    person records the filing, a payment clears the liability and waits in the
+ *                    bank reconciliation, and a late change to a filed month is named
  *
  * A PR that adds a hand-written form, a prefix-less command, or a cross-module UPDATE
  * fails here, not in review.
@@ -545,6 +548,56 @@ for (const tag of R.PERMISSIONS) {
     assert.strictEqual(execute('purch_get_transaction', { transaction_id: 'T-0001' }, p20).status, 'unreviewed', 'unmatched, the row is back to how it was reviewed');
   });
   ok('bank reconciliation: a deposit is matched to its payment once, a check in transit is named, the account ties, a person signs off, a later change shows');
+}
+
+// ----------------------------------------- 21. sales tax: a return, a person's filing, a payment
+// Scenarios run as an agent and cannot record a filing; the person's half and the o2c credits live here.
+{
+  const G = 'gate21-salestax'; wsp.wipe(G);
+  const p21 = { workspace: G, actor: 'test', actor_kind: 'human', role: 'owner' }, a21 = { ...p21, actor_kind: 'agent' };
+  H.withClock('2026-05-04', () => {
+    execute('core_create_item', { sku: 'G21-SH', name: 'Shelf', unit_price: 10000, on_hand: 50, tax_rate_bp: 875 }, p21);
+    execute('core_create_item', { sku: 'G21-IN', name: 'Install', unit_price: 20000, stocked: false }, p21);
+    execute('core_create_customer', { name: 'Gate Corp', terms: 'net30', credit_limit: 5000000, address: '1 Gate St' }, p21);
+    execute('o2c_create_order', { customer_id: 'C-0001', lines: [{ item_id: 'G21-SH', qty: 10 }, { item_id: 'G21-IN', qty: 1 }] }, p21);
+    execute('o2c_confirm_order', { order_id: 'SO-0001' }, p21);
+    execute('o2c_ship_order', { order_id: 'SO-0001', lines: [{ order_line_id: 1, qty: 10 }, { order_line_id: 2, qty: 1 }] }, p21);
+    execute('o2c_invoice_shipped', { order_id: 'SO-0001' }, p21);
+  });
+  H.withClock('2026-05-20', () => execute('o2c_record_return', { order_id: 'SO-0001', reason: 'two shelves bent', lines: [{ order_line_id: 1, qty: 2, restock: false }] }, p21));
+  H.withClock('2026-06-10', () => {
+    const r = execute('tax_return', { period: '2026-05' }, a21);
+    assert.ok(r.taxable === 100000 && r.nontaxable === 20000 && r.tax_collected === 8750 && r.credits_tax === 1750 && r.due === 7000, 'May: 8.75% on the shelves, the return gives back its own tax, installation untaxed (TAX-2)');
+    const cn = execute('o2c_get_order', { order_id: 'SO-0001' }, p21);
+    assert.ok(cn, 'order readable');
+    const j = execute('core_journal', { to: '2026-05-31' }, p21);
+    const stp = j.entries.flatMap(e => e.lines).filter(l => l.account === 'Sales Tax Payable').reduce((n, l) => n + (l.credit || 0) - (l.debit || 0), 0);
+    assert.strictEqual(stp, 7000, 'the credit note takes its tax off Sales Tax Payable, not off sales');
+    let agent = null; try { execute('tax_record_filing', { period: '2026-05', filed_amount: 7000, filed_on: '2026-06-08', reason: 'May' }, a21); } catch (e) { agent = e.message; }
+    assert.ok(agent && /person's act/.test(agent), 'an agent never records a filing (TAX-3)');
+    let off = null; try { execute('tax_record_filing', { period: '2026-05', filed_amount: 6900, filed_on: '2026-06-08', reason: 'May' }, p21); } catch (e) { off = e.message; }
+    assert.ok(off && /Say why they differ/.test(off), 'a filed amount that differs needs a reason (TAX-5)');
+    let early = null; try { execute('tax_record_filing', { period: '2026-06', filed_amount: 0, filed_on: '2026-06-08', reason: 'June' }, p21); } catch (e) { early = e.message; }
+    assert.ok(early && /not ended yet/.test(early), 'a period not yet over cannot be filed (TAX-5)');
+    const fl = execute('tax_record_filing', { period: '2026-05', filed_amount: 7000, filed_on: '2026-06-08', agency: 'CDTFA', reference: 'CONF-1', reason: 'May return, filed online' }, p21);
+    assert.ok(fl.id === 'TF-0001' && fl.hash, 'the filing keeps the return as it stood');
+    let over = null; try { execute('tax_record_payment', { filing_id: 'TF-0001', amount: 7001, paid_on: '2026-06-09' }, a21); } catch (e) { over = e.message; }
+    assert.ok(over && /more than that/.test(over), 'a payment never exceeds what is owed (TAX-6)');
+    execute('tax_record_payment', { filing_id: 'TF-0001', amount: 7000, paid_on: '2026-06-09', method: 'ach', reference: 'PAY-1' }, a21);
+    const li = execute('tax_liability', {}, p21);
+    assert.ok(li.owed === 0 && li.books === 0 && li.ties, 'paid, nothing is owed and the books agree (TAX-7)');
+    const rec = MODULES.find(m => m.name === 'bankrec');
+    assert.ok(wsp.use(G, () => rec.api.views.cashItems()).some(c => c.key === 'salestax:payment:TP-0001' && c.amount === -7000), 'the payment waits in the bank reconciliation like any recorded payment (TAX-6)');
+  });
+  // A goodwill credit on a mixed invoice gives back the invoice's own share of tax: 10,875 x 8,750 / 128,750 = 739.
+  H.withClock('2026-05-25', () => execute('o2c_create_credit_note', { customer_id: 'C-0001', amount: 10875, kind: 'goodwill', invoice_id: 'INV-0001', reason: 'late goodwill for the delay' }, p21));
+  H.withClock('2026-07-05', () => {
+    const f = execute('tax_filings', {}, p21).items[0];
+    assert.ok(f.changed_since && f.change === -739, 'a late change to a filed month shows as changed since, with its amount (TAX-4)');
+    const jr = execute('tax_return', { period: '2026-06' }, p21);
+    assert.ok(jr.prior_changes.length === 1 && jr.prior_changes_total === -739, 'and the next return names it');
+  });
+  ok('sales tax: a return gives credits their tax back, a person records the filing, a payment clears it and waits in the bank, a late change is named');
 }
 
 console.log(`\n${n} contract checks passed across ${MODULES.length} modules, ${COMMANDS.length} commands.`);

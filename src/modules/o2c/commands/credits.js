@@ -6,11 +6,11 @@ const V = require('../views.js');
 const core = () => R.MODULES.find(m => m.name === 'core').api;
 
 /** Shared: raise a credit note row. Total is tax-inclusive; the credit relieves AR gross. */
-function raiseCreditNote(db, at, { customer_id, kind, invoice_id = null, return_id = null, total, reason }) {
+function raiseCreditNote(db, at, { customer_id, kind, invoice_id = null, return_id = null, total, tax_total = 0, reason }) {
   if (total <= 0) throw new Rejected('A credit note must be for a positive amount.');
   const id = H.nextId('CN', 'credit_note');
-  db.prepare('INSERT INTO credit_note (id,customer_id,kind,invoice_id,return_id,total,reason,status,created_at) VALUES (?,?,?,?,?,?,?,?,?)')
-    .run(id, customer_id, kind, invoice_id, return_id, total, reason, 'open', at);
+  db.prepare('INSERT INTO credit_note (id,customer_id,kind,invoice_id,return_id,total,tax_total,reason,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)')
+    .run(id, customer_id, kind, invoice_id, return_id, total, tax_total, reason, 'open', at);
   return id;
 }
 
@@ -42,7 +42,7 @@ price plus the tax as invoiced — the customer gets back what they were billed,
     const id = H.nextId('R', 'return');
     db.prepare('INSERT INTO "return" (id,order_id,reason,recorded_at) VALUES (?,?,?,?)').run(id, a.order_id, a.reason, at);
 
-    let creditTotal = 0, restocked = 0;
+    let creditTotal = 0, creditTax = 0, restocked = 0;
     // Validate per order line against fulfilled-less-already-returned, summing rows first
     // so two rows against one line cannot each pass alone and jointly overdraw.
     const byLine = new Map();
@@ -65,10 +65,11 @@ price plus the tax as invoiced — the customer gets back what they were billed,
       const il = db.prepare('SELECT tax_rate_bp FROM invoice_line WHERE order_line_id = ? ORDER BY id DESC LIMIT 1').get(r.order_line_id);
       const rate = il ? il.tax_rate_bp : (H.get('item', line.item_id).tax_rate_bp || 0);
       const net = r.qty * line.unit_price;
-      creditTotal += net + Math.round(net * rate / 10000);
+      const tax = Math.round(net * rate / 10000);
+      creditTotal += net + tax; creditTax += tax;
     }
 
-    const cnId = raiseCreditNote(db, at, { customer_id: o.customer_id, kind: 'return', return_id: id, total: creditTotal, reason: a.reason });
+    const cnId = raiseCreditNote(db, at, { customer_id: o.customer_id, kind: 'return', return_id: id, total: creditTotal, tax_total: creditTax, reason: a.reason });
     return { return_id: id, order_id: a.order_id, restocked_qty: restocked, credit_note_id: cnId,
       credit_total: creditTotal, credit_total_display: H.money(creditTotal) };
   },
@@ -93,11 +94,14 @@ but the reason is mandatory and it will be read back.`,
   },
   handler(a, { db, at }) {
     H.need('customer', a.customer_id, 'customer');
+    let tax = 0;
     if (a.invoice_id) {
       const inv = H.need('invoice', a.invoice_id, 'invoice');
       if (inv.customer_id !== a.customer_id) throw new Rejected(`Invoice ${inv.id} does not belong to ${a.customer_id}.`);
+      // The credit gives back the invoice's own share of tax; the liability goes down by that.
+      if (inv.total > 0) tax = Math.round(a.amount * inv.tax_total / inv.total);
     }
-    const id = raiseCreditNote(db, at, { customer_id: a.customer_id, kind: a.kind, invoice_id: a.invoice_id || null, total: a.amount, reason: a.reason });
+    const id = raiseCreditNote(db, at, { customer_id: a.customer_id, kind: a.kind, invoice_id: a.invoice_id || null, total: a.amount, tax_total: tax, reason: a.reason });
     return V.creditNoteView(id);
   },
 });

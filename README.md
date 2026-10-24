@@ -11,7 +11,7 @@ of who did what and why.
 and pick the modules your books carry. Connect Claude by adding `https://saybooks.io/mcp` as a
 connector (OAuth, no keys to paste); the same books are in the browser as ordinary pages.
 
-Twelve modules today, every one spec-first with executable conformance scenarios:
+Thirteen modules today, every one spec-first with executable conformance scenarios:
 
 | module | for | what it keeps |
 |---|---|---|
@@ -24,6 +24,7 @@ Twelve modules today, every one spec-first with executable conformance scenarios
 | **inventory** | small businesses that hold stock | every stock move kept, the moving average cost, each shipment's cost and margin, counts with reasons, a value that ties to the books |
 | **purchases** (Personal finances) | anyone | bank and card statements and receipts the agent reads: rows with provenance, review, subscriptions, spend |
 | **bankrec** (Bank) | anyone whose accountant asks "does the bank tie?" | each statement against the books, deposits matched to recorded payments, items in transit named, a sign-off by a person |
+| **salestax** (Sales tax) | anyone who charges sales tax and files it | the return for a month or quarter from what was invoiced and credited, a filing a person records, the payment, a liability that ties |
 | **gl** (Month-end) | anyone closing the books | a close checklist, adjusting entries that balance and can reverse, closed periods that stop moving, corrections in the next open period |
 | **bridge** (Ledger) | anyone with an accountant | the hand-over to QuickBooks, Xero or a plain CSV: map their chart once, export a period, keep what went and through when |
 | **core** | every space | customers, items, the company profile, search, audit, setup |
@@ -117,7 +118,7 @@ a full statement cycle from plain sentences, no coaching. In LM Studio's `mcp.js
 ```
 
 `SAYBOOKS_MODULES` picks the tools the model sees (`core,solo` is 35 tools; `core,purchases` 60;
-all twelve modules is 198 and too many for a small model). Load the model with one concurrent slot.
+all thirteen modules is 204 and too many for a small model). Load the model with one concurrent slot.
 What that took, and the six fixes it forced in the tools, is in
 [saybooks.io/notes/local-models](https://saybooks.io/notes/local-models); the plain-language
 harness that measures it is `npm run local`.

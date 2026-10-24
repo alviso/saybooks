@@ -22,7 +22,7 @@ function cashItems() {
   const out = [];
   for (const m of MODULES()) if (m.api && typeof m.api.cashMovements === 'function') for (const c of m.api.cashMovements() || []) out.push({ ...c, area: m.name });
   // Two areas can both have a P-0001; say which, when both are here.
-  if (new Set(out.map(c => c.area)).size > 1) for (const c of out) c.label = `${c.label} (${AREA_WORD[c.area] || c.area})`;
+  if (out.some(c => c.area === 'o2c') && out.some(c => c.area === 'solo')) for (const c of out) if (AREA_WORD[c.area]) c.label = `${c.label} (${AREA_WORD[c.area]})`;
   return out.map(c => ({ ...c, amount_display: money(c.amount, c.currency) }));
 }
 

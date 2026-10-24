@@ -46,7 +46,7 @@ const returnedQty = (orderLineId) =>
 function creditNoteView(id) {
   const cn = need('credit_note', id, 'credit note');
   const applied = creditApplied(id), ref = refunded('credit_note', id);
-  return { ...cn, total_display: money(cn.total), applied, applied_display: money(applied),
+  return { ...cn, total_display: money(cn.total), tax_total_display: money(cn.tax_total || 0), applied, applied_display: money(applied),
     refunded: ref, open: cn.total - applied - ref, open_display: money(cn.total - applied - ref),
     applications: db().prepare('SELECT * FROM credit_application WHERE credit_note_id = ?').all(id) };
 }
@@ -197,6 +197,18 @@ function cashMovements() {
   return out;
 }
 
-module.exports = { cashMovements, openBalance, committedValue, invoiceApplied, paymentApplied, paymentUnapplied,
+/** For the salestax area: every invoiced line with its tax as charged, and every credit note with the tax it gives back. */
+function salesTaxLines() {
+  try {
+    const lines = db().prepare(`SELECT il.*, i.issued_at, i.status AS invoice_status, c.name AS customer FROM invoice_line il JOIN invoice i ON i.id = il.invoice_id
+      LEFT JOIN customer c ON c.id = i.customer_id WHERE i.status <> 'void' ORDER BY i.issued_at, il.id`).all()
+      .map(l => ({ doc: l.invoice_id, area: 'o2c', date: String(l.issued_at).slice(0, 10), customer: l.customer, what: l.item_id, net: l.qty * l.unit_price, rate_bp: l.tax_rate_bp || 0, tax: l.tax_amount || 0, currency: 'USD' }));
+    const credits = db().prepare('SELECT cn.*, c.name AS customer FROM credit_note cn LEFT JOIN customer c ON c.id = cn.customer_id ORDER BY cn.created_at, cn.id').all()
+      .map(cn => ({ doc: cn.id, area: 'o2c', kind: cn.kind, date: String(cn.created_at).slice(0, 10), customer: cn.customer, invoice_id: cn.invoice_id, total: cn.total, tax: cn.tax_total || 0, net: cn.total - (cn.tax_total || 0), currency: 'USD' }));
+    return { lines, credits };
+  } catch (e) { if (/no such table/i.test(e.message)) return { lines: [], credits: [] }; throw e; }
+}
+
+module.exports = { salesTaxLines, cashMovements, openBalance, committedValue, invoiceApplied, paymentApplied, paymentUnapplied,
   creditApplied, creditUnapplied, creditNoteView, refunded, returnedQty,
   orderView, customerView, quoteView, invoiceView, arAging, unappliedCash, backorders, customerStatement };

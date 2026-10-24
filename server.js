@@ -49,7 +49,7 @@ const seedSandbox = (name) => {
 
 // Anonymous demo sandboxes mount the business modules only — jobhunt is a personal area
 // and belongs to owned spaces (where it mounts in full, data or no data).
-const DEMO_MOUNTS = ['core', 'o2c', 'p2p', 'inventory', 'crm', 'prospect', 'solo', 'purchases', 'bridge', 'gl', 'bankrec'];   // the demo shows everything but the job hunt
+const DEMO_MOUNTS = ['core', 'o2c', 'p2p', 'inventory', 'crm', 'prospect', 'solo', 'purchases', 'bridge', 'gl', 'bankrec', 'salestax'];   // the demo shows everything but the job hunt
 const HUNT_MOUNTS = ['core', 'jobhunt'];   // the free job-hunt offering: one module + the platform
 const SOLO_MOUNTS = ['core', 'solo', 'bridge'];   // the freelancer invoice generator, and the hand-over to their accountant
 const KIND_MOUNTS = { hunt: HUNT_MOUNTS, solo: SOLO_MOUNTS };
@@ -62,6 +62,7 @@ const mountsFor = (w) => { try {
     ...(chosen.includes('p2p') ? ['purchases'] : []),   // p2p's bills and vendors are the purchases area's
     ...(chosen.some(m => m === 'o2c' || m === 'p2p') ? ['inventory'] : []),   // stock that is bought or sold has a value
     ...(chosen.includes('p2p') || (chosen.includes('purchases') && chosen.some(m => m === 'o2c' || m === 'solo')) ? ['bankrec'] : []),   // statements against recorded payments
+    ...(chosen.some(m => m === 'o2c' || m === 'solo') ? ['salestax'] : []),   // tax charged on invoices is owed to someone
     ...(chosen.includes('crm') ? ['prospect'] : [])])]; return KIND_MOUNTS[sp.kind] || null; }
   // A local server honours SAYBOOKS_MODULES the way mcp-server.js does, so a client can be handed
   // the same subset over HTTP as over stdio.

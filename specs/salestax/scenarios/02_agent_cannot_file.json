@@ -1,0 +1,84 @@
+{
+ "name": "the agent cannot record a filing",
+ "spec": "salestax@0.1",
+ "today": "2099-05-10",
+ "notes": "TAX-3: recording a filing is the person's act, whatever the agent's role; the refusal is logged.",
+ "env": [
+  [
+   "set_company_profile",
+   {
+    "name": "Harbor Supply",
+    "address": "1 Dock St, Oakland, CA",
+    "country": "US",
+    "currency": "USD",
+    "tax_label": "Sales tax",
+    "tax_registered": true,
+    "tax_rate_bp": 875
+   },
+   "registered for sales tax at 8.75%"
+  ],
+  [
+   "create_customer",
+   {
+    "name": "Acme Corp",
+    "address": "200 Main St, San Jose, CA",
+    "terms": "net30",
+    "credit_limit": 1000000
+   },
+   "a customer"
+  ],
+  [
+   "draft_invoice",
+   {
+    "customer": "C-0001",
+    "lines": [
+     {
+      "description": "Steel shelving",
+      "qty": 1,
+      "rate": 100000,
+      "tax_rate_bp": 875
+     },
+     {
+      "description": "Installation",
+      "qty": 1,
+      "rate": 50000,
+      "tax_rate_bp": 0
+     }
+    ]
+   },
+   "shelving taxed, installation not"
+  ],
+  [
+   "issue_invoice",
+   {
+    "invoice": "INV-0001"
+   },
+   "issued"
+  ]
+ ],
+ "steps": [
+  {
+   "act": "record_filing",
+   "args": {
+    "period": "2099-04",
+    "filed_amount": 0,
+    "filed_on": "2099-05-05",
+    "reason": "April return"
+   },
+   "expect": {
+    "refused": "person's act"
+   },
+   "notes": "TAX-3"
+  },
+  {
+   "act": "filings",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "count": 0
+    }
+   }
+  }
+ ]
+}

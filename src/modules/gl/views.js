@@ -82,6 +82,8 @@ function checklist({ through }) {
       }
     } catch { /* no statements */ }
   }
+  const tax = area('salestax');
+  if (tax && tax.unfiledThrough) for (const u of tax.unfiledThrough(through)) open.push({ item: 'salestax', text: `Sales tax for ${u.label} is not filed (${u.due_display}).`, fix: 'Read the return on the Sales tax page, file it with the agency, and record the filing.' });
   const inv = area('inventory');
   if (inv && inv.views) { try { const s = inv.views.stock(); if (s.uncosted_items.length) open.push({ item: 'stock', text: s.note, fix: 'State the opening cost in Inventory.' }); } catch { /* none */ } }
   return { through, from, closed_through: last, ready: blocking.length === 0, blocking, open,
