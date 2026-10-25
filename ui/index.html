@@ -241,7 +241,7 @@ const NAV = [
   { key: 'crm', label: 'CRM', prefix: 'crm_', tabs: [['today', 'Today'], ['campaigns', 'Campaigns'], ['accounts', 'Accounts'], ['crmcontacts', 'Contacts'], ['crmdrafts', 'Drafts'], ['crmcal', 'Calendar'], ['crmpipeline', 'Pipeline'], ['network', 'Network'], ['crmactivity', 'Activity']] },
   { key: 'pros', label: 'Prospects', prefix: 'pros_', tabs: [['prospulls', 'Pulls'], ['prosrows', 'Staged rows']] },
   { key: 'hunt', label: 'Job hunt', prefix: 'hunt_', tabs: [['huntdue', 'Due'], ['huntpipeline', 'Pipeline'], ['huntcontacts', 'Contacts'], ['huntresumes', 'Resumes']] },
-  { key: 'purch', label: 'Personal finances', prefix: 'purch_', tabs: [['purchover', 'Overview'], ['purchacc', 'Accounts'], ['purchtx', 'Transactions'], ['purchbills', 'Bills'], ['purchrules', 'Rules'], ['purchsubs', 'Subscriptions'], ['purchrec', 'Receipts'], ['purchsrc', 'Statements']] },
+  { key: 'purch', label: 'Personal finances', prefix: 'purch_', tabs: [['purchover', 'Overview'], ['purchacc', 'Accounts'], ['purchtx', 'Transactions'], ['purchxfer', 'Transfers'], ['purchbills', 'Bills'], ['purchrules', 'Rules'], ['purchsubs', 'Subscriptions'], ['purchrec', 'Receipts'], ['purchsrc', 'Statements']] },
   { key: 'rec', label: 'Bank', prefix: 'rec_', tabs: [['recbank', 'Reconciliation'], ['recmatches', 'Matches'], ['recsignoffs', 'Sign-offs']] },
   { key: 'tax', label: 'Sales tax', prefix: 'tax_', tabs: [['taxreturn', 'Return'], ['taxowed', 'Owed'], ['taxfilings', 'Filings']] },
   { key: 'gl', label: 'Month-end', prefix: 'gl_', tabs: [['glclose', 'Close'], ['glentries', 'Adjusting entries']] },
@@ -478,7 +478,7 @@ async function detail(type, id) {
   const wrap = $('<div></div>');
   const idArg = type === 'solo_invoice' ? 'invoice_id' : type === 'crm_contact' ? 'contact_id' : type.startsWith('purch_') ? type.slice(6) + '_id' : type.startsWith('p2p_') || type.startsWith('inv_') ? type.slice(4) + '_id' : type.startsWith('gl_') ? type.slice(3) + '_id' : type.startsWith('bankrec_') ? type.slice(8) + '_id' : type.startsWith('tax_') ? type.slice(4) + '_id' : type + '_id';
   const [entity, na] = await Promise.all([
-    api({ order:'o2c_get_order', customer: cmd('o2c_get_customer') ? 'o2c_get_customer' : 'core_get_customer', invoice:'o2c_get_invoice', account:'crm_get_account', campaign:'crm_get_campaign', posting:'hunt_get_posting', contact:'hunt_get_contact', resume:'hunt_get_resume', solo_invoice:'solo_get_invoice', purch_transaction:'purch_get_transaction', purch_receipt:'purch_get_receipt', purch_subscription:'purch_get_subscription', purch_rule:'purch_get_rule', purch_bill:'purch_get_bill', purch_source:'purch_source', p2p_po:'p2p_po', inv_item:'inv_item_stock', gl_entry:'gl_entry', bankrec_match:'rec_get_match', purch_account:'purch_account', tax_filing:'tax_get_filing', crm_contact:'crm_get_contact' }[type],
+    api({ order:'o2c_get_order', customer: cmd('o2c_get_customer') ? 'o2c_get_customer' : 'core_get_customer', invoice:'o2c_get_invoice', account:'crm_get_account', campaign:'crm_get_campaign', posting:'hunt_get_posting', contact:'hunt_get_contact', resume:'hunt_get_resume', solo_invoice:'solo_get_invoice', purch_transaction:'purch_get_transaction', purch_receipt:'purch_get_receipt', purch_subscription:'purch_get_subscription', purch_rule:'purch_get_rule', purch_bill:'purch_get_bill', purch_source:'purch_source', p2p_po:'p2p_po', inv_item:'inv_item_stock', gl_entry:'gl_entry', bankrec_match:'rec_get_match', purch_account:'purch_account', purch_transfer:'purch_get_transfer', tax_filing:'tax_get_filing', crm_contact:'crm_get_contact' }[type],
         { [idArg]: id }),
     fetch(wsUrl(`/api/next-actions?type=${type}&id=${id}`)).then(r => r.json()),
   ]);
@@ -499,6 +499,9 @@ async function detail(type, id) {
     ? { Client: entity.customer_name, Currency: entity.currency || 'USD', Total: entity.total_display, Applied: entity.applied_display, Open: entity.open_display, Issued: entity.issued_at ?? '— (draft)', Due: entity.due_at ?? `${entity.due_in_days ?? 30} days from issue`, ...(entity.void_reason && { Voided: entity.void_reason }) }
     : type === 'purch_transaction'
     ? { Date: entity.date, Amount: entity.amount_display, Description: entity.description, Vendor: entity.vendor ?? '—', Category: entity.split_into ? `split into ${entity.split_into}` : (entity.category ?? '—'), Statement: `${entity.source_name ?? entity.source_id} · row ${entity.row_index}`, Receipt: entity.receipt ? entity.receipt.id : '—', ...(entity.raw ? { 'As read': `<code style="font-size:11px">${String(entity.raw).replace(/</g,'&lt;')}</code>` } : {}) }
+    : type === 'purch_transfer'
+    ? { From: `${esc(entity.out.account)} · ${entity.out.id} · ${entity.out.date} · ${esc(entity.out.description)}`, To: `${esc(entity.in.account)} · ${entity.in.id} · ${entity.in.date} · ${esc(entity.in.description)}`,
+        Amount: entity.amount_display, Reason: esc(entity.reason), By: `${esc(entity.created_by || '')} · ${String(entity.created_at).slice(0, 10)}`, ...(entity.unpaired_at ? { Unpaired: `${String(entity.unpaired_at).slice(0, 10)}: ${esc(entity.unpair_reason || '')}` } : {}) }
     : type === 'purch_account'
     ? { Kind: entity.kind.replace('_', ' '), Currency: entity.currency, Institution: esc(entity.institution || '—'), 'Last four': entity.last4 || '—', Opened: entity.opened_on || '—',
         Balance: entity.balance_display ? `${entity.balance_display} <span style="color:var(--dim)">as of ${entity.balance_as_of}, ${esc(entity.balance_from)}</span>` : 'none yet',
@@ -1913,6 +1916,32 @@ async function renderPage() {
     rowsInto(t, ac.items, a => `<td>${esc(a.name)}${a.closed ? ' <span class="pill">closed</span>' : ''}</td><td>${a.kind.replace('_', ' ')}</td><td>${esc(a.institution || '')}</td>
       <td class="num">${a.balance_display ?? '<span style="color:var(--dim)">none yet</span>'}</td><td style="font-size:12.5px${a.stale ? ';color:var(--warn)' : ''}">${a.balance_as_of || ''}</td><td style="font-size:12.5px;color:var(--dim)">${esc(a.balance_from || '')}</td>
       <td class="num">${a.statements.length}</td><td>${a.issues.length ? `<span class="pill unreviewed">${a.issues.length} to look at</span>` : a.statements.length > 1 ? '<span class="pill paid">chains</span>' : ''}</td>`, 'purch_account');
+  }
+  if (view === 'purchxfer') {
+    head('Transfers', 'Money moving between your own accounts: paying the card from checking shows on both statements. Paired, it is counted once and is neither spending nor income.');
+    const tr = await api('purch_transfers', {});
+    const cand = await api('purch_transfer_candidates', {});
+    const pairCmd = REG.commands.find(c => c.name === 'purch_pair_transfer');
+    main.append($(`<div class="doc" style="margin:0 0 12px;max-width:1100px">${esc(tr.note)}</div>`));
+    if (cand.count) {
+      main.append($('<div class="sub" style="margin-top:4px">Could be paired</div>'));
+      const t = $('<table><thead><tr><th>Out of</th><th>Day</th><th>As printed</th><th>Into</th><th>Day</th><th>As printed</th><th class="num">Amount</th><th>Why</th><th></th></tr></thead><tbody></tbody></table>');
+      for (const x of cand.items) {
+        const tr2 = $(`<tr><td>${esc(x.out.account)}</td><td style="font-size:12.5px">${x.out.date}</td><td style="font-size:12.5px">${esc(x.out.description)}</td><td>${esc(x.in.account)}</td><td style="font-size:12.5px">${x.in.date}</td><td style="font-size:12.5px">${esc(x.in.description)}</td><td class="num">${x.amount_display}</td><td style="font-size:12px;color:var(--dim)">${esc(x.why)}</td><td></td></tr>`);
+        if (pairCmd) { const b = buttonFor(pairCmd); b.textContent = 'Pair'; b.onclick = () => openForm(pairCmd, { out_transaction_id: x.out.id, in_transaction_id: x.in.id }); tr2.lastElementChild.append(b); }
+        t.querySelector('tbody').append(tr2);
+      }
+      main.append(t);
+    }
+    if (tr.one_sided.length) {
+      main.append($('<div class="sub" style="margin-top:16px">One side so far</div>'));
+      const t = $('<table><thead><tr><th>Row</th><th>Account</th><th>Day</th><th>As printed</th><th class="num">Amount</th><th>Other account</th><th>State</th></tr></thead><tbody></tbody></table>');
+      rowsInto(t, tr.one_sided, x => `<td>${x.id}</td><td>${esc(x.account)}</td><td style="font-size:12.5px">${x.date}</td><td style="font-size:12.5px">${esc(x.description)}</td><td class="num">${x.amount_display}</td><td>${esc(x.other_account)}</td><td style="font-size:12.5px${x.missing ? ';color:var(--warn)' : ''}">${esc(x.state)}</td>`, 'purch_transaction');
+    }
+    main.append($('<div class="sub" style="margin-top:16px">Paired</div>'));
+    if (!tr.pairs.length) { main.append($('<div class="card doc" style="max-width:640px">Nothing paired yet. With both statements imported, ask your agent to pair the transfers between your accounts.</div>')); return; }
+    const t = $('<table><thead><tr><th>Transfer</th><th>From</th><th>Day</th><th>To</th><th>Day</th><th class="num">Amount</th><th>Reason</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, tr.pairs, x => `<td>${x.id}</td><td>${esc(x.out.account)}</td><td style="font-size:12.5px">${x.out.date}</td><td>${esc(x.in.account)}</td><td style="font-size:12.5px">${x.in.date}</td><td class="num">${x.amount_display}</td><td style="font-size:12.5px">${esc(x.reason)}</td>`, 'purch_transfer');
   }
   if (view === 'purchtx') {
     head('Transactions', 'Every row on record with where it came from. Review is a reasoned act; amount and date never change.');

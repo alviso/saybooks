@@ -1,6 +1,6 @@
 {
   "area": "purchases",
-  "spec": "0.6",
+  "spec": "0.7",
   "doc": "spec.md",
   "acts": {
     "import_statement": {
@@ -232,6 +232,29 @@
     "net_worth": {
       "kind": "read",
       "required": []
+    },
+    "pair_transfer": {
+      "kind": "write",
+      "required": [
+        "out_transaction_id",
+        "in_transaction_id",
+        "reason"
+      ]
+    },
+    "unpair_transfer": {
+      "kind": "write",
+      "required": [
+        "transfer_id",
+        "reason"
+      ]
+    },
+    "transfers": {
+      "kind": "read",
+      "required": []
+    },
+    "transfer_candidates": {
+      "kind": "read",
+      "required": []
     }
   },
   "invariants": [
@@ -290,6 +313,18 @@
     {
       "id": "P-15",
       "title": "Net worth is per currency: what is held less what is owed, each line showing as of when; figures older than 45 days are named."
+    },
+    {
+      "id": "P-16",
+      "title": "A move between two of the person's accounts is one transfer: its two sides paired, exactly opposite, counted once, never as spending or income."
+    },
+    {
+      "id": "P-17",
+      "title": "Pairing is a reasoned act on rows not already booked otherwise; suggestions never pair; unpairing puts both rows back as they were."
+    },
+    {
+      "id": "P-18",
+      "title": "A transfer naming one of the person's accounts with no other side is listed, saying whether that account's statement should already show it."
     }
   ]
 }

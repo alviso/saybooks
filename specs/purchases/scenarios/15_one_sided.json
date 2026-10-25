@@ -1,0 +1,83 @@
+{
+ "name": "a one-sided transfer whose other half should already be on a statement",
+ "spec": "purchases@0.7",
+ "today": "2099-12-10",
+ "notes": "P-18: the card's November statement covers the payment's date and does not show it.",
+ "env": [],
+ "steps": [
+  {
+   "act": "import_statement",
+   "args": {
+    "name": "chk.csv",
+    "hash": "tr-chk-nov",
+    "kind": "bank",
+    "account": "Checking 4410",
+    "currency": "USD",
+    "period_start": "2099-11-01",
+    "period_end": "2099-11-30",
+    "opening_balance": 500000,
+    "closing_balance": 430000,
+    "rows": [
+     {
+      "date": "2099-11-03",
+      "amount": -20000,
+      "description": "GROCER",
+      "row_index": 1
+     },
+     {
+      "date": "2099-11-20",
+      "amount": -50000,
+      "description": "ONLINE PMT TO VISA 8827",
+      "row_index": 2
+     }
+    ]
+   }
+  },
+  {
+   "act": "import_statement",
+   "args": {
+    "name": "visa.csv",
+    "hash": "tr-visa-nov-b",
+    "kind": "card",
+    "account": "Visa ending 8827",
+    "currency": "USD",
+    "period_start": "2099-11-01",
+    "period_end": "2099-11-30",
+    "opening_balance": -80000,
+    "closing_balance": -90000,
+    "rows": [
+     {
+      "date": "2099-11-10",
+      "amount": -10000,
+      "description": "CAFE",
+      "row_index": 1
+     }
+    ]
+   }
+  },
+  {
+   "act": "review_transaction",
+   "args": {
+    "transaction": "T-0002",
+    "status": "transfer",
+    "category": "Visa ending 8827",
+    "reason": "paid the card"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "transfers",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "count": 0,
+     "one_sided_missing": 1
+    }
+   },
+   "notes": "P-18"
+  }
+ ]
+}

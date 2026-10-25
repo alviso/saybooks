@@ -21,6 +21,8 @@ function needTx(id, where = '') {
 
 /** A row matched to a payment in the bank reconciliation is money already recorded here; reviewing it again would count it twice. */
 function notMatched(t, where = '') {
+  const pr = V.pairIndex().get(t.id);
+  if (pr) throw new Rejected(`${where}${t.id} (${t.description}) is one side of transfer ${pr.pair.id}, between two of your accounts. Unpair it first (purch_unpair_transfer) if the pairing is wrong.`);
   const held = V.matchedRows().get(t.id);
   if (held) throw new Rejected(`${where}${t.id} (${t.description}) is matched to ${held} in the bank reconciliation, so it is already in the books. Unmatch it first (rec_unmatch) if the match is wrong.`);
 }

@@ -1,0 +1,115 @@
+{
+ "name": "a card payment from checking is paired and counted once",
+ "spec": "purchases@0.7",
+ "today": "2099-12-10",
+ "notes": "P-16, P-17: the two sides of one move, suggested, paired with a reason, and closed to a second review.",
+ "env": [],
+ "steps": [
+  {
+   "act": "import_statement",
+   "args": {
+    "name": "chk.csv",
+    "hash": "tr-chk-nov",
+    "kind": "bank",
+    "account": "Checking 4410",
+    "currency": "USD",
+    "period_start": "2099-11-01",
+    "period_end": "2099-11-30",
+    "opening_balance": 500000,
+    "closing_balance": 430000,
+    "rows": [
+     {
+      "date": "2099-11-03",
+      "amount": -20000,
+      "description": "GROCER",
+      "row_index": 1
+     },
+     {
+      "date": "2099-11-20",
+      "amount": -50000,
+      "description": "ONLINE PMT TO VISA 8827",
+      "row_index": 2
+     }
+    ]
+   }
+  },
+  {
+   "act": "import_statement",
+   "args": {
+    "name": "visa.csv",
+    "hash": "tr-visa-nov",
+    "kind": "card",
+    "account": "Visa ending 8827",
+    "currency": "USD",
+    "period_start": "2099-11-01",
+    "period_end": "2099-11-30",
+    "opening_balance": -80000,
+    "closing_balance": -40000,
+    "rows": [
+     {
+      "date": "2099-11-10",
+      "amount": -10000,
+      "description": "CAFE",
+      "row_index": 1
+     },
+     {
+      "date": "2099-11-22",
+      "amount": 50000,
+      "description": "PAYMENT - THANK YOU",
+      "row_index": 2
+     }
+    ]
+   }
+  },
+  {
+   "act": "transfer_candidates",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "count": 1
+    }
+   },
+   "notes": "P-17: a suggestion; nothing paired yet"
+  },
+  {
+   "act": "pair_transfer",
+   "args": {
+    "out_transaction_id": "T-0002",
+    "in_transaction_id": "T-0004",
+    "reason": "the Visa payment from checking"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "state": "paired",
+     "amount": 50000
+    }
+   }
+  },
+  {
+   "act": "transfers",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "count": 1,
+     "suggestions": 0
+    }
+   }
+  },
+  {
+   "act": "review_transaction",
+   "args": {
+    "transaction": "T-0004",
+    "status": "income",
+    "category": "refund",
+    "reason": "x"
+   },
+   "expect": {
+    "refused": "one side of transfer"
+   },
+   "notes": "P-16"
+  }
+ ]
+}

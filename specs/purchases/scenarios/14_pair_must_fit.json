@@ -1,0 +1,99 @@
+{
+ "name": "a pair that does not fit is refused",
+ "spec": "purchases@0.7",
+ "today": "2099-12-10",
+ "notes": "P-17: exact, between two accounts, on rows not already booked as something else.",
+ "env": [],
+ "steps": [
+  {
+   "act": "import_statement",
+   "args": {
+    "name": "chk.csv",
+    "hash": "tr-chk-nov",
+    "kind": "bank",
+    "account": "Checking 4410",
+    "currency": "USD",
+    "period_start": "2099-11-01",
+    "period_end": "2099-11-30",
+    "opening_balance": 500000,
+    "closing_balance": 430000,
+    "rows": [
+     {
+      "date": "2099-11-03",
+      "amount": -20000,
+      "description": "GROCER",
+      "row_index": 1
+     },
+     {
+      "date": "2099-11-20",
+      "amount": -50000,
+      "description": "ONLINE PMT TO VISA 8827",
+      "row_index": 2
+     }
+    ]
+   }
+  },
+  {
+   "act": "import_statement",
+   "args": {
+    "name": "visa.csv",
+    "hash": "tr-visa-nov",
+    "kind": "card",
+    "account": "Visa ending 8827",
+    "currency": "USD",
+    "period_start": "2099-11-01",
+    "period_end": "2099-11-30",
+    "opening_balance": -80000,
+    "closing_balance": -40000,
+    "rows": [
+     {
+      "date": "2099-11-10",
+      "amount": -10000,
+      "description": "CAFE",
+      "row_index": 1
+     },
+     {
+      "date": "2099-11-22",
+      "amount": 50000,
+      "description": "PAYMENT - THANK YOU",
+      "row_index": 2
+     }
+    ]
+   }
+  },
+  {
+   "act": "pair_transfer",
+   "args": {
+    "out_transaction_id": "T-0001",
+    "in_transaction_id": "T-0004",
+    "reason": "close enough"
+   },
+   "expect": {
+    "refused": "do not add up"
+   }
+  },
+  {
+   "act": "review_transaction",
+   "args": {
+    "transaction": "T-0002",
+    "status": "purchase",
+    "category": "shopping",
+    "reason": "misread"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "pair_transfer",
+   "args": {
+    "out_transaction_id": "T-0002",
+    "in_transaction_id": "T-0004",
+    "reason": "the Visa payment"
+   },
+   "expect": {
+    "refused": "is reviewed as purchase"
+   }
+  }
+ ]
+}

@@ -85,6 +85,12 @@ const smokeFit = R.execute('rec_candidates', { account: 'Smoke Checking' }, a).r
 R.execute('rec_match', { transaction_id: smokeFit.transaction_id, items: [{ item: 'o2c:payment:' + smokePay.id }], reason: 'smoke: the ACH is the payment' }, a);
 const smD = new Date(), smP = new Date(Date.UTC(smD.getUTCFullYear(), smD.getUTCMonth() - 1, 1)).toISOString().slice(0, 7);
 R.execute('tax_record_filing', { period: smP, filed_amount: R.execute('tax_return', { period: smP }, h).due, filed_on: require(ROOT + '/src/db.js').today(), agency: 'Smoke agency', reason: 'smoke' }, h);
+R.execute('purch_import_statement', { name: 'oct-checking.csv', hash: 'sha256:smokestmt0003', kind: 'bank', account: 'Smoke Checking', currency: 'USD', period_start: '2026-10-01', period_end: '2026-10-31', opening_balance: 107000, closing_balance: 97000, row_count: 1,
+  rows: [{ date: '2026-10-20', amount: -10000, description: 'PMT TO CARD' }] }, a);
+R.execute('purch_import_statement', { name: 'oct-card.csv', hash: 'sha256:smokestmt0004', kind: 'card', account: 'Smoke Card', currency: 'USD', period_start: '2026-10-01', period_end: '2026-10-31', opening_balance: -10000, closing_balance: 0, row_count: 1,
+  rows: [{ date: '2026-10-21', amount: 10000, description: 'PAYMENT THANK YOU' }] }, a);
+const smokePair = R.execute('purch_transfer_candidates', {}, a).items[0];
+R.execute('purch_pair_transfer', { out_transaction_id: smokePair.out.id, in_transaction_id: smokePair.in.id, reason: 'smoke: card payment' }, a);
 const smokeHouse = R.execute('purch_add_account', { name: 'Smoke house', kind: 'asset', currency: 'USD' }, h);
 R.execute('purch_record_value', { account_id: smokeHouse.id, as_of: '2026-09-01', amount: 40000000, according_to: 'smoke appraisal' }, h);
 R.execute('hunt_add_posting', { company: 'Vega', title: 'Staff Engineer', source: 'direct', url: 'https://example.com/j' }, h);
@@ -172,6 +178,7 @@ const DETAILS = [
   ['bankrec_match', '(await api("rec_matches",{})).items?.[0]?.id'],
   ['tax_filing', '(await api("tax_filings",{})).items?.[0]?.id'],
   ['purch_account', '(await api("purch_accounts",{})).items?.[0]?.id'],
+  ['purch_transfer', '(await api("purch_transfers",{})).pairs?.[0]?.id'],
   ['posting', '(await api("hunt_pipeline",{}))[0]?.id'],
 ];
 let dbad = 0, dseen = 0;

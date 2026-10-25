@@ -38,6 +38,13 @@ forecasts, advice, tax treatment of purchases, paying anything.
 - **value** (0.6) — what something without statements is worth, or what is still owed on it, on a
   day, as the person states it with its source ("county assessment 2026", "lender's payoff
   letter"). Never estimated here.
+- **transfer** (0.7) — one move between two of the person's own accounts: the row where money
+  left and the row where it arrived, paired by a reasoned act, exactly opposite, in the same
+  currency, at most ten days apart. Counted once, as a move from one account into the other;
+  neither side is spending or income, and neither can be reviewed again while paired. Unpaired with
+  a reason; both rows go back to how they were reviewed. A row reviewed as a transfer naming one of
+  the person's accounts, with no pair, is one-sided: waiting for that account's statement, or
+  missing from it.
 - **transaction** — one row of a source: date, signed amount in minor units, description as
   printed, counterparty if the row names one, source and row index, the raw line as read.
   Status: unreviewed → purchase | recurring | transfer | income | fee | ignored, set by review
@@ -77,9 +84,10 @@ act, validated whole), set_vendor, add_receipt, match_receipt, declare_subscript
 cancel_subscription, unmatch_receipt, add_rule (a standing rule, with its window, words or
 vendor), end_rule (with a reason), accept_suggestions (confirm what rules suggest, one reasoned
 act, rows the person rejects left out), add_bill, approve_bill (a person only),
-record_bill_payment, reject_bill, add_account, update_account, close_account, record_value (0.6).
+record_bill_payment, reject_bill, add_account, update_account, close_account, record_value (0.6), pair_transfer, unpair_transfer (0.7).
 Reads (14): accounts (each with its balance, as of when, and where its statements do not chain),
-account, net_worth (held less owed, per currency, each figure dated), vocabulary (the statuses with their meaning,
+account, net_worth (held less owed, per currency, each figure dated), transfers (pairs and
+one-sided transfers), transfer_candidates (suggested pairs, with why), vocabulary (the statuses with their meaning,
 the person's categories, vendors and active rules — what an agent proposes from), sources,
 transactions (each unreviewed row with the suggestion a rule makes for it), purchases,
 subscriptions, receipts, spend, source, rules, bills, payables (open bills by when they fall
@@ -142,6 +150,13 @@ due, set against the cash on the latest bank statements).
 - **P-15** Net worth is per currency: what is held less what is owed, each line showing as of
   when. A figure older than 45 days is named as old.
 
+- **P-16** A move between two of the person's accounts is one transfer: its two sides paired,
+  exactly opposite, counted once, never as spending or income.
+- **P-17** Pairing is a reasoned act on rows not already booked otherwise; suggestions never pair;
+  unpairing puts both rows back as they were.
+- **P-18** A transfer naming one of the person's accounts with no other side is listed, saying
+  whether that account's statement should already show it.
+
 ## 6. Required read models
 
 sources (what was imported, when, by whom, reconciled), transactions (by period, status,
@@ -174,7 +189,10 @@ approval; what is coming due set against the latest statement; a bill rejected w
 10 accounts: two statements file under the same account by their label, and the missing month
 and the jump between them are named · 11 net worth: a checking balance and a card balance from
 their statements, a house from a value stated with its source, net worth as held less owed · 12
-a bank balance stated by hand refused, and a card statement refused on a checking account.
+a bank balance stated by hand refused, and a card statement refused on a checking account · 13
+a card payment from checking: suggested, paired with a reason, listed once, the paired row refused
+a second review · 14 a pair that does not add up, two rows on one account, and a row reviewed as a
+purchase refused · 15 a one-sided transfer whose other half the card's statement should show.
 
 ## 9. Deferred — with reasons
 
@@ -188,7 +206,9 @@ a bank balance stated by hand refused, and a card statement refused on a checkin
 
 ---
 
-*Change log: 0.6 (2026-10-25) — accounts: a register statements belong to, values stated for
+*Change log: 0.7 (2026-10-25) — transfers between the person's own accounts: the two sides paired
+and counted once, suggestions, one-sided transfers named; part B of the personal finances plan.
+0.6 (2026-10-25) — accounts: a register statements belong to, values stated for
 things without statements, balances that say where they come from, statement chains checked, and
 net worth; part A of the personal finances plan (docs/plan-personal-finances.md). 0.5 (2026-10-07) — bills prepared for approval, from Aryeh Munk's phase 1 list
 ("Enable AI to make payments, process invoices"), reshaped so nothing pays: the agent prepares,

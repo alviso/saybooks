@@ -303,12 +303,22 @@ function journalLines({ from, to } = {}) {
   // Accounts Payable: the spending was booked when the bill was approved, not again here.
   const paysAccrued = new Map();
   try { for (const b of db().prepare('SELECT id, transaction_id FROM purch_bill WHERE transaction_id IS NOT NULL').all()) if (onAccrual(b.id)) paysAccrued.set(b.transaction_id, b.id); } catch { /* no bills yet */ }
+  const pi = pairIndex();
   for (const t of rows) {
     if (!inRange(t.date)) continue;
     const acct = (t.source_account || `${t.source_kind || 'account'} (unnamed)`).trim();
     const paidFrom = { account: acct, map: { kind: 'source', key: acct } };
     const amount = Math.abs(t.amount);
     const who = t.vendor || t.description;
+    // P-16: a paired transfer posts once, on its out side, from one account straight into the other.
+    const pr = pi.get(t.id);
+    if (pr && pr.side === 'in') continue;
+    if (pr && pr.side === 'out') {
+      const to = rowWithAccount(pr.pair.in_tx).account_name;
+      out.push({ date: t.date, memo: `Transfer ${pr.pair.id} · ${acct} to ${to}`, customer: null, currency: t.currency, source: t.id,
+        lines: [{ account: to, map: { kind: 'source', key: to }, debit: amount }, { ...paidFrom, credit: amount }] });
+      continue;
+    }
     if (t.status === 'fee') {
       out.push({ date: t.date, memo: `Fee · ${t.description}`, customer: null, currency: t.currency, source: t.id,
         lines: [{ account: 'Bank Fees', debit: amount }, { ...paidFrom, credit: amount }] });
@@ -388,14 +398,15 @@ const posts = (t) => ['purchase', 'recurring', 'fee', 'income'].includes(t.statu
 /** Every statement row with its account and whether it posts, for the bank reconciliation. */
 function statementRows() {
   let rows = [];
-  try { rows = db().prepare(`SELECT t.*, COALESCE((SELECT a.name FROM purch_account a WHERE a.id = s.account_id), s.account) AS source_account, s.kind AS source_kind, s.period_end AS source_end FROM purch_transaction t JOIN purch_source s ON s.id = t.source_id ORDER BY t.date, t.id`).all(); }
+  try { rows = db().prepare(`SELECT t.*, s.account_id, COALESCE((SELECT a.name FROM purch_account a WHERE a.id = s.account_id), s.account) AS source_account, s.kind AS source_kind, s.period_end AS source_end FROM purch_transaction t JOIN purch_source s ON s.id = t.source_id ORDER BY t.date, t.id`).all(); }
   catch (e) { if (/no such table/i.test(e.message)) return []; throw e; }
-  return rows.map(t => ({ ...t, account: (t.source_account || `${t.source_kind || 'account'} (unnamed)`).trim(), posts: posts(t), amount_display: money(t.amount, t.currency) }));
+  const pi = pairIndex();   // a paired transfer is in the books once, through its out side (P-16)
+  return rows.map(t => ({ ...t, account: (t.source_account || `${t.source_kind || 'account'} (unnamed)`).trim(), posts: posts(t) || pi.has(t.id), paired: pi.has(t.id) ? pi.get(t.id).pair.id : null, amount_display: money(t.amount, t.currency) }));
 }
 
 function journalOmitted({ from, to } = {}) {
   try {
-    const matched = matchedRows();
+    const matched = matchedRows(), pi = pairIndex();
     const w = ["(t.status = 'unreviewed' OR (t.status = 'transfer' AND COALESCE(TRIM(t.category), '') = '') OR t.status = 'ignored')"]; const args = [];
     if (from) { w.push('t.date >= ?'); args.push(from); }
     if (to) { w.push('t.date <= ?'); args.push(to); }
@@ -405,7 +416,7 @@ function journalOmitted({ from, to } = {}) {
         why: r.status === 'unreviewed' ? 'nobody has said what it is yet'
           : r.status === 'ignored' ? 'reviewed as not theirs to track'
           : 'a transfer with no other side named — say where the money went and it posts' }))
-      .filter(r => !matched.has(r.id));
+      .filter(r => !matched.has(r.id) && !pi.has(r.id));
   } catch (e) {
     // No purchases tables in this space is the only expected miss; anything else is a bug and
     // must not be hidden — an export that silently reports "nothing left out" would be a lie.
@@ -503,4 +514,72 @@ function netWorth({ as_of } = {}) {
   return { as_of: day, currencies, ...(one ? { currency: one.currency, net: one.net, net_display: one.net_display, held_total: one.held_total, owed_total: one.owed_total } : {}), note: currencies.length ? currencies.map(c => c.note).join(' ') : 'No accounts yet. Import a statement, or add an account and state its value.' };
 }
 
-module.exports = { ACCOUNT_KINDS, STATEMENT_KIND, accountKindFor, accountView, accounts, netWorth, statementsOf, chainIssues, balanceOf, matchedRows, statementRows, billView, bills, payables, unpaidBills, approvalHold, onAccrual, statementAccounts, activeRules, ruleMatches, suggestionFor, ruleView, rules, windowText, splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };
+// ---------------------------------------------------------------- transfers between own accounts (0.7)
+const activePairs = () => { try { return db().prepare('SELECT * FROM purch_transfer WHERE unpaired_at IS NULL ORDER BY id').all(); } catch { return []; } };
+/** tx id -> { pair, side } for every row in an active pair (P-16). */
+function pairIndex() { const m = new Map(); for (const p of activePairs()) { m.set(p.out_tx, { pair: p, side: 'out' }); m.set(p.in_tx, { pair: p, side: 'in' }); } return m; }
+const rowWithAccount = (id) => db().prepare(`SELECT t.*, s.account_id, COALESCE(a.name, s.account) AS account_name, a.last4 FROM purch_transaction t JOIN purch_source s ON s.id = t.source_id
+  LEFT JOIN purch_account a ON a.id = s.account_id WHERE t.id = ?`).get(id);
+const brief = (t) => t && { id: t.id, date: t.date, amount: t.amount, amount_display: money(t.amount, t.currency), description: t.description, account_id: t.account_id, account: t.account_name };
+
+function transferView(id) {
+  const p = need('purch_transfer', id, 'transfer');
+  const o = rowWithAccount(p.out_tx), i = rowWithAccount(p.in_tx);
+  return { ...p, name: `${o.account_name} to ${i.account_name}`, state: p.unpaired_at ? 'unpaired' : 'paired', amount: -o.amount, amount_display: money(-o.amount, o.currency),
+    out: brief(o), in: brief(i), out_was: JSON.parse(p.out_was || '{}'), in_was: JSON.parse(p.in_was || '{}') };
+}
+
+const PAY_WORDS = /\b(payment|pmt|transfer|xfer|thank you|autopay|epay|online pmt|to card|from chk|from checking|to savings|from savings)\b/i;
+/** P-17: suggestions only. Each money-out row and a money-in row of the same size in another of the person's accounts, close in time. */
+function transferCandidates({ account_id } = {}) {
+  const pi = pairIndex(), held = matchedRows();
+  const rows = statementRows().filter(t => !pi.has(t.id) && !held.has(t.id) && (t.status === 'unreviewed' || t.status === 'transfer') && t.account_id);
+  let billPaid = new Set(); try { billPaid = new Set(db().prepare('SELECT transaction_id FROM purch_bill WHERE transaction_id IS NOT NULL').all().map(r => r.transaction_id)); } catch { /* none */ }
+  const free = rows.filter(t => !billPaid.has(t.id) && !splitsOf(t.id).length);
+  const accs = new Map(); try { for (const a of db().prepare('SELECT * FROM purch_account').all()) accs.set(a.id, a); } catch { /* none */ }
+  const days = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5);
+  const options = [];
+  for (const o of free.filter(t => t.amount < 0)) for (const i of free.filter(t => t.amount === -o.amount && t.currency === o.currency && t.account_id !== o.account_id)) {
+    const d = days(o.date, i.date); if (d < -3 || d > 7) continue;
+    const ai = accs.get(i.account_id) || {}, ao = accs.get(o.account_id) || {};
+    const named = (ai.last4 && o.description.includes(ai.last4)) || (ao.last4 && i.description.includes(ao.last4));
+    const words = PAY_WORDS.test(o.description) || PAY_WORDS.test(i.description);
+    options.push({ o, i, d, score: (named ? 6 : 0) + (words ? 3 : 0) - Math.abs(d),
+      why: `same amount, ${Math.abs(d)} day${Math.abs(d) === 1 ? '' : 's'} apart${named ? ', the account number in the description' : ''}${words ? ', worded as a payment or transfer' : ''}` });
+  }
+  options.sort((a, b) => b.score - a.score);
+  const used = new Set(), out = [];
+  for (const x of options) {
+    if (used.has(x.o.id) || used.has(x.i.id)) continue;
+    if (account_id && x.o.account_id !== account_id && x.i.account_id !== account_id) continue;
+    used.add(x.o.id); used.add(x.i.id);
+    out.push({ out: brief({ ...x.o, account_name: x.o.account }), in: brief({ ...x.i, account_name: x.i.account }), amount_display: money(-x.o.amount, x.o.currency), why: x.why });
+  }
+  return { count: out.length, items: out, note: out.length ? `${out.length} move${out.length === 1 ? '' : 's'} between your accounts could be paired. Suggestions only: show the person, then pair with purch_pair_transfer and a reason.` : 'Nothing waiting to be paired.' };
+}
+
+/** P-18: rows reviewed as a transfer to or from one of the person's accounts, with no other half paired yet. */
+function oneSided() {
+  const pi = pairIndex(), held = matchedRows();
+  let accs = []; try { accs = db().prepare('SELECT * FROM purch_account').all(); } catch { return []; }
+  const byName = new Map(accs.map(a => [a.name.toLowerCase(), a]));
+  return statementRows().filter(t => t.status === 'transfer' && !pi.has(t.id) && !held.has(t.id) && t.category && byName.has(String(t.category).trim().toLowerCase())).map(t => {
+    const other = byName.get(String(t.category).trim().toLowerCase());
+    const st = statementsOf(other.id);
+    const covered = st.some(s => s.period_start <= t.date && s.period_end >= H.addDays(t.date, 5));
+    const before = st.length && t.date < st[0].period_start;
+    return { ...brief({ ...t, account_name: t.account }), other_account_id: other.id, other_account: other.name,
+      state: !st.length ? 'no statements for that account yet' : before ? 'before that account\'s first statement' : covered ? 'the other half is missing from that account\'s statement' : 'waiting for that account\'s next statement',
+      missing: covered };
+  });
+}
+
+function transfers() {
+  const pairs = activePairs().map(p => transferView(p.id)).reverse();
+  const one = oneSided();
+  const cands = transferCandidates();
+  return { count: pairs.length, pairs, one_sided: one, one_sided_missing: one.filter(x => x.missing).length, suggestions: cands.count,
+    note: `${pairs.length} transfer${pairs.length === 1 ? '' : 's'} paired.${cands.count ? ` ${cands.count} could be paired.` : ''}${one.length ? ` ${one.length} one-sided, ${one.filter(x => x.missing).length} with the other half missing from a statement that should show it.` : ''}` };
+}
+
+module.exports = { pairIndex, transferView, transferCandidates, oneSided, transfers, rowWithAccount, ACCOUNT_KINDS, STATEMENT_KIND, accountKindFor, accountView, accounts, netWorth, statementsOf, chainIssues, balanceOf, matchedRows, statementRows, billView, bills, payables, unpaidBills, approvalHold, onAccrual, statementAccounts, activeRules, ruleMatches, suggestionFor, ruleView, rules, windowText, splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };

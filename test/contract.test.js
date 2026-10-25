@@ -38,6 +38,9 @@
  *  21. sales tax     a month's return is the tax charged less the tax credits give back; only a
  *                    person records the filing, a payment clears the liability and waits in the
  *                    bank reconciliation, and a late change to a filed month is named
+ *  22. transfers     a move between two of the person's accounts posts once, from one account
+ *                    into the other; both accounts tie to their statements and reconcile; an
+ *                    unpaired pair puts both rows back
  *
  * A PR that adds a hand-written form, a prefix-less command, or a cross-module UPDATE
  * fails here, not in review.
@@ -598,6 +601,35 @@ for (const tag of R.PERMISSIONS) {
     assert.ok(jr.prior_changes.length === 1 && jr.prior_changes_total === -739, 'and the next return names it');
   });
   ok('sales tax: a return gives credits their tax back, a person records the filing, a payment clears it and waits in the bank, a late change is named');
+}
+
+// ----------------------------------------- 22. transfers: one move between two accounts, once
+{
+  const G = 'gate22-transfers'; wsp.wipe(G);
+  const p22 = { workspace: G, actor: 'test', actor_kind: 'human', role: 'owner' }, a22 = { ...p22, actor_kind: 'agent' };
+  H.withClock('2026-12-10', () => {
+    const imp = (name, account, kind, o, c, rows, hash) => execute('purch_import_statement', { name, hash, kind, account, currency: 'USD', period_start: '2026-11-01', period_end: '2026-11-30', opening_balance: o, closing_balance: c,
+      rows: rows.map(([date, amount, description], i) => ({ date, amount, description, row_index: i + 1 })) }, a22);
+    imp('chk.csv', 'G22 Checking', 'bank', 500000, 430000, [['2026-11-03', -20000, 'GROCER'], ['2026-11-20', -50000, 'ONLINE PMT TO VISA']], 'sha256:g22chk');
+    imp('visa.csv', 'G22 Visa', 'card', -80000, -40000, [['2026-11-10', -10000, 'CAFE'], ['2026-11-22', 50000, 'PAYMENT THANK YOU']], 'sha256:g22visa');
+    execute('purch_review_transaction', { transaction_id: 'T-0001', status: 'purchase', category: 'groceries', reason: 'food' }, a22);
+    execute('purch_review_transaction', { transaction_id: 'T-0003', status: 'purchase', category: 'meals', reason: 'coffee' }, a22);
+    const c = execute('purch_transfer_candidates', {}, a22);
+    assert.ok(c.count === 1 && c.items[0].out.id === 'T-0002' && c.items[0].in.id === 'T-0004', 'the two sides are suggested as one move (P-17)');
+    execute('purch_pair_transfer', { out_transaction_id: 'T-0002', in_transaction_id: 'T-0004', reason: 'the Visa payment from checking' }, a22);
+    const j = execute('core_journal', {}, p22);
+    const tr = j.entries.filter(e => /Transfer TR-0001/.test(e.memo));
+    assert.ok(tr.length === 1 && tr[0].lines.some(l => l.account === 'G22 Visa' && l.debit === 50000) && tr[0].lines.some(l => l.account === 'G22 Checking' && l.credit === 50000), 'the move posts once, from checking into the card (P-16)');
+    assert.ok(!j.entries.some(e => /PAYMENT THANK YOU/.test(e.memo)), 'the card side posts nothing of its own');
+    const fin = execute('bridge_financials', { from: '2026-11-01', to: '2026-11-30' }, p22);
+    assert.ok(fin.ties.length === 2 && fin.ties.every(t => t.ties), 'both accounts tie to their statements');
+    assert.ok(!fin.profit_and_loss.income.length && fin.profit_and_loss.expenses.reduce((n, x) => n + x.amount, 0) === 30000, 'the transfer is neither income nor spending');
+    const rec = execute('rec_reconciliation', { account: 'G22 Checking' }, p22);
+    assert.ok(rec.ready && rec.difference === 0, 'checking reconciles with the paired row counted');
+    execute('purch_unpair_transfer', { transfer_id: 'TR-0001', reason: 'test' }, a22);
+    assert.ok(['T-0002', 'T-0004'].every(id => execute('purch_get_transaction', { transaction_id: id }, p22).status === 'unreviewed'), 'unpaired, both rows are back as they were');
+  });
+  ok('transfers: a move between two of your accounts posts once, both accounts tie and reconcile, unpairing puts both rows back');
 }
 
 console.log(`\n${n} contract checks passed across ${MODULES.length} modules, ${COMMANDS.length} commands.`);
