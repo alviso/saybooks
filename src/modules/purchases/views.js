@@ -769,9 +769,14 @@ function upcoming({ days = 30, as_of } = {}) {
     items.push({ date: c.due_date, kind: 'card', ref: c.account_id, what: c.name, amount: c.statement_balance - (c.paid || 0), currency: c.currency, minimum: c.minimum_due, state: c.state });
   for (const sub of subscriptions(from).items) if (sub.derived_status === 'active' && sub.next_expected && sub.next_expected >= from && inWin(sub.next_expected))
     items.push({ date: sub.next_expected, kind: 'subscription', ref: sub.id, what: sub.vendor, amount: sub.amount, currency: sub.currency, state: 'expected charge' });
-  for (const sr of billSeries({ as_of: from }).items) if (sr.status === 'active' && sr.next_expected && inWin(H.addDays(sr.next_expected, sr.due_day ? 0 : 14)) && sr.typical != null) {
+  for (const sr of billSeries({ as_of: from }).items) {
+    // Due about two weeks after it arrives, or on its usual due day after that when the person gave one.
+    if (sr.status !== 'active' || !sr.next_expected || sr.typical == null) continue;
+    let dueOn = H.addDays(sr.next_expected, 14);
+    if (sr.due_day) { const [y, m] = dueOn.split('-').map(Number); const last = new Date(Date.UTC(y, m, 0)).getUTCDate(); const d = `${y}-${String(m).padStart(2, '0')}-${String(Math.min(sr.due_day, last)).padStart(2, '0')}`; dueOn = d >= sr.next_expected ? d : addMonths(d, 1); }
+    if (!inWin(dueOn)) continue;
     const has = db().prepare("SELECT 1 FROM purch_bill WHERE vendor_id = ? AND bill_date >= ? AND status <> 'rejected'").get(sr.vendor_id, H.addDays(sr.next_expected, -BILL_GRACE));
-    if (!has) items.push({ date: H.addDays(sr.next_expected, 14), kind: 'expected bill', ref: sr.id, what: sr.vendor, amount: sr.typical, currency: sr.currency, state: sr.missing ? 'missing' : 'not received yet, usual amount' });
+    if (!has) items.push({ date: dueOn, kind: 'expected bill', ref: sr.id, what: sr.vendor, amount: sr.typical, currency: sr.currency, state: sr.missing ? 'missing' : 'not received yet, usual amount' });
   }
   for (const mod of require('../../registry.js').MODULES) if (mod.api && typeof mod.api.upcoming === 'function') for (const x of mod.api.upcoming(from, to)) items.push(x);
   items.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
