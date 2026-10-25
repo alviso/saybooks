@@ -160,3 +160,8 @@ main.prose{padding-top:26px}
 .demo .play::before{content:"";border-style:solid;border-width:8px 0 8px 13px;border-color:transparent transparent transparent #fff}
 .demo:hover .play{background:#1E7A4C}
 .demo-note{font-size:13px;color:var(--muted);margin:-10px 0 18px}
+.demos3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:18px}
+.demos3 .demo{margin:0 0 12px;aspect-ratio:16/10}
+.demos3 .demo .play{font-size:14px;padding:10px 15px}
+.demos3 h3{margin:0 0 6px} .demos3 p{margin:0;color:var(--ink2);font-size:15.5px;line-height:1.5}
+@media (max-width:900px){.demos3{grid-template-columns:1fr}}
