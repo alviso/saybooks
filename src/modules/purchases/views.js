@@ -525,7 +525,7 @@ const brief = (t) => t && { id: t.id, date: t.date, amount: t.amount, amount_dis
 function transferView(id) {
   const p = need('purch_transfer', id, 'transfer');
   const o = rowWithAccount(p.out_tx), i = rowWithAccount(p.in_tx);
-  return { ...p, name: `${o.account_name} to ${i.account_name}`, state: p.unpaired_at ? 'unpaired' : 'paired', amount: -o.amount, amount_display: money(-o.amount, o.currency),
+  return { ...p, name: `${o.account_name} to ${i.account_name}`, state: p.unpaired_at ? 'unpaired' : 'paired', status: p.unpaired_at ? 'unpaired' : 'paired', amount: -o.amount, amount_display: money(-o.amount, o.currency),
     out: brief(o), in: brief(i), out_was: JSON.parse(p.out_was || '{}'), in_was: JSON.parse(p.in_was || '{}') };
 }
 
@@ -561,6 +561,7 @@ function transferCandidates({ account_id } = {}) {
 /** P-18: rows reviewed as a transfer to or from one of the person's accounts, with no other half paired yet. */
 function oneSided() {
   const pi = pairIndex(), held = matchedRows();
+  const suggested = new Map(); for (const c of transferCandidates().items) { suggested.set(c.out.id, c.in.id); suggested.set(c.in.id, c.out.id); }
   let accs = []; try { accs = db().prepare('SELECT * FROM purch_account').all(); } catch { return []; }
   const byName = new Map(accs.map(a => [a.name.toLowerCase(), a]));
   return statementRows().filter(t => t.status === 'transfer' && !pi.has(t.id) && !held.has(t.id) && t.category && byName.has(String(t.category).trim().toLowerCase())).map(t => {
@@ -569,8 +570,8 @@ function oneSided() {
     const covered = st.some(s => s.period_start <= t.date && s.period_end >= H.addDays(t.date, 5));
     const before = st.length && t.date < st[0].period_start;
     return { ...brief({ ...t, account_name: t.account }), other_account_id: other.id, other_account: other.name,
-      state: !st.length ? 'no statements for that account yet' : before ? 'before that account\'s first statement' : covered ? 'the other half is missing from that account\'s statement' : 'waiting for that account\'s next statement',
-      missing: covered };
+      state: suggested.has(t.id) ? `its other half looks like ${suggested.get(t.id)}, suggested for pairing` : !st.length ? 'no statements for that account yet' : before ? 'before that account\'s first statement' : covered ? 'the other half is missing from that account\'s statement' : 'waiting for that account\'s next statement',
+      missing: covered && !suggested.has(t.id) };
   });
 }
 
@@ -579,7 +580,7 @@ function transfers() {
   const one = oneSided();
   const cands = transferCandidates();
   return { count: pairs.length, pairs, one_sided: one, one_sided_missing: one.filter(x => x.missing).length, suggestions: cands.count,
-    note: `${pairs.length} transfer${pairs.length === 1 ? '' : 's'} paired.${cands.count ? ` ${cands.count} could be paired.` : ''}${one.length ? ` ${one.length} one-sided, ${one.filter(x => x.missing).length} with the other half missing from a statement that should show it.` : ''}` };
+    note: `${pairs.length ? `${pairs.length} transfer${pairs.length === 1 ? '' : 's'} paired.` : 'No transfers paired yet.'}${cands.count ? ` ${cands.count} could be paired.` : ''}${one.length ? ` ${one.length} one-sided, ${one.filter(x => x.missing).length} with the other half missing from a statement that should show it.` : ''}` };
 }
 
 module.exports = { pairIndex, transferView, transferCandidates, oneSided, transfers, rowWithAccount, ACCOUNT_KINDS, STATEMENT_KIND, accountKindFor, accountView, accounts, netWorth, statementsOf, chainIssues, balanceOf, matchedRows, statementRows, billView, bills, payables, unpaidBills, approvalHold, onAccrual, statementAccounts, activeRules, ruleMatches, suggestionFor, ruleView, rules, windowText, splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };
