@@ -1580,10 +1580,12 @@ async function renderPage() {
     main.append(stages);
     const rows = await api('hunt_pipeline', huntStage ? { status: huntStage } : {});
     if (!rows.length && !huntStage) { main.append(huntOnboarding()); return; }
-    const t = $('<table><thead><tr><th>Posting</th><th>Title</th><th>Via</th><th>End client</th><th>Stage</th><th>Open next action</th><th>Last touch</th></tr></thead><tbody></tbody></table>');
-    rowsInto(t, rows, r => `<td>${r.id}</td><td>${r.title}</td><td>${r.company_name}</td><td>${r.end_client_name ?? '<span style="color:var(--warn)">—</span>'}</td>
+    // The skip list's value is its reasons (JH-8): they take the next-action column's place.
+    const skips = huntStage === 'skipped';
+    const t = $(`<table><thead><tr><th>Posting</th><th>Title</th><th>Via</th><th>End client</th><th>Stage</th><th>${skips ? 'Why skipped' : 'Open next action'}</th><th>Last touch</th></tr></thead><tbody></tbody></table>`);
+    rowsInto(t, rows, r => `<td>${r.id}</td><td>${r.title}</td><td>${r.company_name}</td><td>${r.end_client_name ?? (r.company_kind === 'end_client' ? '<span style="color:var(--dim)">direct</span>' : '<span style="color:var(--warn)">—</span>')}</td>
       <td><span class="pill ${r.app_status || r.posting_status}">${r.app_status || r.posting_status}</span></td>
-      <td style="font-size:12.5px">${r.open_next_action ? r.open_next_action + (r.next_action_due ? ' <span style="color:var(--dim)">(' + r.next_action_due + ')</span>' : '') : ''}</td>
+      <td style="font-size:12.5px">${skips ? esc(r.skip_reason || '') : r.open_next_action ? r.open_next_action + (r.next_action_due ? ' <span style="color:var(--dim)">(' + r.next_action_due + ')</span>' : '') : ''}</td>
       <td style="font-size:12px;color:var(--dim)">${(r.last_touch||'').slice(0,10)}</td>`, 'posting');
   }
   if (view === 'huntcontacts') {
@@ -1597,8 +1599,8 @@ async function renderPage() {
     head('Resume versions', 'The registry: when a recruiter says "the resume you sent", there is one answer.');
     const rbar = $('<div class="acts" style="margin-bottom:14px"></div>'); rbar.append(buttonFor(cmd('hunt_add_resume_version'))); main.append(rbar);
     const rows = await api('hunt_resume_versions', {});
-    const t = $('<table><thead><tr><th>Version</th><th>Label</th><th>Headline</th><th>Platform</th><th class="num">Applications</th></tr></thead><tbody></tbody></table>');
-    rowsInto(t, rows, r => `<td>${r.id}</td><td>${r.label}</td><td>${r.headline ?? ''}</td><td>${r.platform ?? ''}</td><td class="num">${r.applications}</td>`, 'resume');
+    const t = $('<table><thead><tr><th>Version</th><th>Label</th><th>Headline</th><th>For</th><th class="num">Applications</th></tr></thead><tbody></tbody></table>');
+    rowsInto(t, rows, r => `<td>${r.id}</td><td>${esc(r.label)}</td><td>${esc(r.headline ?? '')}</td><td style="font-size:12.5px">${esc(r.focus ?? '')}${r.notes ? `<div style="color:var(--dim);font-size:12px;margin-top:2px">${esc(r.notes)}</div>` : ''}</td><td class="num">${r.applications}</td>`, 'resume');
   }
   if (view === 'customers') {
     head('Customers', 'Credit position is live: limit less open AR less the uninvoiced value of confirmed orders.');

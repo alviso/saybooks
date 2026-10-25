@@ -4,22 +4,56 @@
   {
    "label": "Ops leadership",
    "headline": "Operations director, food & beverage",
-   "focus": "P&L ownership, 3PL, workforce systems"
+   "focus": "P&L ownership, plants and fleet, 3PL, workforce systems",
+   "notes": "The default for director-level operations roles. Not for individual-contributor roles: it reads as overqualified."
   },
   null,
-  "sam",
-  "human"
+  null,
+  null,
+  null,
+  "-60d"
  ],
  [
   "hunt_add_resume_version",
   {
    "label": "Supply chain IC",
    "headline": "Senior supply chain manager",
-   "focus": "demand planning, S&OP"
+   "focus": "Demand planning, S&OP, inventory",
+   "notes": "Hands-on planning roles. Leaves out the P&L on purpose."
   },
   null,
-  "sam",
-  "human"
+  null,
+  null,
+  null,
+  "-60d"
+ ],
+ [
+  "hunt_add_resume_version",
+  {
+   "label": "Transformation lead",
+   "headline": "Operations transformation: ERP and WMS migrations",
+   "focus": "ERP and WMS cutovers, change management, KPI design",
+   "notes": "Leads with the two WMS cutovers and the ERP migration at Lakeshore's competitor. Use when a posting leads with a system change."
+  },
+  null,
+  null,
+  null,
+  null,
+  "-45d"
+ ],
+ [
+  "hunt_add_resume_version",
+  {
+   "label": "Cold chain",
+   "headline": "Director, cold-chain distribution",
+   "focus": "Temperature-controlled DCs, FSMA, carrier management",
+   "notes": "States the HACCP training honestly: a course, not a certification."
+  },
+  null,
+  null,
+  null,
+  null,
+  "-30d"
  ],
  [
   "hunt_add_contact",
@@ -32,8 +66,10 @@
    "relationship": "responsive"
   },
   null,
-  "sam",
-  "human"
+  null,
+  null,
+  null,
+  "-40d"
  ],
  [
   "hunt_add_posting",
@@ -46,23 +82,28 @@
    "work_mode": "hybrid",
    "comp_min": 16000000,
    "comp_max": 19000000,
-   "jd_text": "Director of Operations\n\nLakeshore Foods runs three production facilities and a cold-chain fleet across the Midwest.\n\nYou will own plant scheduling, carrier management, and the warehouse P&L. We want someone who has lived through an ERP migration and kept the trucks moving."
+   "employment_type": "fulltime",
+   "jd_text": "Director of Operations\n\nLakeshore Foods runs three production facilities and a cold-chain fleet across the Midwest.\n\nYou will own plant scheduling, carrier management, and the warehouse P&L. We want someone who has lived through an ERP migration and kept the trucks moving.\n\nSalary range: $160,000 to $190,000."
   },
   null,
-  "sam",
-  "human"
+  null,
+  null,
+  null,
+  "-16d"
  ],
  [
   "hunt_evaluate_posting",
   {
    "posting_id": "JP-0001",
    "fit_score": 4.5,
-   "fit_notes": "Strong: plant + fleet + ERP migration story. Gap: no food-safety cert.",
+   "fit_notes": "Strong: plants, fleet and an ERP migration. Gap: no food-safety certification.",
    "resume_version": "Ops leadership"
   },
   null,
-  "sam",
-  "human"
+  null,
+  null,
+  null,
+  "-16d"
  ],
  [
   "hunt_apply",
@@ -70,11 +111,13 @@
    "posting_id": "JP-0001",
    "resume_version": "Ops leadership",
    "channel": "portal",
-   "applied_at": "2026-08-12"
+   "applied_at": "{{today-15}}"
   },
   null,
-  "sam",
-  "human"
+  null,
+  null,
+  null,
+  "-15d"
  ],
  [
   "hunt_log_interaction",
@@ -84,11 +127,13 @@
    "medium": "email",
    "summary": "Followed the ATS auto-ack with a short note to the plant HR address from the posting.",
    "next_action": "Chase the recruiter if still silent",
-   "next_action_due": "2026-08-20"
+   "next_action_due": "{{today+1}}"
   },
   null,
-  "sam",
-  "human"
+  null,
+  null,
+  null,
+  "-8d"
  ],
  [
   "hunt_add_posting",
@@ -98,11 +143,14 @@
    "company_kind": "staffing_agency",
    "req_id": "TB-2291",
    "source": "direct",
+   "employment_type": "fulltime",
    "jd_text": "Confidential retained search.\n\nMulti-site retailer, $400M revenue. Owns DC network and transportation. End client disclosed at screen stage."
   },
-  "end client unknown \u2014 the guard will keep asking until it is named",
-  "sam",
-  "human"
+  "end client unknown: the guard will keep asking until it is named",
+  null,
+  null,
+  null,
+  "-12d"
  ],
  [
   "hunt_evaluate_posting",
@@ -113,8 +161,10 @@
    "resume_version": "Ops leadership"
   },
   null,
-  "sam",
-  "human"
+  null,
+  null,
+  null,
+  "-12d"
  ],
  [
   "hunt_apply",
@@ -123,24 +173,28 @@
    "resume_version": "Ops leadership",
    "channel": "agency_submission",
    "via_contact": "HC-0001",
-   "applied_at": "2026-08-15"
+   "applied_at": "{{today-11}}"
   },
   null,
-  "sam",
-  "human"
+  null,
+  null,
+  null,
+  "-11d"
  ],
  [
   "hunt_add_interview",
   {
    "application_id": "APP-0002",
    "kind": "recruiter_screen",
-   "scheduled_at": "2026-08-28T15:00:00",
+   "scheduled_at": "{{today+3}}T15:00:00",
    "interviewer": "Riley Chen",
    "notes": "30 min; ask for the end client name first"
   },
   null,
-  "sam",
-  "human"
+  null,
+  null,
+  null,
+  "-6d"
  ],
  [
   "hunt_add_posting",
@@ -151,8 +205,10 @@
    "source": "linkedin"
   },
   null,
-  "sam",
-  "human"
+  null,
+  null,
+  null,
+  "-55d"
  ],
  [
   "hunt_evaluate_posting",
@@ -163,8 +219,10 @@
    "resume_version": "Supply chain IC"
   },
   null,
-  "sam",
-  "human"
+  null,
+  null,
+  null,
+  "-55d"
  ],
  [
   "hunt_apply",
@@ -172,22 +230,26 @@
    "posting_id": "JP-0003",
    "resume_version": "Supply chain IC",
    "channel": "easy_apply",
-   "applied_at": "2026-07-30"
+   "applied_at": "{{today-54}}"
   },
   null,
-  "sam",
-  "human"
+  null,
+  null,
+  null,
+  "-54d"
  ],
  [
   "hunt_set_application_status",
   {
    "application_id": "APP-0003",
    "status": "ghosted",
-   "note": "six weeks of silence after the auto-ack \u2014 recorded, not deleted; which companies go quiet is pattern knowledge"
+   "note": "six weeks of silence after the auto-ack; recorded, not deleted. Which companies go quiet is pattern knowledge."
   },
   null,
-  "sam",
-  "human"
+  null,
+  null,
+  null,
+  "-10d"
  ],
  [
   "hunt_add_posting",
@@ -198,17 +260,48 @@
    "source": "referral"
   },
   null,
-  "sam",
-  "human"
+  null,
+  null,
+  null,
+  "-25d"
  ],
  [
   "hunt_evaluate_posting",
   {
    "posting_id": "JP-0004",
-   "skip_reason": "day rate below floor and 80% travel \u2014 same pattern as every consultancy pitch this year"
+   "skip_reason": "Day rate below my floor and 80% travel. Same pattern as every consultancy pitch this year."
   },
   null,
-  "sam",
-  "human"
+  null,
+  null,
+  null,
+  "-25d"
+ ],
+ [
+  "hunt_add_posting",
+  {
+   "title": "Operations Manager, defense logistics",
+   "company": "Ridgeline Federal",
+   "company_kind": "end_client",
+   "source": "email_outreach",
+   "jd_text": "Operations Manager supporting a defense logistics contract. Active Secret clearance required at start."
+  },
+  null,
+  null,
+  null,
+  null,
+  "-20d"
+ ],
+ [
+  "hunt_evaluate_posting",
+  {
+   "posting_id": "JP-0005",
+   "skip_reason": "Requires an active security clearance at start. Not something to work around."
+  },
+  null,
+  null,
+  null,
+  null,
+  "-20d"
  ]
 ]

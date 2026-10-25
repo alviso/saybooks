@@ -98,7 +98,7 @@ function postingView(id) {
 }
 
 const pipeline = (status) => db().prepare(`
-  SELECT p.id, p.title, p.status AS posting_status, p.fit_score, c.name AS company_name, ec.name AS end_client_name,
+  SELECT p.id, p.title, p.status AS posting_status, p.fit_score, p.skip_reason, c.name AS company_name, c.kind AS company_kind, ec.name AS end_client_name,
          a.id AS application_id, a.status AS app_status, a.applied_at,
          (SELECT MAX(at) FROM hunt_interaction i WHERE i.posting_id = p.id) AS last_touch,
          (SELECT next_action FROM hunt_interaction i WHERE i.posting_id = p.id AND i.next_action_state = 'open') AS open_next_action,
