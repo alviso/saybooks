@@ -55,6 +55,13 @@ is enough for net worth), tax advice (tags and totals, never what is deductible)
 the spec says Saybooks records and does not counsel. A budget is the person's own policy; if
 wanted later, it would be their numbers shown beside actuals, nothing more.
 
+## Status
+
+All six parts built and deployed one by one after Peter's review (2026-10-25): A accounts and net
+worth (purchases 0.6), B transfers (0.7), C credit cards (0.8), D loans (the loans area 0.1), E household
+bills and what is due (0.9), F receipts and the year (1.0). Next: synthetic household data, then the video
+series.
+
 ## Notes
 
 - The business areas lean on purchases (p2p bills, the bank reconciliation, the journal); every

@@ -1,0 +1,120 @@
+{
+ "name": "a tagged category in the year, with the row that has no receipt",
+ "spec": "purchases@1.0",
+ "today": "2099-12-10",
+ "notes": "P-28: the person's tag; the year names what lacks a receipt; totals, not advice.",
+ "env": [],
+ "steps": [
+  {
+   "act": "import_statement",
+   "args": {
+    "name": "chk.csv",
+    "hash": "year-checking-2099",
+    "kind": "bank",
+    "account": "Checking 4410",
+    "currency": "USD",
+    "period_start": "2099-03-01",
+    "period_end": "2099-06-30",
+    "opening_balance": 100000,
+    "closing_balance": 72000,
+    "rows": [
+     {
+      "date": "2099-03-10",
+      "amount": -20000,
+      "description": "CVS PHARMACY",
+      "row_index": 1
+     },
+     {
+      "date": "2099-06-02",
+      "amount": -8000,
+      "description": "DR SMITH COPAY",
+      "row_index": 2
+     }
+    ]
+   }
+  },
+  {
+   "act": "review_transaction",
+   "args": {
+    "transaction": "T-0001",
+    "status": "purchase",
+    "category": "medical",
+    "reason": "prescriptions"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "review_transaction",
+   "args": {
+    "transaction": "T-0002",
+    "status": "purchase",
+    "category": "medical",
+    "reason": "a copay"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "add_receipt",
+   "args": {
+    "name": "copay.pdf",
+    "hash": "copay-receipt-0602",
+    "vendor": "Dr Smith",
+    "date": "2099-06-02",
+    "total": 8000,
+    "currency": "USD"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "match_receipt",
+   "args": {
+    "receipt": "R-0001",
+    "transaction": "T-0002",
+    "reason": "the copay receipt"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "tag_category",
+   "args": {
+    "category": "vet bills",
+    "tag": "medical"
+   },
+   "expect": {
+    "refused": "No row carries"
+   }
+  },
+  {
+   "act": "tag_category",
+   "args": {
+    "category": "medical",
+    "tag": "medical",
+    "reason": "for the medical deduction"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "year",
+   "args": {
+    "year": "2099"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "missing_receipts": 1
+    }
+   },
+   "notes": "P-28: the pharmacy row has no receipt"
+  }
+ ]
+}

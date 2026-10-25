@@ -1,0 +1,52 @@
+{
+ "name": "a receipt's return and warranty dates are kept and listed",
+ "spec": "purchases@1.0",
+ "today": "2099-12-10",
+ "notes": "P-26: as the receipt states them.",
+ "env": [],
+ "steps": [
+  {
+   "act": "add_receipt",
+   "args": {
+    "name": "bestbuy.jpg",
+    "hash": "bestbuy-receipt-1201",
+    "vendor": "Best Buy",
+    "date": "2099-12-01",
+    "total": 89999,
+    "currency": "USD",
+    "return_by": "2099-12-31",
+    "warranty_until": "2100-12-01"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "receipts",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "count": 1,
+     "unmatched": 1
+    }
+   }
+  },
+  {
+   "act": "add_receipt",
+   "args": {
+    "name": "other.jpg",
+    "hash": "other-receipt-1205",
+    "vendor": "Target",
+    "date": "2099-12-05",
+    "total": 2500,
+    "currency": "USD",
+    "return_by": "2099-11-30"
+   },
+   "expect": {
+    "refused": "before the receipt's own date"
+   },
+   "notes": "P-26"
+  }
+ ]
+}

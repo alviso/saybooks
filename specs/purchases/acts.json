@@ -1,6 +1,6 @@
 {
   "area": "purchases",
-  "spec": "0.9",
+  "spec": "1.0",
   "doc": "spec.md",
   "acts": {
     "import_statement": {
@@ -307,6 +307,36 @@
     "refunds": {
       "kind": "read",
       "required": []
+    },
+    "record_reimbursement": {
+      "kind": "write",
+      "required": [
+        "in_transaction_id",
+        "expenses",
+        "reason"
+      ]
+    },
+    "unlink_reimbursement": {
+      "kind": "write",
+      "required": [
+        "reimbursement_id",
+        "reason"
+      ]
+    },
+    "reimbursements": {
+      "kind": "read",
+      "required": []
+    },
+    "tag_category": {
+      "kind": "write",
+      "required": [
+        "category",
+        "tag"
+      ]
+    },
+    "year": {
+      "kind": "read",
+      "required": []
     }
   },
   "invariants": [
@@ -405,6 +435,18 @@
     {
       "id": "P-25",
       "title": "What is due lists every recorded obligation in a window beside the cash on the latest statements; it is not a forecast: nothing unrecorded is assumed."
+    },
+    {
+      "id": "P-26",
+      "title": "A receipt's return-by and warranty dates are as the receipt states; open return windows and warranties in force are listed, never worked out from a store's policy."
+    },
+    {
+      "id": "P-27",
+      "title": "A work expense marked reimbursable waits until money in is tied to it, exactly; tied, they net to nothing personal; a long wait is named."
+    },
+    {
+      "id": "P-28",
+      "title": "A tax tag is the person's word on a category; the year totals tagged spending net of refunds and paybacks, names rows without a receipt, and gives interest paid and earned from the record; never tax advice."
     }
   ]
 }

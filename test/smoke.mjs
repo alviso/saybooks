@@ -103,6 +103,8 @@ R.execute('purch_import_statement', { name: 'nov-checking.csv', hash: 'sha256:sm
 const smokeLoanRow = R.execute('loan_candidates', {}, a).items[0];
 R.execute('loan_link_payment', { loan_id: smokeLoanRow.loan_id, transaction_id: smokeLoanRow.transaction_id, reason: 'smoke: the November payment' }, a);
 R.execute('purch_declare_bill_series', { vendor: 'Acme Supply', cadence: 'monthly', category: 'supplies', typical_amount: 12500 }, a);
+R.execute('purch_tag_category', { category: 'furniture', tag: 'home_office', reason: 'smoke' }, h);
+R.execute('purch_add_receipt', { name: 'smoke-tv.jpg', hash: 'smoke-receipt-tv-01', vendor: 'Best Buy', date: '2026-11-01', total: 50000, currency: 'USD', return_by: '2099-01-01', warranty_until: '2099-11-01' }, a);
 const smokeHouse = R.execute('purch_add_account', { name: 'Smoke house', kind: 'asset', currency: 'USD' }, h);
 R.execute('purch_record_value', { account_id: smokeHouse.id, as_of: '2026-09-01', amount: 40000000, according_to: 'smoke appraisal' }, h);
 R.execute('hunt_add_posting', { company: 'Vega', title: 'Staff Engineer', source: 'direct', url: 'https://example.com/j' }, h);

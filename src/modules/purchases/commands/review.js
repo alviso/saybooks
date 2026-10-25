@@ -21,6 +21,8 @@ function needTx(id, where = '') {
 
 /** A row matched to a payment in the bank reconciliation is money already recorded here; reviewing it again would count it twice. */
 function notMatched(t, where = '') {
+  const rb = V.reimbursementOf(t.id);
+  if (rb) throw new Rejected(`${where}${t.id} (${t.description}) is part of reimbursement ${rb}. Unlink it there first if that is wrong.`);
   const rf = V.activeRefunds().find(r => r.refund_tx === t.id);
   if (rf) throw new Rejected(`${where}${t.id} (${t.description}) is linked as a refund of ${rf.purchase_tx} (${rf.id}). Unlink it first (purch_unlink_refund) if that is wrong.`);
   const pr = V.pairIndex().get(t.id);
@@ -86,6 +88,8 @@ wrong source, re-read and re-imported.`,
     cadence: f.pick(CADENCES, 'For recurring: how often. Defaults to monthly.'),
     note: f.note('Anything the person said about it.'),
     reason: f.text('Why — part of the record.'),
+    reimbursable_by: f.text('A work expense someone pays back: who ("Acme Corp, expenses"). Clear it with an empty value.'),
+    claim_ref: f.text('The expense report or claim it went on, if any.'),
   },
   handler(a, { db, at }) {
     const t = needTx(a.transaction_id);
@@ -94,6 +98,10 @@ wrong source, re-read and re-imported.`,
     if (a.status === 'recurring' && !(a.vendor && a.vendor.trim()) && !t.vendor_id) throw new Rejected(`${t.id} (${t.description}): a recurring charge needs its vendor named, so the subscription can be declared and confirmed. Pass vendor, the shop's name as a person would say it.`);
     db.prepare('UPDATE purch_transaction SET status = ?, category = COALESCE(?, category), note = COALESCE(?, note), reviewed_at = ? WHERE id = ?')
       .run(a.status, a.category ? a.category.trim() : null, a.note || null, at, t.id);
+    if (a.reimbursable_by !== undefined || a.claim_ref !== undefined) {   // P-27: waiting to be paid back
+      if (a.reimbursable_by && !['purchase', 'recurring'].includes(a.status)) throw new Rejected(`Only spending is paid back; ${t.id} is reviewed as ${a.status}.`);
+      db.prepare('UPDATE purch_transaction SET reimbursable_by = ?, claim_ref = ? WHERE id = ?').run(a.reimbursable_by ? String(a.reimbursable_by).trim() : (a.reimbursable_by === '' ? null : t.reimbursable_by), a.claim_ref !== undefined ? (a.claim_ref || null) : t.claim_ref, t.id);
+    }
     let sub = null;
     if (a.vendor && a.vendor.trim()) nameVendor(db, at, t, a.vendor.trim());
     if (a.status === 'recurring') sub = ensureSubscription(db, at, t, H.get('purch_transaction', t.id).vendor_id, a.cadence);

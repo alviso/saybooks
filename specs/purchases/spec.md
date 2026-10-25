@@ -64,6 +64,18 @@ forecasts, advice, tax treatment of purchases, paying anything.
   loan payments from the loans area, subscriptions' next charges, expected bills not received yet)
   beside the cash on the latest bank statements, with the day it would run short. Not a forecast:
   nothing unrecorded, income included, is assumed.
+- **receipt dates** (1.0) — the last day to return something and the end of its warranty, as the
+  receipt (or the box) states them. Open return windows and warranties in force are listed.
+- **work expense** (1.0) — a purchase marked, when reviewed, as paid back by someone (an employer, a
+  client), with the claim it went on. It waits until money in is tied to it.
+- **reimbursement** (1.0) — money in tied, by a reasoned act, to the work expenses it paid back, adding
+  up to them exactly. Together they net to nothing personal: the expenses leave personal spending and
+  the books take them back out of their categories. Untied with a reason.
+- **tax tag** (1.0) — the person's word on a category at tax time: medical, charitable, business, home
+  office, education, childcare. The year sums tagged spending, net of refunds and of what was paid back.
+- **the year** (1.0) — derived: spending by tax tag, the rows in a tagged category with no receipt,
+  interest paid on cards and loans and interest earned, fees, and work expenses still waiting. Totals
+  from the record; what is deductible is the accountant's call.
 - **transaction** — one row of a source: date, signed amount in minor units, description as
   printed, counterparty if the row names one, source and row index, the raw line as read.
   Status: unreviewed → purchase | recurring | transfer | income | fee | ignored, set by review
@@ -104,13 +116,15 @@ cancel_subscription, unmatch_receipt, add_rule (a standing rule, with its window
 vendor), end_rule (with a reason), accept_suggestions (confirm what rules suggest, one reasoned
 act, rows the person rejects left out), add_bill, approve_bill (a person only),
 record_bill_payment, reject_bill, add_account, update_account, close_account, record_value (0.6), pair_transfer, unpair_transfer (0.7), set_card_facts, link_refund, unlink_refund (0.8), declare_bill_series, end_bill_series, set_autopay
-(a person only) (0.9).
+(a person only) (0.9), record_reimbursement, unlink_reimbursement, tag_category (1.0); review_transaction
+marks a work expense (reimbursable_by, claim_ref); add_receipt takes return_by and warranty_until.
 Reads (14): accounts (each with its balance, as of when, and where its statements do not chain),
 account, net_worth (held less owed, per currency, each figure dated), transfers (pairs and
 one-sided transfers and the suggested pairs, with why), card_dues (each card's balance, minimum, due date,
 payments seen and state), card_costs (interest and fees per card and year), refunds (linked, and suggested with why), bill_series,
 payables (now also the bills a statement row looks like it paid),
-upcoming (what is due beside the cash), vocabulary (the statuses with their meaning,
+upcoming (what is due beside the cash), reimbursements (waiting and paid back), year (the year as the
+record has it), receipts (now with open return windows and warranties in force), vocabulary (the statuses with their meaning,
 the person's categories, vendors and active rules — what an agent proposes from), sources,
 transactions (each unreviewed row with the suggestion a rule makes for it), purchases,
 subscriptions, receipts, spend, source, rules, bills, payables (open bills by when they fall
@@ -196,6 +210,14 @@ due, set against the cash on the latest bank statements).
 - **P-25** What is due lists every recorded obligation in a window beside the cash on the latest
   statements; it is not a forecast: nothing unrecorded is assumed.
 
+- **P-26** A receipt's return-by and warranty dates are as the receipt states; open return windows
+  and warranties in force are listed, never worked out from a store's policy.
+- **P-27** A work expense marked reimbursable waits until money in is tied to it, exactly; tied, they
+  net to nothing personal; a long wait is named.
+- **P-28** A tax tag is the person's word on a category; the year totals tagged spending net of refunds
+  and paybacks, names rows without a receipt, and gives interest paid and earned from the record; it is
+  never tax advice.
+
 ## 6. Required read models
 
 sources (what was imported, when, by whom, reconciled), transactions (by period, status,
@@ -238,7 +260,10 @@ named once a statement covers the due date, and the year's interest from rows re
 a refund suggested, linked to its purchase, more than is left refused, the refund closed to review ·
 19 an expected electric bill: a bill well above the usual named, and the missing month named · 20 autopay
 refused to the agent · 21 what is due: a bill and a subscription's next charge beside the cash, and the
-statement row that paid a bill suggested.
+statement row that paid a bill suggested · 22 a receipt's return and warranty dates kept and listed, a
+return date before the receipt refused · 23 two work expenses marked, a payback that does not add up
+refused, the right one tied, the expenses closed to review · 24 a medical category tagged, the year's
+medical spending with the row that has no receipt named, a tag on an unused category refused.
 
 ## 9. Deferred — with reasons
 
@@ -252,7 +277,9 @@ statement row that paid a bill suggested.
 
 ---
 
-*Change log: 0.9 (2026-10-25) — household bills: expected bills with missing and unusual ones named,
+*Change log: 1.0 (2026-10-25) — receipts and the year: return and warranty dates, work expenses paid
+back, tax tags on categories, and the year as the record has it; the last part of the personal finances
+plan, which makes the area feature complete for a household. 0.9 (2026-10-25) — household bills: expected bills with missing and unusual ones named,
 autopay as a person's standing approval, bill payments suggested, and what is due beside the cash;
 part E of the personal finances plan. 0.8 (2026-10-25) — credit cards: statement facts kept, what is due and whether it was
 met, interest and fees per year, refunds tied to their purchase, fees posting to their own word;

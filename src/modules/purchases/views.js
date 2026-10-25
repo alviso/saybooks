@@ -204,7 +204,7 @@ function transactions({ from, to, status, source_id, vendor, category, limit } =
   const where = []; const args = [];
   if (from) { where.push('t.date >= ?'); args.push(from); }
   if (to) { where.push('t.date <= ?'); args.push(to); }
-  if (status === 'spending') where.push("t.status IN ('purchase','recurring','refund')");   // a refund takes back part of a purchase (P-21)
+  if (status === 'spending') where.push("t.status IN ('purchase','recurring','refund') AND t.id NOT IN (SELECT i.transaction_id FROM purch_reimbursement_item i JOIN purch_reimbursement r ON r.id = i.reimbursement_id WHERE r.unlinked_at IS NULL)");   // a refund takes back part of a purchase (P-21); an expense paid back is not personal spending (P-27)
   else if (status) { where.push('t.status = ?'); args.push(status); }
   if (source_id) { where.push('t.source_id = ?'); args.push(source_id); }
   if (category) { where.push('t.category = ? COLLATE NOCASE'); args.push(category); }
@@ -236,7 +236,8 @@ function purchases(opts = {}) {
 function receipts({ unmatched } = {}) {
   const rows = db().prepare(`SELECT * FROM purch_receipt ${unmatched ? 'WHERE transaction_id IS NULL' : ''} ORDER BY date DESC, id DESC`).all();
   const items = rows.map(r => ({ ...r, matched: !!r.transaction_id, total_display: money(r.total, r.currency) }));
-  return { count: items.length, unmatched: items.filter(i => !i.matched).length, items };
+  const due = receiptsDue();   // P-26: return windows still open and warranties in force
+  return { count: items.length, unmatched: items.filter(i => !i.matched).length, items, returns_open: due.returns, warranties: due.warranties };
 }
 
 function sources() {
@@ -268,6 +269,7 @@ function vocabulary() {
     { status: 'transfer', means: "the person's own money moving: card payoffs, brokerage, loans, own accounts — not spend" },
     { status: 'income', means: 'money in: salary, payments received. Money back for a purchase on record is linked to it as a refund instead (purch_link_refund)' },
     { status: 'refund', means: 'money back for a purchase on record, linked to it: takes back that much of its spending, in its category. Set only by linking, never by review' },
+    { status: 'reimbursement', means: 'money in that paid back work expenses on record, tied to them (purch_record_reimbursement): those expenses and this money net to nothing personal. Set only by tying, never by review' },
     { status: 'fee', means: "a charge by the bank or card: with category interest for interest, or a word for the fee (annual fee, late fee); posts to that category, or Bank Fees without one" },
     { status: 'ignored', means: 'not theirs to track' },
   ];
@@ -300,7 +302,7 @@ function journalLines({ from, to } = {}) {
   try {
     rows = db().prepare(`SELECT t.*, v.name AS vendor, COALESCE((SELECT a.name FROM purch_account a WHERE a.id = s.account_id), s.account) AS source_account, s.kind AS source_kind
       FROM purch_transaction t LEFT JOIN purch_vendor v ON v.id = t.vendor_id JOIN purch_source s ON s.id = t.source_id
-      WHERE t.status IN ('purchase','recurring','fee','income','transfer','refund') ORDER BY t.date, t.id`).all();
+      WHERE t.status IN ('purchase','recurring','fee','income','transfer','refund','reimbursement') ORDER BY t.date, t.id`).all();
   } catch { return []; }
   const out = [];
   // A row that paid a bill kept on the accrual basis (a bill on a purchase order) clears
@@ -330,6 +332,11 @@ function journalLines({ from, to } = {}) {
       const feeAcct = fc ? { account: fc, map: { kind: 'category', key: fc, role: 'expense' } } : { account: 'Bank Fees' };
       out.push({ date: t.date, memo: `Fee · ${t.description}`, customer: null, currency: t.currency, source: t.id,
         lines: t.amount < 0 ? [{ ...feeAcct, debit: amount }, { ...paidFrom, credit: amount }] : [{ ...paidFrom, debit: amount }, { ...feeAcct, credit: amount }] });
+    } else if (t.status === 'reimbursement') {
+      // P-27: money that paid back work expenses takes them back out of their own categories.
+      const items = reimbursementItems(t.id);
+      out.push({ date: t.date, memo: `Reimbursement · ${t.description}`, customer: null, currency: t.currency, source: t.id,
+        lines: [{ ...paidFrom, debit: amount }, ...items.map(i => { const c = (i.category || '').trim() || 'Uncategorised spending'; return { account: c, map: { kind: 'category', key: i.category ? c : '(uncategorised)', role: 'expense' }, credit: i.amount }; })] });
     } else if (t.status === 'refund') {
       // P-21: money back takes back spending in the purchase's own category; it is not income.
       const rc = (t.category || '').trim() || 'Uncategorised spending';
@@ -413,7 +420,7 @@ function postedElsewhere() {
   for (const mod of require('../../registry.js').MODULES) if (mod.api && typeof mod.api.statementRowPosts === 'function') for (const id of mod.api.statementRowPosts()) m.add(id);
   return m;
 }
-const posts = (t) => ['purchase', 'recurring', 'fee', 'income', 'refund'].includes(t.status) || (t.status === 'transfer' && !!String(t.category || '').trim());
+const posts = (t) => ['purchase', 'recurring', 'fee', 'income', 'refund', 'reimbursement'].includes(t.status) || (t.status === 'transfer' && !!String(t.category || '').trim());
 
 /** Every statement row with its account and whether it posts, for the bank reconciliation. */
 function statementRows() {
@@ -804,4 +811,77 @@ function refunds() {
   return { count: linked.length, linked, suggestions: c.count, suggested: c.items, note: c.note };
 }
 
-module.exports = { refunds, seriesView, billSeries, billPaymentCandidates, upcoming, activeSeriesFor, CADENCE_MONTHS, postedElsewhere, cardFacts, cardDues, cardCosts, activeRefunds, refundedOf, refundView, refundCandidates, pct, PAY_WORDS, pairIndex, transferView, transferCandidates, oneSided, transfers, rowWithAccount, ACCOUNT_KINDS, STATEMENT_KIND, accountKindFor, accountView, accounts, netWorth, statementsOf, chainIssues, balanceOf, matchedRows, statementRows, billView, bills, payables, unpaidBills, approvalHold, onAccrual, statementAccounts, activeRules, ruleMatches, suggestionFor, ruleView, rules, windowText, splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };
+// ---------------------------------------------------------------- receipts and the year (1.0)
+const activeReimbursements = () => { try { return db().prepare('SELECT * FROM purch_reimbursement WHERE unlinked_at IS NULL ORDER BY id').all(); } catch { return []; } };
+function reimbursementItems(inTx) {
+  try { return db().prepare(`SELECT i.*, t.category, t.description, t.date FROM purch_reimbursement_item i JOIN purch_reimbursement r ON r.id = i.reimbursement_id JOIN purch_transaction t ON t.id = i.transaction_id
+    WHERE r.in_tx = ? AND r.unlinked_at IS NULL ORDER BY t.date, t.id`).all(inTx); } catch { return []; }
+}
+/** The reimbursement a row is part of (either side), or null. */
+function reimbursementOf(txId) {
+  try { const r = db().prepare(`SELECT r.id FROM purch_reimbursement r LEFT JOIN purch_reimbursement_item i ON i.reimbursement_id = r.id WHERE r.unlinked_at IS NULL AND (r.in_tx = ? OR i.transaction_id = ?) LIMIT 1`).get(txId, txId); return r ? r.id : null; } catch { return null; }
+}
+const CLAIM_WAIT = 45;
+/** P-27: work expenses waiting to be paid back, and what paid them back. */
+function reimbursements({ as_of } = {}) {
+  const day = as_of || today();
+  let waiting = []; try { waiting = db().prepare(`SELECT t.* FROM purch_transaction t WHERE t.reimbursable_by IS NOT NULL AND t.status IN ('purchase','recurring')
+    AND t.id NOT IN (SELECT i.transaction_id FROM purch_reimbursement_item i JOIN purch_reimbursement r ON r.id = i.reimbursement_id WHERE r.unlinked_at IS NULL) ORDER BY t.date, t.id`).all(); } catch { /* none */ }
+  const w = waiting.map(t => { const d = Math.round((Date.parse(day) - Date.parse(t.date)) / 864e5); return { id: t.id, date: t.date, description: t.description, category: t.category, amount: -t.amount, amount_display: money(-t.amount, t.currency), currency: t.currency, payer: t.reimbursable_by, claim_ref: t.claim_ref, days: d, long: d > CLAIM_WAIT }; });
+  const done = activeReimbursements().map(r => { const t = get('purch_transaction', r.in_tx) || {}; const items = reimbursementItems(r.in_tx);
+    return { id: r.id, in_tx: r.in_tx, date: t.date, description: t.description, amount_display: money(t.amount, t.currency), reason: r.reason, items: items.map(i => ({ transaction_id: i.transaction_id, date: i.date, description: i.description, amount_display: money(i.amount, t.currency) })) }; }).reverse();
+  const by = {}; for (const x of w) { by[x.currency] = (by[x.currency] || 0) + x.amount; }
+  return { count: w.length, waiting: w, waiting_long: w.filter(x => x.long).length, paid_back: done,
+    waiting_total: Object.entries(by).map(([c, v]) => ({ currency: c, amount: v, amount_display: money(v, c) })),
+    note: w.length ? `${w.length} work expense${w.length === 1 ? '' : 's'} waiting to be paid back (${Object.entries(by).map(([c, v]) => money(v, c)).join(', ')}).${w.some(x => x.long) ? ` ${w.filter(x => x.long).length} for more than ${CLAIM_WAIT} days.` : ''}` : 'Nothing waiting to be paid back.' };
+}
+
+const TAX_TAGS = ['medical', 'charitable', 'business', 'home_office', 'education', 'childcare'];
+const categoryTags = () => { try { return new Map(db().prepare('SELECT * FROM purch_category_tag').all().map(r => [r.category.toLowerCase(), r])); } catch { return new Map(); } };
+
+/**
+ * P-28: the year as the record has it: spending by tax tag net of refunds and of what was paid back,
+ * the rows in a tagged category with no receipt, interest paid (cards and loans) and earned, fees,
+ * and what is still waiting to be paid back. Totals and where they come from; never tax advice.
+ */
+function year({ year: y } = {}) {
+  const yr = String(y || today().slice(0, 4));
+  const tags = categoryTags();
+  const spend = transactions({ status: 'spending', from: `${yr}-01-01`, to: `${yr}-12-31`, limit: 20000 }).items;
+  let withReceipt = new Set(); try { withReceipt = new Set(db().prepare('SELECT transaction_id FROM purch_receipt WHERE transaction_id IS NOT NULL').all().map(r => r.transaction_id)); } catch { /* none */ }
+  const byTag = {};
+  for (const t of spend) {
+    const tg = tags.get(String(t.category || '').toLowerCase()); if (!tg) continue;
+    const k = `${tg.tag}|${t.currency}`;
+    const e = byTag[k] = byTag[k] || { tag: tg.tag, currency: t.currency, amount: 0, rows: 0, categories: new Set(), missing_receipts: [] };
+    e.amount += -t.amount; e.categories.add(t.category);
+    if (t.amount < 0) { e.rows++; if (!withReceipt.has(t.id)) e.missing_receipts.push({ id: t.id, date: t.date, description: t.description, category: t.category, amount_display: money(-t.amount, t.currency) }); }
+  }
+  const tagged = Object.values(byTag).map(e => ({ ...e, categories: [...e.categories], amount_display: money(e.amount, e.currency), missing_count: e.missing_receipts.length })).sort((a, b) => b.amount - a.amount);
+  const cc = cardCosts({ year: yr });
+  const loanInterest = [];
+  for (const mod of require('../../registry.js').MODULES) if (mod.api && typeof mod.api.yearInterest === 'function') for (const x of mod.api.yearInterest(yr)) loanInterest.push(x);
+  const earnedRows = statementRows().filter(t => t.status === 'income' && t.date.startsWith(yr) && (/interest|dividend/i.test(t.category || '') || /\binterest\b/i.test(t.description)));
+  const earned = {}; for (const t of earnedRows) earned[t.currency] = (earned[t.currency] || 0) + t.amount;
+  const rb = reimbursements({ as_of: `${yr}-12-31` });
+  const total = {}; for (const t of spend) total[t.currency] = (total[t.currency] || 0) - t.amount;
+  return { year: yr,
+    spending: Object.entries(total).map(([c, v]) => ({ currency: c, amount: v, amount_display: money(v, c) })),
+    tagged, untagged_note: tags.size ? null : 'No category carries a tax tag yet: tag the categories that matter at tax time (medical, charitable, business, home office, education, childcare).',
+    interest_paid: { cards: cc.items.map(x => ({ name: x.name, amount: x.interest, amount_display: x.interest_display })), loans: loanInterest },
+    interest_earned: Object.entries(earned).map(([c, v]) => ({ currency: c, amount: v, amount_display: money(v, c) })), interest_earned_rows: earnedRows.length,
+    fees: cc.items.map(x => ({ name: x.name, amount: x.fees, amount_display: x.fees_display })),
+    reimbursements_waiting: rb.waiting_total, reimbursements_waiting_count: rb.count,
+    missing_receipts: tagged.reduce((n, e) => n + e.missing_count, 0),
+    note: `${yr}, as the record has it.${tagged.length ? ` ${tagged.map(e => `${e.tag.replace('_', ' ')} ${e.amount_display}${e.missing_count ? ` (${e.missing_count} without a receipt)` : ''}`).join('; ')}.` : ''}${loanInterest.length ? ` Loan interest: ${loanInterest.map(x => `${x.name} ${x.interest_display}`).join('; ')}.` : ''}${cc.items.some(x => x.interest) ? ` Card interest: ${cc.items.filter(x => x.interest).map(x => `${x.name} ${x.interest_display}`).join('; ')}.` : ''} Totals from what is reviewed and linked, not tax advice: what is deductible is your accountant's call.` };
+}
+
+function receiptsDue({ as_of } = {}) {
+  const day = as_of || today();
+  let rows = []; try { rows = db().prepare('SELECT * FROM purch_receipt WHERE return_by IS NOT NULL OR warranty_until IS NOT NULL ORDER BY COALESCE(return_by, warranty_until)').all(); } catch { return { returns: [], warranties: [] }; }
+  const days = (d) => Math.round((Date.parse(d) - Date.parse(day)) / 864e5);
+  return { returns: rows.filter(r => r.return_by && r.return_by >= day).map(r => ({ id: r.id, vendor: r.vendor, date: r.date, total_display: money(r.total, r.currency), return_by: r.return_by, days_left: days(r.return_by) })),
+    warranties: rows.filter(r => r.warranty_until && r.warranty_until >= day).map(r => ({ id: r.id, vendor: r.vendor, date: r.date, total_display: money(r.total, r.currency), warranty_until: r.warranty_until, days_left: days(r.warranty_until) })) };
+}
+
+module.exports = { reimbursements, reimbursementItems, reimbursementOf, activeReimbursements, TAX_TAGS, categoryTags, year, receiptsDue, refunds, seriesView, billSeries, billPaymentCandidates, upcoming, activeSeriesFor, CADENCE_MONTHS, postedElsewhere, cardFacts, cardDues, cardCosts, activeRefunds, refundedOf, refundView, refundCandidates, pct, PAY_WORDS, pairIndex, transferView, transferCandidates, oneSided, transfers, rowWithAccount, ACCOUNT_KINDS, STATEMENT_KIND, accountKindFor, accountView, accounts, netWorth, statementsOf, chainIssues, balanceOf, matchedRows, statementRows, billView, bills, payables, unpaidBills, approvalHold, onAccrual, statementAccounts, activeRules, ruleMatches, suggestionFor, ruleView, rules, windowText, splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };

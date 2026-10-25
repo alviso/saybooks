@@ -241,7 +241,7 @@ const NAV = [
   { key: 'crm', label: 'CRM', prefix: 'crm_', tabs: [['today', 'Today'], ['campaigns', 'Campaigns'], ['accounts', 'Accounts'], ['crmcontacts', 'Contacts'], ['crmdrafts', 'Drafts'], ['crmcal', 'Calendar'], ['crmpipeline', 'Pipeline'], ['network', 'Network'], ['crmactivity', 'Activity']] },
   { key: 'pros', label: 'Prospects', prefix: 'pros_', tabs: [['prospulls', 'Pulls'], ['prosrows', 'Staged rows']] },
   { key: 'hunt', label: 'Job hunt', prefix: 'hunt_', tabs: [['huntdue', 'Due'], ['huntpipeline', 'Pipeline'], ['huntcontacts', 'Contacts'], ['huntresumes', 'Resumes']] },
-  { key: 'purch', label: 'Personal finances', prefix: 'purch_', tabs: [['purchover', 'Overview'], ['purchdue', 'Due'], ['purchacc', 'Accounts'], ['purchtx', 'Transactions'], ['purchxfer', 'Transfers'], ['purchcards', 'Cards'], ['purchloans', 'Loans', 'loan_'], ['purchbills', 'Bills'], ['purchrules', 'Rules'], ['purchsubs', 'Subscriptions'], ['purchrec', 'Receipts'], ['purchsrc', 'Statements']] },
+  { key: 'purch', label: 'Personal finances', prefix: 'purch_', tabs: [['purchover', 'Overview'], ['purchdue', 'Due'], ['purchacc', 'Accounts'], ['purchtx', 'Transactions'], ['purchxfer', 'Transfers'], ['purchcards', 'Cards'], ['purchloans', 'Loans', 'loan_'], ['purchyear', 'Year'], ['purchbills', 'Bills'], ['purchrules', 'Rules'], ['purchsubs', 'Subscriptions'], ['purchrec', 'Receipts'], ['purchsrc', 'Statements']] },
   { key: 'rec', label: 'Bank', prefix: 'rec_', tabs: [['recbank', 'Reconciliation'], ['recmatches', 'Matches'], ['recsignoffs', 'Sign-offs']] },
   { key: 'tax', label: 'Sales tax', prefix: 'tax_', tabs: [['taxreturn', 'Return'], ['taxowed', 'Owed'], ['taxfilings', 'Filings']] },
   { key: 'gl', label: 'Month-end', prefix: 'gl_', tabs: [['glclose', 'Close'], ['glentries', 'Adjusting entries']] },
@@ -2054,6 +2054,39 @@ async function renderPage() {
       rowsInto(t3, bp.items.map(x => ({ ...x, id: x.bill_id })), x => `<td>${x.bill_id}</td><td>${esc(x.vendor)}</td><td class="num">${x.amount_display}</td><td style="font-size:12.5px">${x.due_date}</td><td><span class="pill">${x.status}</span></td><td style="font-size:12.5px">${x.rows.map(r => `${r.id} · ${r.date} · ${esc(r.description)}`).join('<br>')}</td>`, 'purch_bill');
     }
   }
+  if (view === 'purchyear') {
+    window.pfYear = window.pfYear || String(new Date().getFullYear());
+    head(`The year`, 'The year as the record has it: spending by tax tag, the rows that still lack a receipt, interest paid and earned, fees, and work expenses waiting to be paid back. Totals, not tax advice.');
+    const bar = $(`<div class="acts" style="margin-bottom:14px;align-items:center"><select id="pfYear" style="width:auto">${[0, 1, 2].map(i => String(new Date().getFullYear() - i)).map(y => `<option ${y === window.pfYear ? 'selected' : ''}>${y}</option>`).join('')}</select></div>`);
+    bar.querySelector('#pfYear').onchange = (e) => { window.pfYear = e.target.value; render(); };
+    const tagCmd = REG.commands.find(c => c.name === 'purch_tag_category'); if (tagCmd) bar.append(buttonFor(tagCmd));
+    main.append(bar);
+    const [y, rb] = await Promise.all([api('purch_year', { year: window.pfYear }), api('purch_reimbursements', {})]);
+    const tiles = $('<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;max-width:1100px;margin-bottom:12px"></div>');
+    for (const c of y.spending) tiles.append($(`<div class="tile"><div class="k">Spending ${y.year} · ${c.currency}</div><div class="v">${c.amount_display}</div><div class="s">net of refunds and paybacks</div></div>`));
+    const li = y.interest_paid.loans.reduce((n, x) => n + x.amount, 0) + y.interest_paid.cards.reduce((n, x) => n + x.amount, 0);
+    if (li) tiles.append($(`<div class="tile"><div class="k">Interest paid</div><div class="v">${[...y.interest_paid.loans.map(x => x.interest_display), ...y.interest_paid.cards.filter(x => x.amount).map(x => x.amount_display)].join(' + ')}</div><div class="s">${[...y.interest_paid.loans.map(x => esc(x.name)), ...y.interest_paid.cards.filter(x => x.amount).map(x => esc(x.name))].join(', ')}</div></div>`));
+    for (const e of y.interest_earned) tiles.append($(`<div class="tile"><div class="k">Interest earned</div><div class="v">${e.amount_display}</div><div class="s">${y.interest_earned_rows} row${y.interest_earned_rows === 1 ? '' : 's'}</div></div>`));
+    if (y.missing_receipts) tiles.append($(`<div class="tile"><div class="k">Missing receipts</div><div class="v" style="color:var(--warn)">${y.missing_receipts}</div><div class="s">in tagged categories</div></div>`));
+    main.append(tiles);
+    main.append($('<div class="sub" style="margin-top:6px">By tax tag</div>'));
+    if (!y.tagged.length) main.append($(`<div class="doc" style="margin:4px 0 0">${esc(y.untagged_note || 'Nothing tagged was spent this year.')}</div>`));
+    for (const e of y.tagged) {
+      main.append($(`<div class="card" style="max-width:1100px;margin:8px 0"><b>${e.tag.replace('_', ' ')}</b> · ${e.amount_display} · ${e.rows} row${e.rows === 1 ? '' : 's'} in ${e.categories.map(esc).join(', ')}${e.missing_count ? ` · <span style="color:var(--warn)">${e.missing_count} without a receipt</span>` : ''}</div>`));
+      if (e.missing_count) {
+        const t = $('<table><thead><tr><th>Row</th><th>Day</th><th>As printed</th><th>Category</th><th class="num">Amount</th></tr></thead><tbody></tbody></table>');
+        rowsInto(t, e.missing_receipts, x => `<td>${x.id}</td><td>${x.date}</td><td>${esc(x.description)}</td><td>${esc(x.category || '')}</td><td class="num">${x.amount_display}</td>`, 'purch_transaction');
+      }
+    }
+    main.append($('<div class="sub" style="margin-top:16px">Work expenses waiting to be paid back</div>'));
+    if (!rb.count) main.append($(`<div class="doc" style="margin:4px 0 0">${esc(rb.note)}</div>`));
+    else { const t = $('<table><thead><tr><th>Row</th><th>Day</th><th>As printed</th><th>Paid back by</th><th>Claim</th><th class="num">Amount</th><th class="num">Waiting</th></tr></thead><tbody></tbody></table>');
+      rowsInto(t, rb.waiting, x => `<td>${x.id}</td><td>${x.date}</td><td>${esc(x.description)}</td><td>${esc(x.payer)}</td><td>${esc(x.claim_ref || '')}</td><td class="num">${x.amount_display}</td><td class="num"${x.long ? ' style="color:var(--warn)"' : ''}>${x.days} days</td>`, 'purch_transaction'); }
+    if (rb.paid_back.length) { main.append($('<div class="sub" style="margin-top:16px">Paid back</div>'));
+      const t = $('<table><thead><tr><th>Tie</th><th>Day</th><th>Money in</th><th class="num">Amount</th><th>Expenses</th></tr></thead><tbody></tbody></table>');
+      rowsInto(t, rb.paid_back, x => `<td>${x.id}</td><td>${x.date}</td><td>${esc(x.description)}</td><td class="num">${x.amount_display}</td><td style="font-size:12.5px">${x.items.map(i => `${i.transaction_id} ${esc(i.description)} ${i.amount_display}`).join('<br>')}</td>`, 'nolink'); }
+    main.append($(`<p class="sub" style="margin-top:14px;max-width:1100px">${esc(y.note)}</p>`));
+  }
   if (view === 'purchtx') {
     head('Transactions', 'Every row on record with where it came from. Review is a reasoned act; amount and date never change.');
     const bar = $('<div class="acts" style="margin-bottom:14px"></div>'); newButtons('purch_source').forEach(b => bar.append(b)); main.append(bar);
@@ -2309,6 +2342,12 @@ async function renderPage() {
     const r = await api('purch_receipts', {});
     if (!r.count) { main.append($('<div class="card doc" style="max-width:560px">No receipts yet. Hand one to your agent, or press Add receipt.</div>')); return; }
     main.append($(`<div class="sub" style="margin:0 0 10px">${r.count} receipts · ${r.unmatched} unmatched</div>`));
+    if ((r.returns_open || []).length || (r.warranties || []).length) {
+      const t0 = $('<table style="margin-bottom:16px"><thead><tr><th>Receipt</th><th>Vendor</th><th>Bought</th><th class="num">Total</th><th>Return by</th><th>Warranty until</th></tr></thead><tbody></tbody></table>');
+      const seen = new Map(); for (const x of r.returns_open || []) seen.set(x.id, { ...x }); for (const x of r.warranties || []) seen.set(x.id, { ...(seen.get(x.id) || x), warranty_until: x.warranty_until, w_left: x.days_left });
+      for (const x of seen.values()) t0.querySelector('tbody').append($(`<tr><td>${x.id}</td><td>${esc(x.vendor || '')}</td><td>${x.date}</td><td class="num">${x.total_display}</td><td${x.return_by && x.days_left <= 7 ? ' style="color:var(--warn);font-weight:600"' : ''}>${x.return_by ? `${x.return_by} (${x.days_left} days)` : ''}</td><td>${x.warranty_until || ''}</td></tr>`));
+      main.append($('<div class="sub" style="margin:0 0 6px">Returns still open, and warranties in force</div>'), t0);
+    }
     const t = $('<table><thead><tr><th>Id</th><th>Date</th><th>Vendor</th><th class="num">Total</th><th>File</th><th>Matched to</th></tr></thead><tbody></tbody></table>');
     rowsInto(t, r.items, x => `<td>${x.id}</td><td style="font-size:12px">${x.date}</td><td>${x.vendor || ''}</td><td class="num">${x.total_display}</td><td style="font-size:12px;color:var(--dim)">${x.name}</td><td>${x.transaction_id ? `<span class="pill matched">${x.transaction_id}</span>` : '<span class="pill unreviewed">unmatched</span>'}</td>`, 'purch_receipt');
     main.append(t);

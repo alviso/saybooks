@@ -27,6 +27,8 @@ with a reason. An unmatched receipt is a visible state, not an error.`,
       amount: { ...f.money('The line amount, positive.'), required: true },
     }, 'The lines on the receipt, when it prints them. They must add up to the total, tax included as its own line: that is how a misread digit is caught.'),
     note: f.note(''),
+    return_by: f.date('The last day to return it, when the receipt prints one.'),
+    warranty_until: f.date('When the warranty ends, when the receipt or the box states it.'),
   },
   handler(a, { db, at }) {
     // Same rule as a statement's hash: it exists to stop the same file landing twice, so a file
@@ -43,9 +45,11 @@ with a reason. An unmatched receipt is a visible state, not an error.`,
       if (!Number.isInteger(sum)) throw new Rejected('Every line amount is a whole number of minor units.');
       if (sum !== a.total) throw new Rejected(`The lines add up to ${H.money(sum, cur)} but the total you read is ${H.money(a.total, cur)}. One of them is misread; look at the receipt again and hand over what it prints (P-3).`);
     }
+    // P-26: as the receipt states them; never worked out from a store's usual policy.
+    for (const k of ['return_by', 'warranty_until']) if (a[k] != null) { if (!/^\d{4}-\d{2}-\d{2}$/.test(String(a[k]))) throw new Rejected(`${k} is a date, YYYY-MM-DD.`); if (a[k] < a.date) throw new Rejected(`${k} (${a[k]}) is before the receipt's own date (${a.date}).`); }
     const id = H.nextId('R', 'purch_receipt');
-    db.prepare('INSERT INTO purch_receipt (id,name,hash,vendor,date,total,currency,note,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)')
-      .run(id, a.name, hash, a.vendor || null, a.date, a.total, cur, a.note || null, at, at);
+    db.prepare('INSERT INTO purch_receipt (id,name,hash,vendor,date,total,currency,note,return_by,warranty_until,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
+      .run(id, a.name, hash, a.vendor || null, a.date, a.total, cur, a.note || null, a.return_by || null, a.warranty_until || null, at, at);
     const r = V.receiptView(id);
     const candidates = V.receiptCandidates(r);
     return { ...r, candidates, note: candidates.length ? `${candidates.length} candidate row${candidates.length > 1 ? 's' : ''} — match with purch_match_receipt and a reason.` : 'No row on record matches this total within seven days; leave it unmatched or import the statement it belongs to.' };

@@ -48,6 +48,8 @@
  *                    counts what is owed, and the lender's figure is checked
  *  25. autopay       a person puts a vendor on autopay; its next bill is approved by that
  *                    decision and says whose; stopped, the next bill waits for approval again
+ *  26. the year      expenses paid back leave personal spending and their categories in the books;
+ *                    the year sums tagged spending and gives loan and card interest from the record
  *
  * A PR that adds a hand-written form, a prefix-less command, or a cross-module UPDATE
  * fails here, not in review.
@@ -714,6 +716,35 @@ for (const tag of R.PERMISSIONS) {
     assert.strictEqual(b2.status, 'open', 'autopay stopped, the next bill waits for approval');
   });
   ok('autopay: a person\'s standing approval approves a vendor\'s bills and says so; stopped, bills wait again');
+}
+
+// ---------------------------------------------- 26. the year: paid back, tagged, interest summed
+{
+  const G = 'gate26-year'; wsp.wipe(G);
+  const p26 = { workspace: G, actor: 'test', actor_kind: 'human', role: 'owner' }, a26 = { ...p26, actor_kind: 'agent' };
+  H.withClock('2026-12-10', () => {
+    const imp = (name, account, kind, o, c, rows, hash, ps, pe) => execute('purch_import_statement', { name, hash, kind, account, currency: 'USD', period_start: ps, period_end: pe, opening_balance: o, closing_balance: c,
+      rows: rows.map(([date, amount, description], i) => ({ date, amount, description, row_index: i + 1 })) }, a26);
+    imp('visa.csv', 'G26 Visa', 'card', 0, -76840, [['2026-11-03', -45000, 'HILTON CHICAGO'], ['2026-11-08', -30000, 'CVS PHARMACY'], ['2026-11-30', -1840, 'INTEREST CHARGE']], 'sha256:g26visa', '2026-11-01', '2026-11-30');
+    imp('chk.csv', 'G26 Checking', 'bank', 1000000, 795000, [['2026-11-01', -250000, 'CHASE MTG PMT'], ['2026-11-25', 45000, 'ACME CORP EXPENSE REIMB']], 'sha256:g26chk', '2026-11-01', '2026-11-30');
+    execute('purch_review_transaction', { transaction_id: 'T-0001', status: 'purchase', category: 'travel', reimbursable_by: 'Acme Corp', claim_ref: 'ER-14', reason: 'client visit' }, a26);
+    execute('purch_review_transaction', { transaction_id: 'T-0002', status: 'purchase', category: 'medical', reason: 'prescriptions' }, a26);
+    execute('purch_review_transaction', { transaction_id: 'T-0003', status: 'fee', category: 'interest', reason: 'card interest' }, a26);
+    execute('purch_record_reimbursement', { in_transaction_id: 'T-0005', expenses: [{ transaction_id: 'T-0001' }], reason: 'ER-14 paid' }, a26);
+    execute('loan_add', { name: 'G26 mortgage', kind: 'mortgage', lender: 'Chase', currency: 'USD', balance: 30000000, balance_date: '2026-10-15', rate_bp: 650, payment: 205000, escrow: 45000, due_day: 1, source: 'lender statement' }, a26);
+    execute('loan_link_payment', { loan_id: 'LN-0001', transaction_id: 'T-0004', reason: 'November' }, a26);
+    execute('purch_tag_category', { category: 'medical', tag: 'medical', reason: 'medical deduction' }, p26);
+    const sp = execute('purch_purchases', {}, p26);
+    assert.ok(!sp.by_category.some(c => c.category === 'travel'), 'an expense paid back is not personal spending (P-27)');
+    const fin = execute('bridge_financials', { from: '2026-11-01', to: '2026-11-30' }, p26);
+    assert.ok(!fin.profit_and_loss.expenses.some(x => x.account === 'travel' && x.amount) && !fin.profit_and_loss.income.length, 'in the books the payback takes the expense back out of travel; it is not income');
+    assert.ok(fin.balanced && fin.ties.every(t => t.ties), 'the books balance and every account ties');
+    const y = execute('purch_year', { year: '2026' }, p26);
+    const med = y.tagged.find(t => t.tag === 'medical');
+    assert.ok(med && med.amount === 30000 && med.missing_count === 1, 'the year sums the tagged spending and names the row with no receipt (P-28)');
+    assert.ok(y.interest_paid.loans.some(l => l.amount === 162500) && y.interest_paid.cards.some(c => c.amount === 1840), 'interest paid on the loan and the card, from the record');
+  });
+  ok('the year: an expense paid back leaves personal spending and the books; tagged spending summed with missing receipts; interest from loans and cards');
 }
 
 console.log(`\n${n} contract checks passed across ${MODULES.length} modules, ${COMMANDS.length} commands.`);

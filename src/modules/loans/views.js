@@ -162,4 +162,7 @@ function upcoming(from, to) {
 
 const DERIVATION_ACCOUNTS = [{ account: 'Opening Balance Equity', kind: 'equity', when: 'what a loan was owed when its record starts' }];
 
-module.exports = { upcoming, loanView, loans, candidates, interest, scheduleSplit, history, dueOnOrAfter, statementRowPosts, statementRowMatches, accountBalance, journalLines, DERIVATION_ACCOUNTS, interestCategory, purchases, monthly };
+/** purchases' year summary: interest paid per loan in a year. */
+const yearInterest = (y) => interest({ year: y }).items.map(x => ({ name: x.name, kind: x.kind, amount: x.interest, interest_display: x.interest_display, payments: x.payments }));
+
+module.exports = { yearInterest, upcoming, loanView, loans, candidates, interest, scheduleSplit, history, dueOnOrAfter, statementRowPosts, statementRowMatches, accountBalance, journalLines, DERIVATION_ACCOUNTS, interestCategory, purchases, monthly };
