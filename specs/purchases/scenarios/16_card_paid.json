@@ -1,0 +1,106 @@
+{
+ "name": "a card statement with its facts, paid in full from checking by the due date",
+ "spec": "purchases@0.8",
+ "today": "2099-12-10",
+ "notes": "P-19, P-20: the printed facts kept; the payment seen from checking meets the statement balance.",
+ "env": [],
+ "steps": [
+  {
+   "act": "import_statement",
+   "args": {
+    "name": "visa-oct.csv",
+    "hash": "cc-visa-oct",
+    "kind": "card",
+    "account": "Visa ending 8827",
+    "currency": "USD",
+    "period_start": "2099-10-01",
+    "period_end": "2099-10-31",
+    "opening_balance": 0,
+    "closing_balance": -150000,
+    "rows": [
+     {
+      "date": "2099-10-12",
+      "amount": -150000,
+      "description": "FURNITURE OUTLET",
+      "row_index": 1
+     }
+    ],
+    "minimum_due": 3500,
+    "payment_due_date": "2099-11-25",
+    "credit_limit": 500000,
+    "apr_bp": 2499
+   },
+   "expect": {
+    "ok": true
+   },
+   "notes": "P-19: the facts kept as printed"
+  },
+  {
+   "act": "import_statement",
+   "args": {
+    "name": "chk-nov.csv",
+    "hash": "cc-chk-nov",
+    "kind": "bank",
+    "account": "Checking 4410",
+    "currency": "USD",
+    "period_start": "2099-11-01",
+    "period_end": "2099-11-30",
+    "opening_balance": 400000,
+    "closing_balance": 250000,
+    "rows": [
+     {
+      "date": "2099-11-15",
+      "amount": -150000,
+      "description": "ONLINE PMT TO VISA 8827",
+      "row_index": 1
+     }
+    ]
+   }
+  },
+  {
+   "act": "review_transaction",
+   "args": {
+    "transaction": "T-0002",
+    "status": "transfer",
+    "category": "Visa ending 8827",
+    "reason": "paid the card"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "card_dues",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "count": 1,
+     "missed": 0
+    }
+   }
+  },
+  {
+   "act": "set_card_facts",
+   "args": {
+    "source": "SRC-0002",
+    "minimum_due": 100
+   },
+   "expect": {
+    "refused": "are a card statement's"
+   },
+   "notes": "P-19"
+  },
+  {
+   "act": "set_card_facts",
+   "args": {
+    "source": "SRC-0001",
+    "minimum_due": 4000
+   },
+   "expect": {
+    "refused": "say why"
+   },
+   "notes": "P-19: a correction needs a reason"
+  }
+ ]
+}

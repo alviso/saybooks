@@ -203,7 +203,7 @@ function transactions({ from, to, status, source_id, vendor, category, limit } =
   const where = []; const args = [];
   if (from) { where.push('t.date >= ?'); args.push(from); }
   if (to) { where.push('t.date <= ?'); args.push(to); }
-  if (status === 'spending') where.push("t.status IN ('purchase','recurring')");
+  if (status === 'spending') where.push("t.status IN ('purchase','recurring','refund')");   // a refund takes back part of a purchase (P-21)
   else if (status) { where.push('t.status = ?'); args.push(status); }
   if (source_id) { where.push('t.source_id = ?'); args.push(source_id); }
   if (category) { where.push('t.category = ? COLLATE NOCASE'); args.push(category); }
@@ -221,9 +221,9 @@ function purchases(opts = {}) {
   const byCat = {}, byMonth = {}, byVendor = {};
   for (const i of t.items) {
     const c = i.currency, sp = -i.amount;
-    const k1 = `${i.category || '(uncategorised)'}|${c}`; byCat[k1] = byCat[k1] || { category: i.category || null, currency: c, amount: 0, count: 0 }; byCat[k1].amount += sp; byCat[k1].count++;
-    const k2 = `${i.date.slice(0, 7)}|${c}`; byMonth[k2] = byMonth[k2] || { month: i.date.slice(0, 7), currency: c, amount: 0, count: 0 }; byMonth[k2].amount += sp; byMonth[k2].count++;
-    const k3 = `${i.vendor || '(no vendor)'}|${c}`; byVendor[k3] = byVendor[k3] || { vendor: i.vendor || '(no vendor)', named: !!i.vendor, currency: c, amount: 0, count: 0 }; byVendor[k3].amount += sp; byVendor[k3].count++;
+    const k1 = `${i.category || '(uncategorised)'}|${c}`; byCat[k1] = byCat[k1] || { category: i.category || null, currency: c, amount: 0, count: 0 }; byCat[k1].amount += sp; if (sp > 0) byCat[k1].count++;
+    const k2 = `${i.date.slice(0, 7)}|${c}`; byMonth[k2] = byMonth[k2] || { month: i.date.slice(0, 7), currency: c, amount: 0, count: 0 }; byMonth[k2].amount += sp; if (sp > 0) byMonth[k2].count++;
+    const k3 = `${i.vendor || '(no vendor)'}|${c}`; byVendor[k3] = byVendor[k3] || { vendor: i.vendor || '(no vendor)', named: !!i.vendor, currency: c, amount: 0, count: 0 }; byVendor[k3].amount += sp; if (sp > 0) byVendor[k3].count++;
   }
   const fin = (o) => Object.values(o).map(x => ({ ...x, amount_display: money(x.amount, x.currency) }));
   const latest = (db().prepare('SELECT MAX(period_end) d FROM purch_source').get() || {}).d || null;
@@ -246,7 +246,9 @@ function sourceView(id) {
   const s = need('purch_source', id, 'source');
   const rows = db().prepare('SELECT t.*, v.name AS vendor FROM purch_transaction t LEFT JOIN purch_vendor v ON v.id = t.vendor_id WHERE t.source_id = ? ORDER BY t.row_index').all(id)
     .map(r => ({ ...r, amount_display: money(r.amount, r.currency), suggested: suggestionFor(r) }));
-  return { ...s, opening_display: money(s.opening_balance, s.currency), closing_display: money(s.closing_balance, s.currency), reconciled: true, rows, unreviewed: rows.filter(r => r.status === 'unreviewed').length };
+  const cf = cardFacts(id);
+  return { ...s, opening_display: money(s.opening_balance, s.currency), closing_display: money(s.closing_balance, s.currency), reconciled: true, rows, unreviewed: rows.filter(r => r.status === 'unreviewed').length,
+    card: cf && { ...cf, minimum_due_display: cf.minimum_due == null ? null : money(cf.minimum_due, s.currency), credit_limit_display: cf.credit_limit == null ? null : money(cf.credit_limit, s.currency), apr: pct(cf.apr_bp) } };
 }
 
 /** Candidates for a receipt: same currency, spending, same amount within a cent, within seven days, no receipt yet. */
@@ -263,8 +265,9 @@ function vocabulary() {
     { status: 'purchase', means: 'one-off spending — counted in spend' },
     { status: 'recurring', means: 'spending that repeats (rent, streaming, insurance) — counted in spend; with a vendor it declares the subscription' },
     { status: 'transfer', means: "the person's own money moving: card payoffs, brokerage, loans, own accounts — not spend" },
-    { status: 'income', means: 'money in: salary, refunds, payments received' },
-    { status: 'fee', means: "the bank's charge" },
+    { status: 'income', means: 'money in: salary, payments received. Money back for a purchase on record is linked to it as a refund instead (purch_link_refund)' },
+    { status: 'refund', means: 'money back for a purchase on record, linked to it: takes back that much of its spending, in its category. Set only by linking, never by review' },
+    { status: 'fee', means: "a charge by the bank or card: with category interest for interest, or a word for the fee (annual fee, late fee); posts to that category, or Bank Fees without one" },
     { status: 'ignored', means: 'not theirs to track' },
   ];
   const categories = db().prepare("SELECT category, COUNT(*) n, SUM(CASE WHEN amount < 0 THEN -amount ELSE 0 END) spend FROM purch_transaction WHERE category IS NOT NULL GROUP BY category COLLATE NOCASE ORDER BY n DESC").all();
@@ -296,7 +299,7 @@ function journalLines({ from, to } = {}) {
   try {
     rows = db().prepare(`SELECT t.*, v.name AS vendor, COALESCE((SELECT a.name FROM purch_account a WHERE a.id = s.account_id), s.account) AS source_account, s.kind AS source_kind
       FROM purch_transaction t LEFT JOIN purch_vendor v ON v.id = t.vendor_id JOIN purch_source s ON s.id = t.source_id
-      WHERE t.status IN ('purchase','recurring','fee','income','transfer') ORDER BY t.date, t.id`).all();
+      WHERE t.status IN ('purchase','recurring','fee','income','transfer','refund') ORDER BY t.date, t.id`).all();
   } catch { return []; }
   const out = [];
   // A row that paid a bill kept on the accrual basis (a bill on a purchase order) clears
@@ -320,8 +323,16 @@ function journalLines({ from, to } = {}) {
       continue;
     }
     if (t.status === 'fee') {
+      // A fee with a word posts to it (interest is interest, an annual fee is a fee), else Bank Fees.
+      const fc = (t.category || '').trim();
+      const feeAcct = fc ? { account: fc, map: { kind: 'category', key: fc, role: 'expense' } } : { account: 'Bank Fees' };
       out.push({ date: t.date, memo: `Fee · ${t.description}`, customer: null, currency: t.currency, source: t.id,
-        lines: [{ account: 'Bank Fees', debit: amount }, { ...paidFrom, credit: amount }] });
+        lines: t.amount < 0 ? [{ ...feeAcct, debit: amount }, { ...paidFrom, credit: amount }] : [{ ...paidFrom, debit: amount }, { ...feeAcct, credit: amount }] });
+    } else if (t.status === 'refund') {
+      // P-21: money back takes back spending in the purchase's own category; it is not income.
+      const rc = (t.category || '').trim() || 'Uncategorised spending';
+      out.push({ date: t.date, memo: `Refund · ${who}`, customer: t.vendor || null, currency: t.currency, source: t.id,
+        lines: [{ ...paidFrom, debit: amount }, { account: rc, map: { kind: 'category', key: t.category ? rc : '(uncategorised)', role: 'expense' }, credit: amount }] });
     } else if (t.status === 'transfer') {
       // A transfer is real money leaving or entering this account: it must post, or the ledger's
       // bank balance stops tying to the statement. The category names the other side (savings,
@@ -393,7 +404,7 @@ function matchedRows() {
   for (const mod of require('../../registry.js').MODULES) if (mod.api && typeof mod.api.statementRowMatches === 'function') for (const [k, v] of mod.api.statementRowMatches()) m.set(k, v);
   return m;
 }
-const posts = (t) => ['purchase', 'recurring', 'fee', 'income'].includes(t.status) || (t.status === 'transfer' && !!String(t.category || '').trim());
+const posts = (t) => ['purchase', 'recurring', 'fee', 'income', 'refund'].includes(t.status) || (t.status === 'transfer' && !!String(t.category || '').trim());
 
 /** Every statement row with its account and whether it posts, for the bank reconciliation. */
 function statementRows() {
@@ -583,4 +594,93 @@ function transfers() {
     note: `${pairs.length ? `${pairs.length} transfer${pairs.length === 1 ? '' : 's'} paired.` : 'No transfers paired yet.'}${cands.count ? ` ${cands.count} could be paired.` : ''}${one.length ? ` ${one.length} one-sided, ${one.filter(x => x.missing).length} with the other half missing from a statement that should show it.` : ''}` };
 }
 
-module.exports = { pairIndex, transferView, transferCandidates, oneSided, transfers, rowWithAccount, ACCOUNT_KINDS, STATEMENT_KIND, accountKindFor, accountView, accounts, netWorth, statementsOf, chainIssues, balanceOf, matchedRows, statementRows, billView, bills, payables, unpaidBills, approvalHold, onAccrual, statementAccounts, activeRules, ruleMatches, suggestionFor, ruleView, rules, windowText, splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };
+// ---------------------------------------------------------------- credit cards (0.8)
+const cardFacts = (sourceId) => { try { return db().prepare('SELECT * FROM purch_card_statement WHERE source_id = ?').get(sourceId) || null; } catch { return null; } };
+const pct = (bp) => bp == null ? null : `${(bp / 100).toFixed(2).replace(/\.?0+$/, '')}%`;
+
+/** P-20: what is due on each card from its latest statement, and whether the payments seen meet it. */
+function cardDues({ as_of } = {}) {
+  const day = as_of || today();
+  let cards = []; try { cards = db().prepare("SELECT * FROM purch_account WHERE kind = 'credit_card' AND (closed_on IS NULL OR closed_on > ?) ORDER BY name").all(day); } catch { return { as_of: day, count: 0, items: [] }; }
+  const rows = statementRows(), pi = pairIndex();
+  let allStmts = []; try { allStmts = db().prepare('SELECT * FROM purch_source').all(); } catch { /* none */ }
+  const items = cards.map(c => {
+    const st = statementsOf(c.id).filter(x => x.period_end <= day).pop();
+    if (!st) return { account_id: c.id, name: c.name, currency: c.currency, state: 'no statement yet' };
+    const f = cardFacts(st.id) || {};
+    const owed = st.closing_balance < 0 ? -st.closing_balance : 0;
+    const due = f.due_date || null;
+    const until = due || H.addDays(st.period_end, 25);
+    // Payments: money into this card after the statement closed, up to the due date; and money out
+    // of another account toward it that has no card side on record yet.
+    const inCard = rows.filter(t => t.account_id === c.id && t.amount > 0 && t.date > st.period_end && t.date <= until && (t.status === 'transfer' || (t.status === 'unreviewed' && PAY_WORDS.test(t.description))));
+    const toward = rows.filter(t => t.account_id !== c.id && t.amount < 0 && t.status === 'transfer' && !pi.has(t.id) && String(t.category || '').trim().toLowerCase() === c.name.toLowerCase() && t.date > st.period_end && t.date <= until);
+    const paid = inCard.reduce((n, t) => n + t.amount, 0) + toward.reduce((n, t) => n - t.amount, 0);
+    const seenThrough = allStmts.filter(x => x.period_end >= until).length > 0;
+    const left = due ? Math.round((Date.parse(due) - Date.parse(day)) / 864e5) : null;
+    const min = f.minimum_due ?? null;
+    let state;
+    if (!owed) state = 'nothing owed';
+    else if (paid >= owed) state = 'paid in full';
+    else if (min != null && paid >= min) state = due && day > due ? 'minimum paid, the rest carries interest' : 'minimum paid';
+    else if (!due) state = 'due date not recorded';
+    else if (day <= due) state = `due in ${left} day${left === 1 ? '' : 's'}`;
+    else if (!seenThrough) state = 'past due, no statement shows the payment yet';
+    else state = 'missed: no payment on record by the due date';
+    return { account_id: c.id, name: c.name, currency: c.currency, statement_id: st.id, statement_end: st.period_end,
+      statement_balance: owed, statement_balance_display: money(owed, c.currency), minimum_due: min, minimum_due_display: min == null ? null : money(min, c.currency),
+      due_date: due, days_left: left, credit_limit: f.credit_limit ?? null, credit_limit_display: f.credit_limit == null ? null : money(f.credit_limit, c.currency),
+      utilization_pct: f.credit_limit ? Math.round(owed * 1000 / f.credit_limit) / 10 : null, apr: pct(f.apr_bp), facts_recorded: !!cardFacts(st.id),
+      paid, paid_display: money(paid, c.currency), payments: [...inCard, ...toward].map(t => ({ id: t.id, date: t.date, amount_display: money(Math.abs(t.amount), t.currency), account: t.account })),
+      state, missed: state.startsWith('missed') };
+  });
+  return { as_of: day, count: items.length, items, missed: items.filter(x => x.missed).length,
+    note: items.length ? items.map(x => `${x.name}: ${x.state}${x.due_date && x.statement_balance ? ` (${x.statement_balance_display} owed, ${x.minimum_due_display ? `minimum ${x.minimum_due_display}, ` : ''}due ${x.due_date})` : ''}.`).join(' ') : 'No credit cards in the register.' };
+}
+
+/** P-22: interest and fees as rows reviewed as fees say, per card account and year. */
+function cardCosts({ year } = {}) {
+  const y = String(year || today().slice(0, 4));
+  const rows = statementRows().filter(t => t.status === 'fee' && t.date.startsWith(y));
+  let accs = []; try { accs = db().prepare('SELECT * FROM purch_account').all(); } catch { /* none */ }
+  const by = {};
+  for (const t of rows) {
+    const a = accs.find(x => x.id === t.account_id) || { id: t.account_id, name: t.account, kind: null };
+    const k = `${a.id}|${t.currency}`;
+    const e = by[k] = by[k] || { account_id: a.id, name: a.name, kind: a.kind, currency: t.currency, interest: 0, fees: 0, rows: [] };
+    const charge = -t.amount;
+    if (/interest/i.test(t.category || '') || (!t.category && /interest/i.test(t.description))) e.interest += charge; else e.fees += charge;
+    e.rows.push({ id: t.id, date: t.date, description: t.description, category: t.category, amount_display: money(charge, t.currency) });
+  }
+  const items = Object.values(by).map(e => ({ ...e, interest_display: money(e.interest, e.currency), fees_display: money(e.fees, e.currency), total_display: money(e.interest + e.fees, e.currency) }));
+  return { year: y, count: items.length, items, note: items.length ? `${y}: ${items.map(e => `${e.name}, ${e.interest_display} interest and ${e.fees_display} fees`).join('; ')}. From rows reviewed as fees; a charge not reviewed yet is not here.` : `No interest or fees reviewed in ${y}.` };
+}
+
+// ---------------------------------------------------------------- refunds (0.8)
+const activeRefunds = () => { try { return db().prepare('SELECT * FROM purch_refund WHERE unlinked_at IS NULL ORDER BY id').all(); } catch { return []; } };
+const refundedOf = (purchaseTx) => activeRefunds().filter(r => r.purchase_tx === purchaseTx).reduce((n, r) => n + (get('purch_transaction', r.refund_tx) || {}).amount, 0);
+function refundView(id) {
+  const r = need('purch_refund', id, 'refund');
+  const rf = rowWithAccount(r.refund_tx), pu = rowWithAccount(r.purchase_tx);
+  return { ...r, name: `Refund of ${pu.id}`, status: r.unlinked_at ? 'unlinked' : 'linked', refund: brief(rf), purchase: { ...brief(pu), category: pu.category, vendor: vendorName(pu.vendor_id) }, refund_was: JSON.parse(r.refund_was || '{}') };
+}
+const firstWord = (s) => (String(s || '').toLowerCase().match(/[a-z]{3,}/) || [''])[0];
+/** P-21: money in that looks like money back for a purchase on record. Suggestions only. */
+function refundCandidates() {
+  const linked = new Set(activeRefunds().map(r => r.refund_tx)), pi = pairIndex(), held = matchedRows();
+  const rows = statementRows();
+  const ins = rows.filter(t => t.amount > 0 && ['unreviewed', 'income'].includes(t.status) && !linked.has(t.id) && !pi.has(t.id) && !held.has(t.id));
+  const buys = rows.filter(t => t.amount < 0 && ['purchase', 'recurring'].includes(t.status));
+  const out = [];
+  for (const r of ins) {
+    const fits = buys.filter(b => b.currency === r.currency && b.date <= r.date && b.date >= H.addDays(r.date, -120) && r.amount <= -b.amount - refundedOf(b.id))
+      .map(b => { const sameVendor = (b.vendor_id && b.vendor_id === r.vendor_id) || (firstWord(b.description) && firstWord(b.description) === firstWord(r.description));
+        return { b, sameVendor, score: (sameVendor ? 10 : 0) + (r.amount === -b.amount ? 3 : 0) - (Date.parse(r.date) - Date.parse(b.date)) / 864e5 / 30 }; })
+      .filter(x => x.sameVendor).sort((x, y) => y.score - x.score).slice(0, 3);
+    if (fits.length) out.push({ refund: brief({ ...r, account_name: r.account }), candidates: fits.map(x => ({ ...brief({ ...x.b, account_name: x.b.account }), category: x.b.category,
+      why: `same shop${r.amount === -x.b.amount ? ', the full amount' : `, ${money(r.amount, r.currency)} of ${money(-x.b.amount, x.b.currency)}`}, ${Math.round((Date.parse(r.date) - Date.parse(x.b.date)) / 864e5)} days later` })) });
+  }
+  return { count: out.length, items: out, note: out.length ? `${out.length} row${out.length === 1 ? '' : 's'} of money in look${out.length === 1 ? 's' : ''} like money back for a purchase on record. Suggestions only: link with purch_link_refund and a reason.` : 'No money in waiting to be linked to a purchase.' };
+}
+
+module.exports = { cardFacts, cardDues, cardCosts, activeRefunds, refundedOf, refundView, refundCandidates, pct, PAY_WORDS, pairIndex, transferView, transferCandidates, oneSided, transfers, rowWithAccount, ACCOUNT_KINDS, STATEMENT_KIND, accountKindFor, accountView, accounts, netWorth, statementsOf, chainIssues, balanceOf, matchedRows, statementRows, billView, bills, payables, unpaidBills, approvalHold, onAccrual, statementAccounts, activeRules, ruleMatches, suggestionFor, ruleView, rules, windowText, splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };

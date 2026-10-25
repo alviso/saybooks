@@ -1,0 +1,103 @@
+{
+ "name": "a refund linked to the purchase it reverses",
+ "spec": "purchases@0.8",
+ "today": "2099-12-10",
+ "notes": "P-21: suggested, linked with a reason, never more than is left, and closed to a second review.",
+ "env": [],
+ "steps": [
+  {
+   "act": "import_statement",
+   "args": {
+    "name": "visa.csv",
+    "hash": "rf-visa-nov",
+    "kind": "card",
+    "account": "Visa ending 8827",
+    "currency": "USD",
+    "period_start": "2099-11-01",
+    "period_end": "2099-11-30",
+    "opening_balance": 0,
+    "closing_balance": -17000,
+    "rows": [
+     {
+      "date": "2099-11-02",
+      "amount": -12000,
+      "description": "CRATE AND BARREL",
+      "row_index": 1
+     },
+     {
+      "date": "2099-11-09",
+      "amount": 4000,
+      "description": "CRATE AND BARREL CREDIT",
+      "row_index": 2
+     },
+     {
+      "date": "2099-11-20",
+      "amount": -9000,
+      "description": "CAFE",
+      "row_index": 3
+     }
+    ]
+   }
+  },
+  {
+   "act": "review_transaction",
+   "args": {
+    "transaction": "T-0001",
+    "status": "purchase",
+    "category": "furniture",
+    "reason": "a chair"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "refund_candidates",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "count": 1
+    }
+   },
+   "notes": "P-21: a suggestion"
+  },
+  {
+   "act": "link_refund",
+   "args": {
+    "refund_transaction_id": "T-0002",
+    "purchase_transaction_id": "T-0003",
+    "reason": "wrong one"
+   },
+   "expect": {
+    "refused": "reverses a purchase"
+   }
+  },
+  {
+   "act": "link_refund",
+   "args": {
+    "refund_transaction_id": "T-0002",
+    "purchase_transaction_id": "T-0001",
+    "reason": "returned one of the chairs"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "status": "linked"
+    }
+   }
+  },
+  {
+   "act": "review_transaction",
+   "args": {
+    "transaction": "T-0002",
+    "status": "income",
+    "category": "other",
+    "reason": "x"
+   },
+   "expect": {
+    "refused": "linked as a refund"
+   }
+  }
+ ]
+}

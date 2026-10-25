@@ -21,6 +21,8 @@ function needTx(id, where = '') {
 
 /** A row matched to a payment in the bank reconciliation is money already recorded here; reviewing it again would count it twice. */
 function notMatched(t, where = '') {
+  const rf = V.activeRefunds().find(r => r.refund_tx === t.id);
+  if (rf) throw new Rejected(`${where}${t.id} (${t.description}) is linked as a refund of ${rf.purchase_tx} (${rf.id}). Unlink it first (purch_unlink_refund) if that is wrong.`);
   const pr = V.pairIndex().get(t.id);
   if (pr) throw new Rejected(`${where}${t.id} (${t.description}) is one side of transfer ${pr.pair.id}, between two of your accounts. Unpair it first (purch_unpair_transfer) if the pairing is wrong.`);
   const held = V.matchedRows().get(t.id);

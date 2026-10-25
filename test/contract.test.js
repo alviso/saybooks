@@ -41,6 +41,8 @@
  *  22. transfers     a move between two of the person's accounts posts once, from one account
  *                    into the other; both accounts tie to their statements and reconcile; an
  *                    unpaired pair puts both rows back
+ *  23. cards         a refund takes back spending in its purchase's category, in spend and in the
+ *                    books; interest posts as interest; a payment of only the minimum says so
  *
  * A PR that adds a hand-written form, a prefix-less command, or a cross-module UPDATE
  * fails here, not in review.
@@ -630,6 +632,36 @@ for (const tag of R.PERMISSIONS) {
     assert.ok(['T-0002', 'T-0004'].every(id => execute('purch_get_transaction', { transaction_id: id }, p22).status === 'unreviewed'), 'unpaired, both rows are back as they were');
   });
   ok('transfers: a move between two of your accounts posts once, both accounts tie and reconcile, unpairing puts both rows back');
+}
+
+// ------------------------------------------- 23. cards: refunds, interest, the minimum payment
+{
+  const G = 'gate23-cards'; wsp.wipe(G);
+  const p23 = { workspace: G, actor: 'test', actor_kind: 'human', role: 'owner' }, a23 = { ...p23, actor_kind: 'agent' };
+  H.withClock('2026-12-10', () => {
+    const imp = (name, account, kind, o, c, rows, hash, ps, pe, extra = {}) => execute('purch_import_statement', { name, hash, kind, account, currency: 'USD', period_start: ps, period_end: pe, opening_balance: o, closing_balance: c,
+      rows: rows.map(([date, amount, description], i) => ({ date, amount, description, row_index: i + 1 })), ...extra }, a23);
+    imp('visa-oct.csv', 'G23 Visa', 'card', 0, -14000, [['2026-10-02', -12000, 'CRATE AND BARREL'], ['2026-10-09', 4000, 'CRATE AND BARREL CREDIT'], ['2026-10-20', -6000, 'CAFE']], 'sha256:g23visaoct', '2026-10-01', '2026-10-31',
+      { minimum_due: 2500, payment_due_date: '2026-11-25', credit_limit: 300000, apr_bp: 2499 });
+    imp('chk-nov.csv', 'G23 Checking', 'bank', 100000, 97500, [['2026-11-20', -2500, 'ONLINE PMT TO VISA']], 'sha256:g23chknov', '2026-11-01', '2026-11-30');
+    imp('visa-nov.csv', 'G23 Visa', 'card', -14000, -13340, [['2026-11-21', 2500, 'PAYMENT THANK YOU'], ['2026-11-30', -1840, 'INTEREST CHARGE ON PURCHASES']], 'sha256:g23visanov', '2026-11-01', '2026-11-30');
+    execute('purch_review_transaction', { transaction_id: 'T-0001', status: 'purchase', category: 'furniture', reason: 'chairs' }, a23);
+    execute('purch_review_transaction', { transaction_id: 'T-0003', status: 'purchase', category: 'meals', reason: 'coffee' }, a23);
+    execute('purch_review_transaction', { transaction_id: 'T-0006', status: 'fee', category: 'interest', reason: 'interest on the balance carried' }, a23);
+    execute('purch_link_refund', { refund_transaction_id: 'T-0002', purchase_transaction_id: 'T-0001', reason: 'returned a chair' }, a23);
+    execute('purch_pair_transfer', { out_transaction_id: 'T-0004', in_transaction_id: 'T-0005', reason: 'the card payment' }, a23);
+    const sp = execute('purch_purchases', {}, p23);
+    assert.strictEqual(sp.by_category.find(c => c.category === 'furniture').amount, 8000, 'the refund takes back spending in the purchase\'s category (P-21)');
+    const fin = execute('bridge_financials', { from: '2026-10-01', to: '2026-11-30' }, p23);
+    assert.ok(!fin.profit_and_loss.income.length, 'a refund is not income (P-21)');
+    assert.ok(fin.profit_and_loss.expenses.some(x => x.account === 'furniture' && x.amount === 8000) && fin.profit_and_loss.expenses.some(x => x.account === 'interest' && x.amount === 1840), 'interest posts as interest; furniture net of the refund');
+    assert.ok(fin.balanced && fin.ties.every(t => t.ties), 'the books balance and every account ties');
+    const due = execute('purch_card_dues', { as_of: '2026-11-29' }, p23).items[0];
+    assert.ok(due.paid === 2500 && /minimum paid, the rest carries interest/.test(due.state), 'paying only the minimum says so (P-20)');
+    const costs = execute('purch_card_costs', { year: '2026' }, p23).items[0];
+    assert.ok(costs.interest === 1840 && costs.fees === 0, 'the year\'s interest from the fee row (P-22)');
+  });
+  ok('cards: a refund takes back spending in its category, interest posts as interest, a minimum-only payment is named');
 }
 
 console.log(`\n${n} contract checks passed across ${MODULES.length} modules, ${COMMANDS.length} commands.`);

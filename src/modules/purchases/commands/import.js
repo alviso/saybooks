@@ -159,6 +159,10 @@ Nothing is categorised here; review follows.`,
     text: f.note('The statement\'s lines exactly as you were given them, unchanged: one row per line, date first, amount last. A running-balance column after the amount is fine; dates without a year are fine. Header and footer lines are ignored. This is the normal way.'),
     account: f.text('The account label as printed (e.g. "Visa ending 4421"). Matched to the register by name; a new name adds the account.'),
     account_id: f.ref('purch_account', 'Or the account in the register this statement belongs to, e.g. ACC-0002.'),
+    minimum_due: f.money('Card statements: the minimum payment due, as printed.'),
+    payment_due_date: f.date('Card statements: the payment due date, as printed.'),
+    credit_limit: f.money('Card statements: the credit limit, as printed.'),
+    apr_bp: f.int('Card statements: the purchase rate in basis points, as printed (2499 = 24.99%).'),
     row_count: f.int('The number of rows the statement prints, if it prints one. Checked against the rows read; leave it out when the statement does not say.'),
     hash: f.text('Only with rows: a content hash of the file, or a stable id the statement carries. With text the hash is computed here.'),
     rows: f.lines(ROW, 'Only when there is no text to pass: every row as typed fields, in the statement\'s order.'),
@@ -230,6 +234,9 @@ Nothing is categorised here; review follows.`,
       n++;
     });
     db.prepare('UPDATE purch_source SET rows_in = ?, rows_skipped = ?, account_id = ? WHERE id = ?').run(n, skipped.length, acc.id, id);
+    // P-19: a card statement's printed facts, kept as printed.
+    let card = null;
+    if ([a.minimum_due, a.payment_due_date, a.credit_limit, a.apr_bp].some(x => x != null)) card = require('./cards.js').saveCardFacts(db, H.get('purch_source', id), a, { at, actor });
     const chain = V.chainIssues(V.statementsOf(acc.id), cur).filter(x => x.before === id || x.after === id);
     const ids = db.prepare('SELECT id, row_index, date, amount, description, vendor_id FROM purch_transaction WHERE source_id = ? ORDER BY row_index').all(id);
     // Standing rules the person set ahead of time (P-11): count what they now suggest, so the
@@ -237,7 +244,7 @@ Nothing is categorised here; review follows.`,
     const rl = V.activeRules();
     const suggested = ids.map(t => ({ t, s: V.suggestionFor({ ...t, status: 'unreviewed', currency: cur }, rl) })).filter(x => x.s);
     const ruleNote = suggested.length ? ` ${suggested.length} row${suggested.length > 1 ? 's' : ''} match${suggested.length > 1 ? '' : 'es'} a standing rule (${[...new Set(suggested.map(x => `${x.s.rule_label}: ${x.s.category}`))].join('; ')}); propose those with the rest and confirm with the person.` : '';
-    return { source: id, name: a.name, hash, currency: cur, reconciled: true, account_id: acc.id, account: acc.name, account_new: accNew, chain_issues: chain, rows_in: n, rows_skipped: skipped.length, skipped, suggested_by_rules: suggested.length,
+    return { source: id, name: a.name, hash, currency: cur, reconciled: true, account_id: acc.id, account: acc.name, account_new: accNew, chain_issues: chain, ...(card ? { card_facts: card } : {}), rows_in: n, rows_skipped: skipped.length, skipped, suggested_by_rules: suggested.length,
       // The ids the review step needs, so nobody has to guess them or fetch them again.
       transactions: ids.map(t => { const sg = suggested.find(x => x.t.id === t.id); return { id: t.id, row_index: t.row_index, date: t.date, amount: t.amount, description: t.description, ...(sg ? { suggested: sg.s } : {}) }; }),
       spend: H.money(-rows.filter(r => r.amount < 0).reduce((s, r) => s + r.amount, 0), cur), money_in: H.money(rows.filter(r => r.amount > 0).reduce((s, r) => s + r.amount, 0), cur),

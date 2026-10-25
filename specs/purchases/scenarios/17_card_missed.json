@@ -1,0 +1,119 @@
+{
+ "name": "a missed card payment is named, and the year's interest comes from fee rows",
+ "spec": "purchases@0.8",
+ "today": "2099-12-10",
+ "notes": "P-20, P-22: the checking statement covers the due date and shows no payment; interest is what the fee row says.",
+ "env": [],
+ "steps": [
+  {
+   "act": "import_statement",
+   "args": {
+    "name": "visa-oct.csv",
+    "hash": "cc-visa-oct",
+    "kind": "card",
+    "account": "Visa ending 8827",
+    "currency": "USD",
+    "period_start": "2099-10-01",
+    "period_end": "2099-10-31",
+    "opening_balance": 0,
+    "closing_balance": -150000,
+    "rows": [
+     {
+      "date": "2099-10-12",
+      "amount": -150000,
+      "description": "FURNITURE OUTLET",
+      "row_index": 1
+     }
+    ],
+    "minimum_due": 3500,
+    "payment_due_date": "2099-11-25",
+    "credit_limit": 500000,
+    "apr_bp": 2499
+   },
+   "expect": {
+    "ok": true
+   },
+   "notes": "P-19: the facts kept as printed"
+  },
+  {
+   "act": "import_statement",
+   "args": {
+    "name": "chk-nov.csv",
+    "hash": "cc-chk-nov-b",
+    "kind": "bank",
+    "account": "Checking 4410",
+    "currency": "USD",
+    "period_start": "2099-11-01",
+    "period_end": "2099-11-30",
+    "opening_balance": 400000,
+    "closing_balance": 380000,
+    "rows": [
+     {
+      "date": "2099-11-15",
+      "amount": -20000,
+      "description": "GROCER",
+      "row_index": 1
+     }
+    ]
+   }
+  },
+  {
+   "act": "card_dues",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "missed": 1
+    }
+   },
+   "notes": "P-20"
+  },
+  {
+   "act": "import_statement",
+   "args": {
+    "name": "visa-nov.csv",
+    "hash": "cc-visa-nov",
+    "kind": "card",
+    "account": "Visa ending 8827",
+    "currency": "USD",
+    "period_start": "2099-11-01",
+    "period_end": "2099-11-30",
+    "opening_balance": -150000,
+    "closing_balance": -151840,
+    "rows": [
+     {
+      "date": "2099-11-30",
+      "amount": -1840,
+      "description": "INTEREST CHARGE ON PURCHASES",
+      "row_index": 1
+     }
+    ]
+   }
+  },
+  {
+   "act": "review_transaction",
+   "args": {
+    "transaction": "T-0003",
+    "status": "fee",
+    "category": "interest",
+    "reason": "interest on the unpaid balance"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "card_costs",
+   "args": {
+    "year": "2099"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "count": 1
+    }
+   },
+   "notes": "P-22"
+  }
+ ]
+}

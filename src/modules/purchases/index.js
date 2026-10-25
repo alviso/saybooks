@@ -11,8 +11,8 @@ const H = require('../../db.js');
 
 const mod = R.defineModule({
   name: 'purchases', prefix: 'purch',
-  tables: ['purch_account', 'purch_valuation', 'purch_transfer', 'purch_source', 'purch_vendor', 'purch_vendor_alias', 'purch_transaction', 'purch_split', 'purch_receipt', 'purch_subscription', 'purch_rule', 'purch_bill'],
-  ids: { account: 'ACC-0001', transfer: 'TR-0001', source: 'SRC-0001', transaction: 'T-0001', vendor: 'V-0001', receipt: 'R-0001', subscription: 'SUB-0001', rule: 'RL-0001', bill: 'B-0001' },
+  tables: ['purch_account', 'purch_valuation', 'purch_transfer', 'purch_card_statement', 'purch_refund', 'purch_source', 'purch_vendor', 'purch_vendor_alias', 'purch_transaction', 'purch_split', 'purch_receipt', 'purch_subscription', 'purch_rule', 'purch_bill'],
+  ids: { account: 'ACC-0001', transfer: 'TR-0001', refund: 'RFD-0001', source: 'SRC-0001', transaction: 'T-0001', vendor: 'V-0001', receipt: 'R-0001', subscription: 'SUB-0001', rule: 'RL-0001', bill: 'B-0001' },
   lifecycles: {
     source: 'imported whole (reconciled to its control totals) — immutable; the same hash never twice',
     transaction: 'unreviewed -> purchase | recurring | transfer | income | fee | ignored (a reasoned act; amount and date never change) -> optionally split into legs that add to it exactly',
@@ -86,7 +86,7 @@ Money is integer minor units; sums are per currency and never cross.`,
               approve_bill: 'purch_approve_bill', reject_bill: 'purch_reject_bill', record_bill_payment: 'purch_record_bill_payment' },
   env_argmap: { transaction: 'transaction_id', bill: 'bill_id' },
   implements: {
-    area: 'purchases', spec: '0.7',
+    area: 'purchases', spec: '0.8',
     argmap: { transaction: 'transaction_id', receipt: 'receipt_id', subscription: 'subscription_id', source: 'source_id', rule: 'rule_id', bill: 'bill_id' },
     acts: {
       import_statement: 'purch_import_statement', discard_source: 'purch_discard_source', review_transaction: 'purch_review_transaction', review_batch: 'purch_review_batch', split_transaction: 'purch_split_transaction', set_vendor: 'purch_set_vendor', vocabulary: 'purch_vocabulary', rename_category: 'purch_rename_category',
@@ -97,6 +97,7 @@ Money is integer minor units; sums are per currency and never cross.`,
       add_rule: 'purch_add_rule', end_rule: 'purch_end_rule', accept_suggestions: 'purch_accept_suggestions', rules: 'purch_rules',
       add_account: 'purch_add_account', update_account: 'purch_update_account', close_account: 'purch_close_account', record_value: 'purch_record_value',
       accounts: 'purch_accounts', account: 'purch_account', net_worth: 'purch_net_worth',
+      set_card_facts: 'purch_set_card_facts', card_dues: 'purch_card_dues', card_costs: 'purch_card_costs', link_refund: 'purch_link_refund', unlink_refund: 'purch_unlink_refund', refund_candidates: 'purch_refund_candidates',
       pair_transfer: 'purch_pair_transfer', unpair_transfer: 'purch_unpair_transfer', transfers: 'purch_transfers', transfer_candidates: 'purch_transfer_candidates',
       add_bill: 'purch_add_bill', approve_bill: 'purch_approve_bill', record_bill_payment: 'purch_record_bill_payment', reject_bill: 'purch_reject_bill', bills: 'purch_bills', payables: 'purch_payables',
     },
@@ -113,6 +114,7 @@ Money is integer minor units; sums are per currency and never cross.`,
     } },
 });
 
+R.defineSubject('purch_refund', { load: (id) => V.refundView(id) });
 R.defineSubject('purch_transfer', { load: (id) => V.transferView(id) });
 R.defineSubject('purch_account', { load: (id) => V.accountView(id) });
 R.defineSubject('purch_transaction', { load: (id) => V.transactionView(id) });
@@ -132,6 +134,7 @@ R.inModule(mod, () => {
   require('./commands/bills.js');
   require('./commands/accounts.js');
   require('./commands/transfers.js');
+  require('./commands/cards.js');
   require('./commands/reads.js');
 });
 // The one door to recording a bill, for the p2p area's bill on an order.

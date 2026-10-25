@@ -45,6 +45,15 @@ forecasts, advice, tax treatment of purchases, paying anything.
   a reason; both rows go back to how they were reviewed. A row reviewed as a transfer naming one of
   the person's accounts, with no pair, is one-sided: waiting for that account's statement, or
   missing from it.
+- **card statement facts** (0.8) — what a card statement prints besides its rows: minimum payment,
+  payment due date, credit limit, purchase rate. Kept as printed, with the import or after it;
+  changing them is a correction with a reason. What is due on a card comes from its latest
+  statement's facts; payments seen into the card by the due date (or out of another account toward
+  it) meet it in full, meet the minimum, or it is missed. A due date no statement covers yet is
+  said to be unseen, never assumed paid.
+- **refund** (0.8) — money in tied to the purchase it reverses, by a reasoned act, never more than
+  is left of that purchase after earlier refunds. It takes back that much spending in the
+  purchase's category and is not income. Unlinked with a reason; the row goes back as it was.
 - **transaction** — one row of a source: date, signed amount in minor units, description as
   printed, counterparty if the row names one, source and row index, the raw line as read.
   Status: unreviewed → purchase | recurring | transfer | income | fee | ignored, set by review
@@ -84,10 +93,11 @@ act, validated whole), set_vendor, add_receipt, match_receipt, declare_subscript
 cancel_subscription, unmatch_receipt, add_rule (a standing rule, with its window, words or
 vendor), end_rule (with a reason), accept_suggestions (confirm what rules suggest, one reasoned
 act, rows the person rejects left out), add_bill, approve_bill (a person only),
-record_bill_payment, reject_bill, add_account, update_account, close_account, record_value (0.6), pair_transfer, unpair_transfer (0.7).
+record_bill_payment, reject_bill, add_account, update_account, close_account, record_value (0.6), pair_transfer, unpair_transfer (0.7), set_card_facts, link_refund, unlink_refund (0.8).
 Reads (14): accounts (each with its balance, as of when, and where its statements do not chain),
 account, net_worth (held less owed, per currency, each figure dated), transfers (pairs and
-one-sided transfers), transfer_candidates (suggested pairs, with why), vocabulary (the statuses with their meaning,
+one-sided transfers), transfer_candidates (suggested pairs, with why), card_dues (each card's balance, minimum, due date,
+payments seen and state), card_costs (interest and fees per card and year), refund_candidates, vocabulary (the statuses with their meaning,
 the person's categories, vendors and active rules — what an agent proposes from), sources,
 transactions (each unreviewed row with the suggestion a rule makes for it), purchases,
 subscriptions, receipts, spend, source, rules, bills, payables (open bills by when they fall
@@ -157,6 +167,15 @@ due, set against the cash on the latest bank statements).
 - **P-18** A transfer naming one of the person's accounts with no other side is listed, saying
   whether that account's statement should already show it.
 
+- **P-19** A card statement's printed facts are kept as printed; changing them is a correction with
+  a reason.
+- **P-20** A card payment is due from the statement's facts and met by payments seen into the card
+  by the due date; a missed one is named, never assumed paid.
+- **P-21** A refund is tied to the purchase it reverses, never more than is left of it; it takes
+  back spending in the purchase's category and is not income.
+- **P-22** Interest and fees are what rows reviewed as fees say, per card and year; nothing is
+  estimated from the rate.
+
 ## 6. Required read models
 
 sources (what was imported, when, by whom, reconciled), transactions (by period, status,
@@ -192,7 +211,11 @@ their statements, a house from a value stated with its source, net worth as held
 a bank balance stated by hand refused, and a card statement refused on a checking account · 13
 a card payment from checking: suggested, paired with a reason, listed once, the paired row refused
 a second review · 14 a pair that does not add up, two rows on one account, and a row reviewed as a
-purchase refused · 15 a one-sided transfer whose other half the card's statement should show.
+purchase refused · 15 a one-sided transfer whose other half the card's statement should show · 16
+a card statement imported with its facts, paid in full from checking by the due date; facts refused
+on a bank statement and a second recording refused without a reason · 17 a missed card payment
+named once a statement covers the due date, and the year's interest from rows reviewed as fees · 18
+a refund suggested, linked to its purchase, more than is left refused, the refund closed to review.
 
 ## 9. Deferred — with reasons
 
@@ -206,7 +229,9 @@ purchase refused · 15 a one-sided transfer whose other half the card's statemen
 
 ---
 
-*Change log: 0.7 (2026-10-25) — transfers between the person's own accounts: the two sides paired
+*Change log: 0.8 (2026-10-25) — credit cards: statement facts kept, what is due and whether it was
+met, interest and fees per year, refunds tied to their purchase, fees posting to their own word;
+part C of the personal finances plan. 0.7 (2026-10-25) — transfers between the person's own accounts: the two sides paired
 and counted once, suggestions, one-sided transfers named; part B of the personal finances plan.
 0.6 (2026-10-25) — accounts: a register statements belong to, values stated for
 things without statements, balances that say where they come from, statement chains checked, and

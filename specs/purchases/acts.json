@@ -1,6 +1,6 @@
 {
   "area": "purchases",
-  "spec": "0.7",
+  "spec": "0.8",
   "doc": "spec.md",
   "acts": {
     "import_statement": {
@@ -255,6 +255,39 @@
     "transfer_candidates": {
       "kind": "read",
       "required": []
+    },
+    "set_card_facts": {
+      "kind": "write",
+      "required": [
+        "source"
+      ]
+    },
+    "card_dues": {
+      "kind": "read",
+      "required": []
+    },
+    "card_costs": {
+      "kind": "read",
+      "required": []
+    },
+    "link_refund": {
+      "kind": "write",
+      "required": [
+        "refund_transaction_id",
+        "purchase_transaction_id",
+        "reason"
+      ]
+    },
+    "unlink_refund": {
+      "kind": "write",
+      "required": [
+        "refund_id",
+        "reason"
+      ]
+    },
+    "refund_candidates": {
+      "kind": "read",
+      "required": []
     }
   },
   "invariants": [
@@ -325,6 +358,22 @@
     {
       "id": "P-18",
       "title": "A transfer naming one of the person's accounts with no other side is listed, saying whether that account's statement should already show it."
+    },
+    {
+      "id": "P-19",
+      "title": "A card statement's printed facts (minimum payment, due date, credit limit, rate) are kept as printed; changing them is a correction with a reason."
+    },
+    {
+      "id": "P-20",
+      "title": "A card payment is due from the statement's facts and met by payments seen into the card by the due date; a missed one is named, never assumed paid."
+    },
+    {
+      "id": "P-21",
+      "title": "A refund is tied to the purchase it reverses, never more than is left of it; it takes back spending in the purchase's category and is not income."
+    },
+    {
+      "id": "P-22",
+      "title": "Interest and fees are what rows reviewed as fees say, per card and year; nothing is estimated from the rate."
     }
   ]
 }

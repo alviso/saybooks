@@ -91,6 +91,12 @@ R.execute('purch_import_statement', { name: 'oct-card.csv', hash: 'sha256:smokes
   rows: [{ date: '2026-10-21', amount: 10000, description: 'PAYMENT THANK YOU' }] }, a);
 const smokePair = R.execute('purch_transfer_candidates', {}, a).items[0];
 R.execute('purch_pair_transfer', { out_transaction_id: smokePair.out.id, in_transaction_id: smokePair.in.id, reason: 'smoke: card payment' }, a);
+R.execute('purch_import_statement', { name: 'nov-card.csv', hash: 'sha256:smokestmt0005', kind: 'card', account: 'Smoke Card', currency: 'USD', period_start: '2026-11-01', period_end: '2026-11-30', opening_balance: 0, closing_balance: -8000, row_count: 2,
+  rows: [{ date: '2026-11-03', amount: -12000, description: 'CHAIR SHOP' }, { date: '2026-11-09', amount: 4000, description: 'CHAIR SHOP CREDIT' }], minimum_due: 2500, payment_due_date: '2026-12-20', credit_limit: 200000, apr_bp: 2499 }, a);
+const smokeChair = R.execute('purch_transactions', { limit: 50 }, a).items.find(t => t.description === 'CHAIR SHOP');
+R.execute('purch_review_transaction', { transaction_id: smokeChair.id, status: 'purchase', category: 'furniture', reason: 'smoke chair' }, a);
+const smokeRefund = R.execute('purch_refund_candidates', {}, a).items[0];
+R.execute('purch_link_refund', { refund_transaction_id: smokeRefund.refund.id, purchase_transaction_id: smokeRefund.candidates[0].id, reason: 'smoke: returned' }, a);
 const smokeHouse = R.execute('purch_add_account', { name: 'Smoke house', kind: 'asset', currency: 'USD' }, h);
 R.execute('purch_record_value', { account_id: smokeHouse.id, as_of: '2026-09-01', amount: 40000000, according_to: 'smoke appraisal' }, h);
 R.execute('hunt_add_posting', { company: 'Vega', title: 'Staff Engineer', source: 'direct', url: 'https://example.com/j' }, h);
@@ -179,6 +185,7 @@ const DETAILS = [
   ['tax_filing', '(await api("tax_filings",{})).items?.[0]?.id'],
   ['purch_account', '(await api("purch_accounts",{})).items?.[0]?.id'],
   ['purch_transfer', '(await api("purch_transfers",{})).pairs?.[0]?.id'],
+  ['purch_refund', '"RFD-0001"'],
   ['posting', '(await api("hunt_pipeline",{}))[0]?.id'],
 ];
 let dbad = 0, dseen = 0;
