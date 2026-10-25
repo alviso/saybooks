@@ -1563,7 +1563,7 @@ async function renderPage() {
     sec('Agency postings missing an end client', d.missing_end_client, r => `<td>${r.id}</td><td>${r.title}</td><td>${r.company_name}</td>`, '<th>Id</th><th>Posting</th><th>Agency</th>');
     // "2026-10-28T15:00:00" reads as data; "Oct 28, 3:00 PM" reads as a day in someone's week.
     const when = (v) => { if (!v) return 'unscheduled'; const t = /T\d/.test(v) ? new Date(v) : null; return t && !isNaN(t) ? t.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : esc(v); };
-    sec('Upcoming interviews', d.upcoming_interviews, r => `<td>${when(r.scheduled_at)}</td><td>${r.title}</td><td>${r.company_name}</td><td>${esc(String(r.kind || '').replace(/_/g, ' '))}${r.round ? `, round ${r.round}` : ''}</td>`, '<th>When</th><th>Posting</th><th>Company</th><th>Round</th>');
+    sec('Interviews coming up or waiting for an outcome', d.upcoming_interviews, r => `<td>${when(r.scheduled_at)}</td><td>${r.title}</td><td>${r.company_name}</td><td>${esc(String(r.kind || '').replace(/_/g, ' '))}${r.round ? `, round ${r.round}` : ''}</td>`, '<th>When</th><th>Posting</th><th>Company</th><th>Round</th>');
     sec('Stale leads', d.stale_leads, r => `<td>${r.id}</td><td>${r.title}</td><td>${r.company_name}</td>`, '<th>Id</th><th>Posting</th><th>Company</th>');
   }
   if (view === 'huntpipeline') {

@@ -120,17 +120,22 @@ function due(horizonDays = 7) {
     JOIN hunt_posting p ON p.id = i.posting_id JOIN hunt_company c ON c.id = p.company_id
     WHERE i.next_action_state = 'open' ORDER BY i.next_action_due`).all();
   const active = db().prepare(`
-    SELECT a.id, a.status, p.id AS posting_id, p.title, c.name AS company_name,
+    SELECT a.id, a.status, a.applied_at, p.id AS posting_id, p.title, c.name AS company_name,
       (SELECT MAX(at) FROM hunt_interaction i WHERE i.posting_id = p.id AND i.direction = 'out') AS last_out,
       (SELECT MAX(at) FROM hunt_interaction i WHERE i.posting_id = p.id AND i.direction = 'in') AS last_in
     FROM hunt_application a JOIN hunt_posting p ON p.id = a.posting_id JOIN hunt_company c ON c.id = p.company_id
-    WHERE a.status IN ('submitted','screening','interviewing','offer')`).all();
+    WHERE a.status IN ('submitted','screening','interviewing','offer')`).all()
+    // Applying is itself the first outbound touch: an application nobody logged anything after
+    // must still come up for a follow-up, and later for ghosted (JH-6), or the quietest ones vanish.
+    .map(a => { const ap = /^\d{4}-\d{2}-\d{2}/.test(a.applied_at || '') ? a.applied_at : null; return { ...a, last_out: [a.last_out, ap].filter(Boolean).sort().pop() || null }; });
   const days = (d) => d ? Math.floor((Date.parse(today) - Date.parse(String(d).slice(0, 10))) / 864e5) : null;
   return {
     overdue: open.filter(i => i.next_action_due && i.next_action_due < today),
     upcoming: open.filter(i => !i.next_action_due || (i.next_action_due >= today && i.next_action_due <= horizon)),
     open_actions_count: open.length,
-    nudges: active.filter(a => { const dl = days(a.last_out ?? a.last_in); return dl !== null && dl >= followUp && (days(a.last_in) === null || days(a.last_in) >= followUp); })
+    // A nudge until the silence reaches the ghost threshold; past it, suggest ghosted instead.
+    nudges: active.filter(a => { const dl = days(a.last_out ?? a.last_in); const quiet = days([a.last_in, a.last_out].filter(Boolean).sort().pop());
+      return dl !== null && dl >= followUp && (days(a.last_in) === null || days(a.last_in) >= followUp) && !(['submitted', 'screening'].includes(a.status) && quiet >= ghost); })
       .map(a => ({ ...a, days_quiet: days(a.last_in ?? a.last_out) })),
     suggest_ghosted: active.filter(a => {
       if (!['submitted', 'screening'].includes(a.status)) return false;

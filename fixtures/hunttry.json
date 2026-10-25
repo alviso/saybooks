@@ -127,7 +127,7 @@
    "medium": "email",
    "summary": "Followed the ATS auto-ack with a short note to the plant HR address from the posting.",
    "next_action": "Chase the recruiter if still silent",
-   "next_action_due": "{{today+1}}"
+   "next_action_due": "{{today-1}}"
   },
   null,
   null,
@@ -186,7 +186,7 @@
   {
    "application_id": "APP-0002",
    "kind": "recruiter_screen",
-   "scheduled_at": "{{today+3}}T15:00:00",
+   "scheduled_at": "{{today-1}}T15:00:00",
    "interviewer": "Riley Chen",
    "notes": "30 min; ask for the end client name first"
   },
@@ -303,5 +303,50 @@
   null,
   null,
   "-20d"
+ ],
+ [
+  "hunt_add_posting",
+  {
+   "title": "Senior Manager, Distribution Strategy",
+   "company": "Cedar & Co",
+   "company_kind": "end_client",
+   "source": "linkedin",
+   "location": "Minneapolis, MN",
+   "work_mode": "hybrid",
+   "employment_type": "fulltime"
+  },
+  null,
+  null,
+  null,
+  null,
+  "-31d"
+ ],
+ [
+  "hunt_evaluate_posting",
+  {
+   "posting_id": "JP-0006",
+   "fit_score": 3.5,
+   "fit_notes": "Good scope; strategy more than operations.",
+   "resume_version": "Ops leadership"
+  },
+  null,
+  null,
+  null,
+  null,
+  "-31d"
+ ],
+ [
+  "hunt_apply",
+  {
+   "posting_id": "JP-0006",
+   "resume_version": "Ops leadership",
+   "channel": "portal",
+   "applied_at": "{{today-30}}"
+  },
+  null,
+  null,
+  null,
+  null,
+  "-30d"
  ]
 ]
