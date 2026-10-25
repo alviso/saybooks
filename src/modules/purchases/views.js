@@ -624,7 +624,7 @@ function cardDues({ as_of } = {}) {
     else if (paid >= owed) state = 'paid in full';
     else if (min != null && paid >= min) state = due && day > due ? 'minimum paid, the rest carries interest' : 'minimum paid';
     else if (!due) state = 'due date not recorded';
-    else if (day <= due) state = `due in ${left} day${left === 1 ? '' : 's'}`;
+    else if (day <= due) state = left === 0 ? 'due today' : `due in ${left} day${left === 1 ? '' : 's'}`;
     else if (!seenThrough) state = 'past due, no statement shows the payment yet';
     else state = 'missed: no payment on record by the due date';
     return { account_id: c.id, name: c.name, currency: c.currency, statement_id: st.id, statement_end: st.period_end,
