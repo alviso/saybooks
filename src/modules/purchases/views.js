@@ -306,7 +306,7 @@ function journalLines({ from, to } = {}) {
   // Accounts Payable: the spending was booked when the bill was approved, not again here.
   const paysAccrued = new Map();
   try { for (const b of db().prepare('SELECT id, transaction_id FROM purch_bill WHERE transaction_id IS NOT NULL').all()) if (onAccrual(b.id)) paysAccrued.set(b.transaction_id, b.id); } catch { /* no bills yet */ }
-  const pi = pairIndex();
+  const pi = pairIndex(), pe = postedElsewhere();
   for (const t of rows) {
     if (!inRange(t.date)) continue;
     const acct = (t.source_account || `${t.source_kind || 'account'} (unnamed)`).trim();
@@ -314,6 +314,7 @@ function journalLines({ from, to } = {}) {
     const amount = Math.abs(t.amount);
     const who = t.vendor || t.description;
     // P-16: a paired transfer posts once, on its out side, from one account straight into the other.
+    if (pe.has(t.id)) continue;   // another area posts this row itself
     const pr = pi.get(t.id);
     if (pr && pr.side === 'in') continue;
     if (pr && pr.side === 'out') {
@@ -404,6 +405,13 @@ function matchedRows() {
   for (const mod of require('../../registry.js').MODULES) if (mod.api && typeof mod.api.statementRowMatches === 'function') for (const [k, v] of mod.api.statementRowMatches()) m.set(k, v);
   return m;
 }
+/** Rows another area posts itself (a loan payment split into principal, interest and escrow): they
+ *  count as in the books for reconciliation, and this area posts nothing for them. */
+function postedElsewhere() {
+  const m = new Set();
+  for (const mod of require('../../registry.js').MODULES) if (mod.api && typeof mod.api.statementRowPosts === 'function') for (const id of mod.api.statementRowPosts()) m.add(id);
+  return m;
+}
 const posts = (t) => ['purchase', 'recurring', 'fee', 'income', 'refund'].includes(t.status) || (t.status === 'transfer' && !!String(t.category || '').trim());
 
 /** Every statement row with its account and whether it posts, for the bank reconciliation. */
@@ -412,7 +420,8 @@ function statementRows() {
   try { rows = db().prepare(`SELECT t.*, s.account_id, COALESCE((SELECT a.name FROM purch_account a WHERE a.id = s.account_id), s.account) AS source_account, s.kind AS source_kind, s.period_end AS source_end FROM purch_transaction t JOIN purch_source s ON s.id = t.source_id ORDER BY t.date, t.id`).all(); }
   catch (e) { if (/no such table/i.test(e.message)) return []; throw e; }
   const pi = pairIndex();   // a paired transfer is in the books once, through its out side (P-16)
-  return rows.map(t => ({ ...t, account: (t.source_account || `${t.source_kind || 'account'} (unnamed)`).trim(), posts: posts(t) || pi.has(t.id), paired: pi.has(t.id) ? pi.get(t.id).pair.id : null, amount_display: money(t.amount, t.currency) }));
+  const pe = postedElsewhere();
+  return rows.map(t => ({ ...t, account: (t.source_account || `${t.source_kind || 'account'} (unnamed)`).trim(), posts: posts(t) || pi.has(t.id) || pe.has(t.id), posted_elsewhere: pe.has(t.id), paired: pi.has(t.id) ? pi.get(t.id).pair.id : null, amount_display: money(t.amount, t.currency) }));
 }
 
 function journalOmitted({ from, to } = {}) {
@@ -477,7 +486,10 @@ function balanceOf(acc, asOf) {
   const va = valuationsOf(acc.id).filter(x => x.as_of <= asOf).pop();
   const fromSt = st && { balance: st.closing_balance, as_of: st.period_end, from: `statement ${st.id}` };
   const fromVa = va && { balance: va.value, as_of: va.as_of, from: `stated: ${va.source}` };
-  return (fromSt && fromVa) ? (fromVa.as_of > fromSt.as_of ? fromVa : fromSt) : (fromSt || fromVa || null);
+  // Another area that keeps this account's balance (a loan's schedule and its payments) offers it too.
+  const fromAreas = [];
+  for (const mod of require('../../registry.js').MODULES) if (mod.api && typeof mod.api.accountBalance === 'function') { const b = mod.api.accountBalance(acc.id, asOf); if (b) fromAreas.push(b); }
+  return [fromSt, fromVa, ...fromAreas].filter(Boolean).sort((a, b) => (a.as_of < b.as_of ? 1 : a.as_of > b.as_of ? -1 : 0))[0] || null;
 }
 
 function accountView(id, asOf = today()) {
@@ -683,4 +695,4 @@ function refundCandidates() {
   return { count: out.length, items: out, note: out.length ? `${out.length} row${out.length === 1 ? '' : 's'} of money in look${out.length === 1 ? 's' : ''} like money back for a purchase on record. Suggestions only: link with purch_link_refund and a reason.` : 'No money in waiting to be linked to a purchase.' };
 }
 
-module.exports = { cardFacts, cardDues, cardCosts, activeRefunds, refundedOf, refundView, refundCandidates, pct, PAY_WORDS, pairIndex, transferView, transferCandidates, oneSided, transfers, rowWithAccount, ACCOUNT_KINDS, STATEMENT_KIND, accountKindFor, accountView, accounts, netWorth, statementsOf, chainIssues, balanceOf, matchedRows, statementRows, billView, bills, payables, unpaidBills, approvalHold, onAccrual, statementAccounts, activeRules, ruleMatches, suggestionFor, ruleView, rules, windowText, splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };
+module.exports = { postedElsewhere, cardFacts, cardDues, cardCosts, activeRefunds, refundedOf, refundView, refundCandidates, pct, PAY_WORDS, pairIndex, transferView, transferCandidates, oneSided, transfers, rowWithAccount, ACCOUNT_KINDS, STATEMENT_KIND, accountKindFor, accountView, accounts, netWorth, statementsOf, chainIssues, balanceOf, matchedRows, statementRows, billView, bills, payables, unpaidBills, approvalHold, onAccrual, statementAccounts, activeRules, ruleMatches, suggestionFor, ruleView, rules, windowText, splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };

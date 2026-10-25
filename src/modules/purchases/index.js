@@ -104,6 +104,14 @@ Money is integer minor units; sums are per currency and never cross.`,
   },
   api: { views: V, journalLines: V.journalLines, journalOmitted: V.journalOmitted, mappableKeys: V.mappableKeys, statementAccounts: V.statementAccounts, unpaidBills: V.unpaidBills, statementRows: V.statementRows,
     /** bankrec's door to a row it matched: reviewed as money recorded elsewhere (a transfer with no other side), and back. */
+    /** Another area's door to the register: the account a loan lives under, added if new. */
+    ensureAccount(db, { name, kind, currency, institution }, at) {
+      let a = db.prepare('SELECT * FROM purch_account WHERE name = ? COLLATE NOCASE AND currency = ?').get(name, currency);
+      if (a) { if (a.kind !== kind) throw new R.Rejected(`${a.id} (${a.name}) is a ${a.kind.replace('_', ' ')} account, not a ${kind}.`); return a; }
+      const id = H.nextId('ACC', 'purch_account');
+      db.prepare('INSERT INTO purch_account (id,name,kind,currency,institution,created_at,updated_at) VALUES (?,?,?,?,?,?,?)').run(id, name, kind, currency, institution || null, at, at);
+      return H.get('purch_account', id);
+    },
     markRecordedElsewhere(db, txId, note, at) {
       const t = H.need('purch_transaction', txId, 'transaction');
       db.prepare("UPDATE purch_transaction SET status = 'transfer', category = NULL, note = ?, reviewed_at = ? WHERE id = ?").run(note, at, txId);

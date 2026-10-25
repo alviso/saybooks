@@ -133,6 +133,7 @@ const BLURB = {
   jobhunt: 'A job search as a system of record: postings, applications, interviews, recruiters, a duplicate guard, and one next action per pursuit.',
   purchases: 'Accounts and net worth; bank and card statements and receipts the agent read: rows with provenance, accepted whole or not at all, reviewed in the person\'s own words; standing rules that suggest, subscriptions and spend, and bills only a person approves paying.',
   bridge: 'The hand-over to the accountant: map their chart once, export a period as QuickBooks Online or Xero journal lines, keep what went and when; and preliminary financials before the close.',
+  loans: 'A mortgage, a car loan, a student or personal loan from the lender\'s figures: each payment row split into principal, interest and escrow, what is owed and the payoff date, interest per year, and a check against the lender\'s statement.',
   salestax: 'The sales tax return from what was invoiced and credited, tax as charged; a filing a person records and keeps as it stood, the payment, and a liability that ties to the books.',
   bankrec: 'The bank statement against the books: deposits matched to the payments they are, every difference named, items in transit with their age, and a sign-off a person gives.',
   gl: 'Closing the books: a checklist of what blocks a close, adjusting entries that balance and can reverse, closed periods that stop moving, and corrections that land in the next open period.',

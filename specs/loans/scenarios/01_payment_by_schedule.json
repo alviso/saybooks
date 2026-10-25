@@ -1,0 +1,102 @@
+{
+ "name": "a mortgage payment suggested, linked and split by the schedule",
+ "spec": "loans@0.1",
+ "today": "2099-12-10",
+ "notes": "L-3, L-4, L-6: the schedule's split says so; what is owed goes down by the principal.",
+ "env": [
+  [
+   "import_statement",
+   {
+    "name": "chk.csv",
+    "hash": "loans-checking-nov",
+    "kind": "bank",
+    "account": "Checking 4410",
+    "currency": "USD",
+    "period_start": "2099-11-01",
+    "period_end": "2099-12-05",
+    "opening_balance": 1000000,
+    "closing_balance": 500000,
+    "rows": [
+     {
+      "date": "2099-11-01",
+      "amount": -250000,
+      "description": "CHASE MTG PMT 7731",
+      "row_index": 1
+     },
+     {
+      "date": "2099-12-01",
+      "amount": -250000,
+      "description": "CHASE MTG PMT 7731",
+      "row_index": 2
+     }
+    ]
+   },
+   "two months of checking"
+  ]
+ ],
+ "steps": [
+  {
+   "act": "add",
+   "args": {
+    "name": "Chase mortgage ending 7731",
+    "kind": "mortgage",
+    "lender": "Chase Home Lending",
+    "currency": "USD",
+    "balance": 30000000,
+    "balance_date": "2099-10-15",
+    "rate_bp": 650,
+    "payment": 205000,
+    "escrow": 45000,
+    "due_day": 1,
+    "source": "lender statement, October 2099"
+   },
+   "expect": {
+    "ok": true
+   },
+   "notes": "L-2"
+  },
+  {
+   "act": "candidates",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "count": 2
+    }
+   },
+   "notes": "L-6"
+  },
+  {
+   "act": "link_payment",
+   "args": {
+    "loan": "LN-0001",
+    "transaction": "T-0001",
+    "reason": "the November mortgage payment"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "split_from": "schedule",
+     "interest": 162500,
+     "principal": 42500,
+     "escrow": 45000,
+     "owed": 29957500
+    }
+   },
+   "notes": "L-4"
+  },
+  {
+   "act": "loan",
+   "args": {
+    "loan": "LN-0001"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "owed": 29957500,
+     "status": "open"
+    }
+   }
+  }
+ ]
+}

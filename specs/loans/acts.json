@@ -1,0 +1,85 @@
+{
+  "area": "loans",
+  "spec": "0.1",
+  "doc": "spec.md",
+  "acts": {
+    "add": {
+      "kind": "write",
+      "required": [
+        "name",
+        "kind",
+        "currency",
+        "balance",
+        "balance_date",
+        "rate_bp",
+        "payment",
+        "due_day",
+        "source"
+      ]
+    },
+    "link_payment": {
+      "kind": "write",
+      "required": [
+        "loan",
+        "transaction",
+        "reason"
+      ]
+    },
+    "unlink_payment": {
+      "kind": "write",
+      "required": [
+        "loan",
+        "payment_id",
+        "reason"
+      ]
+    },
+    "loans": {
+      "kind": "read",
+      "required": []
+    },
+    "loan": {
+      "kind": "read",
+      "required": [
+        "loan"
+      ]
+    },
+    "candidates": {
+      "kind": "read",
+      "required": []
+    },
+    "interest": {
+      "kind": "read",
+      "required": []
+    }
+  },
+  "invariants": [
+    {
+      "id": "L-1",
+      "title": "Money is integer cents; a payment's principal, interest and escrow add up to its row exactly."
+    },
+    {
+      "id": "L-2",
+      "title": "A loan starts from the lender's figures with their source; a payment that cannot cover a month's interest is refused."
+    },
+    {
+      "id": "L-3",
+      "title": "A linked row is in the books once: principal off what is owed, interest and escrow as spending, paid from its account."
+    },
+    {
+      "id": "L-4",
+      "title": "The lender's printed split is the record; a split by the schedule says so."
+    },
+    {
+      "id": "L-5",
+      "title": "What is owed is the lender's figure less the principal paid since; a difference with the lender's later figure is named."
+    },
+    {
+      "id": "L-6",
+      "title": "Suggestions never link."
+    },
+    {
+      "id": "L-7",
+      "title": "Every write is a logged command with an actor; refusals are logged too."
+    }
+  ]
+}

@@ -43,6 +43,9 @@
  *                    unpaired pair puts both rows back
  *  23. cards         a refund takes back spending in its purchase's category, in spend and in the
  *                    books; interest posts as interest; a payment of only the minimum says so
+ *  24. loans         a mortgage payment posts once: principal off what is owed, interest and
+ *                    escrow as spending; the books balance, checking ties and reconciles, net worth
+ *                    counts what is owed, and the lender's figure is checked
  *
  * A PR that adds a hand-written form, a prefix-less command, or a cross-module UPDATE
  * fails here, not in review.
@@ -662,6 +665,36 @@ for (const tag of R.PERMISSIONS) {
     assert.ok(costs.interest === 1840 && costs.fees === 0, 'the year\'s interest from the fee row (P-22)');
   });
   ok('cards: a refund takes back spending in its category, interest posts as interest, a minimum-only payment is named');
+}
+
+// --------------------------------------------- 24. loans: one payment, split, in the books once
+{
+  const G = 'gate24-loans'; wsp.wipe(G);
+  const p24 = { workspace: G, actor: 'test', actor_kind: 'human', role: 'owner' }, a24 = { ...p24, actor_kind: 'agent' };
+  H.withClock('2026-12-10', () => {
+    execute('loan_add', { name: 'G24 mortgage ending 7731', kind: 'mortgage', lender: 'Chase Home Lending', currency: 'USD', balance: 30000000, balance_date: '2026-10-15', rate_bp: 650, payment: 205000, escrow: 45000, due_day: 1, source: 'lender statement, October 2026' }, a24);
+    execute('purch_import_statement', { name: 'chk.csv', hash: 'sha256:g24chk', kind: 'bank', account: 'G24 Checking', currency: 'USD', period_start: '2026-11-01', period_end: '2026-11-30', opening_balance: 1000000, closing_balance: 750000,
+      rows: [{ date: '2026-11-01', amount: -250000, description: 'CHASE MTG PMT 7731', row_index: 1 }] }, a24);
+    const lk = execute('loan_link_payment', { loan_id: 'LN-0001', transaction_id: 'T-0001', reason: 'the November payment' }, a24);
+    assert.ok(lk.principal === 42500 && lk.interest === 162500 && lk.escrow === 45000, 'split by the schedule: a month\'s interest on what was owed, the escrow, the rest to principal (L-4)');
+    let again = null; try { execute('purch_review_transaction', { transaction_id: 'T-0001', status: 'purchase', category: 'housing', reason: 'x' }, a24); } catch (e) { again = e.message; }
+    assert.ok(again && /loan payment LP-0001/.test(again), 'a linked row cannot be reviewed again (L-3)');
+    const j = execute('core_journal', {}, p24);
+    const pay = j.entries.filter(e => /Loan payment LP-0001/.test(e.memo));
+    assert.ok(pay.length === 1 && !j.entries.some(e => /CHASE MTG PMT/.test(e.memo)), 'the row posts once, through the loan (L-3)');
+    const L = (acct) => pay[0].lines.find(l => l.account === acct) || {};
+    assert.ok(L('G24 mortgage ending 7731').debit === 42500 && L('mortgage interest').debit === 162500 && L('escrow').debit === 45000 && L('G24 Checking').credit === 250000, 'principal off the loan, interest and escrow as spending, paid from checking');
+    const fin = execute('bridge_financials', { from: '2026-10-01', to: '2026-11-30' }, p24);
+    assert.ok(fin.balanced && fin.ties.every(t => t.ties), 'the books balance and checking ties');
+    assert.ok(fin.balance_sheet.liabilities.some(x => x.account === 'G24 mortgage ending 7731' && x.amount === 29957500), 'what is owed sits as a liability, less the principal paid');
+    assert.ok(execute('rec_reconciliation', { account: 'G24 Checking' }, p24).ready, 'checking reconciles with the linked row counted');
+    const nw = execute('purch_net_worth', { as_of: '2026-12-01' }, p24);
+    assert.ok(nw.owed_total === 29957500, 'net worth counts what the loan still owes');
+    execute('purch_record_value', { account_id: H.withClock('2026-12-10', () => wsp.use(G, () => H.db().prepare("SELECT account_id FROM loan_loan WHERE id = 'LN-0001'").get().account_id)), as_of: '2026-11-15', amount: 29957400, according_to: 'November lender statement' }, p24);
+    const tie = execute('loan_get', { loan_id: 'LN-0001' }, p24).lender_tie;
+    assert.ok(tie && !tie.ties && tie.difference === -100, 'the lender\'s figure, a dollar apart, is named, never absorbed (L-5)');
+  });
+  ok('loans: a payment posts once, split; the books balance, checking ties and reconciles, net worth counts what is owed, the lender\'s figure is checked');
 }
 
 console.log(`\n${n} contract checks passed across ${MODULES.length} modules, ${COMMANDS.length} commands.`);

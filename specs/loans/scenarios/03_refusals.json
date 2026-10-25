@@ -1,0 +1,86 @@
+{
+ "name": "a payment that cannot cover the interest, and a row inside the starting balance, are refused",
+ "spec": "loans@0.1",
+ "today": "2099-12-10",
+ "notes": "L-2: the figures must make sense together; a row before the lender's figure is already inside it.",
+ "env": [
+  [
+   "import_statement",
+   {
+    "name": "chk.csv",
+    "hash": "loans-checking-nov",
+    "kind": "bank",
+    "account": "Checking 4410",
+    "currency": "USD",
+    "period_start": "2099-11-01",
+    "period_end": "2099-12-05",
+    "opening_balance": 1000000,
+    "closing_balance": 500000,
+    "rows": [
+     {
+      "date": "2099-11-01",
+      "amount": -250000,
+      "description": "CHASE MTG PMT 7731",
+      "row_index": 1
+     },
+     {
+      "date": "2099-12-01",
+      "amount": -250000,
+      "description": "CHASE MTG PMT 7731",
+      "row_index": 2
+     }
+    ]
+   },
+   "two months of checking"
+  ]
+ ],
+ "steps": [
+  {
+   "act": "add",
+   "args": {
+    "name": "Car loan",
+    "kind": "auto",
+    "currency": "USD",
+    "balance": 3000000,
+    "balance_date": "2099-10-15",
+    "rate_bp": 900,
+    "payment": 20000,
+    "due_day": 5,
+    "source": "loan papers"
+   },
+   "expect": {
+    "refused": "does not cover a month's interest"
+   },
+   "notes": "L-2"
+  },
+  {
+   "act": "add",
+   "args": {
+    "name": "Chase mortgage ending 7731",
+    "kind": "mortgage",
+    "currency": "USD",
+    "balance": 30000000,
+    "balance_date": "2099-11-15",
+    "rate_bp": 650,
+    "payment": 205000,
+    "escrow": 45000,
+    "due_day": 1,
+    "source": "lender statement, November 2099"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "link_payment",
+   "args": {
+    "loan": "LN-0001",
+    "transaction": "T-0001",
+    "reason": "November"
+   },
+   "expect": {
+    "refused": "already inside the balance"
+   }
+  }
+ ]
+}

@@ -15,7 +15,7 @@ connector (OAuth, no keys to paste); the same books are in the browser as ordina
 videos recorded live against the demo books: purchase orders and receiving, inventory value, the
 month-end close, bank reconciliation, and sales tax.
 
-Thirteen modules today, every one spec-first with executable conformance scenarios:
+Fourteen modules today, every one spec-first with executable conformance scenarios:
 
 | module | for | what it keeps |
 |---|---|---|
@@ -28,6 +28,7 @@ Thirteen modules today, every one spec-first with executable conformance scenari
 | **inventory** | small businesses that hold stock | every stock move kept, the moving average cost, each shipment's cost and margin, counts with reasons, a value that ties to the books |
 | **purchases** (Personal finances) | anyone | accounts and net worth, transfers between them, card dues, interest and refunds; bank and card statements and receipts the agent reads: rows with provenance, review, subscriptions, spend |
 | **bankrec** (Bank) | anyone whose accountant asks "does the bank tie?" | each statement against the books, deposits matched to recorded payments, items in transit named, a sign-off by a person |
+| **loans** (Personal finances, Loans) | anyone with a mortgage or a car loan | the lender's figures, each payment split into principal, interest and escrow, what is owed and when it ends, interest per year, a check against the lender |
 | **salestax** (Sales tax) | anyone who charges sales tax and files it | the return for a month or quarter from what was invoiced and credited, a filing a person records, the payment, a liability that ties |
 | **gl** (Month-end) | anyone closing the books | a close checklist, adjusting entries that balance and can reverse, closed periods that stop moving, corrections in the next open period |
 | **bridge** (Ledger) | anyone with an accountant | the hand-over to QuickBooks, Xero or a plain CSV: map their chart once, export a period, keep what went and through when |
@@ -122,7 +123,7 @@ a full statement cycle from plain sentences, no coaching. In LM Studio's `mcp.js
 ```
 
 `SAYBOOKS_MODULES` picks the tools the model sees (`core,solo` is 35 tools; `core,purchases` 60;
-all thirteen modules is 223 and too many for a small model). Load the model with one concurrent slot.
+all fourteen modules is 230 and too many for a small model). Load the model with one concurrent slot.
 What that took, and the six fixes it forced in the tools, is in
 [saybooks.io/notes/local-models](https://saybooks.io/notes/local-models); the plain-language
 harness that measures it is `npm run local`.
