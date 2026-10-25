@@ -294,7 +294,7 @@ function journalLines({ from, to } = {}) {
   const inRange = (d) => (!from || d >= from) && (!to || d <= to);
   let rows = [];
   try {
-    rows = db().prepare(`SELECT t.*, v.name AS vendor, s.account AS source_account, s.kind AS source_kind
+    rows = db().prepare(`SELECT t.*, v.name AS vendor, COALESCE((SELECT a.name FROM purch_account a WHERE a.id = s.account_id), s.account) AS source_account, s.kind AS source_kind
       FROM purch_transaction t LEFT JOIN purch_vendor v ON v.id = t.vendor_id JOIN purch_source s ON s.id = t.source_id
       WHERE t.status IN ('purchase','recurring','fee','income','transfer') ORDER BY t.date, t.id`).all();
   } catch { return []; }
@@ -361,7 +361,8 @@ function journalLines({ from, to } = {}) {
  */
 function statementAccounts() {
   let rows = [];
-  try { rows = db().prepare('SELECT * FROM purch_source ORDER BY period_start, id').all(); } catch { return []; }
+  // The register's name for the account, so every statement of one account is one account here too.
+  try { rows = db().prepare('SELECT s.*, COALESCE(a.name, s.account) AS account FROM purch_source s LEFT JOIN purch_account a ON a.id = s.account_id ORDER BY s.period_start, s.id').all(); } catch { return []; }
   const by = {};
   for (const s of rows) {
     const account = (s.account || `${s.kind || 'account'} (unnamed)`).trim();
@@ -387,7 +388,7 @@ const posts = (t) => ['purchase', 'recurring', 'fee', 'income'].includes(t.statu
 /** Every statement row with its account and whether it posts, for the bank reconciliation. */
 function statementRows() {
   let rows = [];
-  try { rows = db().prepare(`SELECT t.*, s.account AS source_account, s.kind AS source_kind, s.period_end AS source_end FROM purch_transaction t JOIN purch_source s ON s.id = t.source_id ORDER BY t.date, t.id`).all(); }
+  try { rows = db().prepare(`SELECT t.*, COALESCE((SELECT a.name FROM purch_account a WHERE a.id = s.account_id), s.account) AS source_account, s.kind AS source_kind, s.period_end AS source_end FROM purch_transaction t JOIN purch_source s ON s.id = t.source_id ORDER BY t.date, t.id`).all(); }
   catch (e) { if (/no such table/i.test(e.message)) return []; throw e; }
   return rows.map(t => ({ ...t, account: (t.source_account || `${t.source_kind || 'account'} (unnamed)`).trim(), posts: posts(t), amount_display: money(t.amount, t.currency) }));
 }
@@ -398,7 +399,7 @@ function journalOmitted({ from, to } = {}) {
     const w = ["(t.status = 'unreviewed' OR (t.status = 'transfer' AND COALESCE(TRIM(t.category), '') = '') OR t.status = 'ignored')"]; const args = [];
     if (from) { w.push('t.date >= ?'); args.push(from); }
     if (to) { w.push('t.date <= ?'); args.push(to); }
-    return db().prepare(`SELECT t.id, t.date, t.description, t.amount, t.currency, t.status, s.account AS source_account
+    return db().prepare(`SELECT t.id, t.date, t.description, t.amount, t.currency, t.status, COALESCE((SELECT a.name FROM purch_account a WHERE a.id = s.account_id), s.account) AS source_account
       FROM purch_transaction t JOIN purch_source s ON s.id = t.source_id WHERE ${w.join(' AND ')} ORDER BY t.date, t.id`).all(...args)
       .map(r => ({ ...r, amount_display: money(r.amount, r.currency),
         why: r.status === 'unreviewed' ? 'nobody has said what it is yet'
@@ -424,4 +425,82 @@ function mappableKeys() {
   return { categories: [...new Set(cats.map(c => c.k))].sort(), sources: [...new Set(srcs.map(s => (s.k || `${s.kind} (unnamed)`).trim()))].sort() };
 }
 
-module.exports = { matchedRows, statementRows, billView, bills, payables, unpaidBills, approvalHold, onAccrual, statementAccounts, activeRules, ruleMatches, suggestionFor, ruleView, rules, windowText, splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };
+// ---------------------------------------------------------------- accounts and net worth (0.6)
+const ACCOUNT_KINDS = ['checking', 'savings', 'credit_card', 'loan', 'asset', 'other'];
+// Which statements an account can carry: a card's statements are card statements, and so on.
+// An asset (a house, a car) has no statements; its value is what a person states.
+const STATEMENT_KIND = { checking: ['bank'], savings: ['bank'], credit_card: ['card'], loan: ['other'], other: ['bank', 'card', 'other'], asset: [] };
+const accountKindFor = (sourceKind) => ({ bank: 'checking', card: 'credit_card' }[sourceKind] || 'other');
+const STALE_DAYS = 45;
+
+const accountRow = (id) => H.need('purch_account', id, 'account');
+const statementsOf = (accountId) => { try { return db().prepare('SELECT * FROM purch_source WHERE account_id = ? ORDER BY period_start, id').all(accountId); } catch { return []; } };
+const valuationsOf = (accountId) => { try { return db().prepare('SELECT * FROM purch_valuation WHERE account_id = ? ORDER BY as_of, id').all(accountId); } catch { return []; } };
+
+/** P-13: statements chain; a gap, an overlap or an opening that is not the last closing is named. */
+function chainIssues(stmts, cur) {
+  const out = [];
+  for (let i = 1; i < stmts.length; i++) {
+    const a = stmts[i - 1], b = stmts[i];
+    if (b.period_start > H.addDays(a.period_end, 1)) out.push({ kind: 'gap', after: a.id, before: b.id, text: `No statement for ${H.addDays(a.period_end, 1)} to ${H.addDays(b.period_start, -1)}.` });
+    else if (b.period_start <= a.period_end) out.push({ kind: 'overlap', after: a.id, before: b.id, text: `${b.id} starts ${b.period_start}, before ${a.id} ends (${a.period_end}).` });
+    if (b.opening_balance !== a.closing_balance) out.push({ kind: 'jump', after: a.id, before: b.id, text: `${b.id} opens at ${money(b.opening_balance, cur)}; ${a.id} closed at ${money(a.closing_balance, cur)}.` });
+  }
+  return out;
+}
+
+/** P-14: a balance is what a statement printed or a value a person stated, with its date; never extrapolated. */
+function balanceOf(acc, asOf) {
+  const st = statementsOf(acc.id).filter(x => x.period_end <= asOf).pop();
+  const va = valuationsOf(acc.id).filter(x => x.as_of <= asOf).pop();
+  const fromSt = st && { balance: st.closing_balance, as_of: st.period_end, from: `statement ${st.id}` };
+  const fromVa = va && { balance: va.value, as_of: va.as_of, from: `stated: ${va.source}` };
+  return (fromSt && fromVa) ? (fromVa.as_of > fromSt.as_of ? fromVa : fromSt) : (fromSt || fromVa || null);
+}
+
+function accountView(id, asOf = today()) {
+  const acc = accountRow(id);
+  const stmts = statementsOf(acc.id), vals = valuationsOf(acc.id);
+  const b = balanceOf(acc, asOf);
+  const issues = chainIssues(stmts, acc.currency);
+  const stale = b ? Math.floor((Date.parse(asOf) - Date.parse(b.as_of)) / 864e5) : null;
+  return { ...acc, status: acc.closed_on && acc.closed_on <= asOf ? 'closed' : 'open', nature: ['credit_card', 'loan'].includes(acc.kind) ? 'owed' : 'held',
+    balance: b ? b.balance : null, balance_display: b ? money(b.balance, acc.currency) : null, balance_as_of: b ? b.as_of : null, balance_from: b ? b.from : null,
+    stale_days: stale, stale: stale != null && stale > STALE_DAYS, closed: !!(acc.closed_on && acc.closed_on <= asOf),
+    statements: stmts.map(x => ({ id: x.id, name: x.name, period_start: x.period_start, period_end: x.period_end, opening: x.opening_balance, closing: x.closing_balance,
+      opening_display: money(x.opening_balance, acc.currency), closing_display: money(x.closing_balance, acc.currency), rows: x.rows_in })),
+    valuations: vals.map(v => ({ ...v, value_display: money(v.value, acc.currency) })), issues };
+}
+
+function accounts({ as_of } = {}) {
+  const day = as_of || today();
+  let rows = []; try { rows = db().prepare('SELECT id FROM purch_account ORDER BY id').all(); } catch { return { as_of: day, count: 0, items: [] }; }
+  const order = Object.fromEntries(ACCOUNT_KINDS.map((k, i) => [k, i]));
+  const items = rows.map(r => accountView(r.id, day)).sort((a, b) => (order[a.kind] - order[b.kind]) || a.name.localeCompare(b.name));
+  return { as_of: day, count: items.length, issues: items.reduce((n, a) => n + a.issues.length, 0), items };
+}
+
+/** P-15: net worth per currency, what is held less what is owed, each line with its date. */
+function netWorth({ as_of } = {}) {
+  const day = as_of || today();
+  const all = accounts({ as_of: day }).items.filter(a => !a.closed && !(a.opened_on && a.opened_on > day));
+  const by = {};
+  for (const a of all) {
+    const c = by[a.currency] = by[a.currency] || { currency: a.currency, held: [], owed: [], unknown: [] };
+    const line = { account_id: a.id, name: a.name, kind: a.kind, balance: a.balance, balance_display: a.balance_display, as_of: a.balance_as_of, from: a.balance_from, stale: a.stale, stale_days: a.stale_days };
+    if (a.balance == null) c.unknown.push(line); else if (a.balance >= 0) c.held.push(line); else c.owed.push(line);
+  }
+  const sum = (xs) => xs.reduce((n, x) => n + x.balance, 0);
+  const currencies = Object.values(by).map(c => {
+    const held = sum(c.held), owed = -sum(c.owed), net = held - owed;
+    const stale = [...c.held, ...c.owed].filter(x => x.stale);
+    return { ...c, held_total: held, held_display: money(held, c.currency), owed_total: owed, owed_display: money(owed, c.currency), net, net_display: money(net, c.currency),
+      note: `Net worth ${money(net, c.currency)} as of ${day}: ${money(held, c.currency)} held, ${money(owed, c.currency)} owed.`
+        + (stale.length ? ` ${stale.length} figure${stale.length === 1 ? ' is' : 's are'} more than ${STALE_DAYS} days old (${stale.map(x => `${x.name}, ${x.as_of}`).join('; ')}).` : '')
+        + (c.unknown.length ? ` No balance yet for ${c.unknown.map(x => x.name).join(', ')}.` : '') };
+  });
+  const one = currencies.length === 1 ? currencies[0] : null;
+  return { as_of: day, currencies, ...(one ? { currency: one.currency, net: one.net, net_display: one.net_display, held_total: one.held_total, owed_total: one.owed_total } : {}), note: currencies.length ? currencies.map(c => c.note).join(' ') : 'No accounts yet. Import a statement, or add an account and state its value.' };
+}
+
+module.exports = { ACCOUNT_KINDS, STATEMENT_KIND, accountKindFor, accountView, accounts, netWorth, statementsOf, chainIssues, balanceOf, matchedRows, statementRows, billView, bills, payables, unpaidBills, approvalHold, onAccrual, statementAccounts, activeRules, ruleMatches, suggestionFor, ruleView, rules, windowText, splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };

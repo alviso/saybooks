@@ -26,7 +26,7 @@ Thirteen modules today, every one spec-first with executable conformance scenari
 | **jobhunt** | people open to work | postings, applications, interviews, recruiters, a duplicate guard, one next action |
 | **p2p** (Purchasing) | small businesses that buy stock | purchase orders at the vendor's price, goods received against them, vendor bills held to a 3-way match before a person approves paying |
 | **inventory** | small businesses that hold stock | every stock move kept, the moving average cost, each shipment's cost and margin, counts with reasons, a value that ties to the books |
-| **purchases** (Personal finances) | anyone | bank and card statements and receipts the agent reads: rows with provenance, review, subscriptions, spend |
+| **purchases** (Personal finances) | anyone | accounts and net worth; bank and card statements and receipts the agent reads: rows with provenance, review, subscriptions, spend |
 | **bankrec** (Bank) | anyone whose accountant asks "does the bank tie?" | each statement against the books, deposits matched to recorded payments, items in transit named, a sign-off by a person |
 | **salestax** (Sales tax) | anyone who charges sales tax and files it | the return for a month or quarter from what was invoiced and credited, a filing a person records, the payment, a liability that ties |
 | **gl** (Month-end) | anyone closing the books | a close checklist, adjusting entries that balance and can reverse, closed periods that stop moving, corrections in the next open period |
@@ -122,7 +122,7 @@ a full statement cycle from plain sentences, no coaching. In LM Studio's `mcp.js
 ```
 
 `SAYBOOKS_MODULES` picks the tools the model sees (`core,solo` is 35 tools; `core,purchases` 60;
-all thirteen modules is 204 and too many for a small model). Load the model with one concurrent slot.
+all thirteen modules is 211 and too many for a small model). Load the model with one concurrent slot.
 What that took, and the six fixes it forced in the tools, is in
 [saybooks.io/notes/local-models](https://saybooks.io/notes/local-models); the plain-language
 harness that measures it is `npm run local`.

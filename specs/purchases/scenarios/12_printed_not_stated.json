@@ -1,0 +1,69 @@
+{
+ "name": "a bank balance comes from its statement, and a card statement does not go on a checking account",
+ "spec": "purchases@0.6",
+ "today": "2099-12-10",
+ "notes": "P-14: a bank or card balance is never stated by hand; a statement of the wrong kind for an account is refused.",
+ "env": [],
+ "steps": [
+  {
+   "act": "import_statement",
+   "args": {
+    "name": "chk.csv",
+    "hash": "bal-chk-nov",
+    "kind": "bank",
+    "account": "Checking 4410",
+    "currency": "USD",
+    "period_start": "2099-11-01",
+    "period_end": "2099-11-30",
+    "opening_balance": 500000,
+    "closing_balance": 450000,
+    "rows": [
+     {
+      "date": "2099-11-03",
+      "amount": -50000,
+      "description": "RENT",
+      "row_index": 1
+     }
+    ]
+   }
+  },
+  {
+   "act": "record_value",
+   "args": {
+    "account_id": "ACC-0001",
+    "as_of": "2099-11-30",
+    "amount": 460000,
+    "according_to": "I think it's about this"
+   },
+   "expect": {
+    "refused": "comes from its statements"
+   },
+   "notes": "P-14"
+  },
+  {
+   "act": "import_statement",
+   "args": {
+    "name": "visa.csv",
+    "hash": "bal-visa-nov",
+    "kind": "card",
+    "account_id": "ACC-0001",
+    "currency": "USD",
+    "period_start": "2099-11-01",
+    "period_end": "2099-11-30",
+    "opening_balance": 0,
+    "closing_balance": -2000,
+    "rows": [
+     {
+      "date": "2099-11-04",
+      "amount": -2000,
+      "description": "CAFE",
+      "row_index": 1
+     }
+    ]
+   },
+   "expect": {
+    "refused": "does not belong on it"
+   }
+  }
+ ]
+}

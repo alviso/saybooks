@@ -157,7 +157,8 @@ Nothing is categorised here; review follows.`,
     opening_balance: { ...f.money('Opening balance as printed, signed.'), required: true },
     closing_balance: { ...f.money('Closing balance as printed, signed.'), required: true },
     text: f.note('The statement\'s lines exactly as you were given them, unchanged: one row per line, date first, amount last. A running-balance column after the amount is fine; dates without a year are fine. Header and footer lines are ignored. This is the normal way.'),
-    account: f.text('The account label as printed (e.g. "Visa ending 4421").'),
+    account: f.text('The account label as printed (e.g. "Visa ending 4421"). Matched to the register by name; a new name adds the account.'),
+    account_id: f.ref('purch_account', 'Or the account in the register this statement belongs to, e.g. ACC-0002.'),
     row_count: f.int('The number of rows the statement prints, if it prints one. Checked against the rows read; leave it out when the statement does not say.'),
     hash: f.text('Only with rows: a content hash of the file, or a stable id the statement carries. With text the hash is computed here.'),
     rows: f.lines(ROW, 'Only when there is no text to pass: every row as typed fields, in the statement\'s order.'),
@@ -196,11 +197,28 @@ Nothing is categorised here; review follows.`,
     if (sum !== expected) {
       throw new Rejected(`The rows do not reconcile: they sum to ${H.money(sum, cur)}, but the statement moves ${H.money(a.opening_balance, cur)} → ${H.money(a.closing_balance, cur)}, which is ${H.money(expected, cur)}. Gap ${H.money(expected - sum, cur)}. Re-read the rows; do not adjust them to fit (P-3).`);
     }
+    // P-13: every statement belongs to one account. By id, or by the label it prints; a label not
+    // in the register yet adds the account, so importing stays one act.
+    let acc = null, accNew = false;
+    if (a.account_id) {
+      acc = H.need('purch_account', a.account_id, 'account');
+      if (acc.currency !== cur) throw new Rejected(`${acc.id} is a ${acc.currency} account; this statement is in ${cur}.`);
+    } else {
+      const label = String(a.account || '').trim() || `${a.kind} (unnamed)`;
+      acc = db.prepare('SELECT * FROM purch_account WHERE name = ? COLLATE NOCASE AND currency = ?').get(label, cur);
+      if (!acc) {
+        const aid = H.nextId('ACC', 'purch_account');
+        db.prepare('INSERT INTO purch_account (id,name,kind,currency,created_at,updated_at) VALUES (?,?,?,?,?,?)').run(aid, label, V.accountKindFor(a.kind), cur, at, at);
+        acc = H.get('purch_account', aid); accNew = true;
+      }
+    }
+    if (!V.STATEMENT_KIND[acc.kind].includes(a.kind)) throw new Rejected(`${acc.id} (${acc.name}) is a ${acc.kind.replace('_', ' ')} account; a ${a.kind} statement does not belong on it.`);
+    if (acc.closed_on && a.period_start > acc.closed_on) throw new Rejected(`${acc.id} (${acc.name}) closed on ${acc.closed_on}; this statement starts after that.`);
     const id = H.nextId('SRC', 'purch_source');
     const skipped = []; let n = 0;
     const seen = db.prepare('SELECT id, source_id FROM purch_transaction WHERE currency = ? AND date = ? AND amount = ? AND lower(description) = lower(?) LIMIT 1');
     db.prepare(`INSERT INTO purch_source (id,name,hash,kind,account,currency,period_start,period_end,opening_balance,closing_balance,row_count,rows_in,rows_skipped,imported_by,created_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,0,0,?,?)`).run(id, a.name, hash, a.kind, a.account || null, cur, a.period_start, a.period_end, a.opening_balance, a.closing_balance, a.row_count ?? rows.length, actor || 'unknown', at);
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,0,0,?,?)`).run(id, a.name, hash, a.kind, acc.name, cur, a.period_start, a.period_end, a.opening_balance, a.closing_balance, a.row_count ?? rows.length, actor || 'unknown', at);
     const alias = db.prepare('SELECT vendor_id FROM purch_vendor_alias WHERE alias = ?');
     rows.forEach((r, i) => {
       const have = seen.get(cur, r.date, r.amount, r.description);
@@ -211,18 +229,19 @@ Nothing is categorised here; review follows.`,
         .run(tid, id, r.row_index || i + 1, r.date, r.amount, cur, r.description, r.counterparty || null, r.raw || null, v ? v.vendor_id : null, at);
       n++;
     });
-    db.prepare('UPDATE purch_source SET rows_in = ?, rows_skipped = ? WHERE id = ?').run(n, skipped.length, id);
+    db.prepare('UPDATE purch_source SET rows_in = ?, rows_skipped = ?, account_id = ? WHERE id = ?').run(n, skipped.length, acc.id, id);
+    const chain = V.chainIssues(V.statementsOf(acc.id), cur).filter(x => x.before === id || x.after === id);
     const ids = db.prepare('SELECT id, row_index, date, amount, description, vendor_id FROM purch_transaction WHERE source_id = ? ORDER BY row_index').all(id);
     // Standing rules the person set ahead of time (P-11): count what they now suggest, so the
     // review starts from them. A suggestion is not a review; the rows stay unreviewed.
     const rl = V.activeRules();
     const suggested = ids.map(t => ({ t, s: V.suggestionFor({ ...t, status: 'unreviewed', currency: cur }, rl) })).filter(x => x.s);
     const ruleNote = suggested.length ? ` ${suggested.length} row${suggested.length > 1 ? 's' : ''} match${suggested.length > 1 ? '' : 'es'} a standing rule (${[...new Set(suggested.map(x => `${x.s.rule_label}: ${x.s.category}`))].join('; ')}); propose those with the rest and confirm with the person.` : '';
-    return { source: id, name: a.name, hash, currency: cur, reconciled: true, rows_in: n, rows_skipped: skipped.length, skipped, suggested_by_rules: suggested.length,
+    return { source: id, name: a.name, hash, currency: cur, reconciled: true, account_id: acc.id, account: acc.name, account_new: accNew, chain_issues: chain, rows_in: n, rows_skipped: skipped.length, skipped, suggested_by_rules: suggested.length,
       // The ids the review step needs, so nobody has to guess them or fetch them again.
       transactions: ids.map(t => { const sg = suggested.find(x => x.t.id === t.id); return { id: t.id, row_index: t.row_index, date: t.date, amount: t.amount, description: t.description, ...(sg ? { suggested: sg.s } : {}) }; }),
       spend: H.money(-rows.filter(r => r.amount < 0).reduce((s, r) => s + r.amount, 0), cur), money_in: H.money(rows.filter(r => r.amount > 0).reduce((s, r) => s + r.amount, 0), cur),
-      note: `Accepted whole: ${rows.length} rows reconcile to ${H.money(a.opening_balance, cur)} → ${H.money(a.closing_balance, cur)}.${skipped.length ? ` ${skipped.length} already on record, skipped (listed).` : ''}${ruleNote} NEXT: read purch_vocabulary (the statuses and the person's own categories and vendors), propose a status, a category and a vendor for every row listed here, show the person the whole table, and once they have answered write it in one purch_review_batch with their confirmation as the reason. A row marked recurring must carry its vendor.` };
+      note: `Accepted whole: ${rows.length} rows reconcile to ${H.money(a.opening_balance, cur)} → ${H.money(a.closing_balance, cur)}, filed under ${acc.id} (${acc.name}${accNew ? ', new in the register' : ''}).${chain.length ? ` ${chain.map(x => x.text).join(' ')}` : ''}${skipped.length ? ` ${skipped.length} already on record, skipped (listed).` : ''}${ruleNote} NEXT: read purch_vocabulary (the statuses and the person's own categories and vendors), propose a status, a category and a vendor for every row listed here, show the person the whole table, and once they have answered write it in one purch_review_batch with their confirmation as the reason. A row marked recurring must carry its vendor.` };
   },
 });
 

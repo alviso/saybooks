@@ -1,0 +1,92 @@
+{
+ "name": "net worth from statements and a stated value",
+ "spec": "purchases@0.6",
+ "today": "2099-12-10",
+ "notes": "P-14, P-15: balances from what statements printed and what a person stated, each with its date; a card balance owed counts against.",
+ "env": [],
+ "steps": [
+  {
+   "act": "import_statement",
+   "args": {
+    "name": "chk.csv",
+    "hash": "nw-chk-nov",
+    "kind": "bank",
+    "account": "Checking 4410",
+    "currency": "USD",
+    "period_start": "2099-11-01",
+    "period_end": "2099-11-30",
+    "opening_balance": 500000,
+    "closing_balance": 450000,
+    "rows": [
+     {
+      "date": "2099-11-03",
+      "amount": -50000,
+      "description": "RENT",
+      "row_index": 1
+     }
+    ]
+   }
+  },
+  {
+   "act": "import_statement",
+   "args": {
+    "name": "visa.csv",
+    "hash": "nw-visa-nov",
+    "kind": "card",
+    "account": "Visa ending 8827",
+    "currency": "USD",
+    "period_start": "2099-11-01",
+    "period_end": "2099-11-30",
+    "opening_balance": 0,
+    "closing_balance": -150000,
+    "rows": [
+     {
+      "date": "2099-11-12",
+      "amount": -150000,
+      "description": "FURNITURE STORE",
+      "row_index": 1
+     }
+    ]
+   }
+  },
+  {
+   "act": "add_account",
+   "args": {
+    "name": "Home, 12 Elm St",
+    "kind": "asset",
+    "currency": "USD"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "record_value",
+   "args": {
+    "account_id": "ACC-0003",
+    "as_of": "2099-10-15",
+    "amount": 45000000,
+    "according_to": "county assessment 2099"
+   },
+   "expect": {
+    "ok": true
+   },
+   "notes": "P-14: a value the person states, with its source"
+  },
+  {
+   "act": "net_worth",
+   "args": {
+    "as_of": "2099-12-01"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "net": 45300000,
+     "held_total": 45450000,
+     "owed_total": 150000
+    }
+   },
+   "notes": "P-15: 4,500.00 + 450,000.00 held, 1,500.00 owed on the card"
+  }
+ ]
+}

@@ -85,6 +85,8 @@ const smokeFit = R.execute('rec_candidates', { account: 'Smoke Checking' }, a).r
 R.execute('rec_match', { transaction_id: smokeFit.transaction_id, items: [{ item: 'o2c:payment:' + smokePay.id }], reason: 'smoke: the ACH is the payment' }, a);
 const smD = new Date(), smP = new Date(Date.UTC(smD.getUTCFullYear(), smD.getUTCMonth() - 1, 1)).toISOString().slice(0, 7);
 R.execute('tax_record_filing', { period: smP, filed_amount: R.execute('tax_return', { period: smP }, h).due, filed_on: require(ROOT + '/src/db.js').today(), agency: 'Smoke agency', reason: 'smoke' }, h);
+const smokeHouse = R.execute('purch_add_account', { name: 'Smoke house', kind: 'asset', currency: 'USD' }, h);
+R.execute('purch_record_value', { account_id: smokeHouse.id, as_of: '2026-09-01', amount: 40000000, according_to: 'smoke appraisal' }, h);
 R.execute('hunt_add_posting', { company: 'Vega', title: 'Staff Engineer', source: 'direct', url: 'https://example.com/j' }, h);
 `;
 
@@ -169,6 +171,7 @@ const DETAILS = [
   ['gl_entry', '(await api("gl_entries",{})).items?.[0]?.id'],
   ['bankrec_match', '(await api("rec_matches",{})).items?.[0]?.id'],
   ['tax_filing', '(await api("tax_filings",{})).items?.[0]?.id'],
+  ['purch_account', '(await api("purch_accounts",{})).items?.[0]?.id'],
   ['posting', '(await api("hunt_pipeline",{}))[0]?.id'],
 ];
 let dbad = 0, dseen = 0;

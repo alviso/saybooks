@@ -131,7 +131,7 @@ const BLURB = {
   crm: 'Relationship pursuit: campaigns with a goal, accounts that earned their place, contacts with sources or recorded as gaps, drafts the agent writes and a person sends, events with the page their date came from.',
   prospect: 'The holding area in front of the CRM: bought or scraped rows the agent stages and judges, that only a person promotes.',
   jobhunt: 'A job search as a system of record: postings, applications, interviews, recruiters, a duplicate guard, and one next action per pursuit.',
-  purchases: 'Bank and card statements and receipts the agent read: rows with provenance, accepted whole or not at all, reviewed in the person\'s own words; standing rules that suggest, subscriptions and spend, and bills only a person approves paying.',
+  purchases: 'Accounts and net worth; bank and card statements and receipts the agent read: rows with provenance, accepted whole or not at all, reviewed in the person\'s own words; standing rules that suggest, subscriptions and spend, and bills only a person approves paying.',
   bridge: 'The hand-over to the accountant: map their chart once, export a period as QuickBooks Online or Xero journal lines, keep what went and when; and preliminary financials before the close.',
   salestax: 'The sales tax return from what was invoiced and credited, tax as charged; a filing a person records and keeps as it stood, the payment, and a liability that ties to the books.',
   bankrec: 'The bank statement against the books: deposits matched to the payments they are, every difference named, items in transit with their age, and a sign-off a person gives.',

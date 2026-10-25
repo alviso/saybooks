@@ -1,0 +1,79 @@
+{
+ "name": "statements file under their account, and a missing month is named",
+ "spec": "purchases@0.6",
+ "today": "2099-12-10",
+ "notes": "P-13: every statement belongs to one account, and the chain's gaps and jumps are named, never smoothed.",
+ "env": [],
+ "steps": [
+  {
+   "act": "import_statement",
+   "args": {
+    "name": "sep.csv",
+    "hash": "acct-sep-4410",
+    "kind": "bank",
+    "account": "Checking 4410",
+    "currency": "USD",
+    "period_start": "2099-09-01",
+    "period_end": "2099-09-30",
+    "opening_balance": 100000,
+    "closing_balance": 90000,
+    "rows": [
+     {
+      "date": "2099-09-05",
+      "amount": -10000,
+      "description": "GROCER",
+      "row_index": 1
+     }
+    ]
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "account_id": "ACC-0001",
+     "account_new": true
+    }
+   }
+  },
+  {
+   "act": "import_statement",
+   "args": {
+    "name": "nov.csv",
+    "hash": "acct-nov-4410",
+    "kind": "bank",
+    "account": "Checking 4410",
+    "currency": "USD",
+    "period_start": "2099-11-01",
+    "period_end": "2099-11-30",
+    "opening_balance": 80000,
+    "closing_balance": 75000,
+    "rows": [
+     {
+      "date": "2099-11-07",
+      "amount": -5000,
+      "description": "PHARMACY",
+      "row_index": 1
+     }
+    ]
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "account_id": "ACC-0001",
+     "account_new": false
+    }
+   },
+   "notes": "P-13: the same label files under the same account; the missing October and the jump from 900.00 to 800.00 are named"
+  },
+  {
+   "act": "accounts",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "count": 1,
+     "issues": 2
+    }
+   }
+  }
+ ]
+}

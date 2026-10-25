@@ -1,6 +1,6 @@
 {
   "area": "purchases",
-  "spec": "0.5",
+  "spec": "0.6",
   "doc": "spec.md",
   "acts": {
     "import_statement": {
@@ -187,6 +187,51 @@
     "payables": {
       "kind": "read",
       "required": []
+    },
+    "add_account": {
+      "kind": "write",
+      "required": [
+        "name",
+        "kind",
+        "currency"
+      ]
+    },
+    "update_account": {
+      "kind": "write",
+      "required": [
+        "account_id"
+      ]
+    },
+    "close_account": {
+      "kind": "write",
+      "required": [
+        "account_id",
+        "closed_on",
+        "reason"
+      ]
+    },
+    "record_value": {
+      "kind": "write",
+      "required": [
+        "account_id",
+        "as_of",
+        "amount",
+        "according_to"
+      ]
+    },
+    "accounts": {
+      "kind": "read",
+      "required": []
+    },
+    "account": {
+      "kind": "read",
+      "required": [
+        "account_id"
+      ]
+    },
+    "net_worth": {
+      "kind": "read",
+      "required": []
     }
   },
   "invariants": [
@@ -233,6 +278,18 @@
     {
       "id": "P-12",
       "title": "A bill is a record, never a payment: only a person approves paying it, a payment is recorded after it happened and by an agent only for an approved bill, a linked statement row must match it, and the same bill is refused twice."
+    },
+    {
+      "id": "P-13",
+      "title": "Every statement belongs to one account; an account's statements chain, and a gap, an overlap or an opening that is not the last closing is named, never smoothed."
+    },
+    {
+      "id": "P-14",
+      "title": "A balance is what a statement printed or a value a person stated, each with its date and source; nothing is extrapolated or estimated."
+    },
+    {
+      "id": "P-15",
+      "title": "Net worth is per currency: what is held less what is owed, each line showing as of when; figures older than 45 days are named."
     }
   ]
 }

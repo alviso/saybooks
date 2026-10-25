@@ -29,6 +29,15 @@ forecasts, advice, tax treatment of purchases, paying anything.
   (bank | card | other), the account label as printed, period start and end, opening and
   closing balance, row count, currency. Immutable once accepted. The same hash is never
   accepted twice.
+- **account** (0.6) — an account the person has, in a register: name as its statements print
+  it, kind (checking | savings | credit_card | loan | asset | other), currency, institution, last
+  four digits, opened and closed days. Every statement belongs to one; importing a statement whose
+  label is not in the register adds the account. A card's statements are card statements, a bank
+  account's bank statements; an asset (a house, a car) has none. Closed with a day and a reason;
+  it stays in the register.
+- **value** (0.6) — what something without statements is worth, or what is still owed on it, on a
+  day, as the person states it with its source ("county assessment 2026", "lender's payoff
+  letter"). Never estimated here.
 - **transaction** — one row of a source: date, signed amount in minor units, description as
   printed, counterparty if the row names one, source and row index, the raw line as read.
   Status: unreviewed → purchase | recurring | transfer | income | fee | ignored, set by review
@@ -68,7 +77,9 @@ act, validated whole), set_vendor, add_receipt, match_receipt, declare_subscript
 cancel_subscription, unmatch_receipt, add_rule (a standing rule, with its window, words or
 vendor), end_rule (with a reason), accept_suggestions (confirm what rules suggest, one reasoned
 act, rows the person rejects left out), add_bill, approve_bill (a person only),
-record_bill_payment, reject_bill. Reads (11): vocabulary (the statuses with their meaning,
+record_bill_payment, reject_bill, add_account, update_account, close_account, record_value (0.6).
+Reads (14): accounts (each with its balance, as of when, and where its statements do not chain),
+account, net_worth (held less owed, per currency, each figure dated), vocabulary (the statuses with their meaning,
 the person's categories, vendors and active rules — what an agent proposes from), sources,
 transactions (each unreviewed row with the suggestion a rule makes for it), purchases,
 subscriptions, receipts, spend, source, rules, bills, payables (open bills by when they fall
@@ -124,6 +135,13 @@ due, set against the cash on the latest bank statements).
 - **P-9** Files never live here. A source is its hash, its metadata and its rows; the file
   stays with the person. The record can prove what was read, not re-show the page.
 
+- **P-13** Every statement belongs to one account; an account's statements chain. A gap, an
+  overlap or an opening that is not the last closing is named, never smoothed over.
+- **P-14** A balance is what a statement printed or a value a person stated, each with its date
+  and source. Nothing is extrapolated from rows or estimated.
+- **P-15** Net worth is per currency: what is held less what is owed, each line showing as of
+  when. A figure older than 45 days is named as old.
+
 ## 6. Required read models
 
 sources (what was imported, when, by whom, reconciled), transactions (by period, status,
@@ -152,7 +170,11 @@ as travel (a refund in the same window not), the suggestions accepted in one act
 accept refused, a rule that narrows nothing refused, the rule ended · 09 bills: a vendor's
 bill recorded, the same one forwarded twice refused, one due before its date refused, one with
 no due date and no terms refused; approval refused to the agent; a payment refused before
-approval; what is coming due set against the latest statement; a bill rejected with a reason.
+approval; what is coming due set against the latest statement; a bill rejected with a reason ·
+10 accounts: two statements file under the same account by their label, and the missing month
+and the jump between them are named · 11 net worth: a checking balance and a card balance from
+their statements, a house from a value stated with its source, net worth as held less owed · 12
+a bank balance stated by hand refused, and a card statement refused on a checking account.
 
 ## 9. Deferred — with reasons
 
@@ -166,7 +188,9 @@ approval; what is coming due set against the latest statement; a bill rejected w
 
 ---
 
-*Change log: 0.5 (2026-10-07) — bills prepared for approval, from Aryeh Munk's phase 1 list
+*Change log: 0.6 (2026-10-25) — accounts: a register statements belong to, values stated for
+things without statements, balances that say where they come from, statement chains checked, and
+net worth; part A of the personal finances plan (docs/plan-personal-finances.md). 0.5 (2026-10-07) — bills prepared for approval, from Aryeh Munk's phase 1 list
 ("Enable AI to make payments, process invoices"), reshaped so nothing pays: the agent prepares,
 a person approves, the bank pays, the record follows. 0.4 (2026-10-07) — standing rules, from Aryeh Munk's phase 1 list ("I am
 traveling these next 5 days for conference, book to Texas conference"), kept as suggestions
