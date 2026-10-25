@@ -63,7 +63,7 @@ defineCommand({
   permission: 'cash.write',
   title: 'Link a refund', group: 'Cards', subject: 'purch_refund', scope: 'collection',
   summary: 'Tie money back to the purchase it reverses. It takes back that much of the purchase\'s spending, in its category; it is not income.',
-  doctrine: `Read purch_refund_candidates: money in that looks like money back from the same shop.
+  doctrine: `Read purch_refunds: money in that looks like money back from the same shop.
 Show the person and link with a reason. A refund is never more than what is left of the purchase
 after earlier refunds. Money back for something not on record stays income.`,
   effects: ['refund row tied to its purchase', 'the purchase\'s spending reduced by it'],
@@ -119,9 +119,7 @@ read({ name: 'purch_card_dues', title: 'Card payments due', summary: 'Each card:
   args: { as_of: f.date('The day. Defaults to today.') }, handler: (a) => V.cardDues(a) });
 read({ name: 'purch_card_costs', title: 'Interest and fees', summary: 'Interest and fees per card for a year, from the rows reviewed as fees.',
   args: { year: f.text('e.g. 2026. Defaults to this year.') }, handler: (a) => V.cardCosts(a) });
-read({ name: 'purch_refund_candidates', title: 'Refund suggestions', summary: 'Money in that looks like money back for a purchase on record, from the same shop, with why. Suggestions only.',
-  args: {}, handler: () => V.refundCandidates() });
-read({ name: 'purch_get_refund', title: 'Refund', summary: 'One refund link: the money in, the purchase it reverses, the reason.',
-  args: { refund_id: { ...f.text('e.g. RFD-0001.'), required: true } }, handler: (a) => V.refundView(a.refund_id) });
+read({ name: 'purch_refunds', title: 'Refunds', summary: 'Money back linked to the purchase it reverses, and money in that looks like money back from the same shop (suggested, with why). With refund_id: that link whole.',
+  args: { refund_id: f.text('One link, e.g. RFD-0001.') }, handler: (a) => a.refund_id ? V.refundView(a.refund_id) : V.refunds() });
 
 module.exports = { saveCardFacts };

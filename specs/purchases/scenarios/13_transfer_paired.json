@@ -62,12 +62,12 @@
    }
   },
   {
-   "act": "transfer_candidates",
+   "act": "transfers",
    "args": {},
    "expect": {
     "ok": true,
     "include": {
-     "count": 1
+     "suggestions": 1
     }
    },
    "notes": "P-17: a suggestion; nothing paired yet"

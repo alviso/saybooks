@@ -52,12 +52,12 @@
    }
   },
   {
-   "act": "refund_candidates",
+   "act": "refunds",
    "args": {},
    "expect": {
     "ok": true,
     "include": {
-     "count": 1
+     "suggestions": 1
     }
    },
    "notes": "P-21: a suggestion"

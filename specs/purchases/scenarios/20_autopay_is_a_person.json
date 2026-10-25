@@ -1,0 +1,61 @@
+{
+ "name": "autopay is a person's decision",
+ "spec": "purchases@0.9",
+ "today": "2099-12-10",
+ "notes": "P-24: refused to the agent whatever its role; without it, a bill waits for approval.",
+ "env": [],
+ "steps": [
+  {
+   "act": "declare_bill_series",
+   "args": {
+    "vendor": "Comcast",
+    "cadence": "monthly",
+    "category": "internet"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "add_account",
+   "args": {
+    "name": "Checking 4410",
+    "kind": "checking",
+    "currency": "USD"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "set_autopay",
+   "args": {
+    "series_id": "BS-0001",
+    "account_id": "ACC-0001",
+    "reason": "pay it automatically"
+   },
+   "expect": {
+    "refused": "person's act"
+   },
+   "notes": "P-24"
+  },
+  {
+   "act": "add_bill",
+   "args": {
+    "vendor": "Comcast",
+    "number": "C-11",
+    "bill_date": "2099-11-20",
+    "terms_days": 15,
+    "amount": 8999,
+    "currency": "USD",
+    "category": "internet"
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "status": "open"
+    }
+   }
+  }
+ ]
+}

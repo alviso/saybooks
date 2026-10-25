@@ -16,7 +16,7 @@ defineCommand({
   title: 'Pair a transfer', group: 'Transfers', subject: 'purch_transfer', scope: 'collection',
   summary: 'Tie the two sides of one move between your own accounts: the row where money left and the row where it arrived. Counted once, as neither spending nor income.',
   doctrine: `Paying the card from checking shows twice: out of checking, into the card. Read
-purch_transfer_candidates for what fits (same amount, close in time, worded as a payment), show the
+purch_transfers for the suggested pairs (same amount, close in time, worded as a payment), show the
 person, and pair with a reason. The amounts must be exactly opposite and the accounts different;
 a pair is refused otherwise. A transfer to an account that has no statements here (a savings
 account kept elsewhere, an owner draw) is not a pair: review that row as a transfer naming where
@@ -83,9 +83,5 @@ defineCommand({
   },
 });
 
-read({ name: 'purch_transfers', title: 'Transfers', summary: 'Moves between your own accounts: the pairs, the transfers with only one side so far (and whether the other side should already be on a statement), and how many could be paired.',
-  args: {}, handler: () => V.transfers() });
-read({ name: 'purch_transfer_candidates', title: 'Transfer suggestions', summary: 'Rows that look like the two sides of one move between your accounts, with why. Suggestions only.',
-  args: { account_id: f.text('One account; all when left out.') }, handler: (a) => V.transferCandidates(a) });
-read({ name: 'purch_get_transfer', title: 'Transfer', summary: 'One pair: both rows, the reason, and how each row was reviewed before.',
-  args: { transfer_id: { ...f.text('e.g. TR-0001.'), required: true } }, handler: (a) => V.transferView(a.transfer_id) });
+read({ name: 'purch_transfers', title: 'Transfers', summary: 'Moves between your own accounts: the pairs, the rows that look like the two sides of one move (suggested, with why), and transfers with one side so far. With transfer_id: that pair whole.',
+  args: { transfer_id: f.text('One pair, e.g. TR-0001.') }, handler: (a) => a.transfer_id ? V.transferView(a.transfer_id) : V.transfers() });

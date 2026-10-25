@@ -154,6 +154,12 @@ function journalLines() {
   return out;
 }
 
+/** purchases' due list: each open loan's next payment in the window, as scheduled. */
+function upcoming(from, to) {
+  return loanRows().map(l => loanView(l.id, from)).filter(v => v.next_due && v.next_due <= to)
+    .map(v => ({ date: v.next_due, kind: 'loan', ref: v.id, what: v.name, amount: v.payment + v.escrow, currency: v.currency, state: v.next_due < from ? 'not seen paid yet' : 'scheduled payment' }));
+}
+
 const DERIVATION_ACCOUNTS = [{ account: 'Opening Balance Equity', kind: 'equity', when: 'what a loan was owed when its record starts' }];
 
-module.exports = { loanView, loans, candidates, interest, scheduleSplit, history, dueOnOrAfter, statementRowPosts, statementRowMatches, accountBalance, journalLines, DERIVATION_ACCOUNTS, interestCategory, purchases, monthly };
+module.exports = { upcoming, loanView, loans, candidates, interest, scheduleSplit, history, dueOnOrAfter, statementRowPosts, statementRowMatches, accountBalance, journalLines, DERIVATION_ACCOUNTS, interestCategory, purchases, monthly };

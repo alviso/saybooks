@@ -125,9 +125,7 @@ thing you own, what is owed for a loan; the sign follows the kind.`,
   },
 });
 
-read({ name: 'purch_accounts', title: 'Accounts', summary: 'Every account with its balance (from its latest statement, or a stated value), as of when, and any gap or jump between its statements.',
-  args: { as_of: f.date('The day. Defaults to today.') }, handler: (a) => V.accounts(a) });
-read({ name: 'purch_account', title: 'Account', summary: 'One account: its statements in order, the values stated for it, its balance, and where its statements do not chain.',
-  args: { account_id: { ...f.text('e.g. ACC-0001.'), required: true }, as_of: f.date('') }, handler: (a) => V.accountView(a.account_id, a.as_of || undefined) });
+read({ name: 'purch_accounts', title: 'Accounts', summary: 'Every account with its balance (from its latest statement, a stated value, or its loan), as of when, and any gap or jump between its statements. With account_id: that one account whole, its statements in order and the values stated for it.',
+  args: { account_id: f.text('One account, e.g. ACC-0001.'), as_of: f.date('The day. Defaults to today.') }, handler: (a) => a.account_id ? V.accountView(a.account_id, a.as_of || undefined) : V.accounts(a) });
 read({ name: 'purch_net_worth', title: 'Net worth', summary: 'What is held less what is owed, per currency, on a day: each account\'s figure with its date and source; old figures named.',
   args: { as_of: f.date('The day. Defaults to today.') }, handler: (a) => V.netWorth(a) });

@@ -81,6 +81,15 @@ bank. purch_payables shows what is coming due against the cash on their latest s
   },
   handler(a, { db, at, actor }) {
     const b = addBill(db, a, { at, actor });
+    // P-24: a vendor on autopay was approved ahead by a person, for its bills from one account.
+    const sr = V.activeSeriesFor(H.get('purch_bill', b.id).vendor_id);
+    if (sr && sr.autopay_account_id) {
+      const acct = H.get('purch_account', sr.autopay_account_id);
+      db.prepare("UPDATE purch_bill SET status = 'approved', approved_by = ?, approved_at = ?, pay_by = due_date, approval_note = ?, updated_at = ? WHERE id = ?")
+        .run(sr.autopay_set_by, at, `Autopay from ${acct ? acct.name : sr.autopay_account_id} (${sr.id}), set by ${sr.autopay_set_by} on ${String(sr.autopay_set_at).slice(0, 10)}`, at, b.id);
+      const v = V.billView(b.id);
+      return { ...v, note: `Recorded ${v.name}: ${v.amount_display}, due ${v.due_date}. ${v.vendor} is on autopay from ${acct ? acct.name : 'an account'}, which ${sr.autopay_set_by} approved ahead; it is paid from there on its own. Nothing is paid from here.` };
+    }
     return { ...b, note: `Recorded ${b.name}: ${b.amount_display}, due ${b.due_date}. It waits for a person to approve paying it; nothing is paid from here.` };
   },
 });

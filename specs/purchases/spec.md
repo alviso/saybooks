@@ -54,6 +54,16 @@ forecasts, advice, tax treatment of purchases, paying anything.
 - **refund** (0.8) — money in tied to the purchase it reverses, by a reasoned act, never more than
   is left of that purchase after earlier refunds. It takes back that much spending in the
   purchase's category and is not income. Unlinked with a reason; the row goes back as it was.
+- **expected bill** (0.9) — a vendor whose bill comes every period (monthly, quarterly, yearly), declared
+  once from what the person says. Its bills are the vendor's bills on record; its usual amount is the
+  median of its recent bills (or what the person said, until there are a few). A period with no bill
+  well past its time is named missing; a bill well above the usual amount is named. Ended with a reason.
+- **autopay** (0.9) — a person's standing approval for one vendor's bills to be taken from one account.
+  Set and stopped only by a person; a bill recorded while it stands is approved by it, and says so.
+- **what is due** (0.9) — derived: every recorded obligation in a window by date (bills, card payments,
+  loan payments from the loans area, subscriptions' next charges, expected bills not received yet)
+  beside the cash on the latest bank statements, with the day it would run short. Not a forecast:
+  nothing unrecorded, income included, is assumed.
 - **transaction** — one row of a source: date, signed amount in minor units, description as
   printed, counterparty if the row names one, source and row index, the raw line as read.
   Status: unreviewed → purchase | recurring | transfer | income | fee | ignored, set by review
@@ -93,11 +103,14 @@ act, validated whole), set_vendor, add_receipt, match_receipt, declare_subscript
 cancel_subscription, unmatch_receipt, add_rule (a standing rule, with its window, words or
 vendor), end_rule (with a reason), accept_suggestions (confirm what rules suggest, one reasoned
 act, rows the person rejects left out), add_bill, approve_bill (a person only),
-record_bill_payment, reject_bill, add_account, update_account, close_account, record_value (0.6), pair_transfer, unpair_transfer (0.7), set_card_facts, link_refund, unlink_refund (0.8).
+record_bill_payment, reject_bill, add_account, update_account, close_account, record_value (0.6), pair_transfer, unpair_transfer (0.7), set_card_facts, link_refund, unlink_refund (0.8), declare_bill_series, end_bill_series, set_autopay
+(a person only) (0.9).
 Reads (14): accounts (each with its balance, as of when, and where its statements do not chain),
 account, net_worth (held less owed, per currency, each figure dated), transfers (pairs and
-one-sided transfers), transfer_candidates (suggested pairs, with why), card_dues (each card's balance, minimum, due date,
-payments seen and state), card_costs (interest and fees per card and year), refund_candidates, vocabulary (the statuses with their meaning,
+one-sided transfers and the suggested pairs, with why), card_dues (each card's balance, minimum, due date,
+payments seen and state), card_costs (interest and fees per card and year), refunds (linked, and suggested with why), bill_series,
+payables (now also the bills a statement row looks like it paid),
+upcoming (what is due beside the cash), vocabulary (the statuses with their meaning,
 the person's categories, vendors and active rules — what an agent proposes from), sources,
 transactions (each unreviewed row with the suggestion a rule makes for it), purchases,
 subscriptions, receipts, spend, source, rules, bills, payables (open bills by when they fall
@@ -176,6 +189,13 @@ due, set against the cash on the latest bank statements).
 - **P-22** Interest and fees are what rows reviewed as fees say, per card and year; nothing is
   estimated from the rate.
 
+- **P-23** A bill that comes every period is expected: a period with no bill past its usual time is
+  named missing, a bill well above its usual amount is named; neither is assumed.
+- **P-24** Autopay is a person's standing approval for one vendor's bills from one account, set and
+  stopped only by a person; bills under it are approved by it and say so.
+- **P-25** What is due lists every recorded obligation in a window beside the cash on the latest
+  statements; it is not a forecast: nothing unrecorded is assumed.
+
 ## 6. Required read models
 
 sources (what was imported, when, by whom, reconciled), transactions (by period, status,
@@ -215,7 +235,10 @@ purchase refused · 15 a one-sided transfer whose other half the card's statemen
 a card statement imported with its facts, paid in full from checking by the due date; facts refused
 on a bank statement and a second recording refused without a reason · 17 a missed card payment
 named once a statement covers the due date, and the year's interest from rows reviewed as fees · 18
-a refund suggested, linked to its purchase, more than is left refused, the refund closed to review.
+a refund suggested, linked to its purchase, more than is left refused, the refund closed to review ·
+19 an expected electric bill: a bill well above the usual named, and the missing month named · 20 autopay
+refused to the agent · 21 what is due: a bill and a subscription's next charge beside the cash, and the
+statement row that paid a bill suggested.
 
 ## 9. Deferred — with reasons
 
@@ -229,7 +252,9 @@ a refund suggested, linked to its purchase, more than is left refused, the refun
 
 ---
 
-*Change log: 0.8 (2026-10-25) — credit cards: statement facts kept, what is due and whether it was
+*Change log: 0.9 (2026-10-25) — household bills: expected bills with missing and unusual ones named,
+autopay as a person's standing approval, bill payments suggested, and what is due beside the cash;
+part E of the personal finances plan. 0.8 (2026-10-25) — credit cards: statement facts kept, what is due and whether it was
 met, interest and fees per year, refunds tied to their purchase, fees posting to their own word;
 part C of the personal finances plan. 0.7 (2026-10-25) — transfers between the person's own accounts: the two sides paired
 and counted once, suggestions, one-sided transfers named; part B of the personal finances plan.

@@ -32,7 +32,7 @@ account with purch_record_value (according_to the statement) and the loan shows 
     argmap: { loan: 'loan_id', transaction: 'transaction_id' },
     acts: { add: 'loan_add', link_payment: 'loan_link_payment', unlink_payment: 'loan_unlink_payment', loans: 'loan_loans', loan: 'loan_get', candidates: 'loan_candidates', interest: 'loan_interest' },
   },
-  api: { views: V, journalLines: V.journalLines, statementRowPosts: V.statementRowPosts, statementRowMatches: V.statementRowMatches, accountBalance: V.accountBalance, derivationAccounts: V.DERIVATION_ACCOUNTS },
+  api: { views: V, journalLines: V.journalLines, statementRowPosts: V.statementRowPosts, statementRowMatches: V.statementRowMatches, accountBalance: V.accountBalance, upcoming: V.upcoming, derivationAccounts: V.DERIVATION_ACCOUNTS },
 });
 
 R.defineSubject('loan_loan', { load: (id) => V.loanView(id) });

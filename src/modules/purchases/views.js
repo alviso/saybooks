@@ -56,7 +56,8 @@ function payables({ as_of } = {}) {
   const lines = Object.values(by).map(x => x.cash_on_hand == null
     ? `${x.due_within_30_display} due within 30 days in ${x.currency}; no bank statement on record to set it against.`
     : `${x.due_within_30_display} due within 30 days against ${x.cash_on_hand_display} in the bank as of ${x.cash_as_of}, leaving ${x.after_due_within_30_display}.${x.after_due_within_30 < 0 ? ' That is short: the bills due first, or money coming in, decide which can wait.' : ''}`);
-  return { as_of: at, open_count: open.length, overdue_count: buckets.overdue.length, by_currency: by,
+  const pos = billPaymentCandidates();   // bills a statement row looks like it paid
+  return { as_of: at, paid_on_statement: pos.items, paid_on_statement_count: pos.count, open_count: open.length, overdue_count: buckets.overdue.length, by_currency: by,
     buckets: Object.fromEntries(Object.entries(buckets).map(([k, v]) => [k, v.map(b => ({ id: b.id, vendor: b.vendor, number: b.number, due_date: b.due_date, amount_display: b.amount_display, status: b.status }))])),
     note: open.length ? lines.join(' ') : 'No bills waiting to be paid.' };
 }
@@ -602,7 +603,7 @@ function transfers() {
   const pairs = activePairs().map(p => transferView(p.id)).reverse();
   const one = oneSided();
   const cands = transferCandidates();
-  return { count: pairs.length, pairs, one_sided: one, one_sided_missing: one.filter(x => x.missing).length, suggestions: cands.count,
+  return { count: pairs.length, pairs, one_sided: one, one_sided_missing: one.filter(x => x.missing).length, suggestions: cands.count, suggested: cands.items,
     note: `${pairs.length ? `${pairs.length} transfer${pairs.length === 1 ? '' : 's'} paired.` : 'No transfers paired yet.'}${cands.count ? ` ${cands.count} could be paired.` : ''}${one.length ? ` ${one.length} one-sided, ${one.filter(x => x.missing).length} with the other half missing from a statement that should show it.` : ''}` };
 }
 
@@ -695,4 +696,107 @@ function refundCandidates() {
   return { count: out.length, items: out, note: out.length ? `${out.length} row${out.length === 1 ? '' : 's'} of money in look${out.length === 1 ? 's' : ''} like money back for a purchase on record. Suggestions only: link with purch_link_refund and a reason.` : 'No money in waiting to be linked to a purchase.' };
 }
 
-module.exports = { postedElsewhere, cardFacts, cardDues, cardCosts, activeRefunds, refundedOf, refundView, refundCandidates, pct, PAY_WORDS, pairIndex, transferView, transferCandidates, oneSided, transfers, rowWithAccount, ACCOUNT_KINDS, STATEMENT_KIND, accountKindFor, accountView, accounts, netWorth, statementsOf, chainIssues, balanceOf, matchedRows, statementRows, billView, bills, payables, unpaidBills, approvalHold, onAccrual, statementAccounts, activeRules, ruleMatches, suggestionFor, ruleView, rules, windowText, splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };
+// ---------------------------------------------------------------- household bills and what is due (0.9)
+const CADENCE_MONTHS = { monthly: 1, quarterly: 3, yearly: 12 };
+const addMonths = (d, n) => { const [y, m, dd] = d.split('-').map(Number); const t = new Date(Date.UTC(y, m - 1 + n, 1)); const last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate();
+  return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}-${String(Math.min(dd, last)).padStart(2, '0')}`; };
+const median = (xs) => { if (!xs.length) return null; const s = xs.slice().sort((a, b) => a - b); const k = Math.floor(s.length / 2); return s.length % 2 ? s[k] : Math.round((s[k - 1] + s[k]) / 2); };
+const BILL_GRACE = 10, HIGH = 1.3;
+const seriesRows = () => { try { return db().prepare('SELECT * FROM purch_bill_series ORDER BY id').all(); } catch { return []; } };
+const activeSeriesFor = (vendorId) => { try { return db().prepare("SELECT * FROM purch_bill_series WHERE vendor_id = ? AND status = 'active'").get(vendorId) || null; } catch { return null; } };
+
+/** P-23: a bill that comes every period, its usual amount from its own history, a missing period and an unusual amount named. */
+function seriesView(id, asOf = today()) {
+  const sr = need('purch_bill_series', id, 'bill series');
+  const bills = db().prepare("SELECT * FROM purch_bill WHERE vendor_id = ? AND currency = ? AND status <> 'rejected' ORDER BY bill_date, id").all(sr.vendor_id, sr.currency);
+  const amounts = bills.map(b => b.amount);
+  const prior = amounts.slice(0, -1).slice(-6);
+  const typical = prior.length >= 2 ? median(prior) : (sr.typical_amount ?? (amounts.length ? median(amounts) : null));
+  const last = bills[bills.length - 1] || null;
+  const nextExpected = last ? addMonths(last.bill_date, CADENCE_MONTHS[sr.cadence]) : null;
+  const missing = sr.status === 'active' && nextExpected && asOf > H.addDays(nextExpected, BILL_GRACE);
+  const high = last && typical && prior.length >= 2 && last.amount > typical * HIGH;
+  const acct = sr.autopay_account_id ? get('purch_account', sr.autopay_account_id) : null;
+  return { ...sr, name: `${vendorName(sr.vendor_id)}, ${sr.cadence}`, vendor: vendorName(sr.vendor_id),
+    bills: bills.map(b => ({ id: b.id, bill_date: b.bill_date, due_date: b.due_date, amount: b.amount, amount_display: money(b.amount, b.currency), status: b.status })).reverse(),
+    typical, typical_display: typical == null ? null : money(typical, sr.currency), last_bill: last && { id: last.id, bill_date: last.bill_date, amount_display: money(last.amount, last.currency) },
+    next_expected: nextExpected, missing: !!missing, unusual: !!high,
+    autopay: acct ? { account_id: acct.id, account: acct.name, set_by: sr.autopay_set_by, set_at: sr.autopay_set_at, reason: sr.autopay_reason } : null,
+    note: `${vendorName(sr.vendor_id)}: ${bills.length} bill${bills.length === 1 ? '' : 's'}${typical != null ? `, usually ${money(typical, sr.currency)}` : ''}.`
+      + (missing ? ` No bill since ${last.bill_date}; one was expected around ${nextExpected}.` : nextExpected && sr.status === 'active' ? ` Next expected around ${nextExpected}.` : '')
+      + (high ? ` The latest, ${money(last.amount, last.currency)}, is well above the usual ${money(typical, sr.currency)}.` : '')
+      + (acct ? ` On autopay from ${acct.name}.` : '') };
+}
+function billSeries({ as_of } = {}) {
+  const items = seriesRows().map(r => seriesView(r.id, as_of || today()));
+  return { count: items.length, items, missing: items.filter(x => x.missing).length, unusual: items.filter(x => x.unusual).length,
+    note: items.length ? items.map(x => x.note).join(' ') : 'No expected bills declared.' };
+}
+
+/** Rows that look like the payment of an unpaid bill: its amount, the vendor, near its dates. Suggestions only. */
+function billPaymentCandidates() {
+  const bills = db().prepare("SELECT * FROM purch_bill WHERE status IN ('open','approved') AND transaction_id IS NULL ORDER BY due_date").all();
+  const taken = new Set(db().prepare('SELECT transaction_id FROM purch_bill WHERE transaction_id IS NOT NULL').all().map(r => r.transaction_id));
+  const pi = pairIndex(), held = matchedRows();
+  const rows = statementRows().filter(t => t.amount < 0 && !taken.has(t.id) && !pi.has(t.id) && !held.has(t.id) && ['unreviewed', 'purchase', 'recurring'].includes(t.status) && !splitsOf(t.id).length);
+  const out = [];
+  for (const b of bills) {
+    const vname = vendorName(b.vendor_id) || '';
+    const fits = rows.filter(t => t.currency === b.currency && -t.amount === b.amount && t.date >= H.addDays(b.bill_date, -3) && t.date <= H.addDays(b.due_date, BILL_GRACE)
+      && ((t.vendor_id && t.vendor_id === b.vendor_id) || (firstWord(vname) && t.description.toLowerCase().includes(firstWord(vname)))));
+    if (fits.length) out.push({ bill_id: b.id, vendor: vname, amount_display: money(b.amount, b.currency), due_date: b.due_date, status: b.status,
+      rows: fits.slice(0, 3).map(t => ({ ...brief({ ...t, account_name: t.account }), why: `the bill's amount, ${vname} on the line, ${t.date <= b.due_date ? 'by' : 'after'} the due date` })) });
+  }
+  return { count: out.length, items: out, note: out.length ? `${out.length} bill${out.length === 1 ? '' : 's'} look${out.length === 1 ? 's' : ''} paid on a statement. ${out.some(x => x.status === 'open') ? 'An open bill needs a person\'s approval before its payment is recorded. ' : ''}Record the payment with purch_record_bill_payment, linking the row.` : 'No statement row looks like an unpaid bill\'s payment.' };
+}
+
+/**
+ * P-25: what is due in a window (bills, card payments, loan payments, subscriptions, expected bills
+ * not received yet) beside the cash on the latest bank statements. A list of what is on record, not a
+ * forecast: nothing unrecorded, income included, is assumed.
+ */
+function upcoming({ days = 30, as_of } = {}) {
+  const from = as_of || today(), to = H.addDays(from, Number(days) || 30);
+  const items = [];
+  const inWin = (d) => d && d <= to;
+  for (const b of db().prepare("SELECT * FROM purch_bill WHERE status IN ('open','approved') ORDER BY due_date").all()) {
+    if (!inWin(b.due_date)) continue;
+    const sr = activeSeriesFor(b.vendor_id);
+    items.push({ date: b.due_date, kind: 'bill', ref: b.id, what: `${vendorName(b.vendor_id)}${b.number ? ` ${b.number}` : ''}`, amount: b.amount, currency: b.currency,
+      state: b.due_date < from ? 'overdue' : b.status === 'approved' ? (sr && sr.autopay_account_id && /^Autopay/.test(b.approval_note || '') ? 'autopay' : 'approved') : 'waiting for approval' });
+  }
+  for (const c of cardDues({ as_of: from }).items) if (c.due_date && inWin(c.due_date) && c.statement_balance && !/paid in full|nothing owed/.test(c.state))
+    items.push({ date: c.due_date, kind: 'card', ref: c.account_id, what: c.name, amount: c.statement_balance - (c.paid || 0), currency: c.currency, minimum: c.minimum_due, state: c.state });
+  for (const sub of subscriptions(from).items) if (sub.derived_status === 'active' && sub.next_expected && sub.next_expected >= from && inWin(sub.next_expected))
+    items.push({ date: sub.next_expected, kind: 'subscription', ref: sub.id, what: sub.vendor, amount: sub.amount, currency: sub.currency, state: 'expected charge' });
+  for (const sr of billSeries({ as_of: from }).items) if (sr.status === 'active' && sr.next_expected && inWin(H.addDays(sr.next_expected, sr.due_day ? 0 : 14)) && sr.typical != null) {
+    const has = db().prepare("SELECT 1 FROM purch_bill WHERE vendor_id = ? AND bill_date >= ? AND status <> 'rejected'").get(sr.vendor_id, H.addDays(sr.next_expected, -BILL_GRACE));
+    if (!has) items.push({ date: H.addDays(sr.next_expected, 14), kind: 'expected bill', ref: sr.id, what: sr.vendor, amount: sr.typical, currency: sr.currency, state: sr.missing ? 'missing' : 'not received yet, usual amount' });
+  }
+  for (const mod of require('../../registry.js').MODULES) if (mod.api && typeof mod.api.upcoming === 'function') for (const x of mod.api.upcoming(from, to)) items.push(x);
+  items.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  // The cash: the latest statement of each bank account, per currency, with its date.
+  const cash = {};
+  for (const a of accounts({ as_of: from }).items) if (['checking', 'savings'].includes(a.kind) && !a.closed && a.balance != null) {
+    const c = cash[a.currency] = cash[a.currency] || { currency: a.currency, amount: 0, accounts: [] }; c.amount += a.balance; c.accounts.push({ name: a.name, balance_display: a.balance_display, as_of: a.balance_as_of });
+  }
+  const run = Object.fromEntries(Object.values(cash).map(c => [c.currency, c.amount]));
+  const rows = items.map(x => { if (x.currency in run) run[x.currency] -= x.amount; return { ...x, amount_display: money(x.amount, x.currency), minimum_display: x.minimum == null ? null : money(x.minimum, x.currency),
+    cash_after: x.currency in run ? run[x.currency] : null, cash_after_display: x.currency in run ? money(run[x.currency], x.currency) : null, short: x.currency in run && run[x.currency] < 0 }; });
+  const first = rows.find(r => r.short);
+  const totals = {}; for (const r of rows) totals[r.currency] = (totals[r.currency] || 0) + r.amount;
+  return { from, to, count: rows.length, items: rows, cash: Object.values(cash).map(c => ({ ...c, amount_display: money(c.amount, c.currency) })),
+    totals: Object.entries(totals).map(([c, v]) => ({ currency: c, amount: v, amount_display: money(v, c) })), short_on: first ? first.date : null,
+    note: rows.length ? `${rows.length} thing${rows.length === 1 ? '' : 's'} due by ${to}: ${Object.entries(totals).map(([c, v]) => money(v, c)).join(', ')}.`
+      + (Object.keys(cash).length ? ` Cash on the latest statements: ${Object.values(cash).map(c => money(c.amount, c.currency)).join(', ')}.` : ' No bank statement yet to set it against.')
+      + (first ? ` It runs short on ${first.date}, at ${first.what}.` : '') + ' Nothing unrecorded is assumed, income included.' : `Nothing on record is due by ${to}.` };
+}
+
+/** Refunds linked and money in that looks like one. */
+function refunds() {
+  const c = refundCandidates();
+  const linked = activeRefunds().map(r => refundView(r.id)).reverse();
+  return { count: linked.length, linked, suggestions: c.count, suggested: c.items, note: c.note };
+}
+
+module.exports = { refunds, seriesView, billSeries, billPaymentCandidates, upcoming, activeSeriesFor, CADENCE_MONTHS, postedElsewhere, cardFacts, cardDues, cardCosts, activeRefunds, refundedOf, refundView, refundCandidates, pct, PAY_WORDS, pairIndex, transferView, transferCandidates, oneSided, transfers, rowWithAccount, ACCOUNT_KINDS, STATEMENT_KIND, accountKindFor, accountView, accounts, netWorth, statementsOf, chainIssues, balanceOf, matchedRows, statementRows, billView, bills, payables, unpaidBills, approvalHold, onAccrual, statementAccounts, activeRules, ruleMatches, suggestionFor, ruleView, rules, windowText, splitsOf, journalLines, journalOmitted, mappableKeys, vocabulary, transactionView, receiptView, subscriptionView, subscriptions, transactions, purchases, receipts, sources, sourceView, receiptCandidates, addPeriod, norm, vendorName };

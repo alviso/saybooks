@@ -1,0 +1,94 @@
+{
+ "name": "an expected electric bill: an unusual one and a missing month named",
+ "spec": "purchases@0.9",
+ "today": "2099-12-10",
+ "notes": "P-23: the usual amount from the bills themselves; nothing assumed.",
+ "env": [],
+ "steps": [
+  {
+   "act": "declare_bill_series",
+   "args": {
+    "vendor": "PG&E",
+    "cadence": "monthly",
+    "category": "utilities",
+    "reason": "the electric bill comes every month"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "add_bill",
+   "args": {
+    "vendor": "PG&E",
+    "number": "E-07",
+    "bill_date": "2099-07-10",
+    "terms_days": 15,
+    "amount": 12000,
+    "currency": "USD",
+    "category": "utilities"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "add_bill",
+   "args": {
+    "vendor": "PG&E",
+    "number": "E-08",
+    "bill_date": "2099-08-10",
+    "terms_days": 15,
+    "amount": 13000,
+    "currency": "USD",
+    "category": "utilities"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "add_bill",
+   "args": {
+    "vendor": "PG&E",
+    "number": "E-09",
+    "bill_date": "2099-09-10",
+    "terms_days": 15,
+    "amount": 12500,
+    "currency": "USD",
+    "category": "utilities"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "add_bill",
+   "args": {
+    "vendor": "PG&E",
+    "number": "E-10",
+    "bill_date": "2099-10-10",
+    "terms_days": 15,
+    "amount": 25000,
+    "currency": "USD",
+    "category": "utilities"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "bill_series",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "count": 1,
+     "missing": 1,
+     "unusual": 1
+    }
+   },
+   "notes": "P-23: October well above the usual; November never came"
+  }
+ ]
+}

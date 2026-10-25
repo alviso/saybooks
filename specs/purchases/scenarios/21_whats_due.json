@@ -1,0 +1,85 @@
+{
+ "name": "what is due beside the cash, and a bill's payment suggested",
+ "spec": "purchases@0.9",
+ "today": "2099-12-10",
+ "notes": "P-25: recorded obligations only, against the latest statement; the row that paid a bill suggested.",
+ "env": [],
+ "steps": [
+  {
+   "act": "import_statement",
+   "args": {
+    "name": "chk.csv",
+    "hash": "due-chk-nov",
+    "kind": "bank",
+    "account": "Checking 4410",
+    "currency": "USD",
+    "period_start": "2099-11-01",
+    "period_end": "2099-12-05",
+    "opening_balance": 300000,
+    "closing_balance": 291001,
+    "rows": [
+     {
+      "date": "2099-12-02",
+      "amount": -8999,
+      "description": "COMCAST CABLE AUTOPAY",
+      "row_index": 1
+     }
+    ]
+   }
+  },
+  {
+   "act": "add_bill",
+   "args": {
+    "vendor": "Comcast",
+    "number": "C-12",
+    "bill_date": "2099-11-25",
+    "due_date": "2099-12-08",
+    "amount": 8999,
+    "currency": "USD",
+    "category": "internet"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "add_bill",
+   "args": {
+    "vendor": "Allstate",
+    "number": "P-99",
+    "bill_date": "2099-12-01",
+    "due_date": "2099-12-28",
+    "amount": 64000,
+    "currency": "USD",
+    "category": "insurance"
+   },
+   "expect": {
+    "ok": true
+   }
+  },
+  {
+   "act": "payables",
+   "args": {},
+   "expect": {
+    "ok": true,
+    "include": {
+     "paid_on_statement_count": 1
+    }
+   },
+   "notes": "the Comcast row fits its bill"
+  },
+  {
+   "act": "upcoming",
+   "args": {
+    "days": 30
+   },
+   "expect": {
+    "ok": true,
+    "include": {
+     "count": 2
+    }
+   },
+   "notes": "P-25: both bills, overdue and coming, beside the cash"
+  }
+ ]
+}

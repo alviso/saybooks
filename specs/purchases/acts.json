@@ -1,6 +1,6 @@
 {
   "area": "purchases",
-  "spec": "0.8",
+  "spec": "0.9",
   "doc": "spec.md",
   "acts": {
     "import_statement": {
@@ -223,12 +223,6 @@
       "kind": "read",
       "required": []
     },
-    "account": {
-      "kind": "read",
-      "required": [
-        "account_id"
-      ]
-    },
     "net_worth": {
       "kind": "read",
       "required": []
@@ -249,10 +243,6 @@
       ]
     },
     "transfers": {
-      "kind": "read",
-      "required": []
-    },
-    "transfer_candidates": {
       "kind": "read",
       "required": []
     },
@@ -285,7 +275,36 @@
         "reason"
       ]
     },
-    "refund_candidates": {
+    "declare_bill_series": {
+      "kind": "write",
+      "required": [
+        "vendor",
+        "cadence"
+      ]
+    },
+    "end_bill_series": {
+      "kind": "write",
+      "required": [
+        "series_id",
+        "reason"
+      ]
+    },
+    "set_autopay": {
+      "kind": "write",
+      "required": [
+        "series_id",
+        "reason"
+      ]
+    },
+    "bill_series": {
+      "kind": "read",
+      "required": []
+    },
+    "upcoming": {
+      "kind": "read",
+      "required": []
+    },
+    "refunds": {
       "kind": "read",
       "required": []
     }
@@ -374,6 +393,18 @@
     {
       "id": "P-22",
       "title": "Interest and fees are what rows reviewed as fees say, per card and year; nothing is estimated from the rate."
+    },
+    {
+      "id": "P-23",
+      "title": "A bill that comes every period is expected: a period with no bill past its usual time is named missing, a bill well above its usual amount is named; neither is assumed."
+    },
+    {
+      "id": "P-24",
+      "title": "Autopay is a person's standing approval for one vendor's bills from one account, set and stopped only by a person; bills under it are approved by it and say so."
+    },
+    {
+      "id": "P-25",
+      "title": "What is due lists every recorded obligation in a window beside the cash on the latest statements; it is not a forecast: nothing unrecorded is assumed."
     }
   ]
 }

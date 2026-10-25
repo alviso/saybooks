@@ -46,6 +46,8 @@
  *  24. loans         a mortgage payment posts once: principal off what is owed, interest and
  *                    escrow as spending; the books balance, checking ties and reconciles, net worth
  *                    counts what is owed, and the lender's figure is checked
+ *  25. autopay       a person puts a vendor on autopay; its next bill is approved by that
+ *                    decision and says whose; stopped, the next bill waits for approval again
  *
  * A PR that adds a hand-written form, a prefix-less command, or a cross-module UPDATE
  * fails here, not in review.
@@ -619,8 +621,8 @@ for (const tag of R.PERMISSIONS) {
     imp('visa.csv', 'G22 Visa', 'card', -80000, -40000, [['2026-11-10', -10000, 'CAFE'], ['2026-11-22', 50000, 'PAYMENT THANK YOU']], 'sha256:g22visa');
     execute('purch_review_transaction', { transaction_id: 'T-0001', status: 'purchase', category: 'groceries', reason: 'food' }, a22);
     execute('purch_review_transaction', { transaction_id: 'T-0003', status: 'purchase', category: 'meals', reason: 'coffee' }, a22);
-    const c = execute('purch_transfer_candidates', {}, a22);
-    assert.ok(c.count === 1 && c.items[0].out.id === 'T-0002' && c.items[0].in.id === 'T-0004', 'the two sides are suggested as one move (P-17)');
+    const c = execute('purch_transfers', {}, a22);
+    assert.ok(c.suggestions === 1 && c.suggested[0].out.id === 'T-0002' && c.suggested[0].in.id === 'T-0004', 'the two sides are suggested as one move (P-17)');
     execute('purch_pair_transfer', { out_transaction_id: 'T-0002', in_transaction_id: 'T-0004', reason: 'the Visa payment from checking' }, a22);
     const j = execute('core_journal', {}, p22);
     const tr = j.entries.filter(e => /Transfer TR-0001/.test(e.memo));
@@ -695,6 +697,23 @@ for (const tag of R.PERMISSIONS) {
     assert.ok(tie && !tie.ties && tie.difference === -100, 'the lender\'s figure, a dollar apart, is named, never absorbed (L-5)');
   });
   ok('loans: a payment posts once, split; the books balance, checking ties and reconciles, net worth counts what is owed, the lender\'s figure is checked');
+}
+
+// ------------------------------------------------- 25. autopay: a person's standing approval
+{
+  const G = 'gate25-autopay'; wsp.wipe(G);
+  const p25 = { workspace: G, actor: 'test', actor_kind: 'human', role: 'owner' }, a25 = { ...p25, actor_kind: 'agent' };
+  H.withClock('2026-12-10', () => {
+    execute('purch_add_account', { name: 'G25 Checking', kind: 'checking', currency: 'USD' }, p25);
+    execute('purch_declare_bill_series', { vendor: 'Comcast', cadence: 'monthly', category: 'internet' }, a25);
+    execute('purch_set_autopay', { series_id: 'BS-0001', account_id: 'ACC-0001', reason: 'Comcast takes it from checking each month' }, p25);
+    const b = execute('purch_add_bill', { vendor: 'Comcast', number: 'C-12', bill_date: '2026-11-25', due_date: '2026-12-08', amount: 8999, currency: 'USD', category: 'internet' }, a25);
+    assert.ok(b.status === 'approved' && /Autopay from G25 Checking .*set by test/.test(b.approval_note || ''), 'a bill under autopay is approved by the person\'s standing decision, and says whose (P-24)');
+    execute('purch_set_autopay', { series_id: 'BS-0001', off: true, reason: 'switching to paying by hand' }, p25);
+    const b2 = execute('purch_add_bill', { vendor: 'Comcast', number: 'C-13', bill_date: '2026-12-01', due_date: '2026-12-15', amount: 8999, currency: 'USD', category: 'internet' }, a25);
+    assert.strictEqual(b2.status, 'open', 'autopay stopped, the next bill waits for approval');
+  });
+  ok('autopay: a person\'s standing approval approves a vendor\'s bills and says so; stopped, bills wait again');
 }
 
 console.log(`\n${n} contract checks passed across ${MODULES.length} modules, ${COMMANDS.length} commands.`);
