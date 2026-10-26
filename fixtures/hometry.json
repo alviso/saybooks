@@ -1,0 +1,1417 @@
+[
+ [
+  "purch_add_account",
+  {
+   "name": "Wells Fargo Checking ending 3301",
+   "kind": "checking",
+   "currency": "USD",
+   "institution": "Wells Fargo",
+   "last4": "3301"
+  },
+  "Maya: our joint checking"
+ ],
+ [
+  "purch_add_account",
+  {
+   "name": "Wells Fargo Savings ending 3302",
+   "kind": "savings",
+   "currency": "USD",
+   "institution": "Wells Fargo",
+   "last4": "3302"
+  },
+  "Maya: the savings account"
+ ],
+ [
+  "purch_add_account",
+  {
+   "name": "Chase Sapphire Visa ending 4417",
+   "kind": "credit_card",
+   "currency": "USD",
+   "institution": "Chase",
+   "last4": "4417"
+  },
+  "Maya: the everyday card"
+ ],
+ [
+  "loan_add",
+  {
+   "name": "Rocket Mortgage ending 5520",
+   "kind": "mortgage",
+   "lender": "Rocket Mortgage",
+   "currency": "USD",
+   "balance": 41230000,
+   "balance_date": "{{today-100}}",
+   "rate_bp": 625,
+   "payment": 254000,
+   "escrow": 51240,
+   "due_day": 1,
+   "original_principal": 44000000,
+   "term_months": 360,
+   "source": "Rocket Mortgage statement, the month before these books start"
+  },
+  "Maya: the mortgage"
+ ],
+ [
+  "loan_add",
+  {
+   "name": "Toyota Financial auto loan ending 8812",
+   "kind": "auto",
+   "lender": "Toyota Financial Services",
+   "currency": "USD",
+   "balance": 1840000,
+   "balance_date": "{{today-100}}",
+   "rate_bp": 490,
+   "payment": 48700,
+   "due_day": 15,
+   "original_principal": 2950000,
+   "term_months": 60,
+   "source": "Toyota Financial statement"
+  },
+  "Maya: the car loan"
+ ],
+ [
+  "purch_add_account",
+  {
+   "name": "Home, 214 Alder St",
+   "kind": "asset",
+   "currency": "USD",
+   "notes": "bought 2019"
+  },
+  "Maya: the house"
+ ],
+ [
+  "purch_record_value",
+  {
+   "account_id": "ACC-0006",
+   "as_of": "{{today-40}}",
+   "amount": 72500000,
+   "according_to": "county assessment, this year"
+  },
+  "Maya: from the assessment letter"
+ ],
+ [
+  "purch_add_account",
+  {
+   "name": "2022 Toyota RAV4",
+   "kind": "asset",
+   "currency": "USD"
+  },
+  "Maya: the car"
+ ],
+ [
+  "purch_record_value",
+  {
+   "account_id": "ACC-0007",
+   "as_of": "{{today-30}}",
+   "amount": 2350000,
+   "according_to": "Kelley Blue Book, private party"
+  },
+  "Maya: looked it up"
+ ],
+ [
+  "purch_declare_bill_series",
+  {
+   "vendor": "PG&E",
+   "cadence": "monthly",
+   "category": "utilities",
+   "reason": "Maya: gas and electric, every month"
+  },
+  null
+ ],
+ [
+  "purch_declare_bill_series",
+  {
+   "vendor": "Comcast",
+   "cadence": "monthly",
+   "category": "internet",
+   "typical_amount": 8999,
+   "reason": "Maya: internet, every month"
+  },
+  null
+ ],
+ [
+  "purch_set_autopay",
+  {
+   "series_id": "BS-0002",
+   "account_id": "ACC-0001",
+   "reason": "Maya: Comcast takes it from checking"
+  },
+  "Maya set it up when the account opened"
+ ],
+ [
+  "purch_add_bill",
+  {
+   "vendor": "PG&E",
+   "number": "PGE-7710",
+   "bill_date": "{{today-97}}",
+   "due_date": "{{today-83}}",
+   "amount": 14210,
+   "currency": "USD",
+   "category": "utilities",
+   "file_name": "pge-statement.pdf"
+  },
+  "emailed by PG&E"
+ ],
+ [
+  "purch_add_bill",
+  {
+   "vendor": "Comcast",
+   "number": "C-4401",
+   "bill_date": "{{today-96}}",
+   "due_date": "{{today-81}}",
+   "amount": 8999,
+   "currency": "USD",
+   "category": "internet"
+  },
+  "emailed by Comcast"
+ ],
+ [
+  "purch_import_statement",
+  {
+   "name": "checking-1.pdf",
+   "hash": "hometry-acc-0001-p1",
+   "kind": "bank",
+   "account_id": "ACC-0001",
+   "currency": "USD",
+   "period_start": "{{today-95}}",
+   "period_end": "{{today-66}}",
+   "opening_balance": 642000,
+   "closing_balance": 823361,
+   "rows": [
+    {
+     "date": "{{today-93}}",
+     "amount": 385000,
+     "description": "ACME CORP PAYROLL",
+     "row_index": 1
+    },
+    {
+     "date": "{{today-92}}",
+     "amount": -305240,
+     "description": "ROCKET MORTGAGE PMT 5520",
+     "row_index": 2
+    },
+    {
+     "date": "{{today-90}}",
+     "amount": -148240,
+     "description": "CHASE CREDIT CRD AUTOPAY",
+     "row_index": 3
+    },
+    {
+     "date": "{{today-88}}",
+     "amount": -50000,
+     "description": "TRANSFER TO SAV 3302",
+     "row_index": 4
+    },
+    {
+     "date": "{{today-86}}",
+     "amount": -14210,
+     "description": "PGANDE WEB ONLINE",
+     "row_index": 5
+    },
+    {
+     "date": "{{today-83}}",
+     "amount": -48700,
+     "description": "TOYOTA FINANCIAL PMT",
+     "row_index": 6
+    },
+    {
+     "date": "{{today-81}}",
+     "amount": -8999,
+     "description": "COMCAST CABLE AUTOPAY",
+     "row_index": 7
+    },
+    {
+     "date": "{{today-79}}",
+     "amount": 385000,
+     "description": "ACME CORP PAYROLL",
+     "row_index": 8
+    },
+    {
+     "date": "{{today-75}}",
+     "amount": -13250,
+     "description": "GEICO AUTO INS",
+     "row_index": 9
+    }
+   ]
+  },
+  "the first statement"
+ ],
+ [
+  "purch_import_statement",
+  {
+   "name": "savings-1.pdf",
+   "hash": "hometry-acc-0002-p1",
+   "kind": "bank",
+   "account_id": "ACC-0002",
+   "currency": "USD",
+   "period_start": "{{today-95}}",
+   "period_end": "{{today-66}}",
+   "opening_balance": 1250000,
+   "closing_balance": 1300417,
+   "rows": [
+    {
+     "date": "{{today-88}}",
+     "amount": 50000,
+     "description": "TRANSFER FROM CHK 3301",
+     "row_index": 1
+    },
+    {
+     "date": "{{today-66}}",
+     "amount": 417,
+     "description": "INTEREST PAYMENT",
+     "row_index": 2
+    }
+   ]
+  },
+  "the first statement"
+ ],
+ [
+  "purch_import_statement",
+  {
+   "name": "sapphire-1.pdf",
+   "hash": "hometry-acc-0003-p1",
+   "kind": "card",
+   "account_id": "ACC-0003",
+   "currency": "USD",
+   "period_start": "{{today-95}}",
+   "period_end": "{{today-66}}",
+   "opening_balance": -148240,
+   "closing_balance": -56005,
+   "rows": [
+    {
+     "date": "{{today-93}}",
+     "amount": -8642,
+     "description": "TRADER JOE'S #127",
+     "row_index": 1
+    },
+    {
+     "date": "{{today-91}}",
+     "amount": -11234,
+     "description": "SAFEWAY #1871",
+     "row_index": 2
+    },
+    {
+     "date": "{{today-89}}",
+     "amount": 148240,
+     "description": "AUTOMATIC PAYMENT - THANK YOU",
+     "row_index": 3
+    },
+    {
+     "date": "{{today-87}}",
+     "amount": -5210,
+     "description": "SHELL OIL 57442",
+     "row_index": 4
+    },
+    {
+     "date": "{{today-85}}",
+     "amount": -1549,
+     "description": "NETFLIX.COM",
+     "row_index": 5
+    },
+    {
+     "date": "{{today-84}}",
+     "amount": -1199,
+     "description": "SPOTIFY USA",
+     "row_index": 6
+    },
+    {
+     "date": "{{today-83}}",
+     "amount": -2399,
+     "description": "CVS/PHARMACY #9821",
+     "row_index": 7
+    },
+    {
+     "date": "{{today-81}}",
+     "amount": -1845,
+     "description": "CHIPOTLE 2231",
+     "row_index": 8
+    },
+    {
+     "date": "{{today-78}}",
+     "amount": -9120,
+     "description": "TRADER JOE'S #127",
+     "row_index": 9
+    },
+    {
+     "date": "{{today-75}}",
+     "amount": -4890,
+     "description": "SHELL OIL 57442",
+     "row_index": 10
+    },
+    {
+     "date": "{{today-73}}",
+     "amount": -6418,
+     "description": "TARGET 00021",
+     "row_index": 11
+    },
+    {
+     "date": "{{today-70}}",
+     "amount": -3499,
+     "description": "AMAZON.COM*2K4LM",
+     "row_index": 12
+    }
+   ],
+   "minimum_due": 3500,
+   "payment_due_date": "{{today-41}}",
+   "credit_limit": 1500000,
+   "apr_bp": 2449
+  },
+  "the first statement"
+ ],
+ [
+  "purch_add_bill",
+  {
+   "vendor": "PG&E",
+   "number": "PGE-7711",
+   "bill_date": "{{today-67}}",
+   "due_date": "{{today-53}}",
+   "amount": 15830,
+   "currency": "USD",
+   "category": "utilities",
+   "file_name": "pge-statement.pdf"
+  },
+  "emailed by PG&E"
+ ],
+ [
+  "purch_add_bill",
+  {
+   "vendor": "Comcast",
+   "number": "C-4402",
+   "bill_date": "{{today-66}}",
+   "due_date": "{{today-51}}",
+   "amount": 8999,
+   "currency": "USD",
+   "category": "internet"
+  },
+  "emailed by Comcast"
+ ],
+ [
+  "purch_import_statement",
+  {
+   "name": "checking-2.pdf",
+   "hash": "hometry-acc-0001-p2",
+   "kind": "bank",
+   "account_id": "ACC-0001",
+   "currency": "USD",
+   "period_start": "{{today-65}}",
+   "period_end": "{{today-36}}",
+   "opening_balance": 823361,
+   "closing_balance": 1095337,
+   "rows": [
+    {
+     "date": "{{today-63}}",
+     "amount": 385000,
+     "description": "ACME CORP PAYROLL",
+     "row_index": 1
+    },
+    {
+     "date": "{{today-62}}",
+     "amount": -305240,
+     "description": "ROCKET MORTGAGE PMT 5520",
+     "row_index": 2
+    },
+    {
+     "date": "{{today-60}}",
+     "amount": -56005,
+     "description": "CHASE CREDIT CRD AUTOPAY",
+     "row_index": 3
+    },
+    {
+     "date": "{{today-58}}",
+     "amount": -50000,
+     "description": "TRANSFER TO SAV 3302",
+     "row_index": 4
+    },
+    {
+     "date": "{{today-56}}",
+     "amount": -15830,
+     "description": "PGANDE WEB ONLINE",
+     "row_index": 5
+    },
+    {
+     "date": "{{today-53}}",
+     "amount": -48700,
+     "description": "TOYOTA FINANCIAL PMT",
+     "row_index": 6
+    },
+    {
+     "date": "{{today-51}}",
+     "amount": -8999,
+     "description": "COMCAST CABLE AUTOPAY",
+     "row_index": 7
+    },
+    {
+     "date": "{{today-49}}",
+     "amount": 385000,
+     "description": "ACME CORP PAYROLL",
+     "row_index": 8
+    },
+    {
+     "date": "{{today-45}}",
+     "amount": -13250,
+     "description": "GEICO AUTO INS",
+     "row_index": 9
+    }
+   ]
+  },
+  "the second statement"
+ ],
+ [
+  "purch_import_statement",
+  {
+   "name": "savings-2.pdf",
+   "hash": "hometry-acc-0002-p2",
+   "kind": "bank",
+   "account_id": "ACC-0002",
+   "currency": "USD",
+   "period_start": "{{today-65}}",
+   "period_end": "{{today-36}}",
+   "opening_balance": 1300417,
+   "closing_balance": 1350850,
+   "rows": [
+    {
+     "date": "{{today-58}}",
+     "amount": 50000,
+     "description": "TRANSFER FROM CHK 3301",
+     "row_index": 1
+    },
+    {
+     "date": "{{today-36}}",
+     "amount": 433,
+     "description": "INTEREST PAYMENT",
+     "row_index": 2
+    }
+   ]
+  },
+  "the second statement"
+ ],
+ [
+  "purch_import_statement",
+  {
+   "name": "sapphire-2.pdf",
+   "hash": "hometry-acc-0003-p2",
+   "kind": "card",
+   "account_id": "ACC-0003",
+   "currency": "USD",
+   "period_start": "{{today-65}}",
+   "period_end": "{{today-36}}",
+   "opening_balance": -56005,
+   "closing_balance": -72887,
+   "rows": [
+    {
+     "date": "{{today-63}}",
+     "amount": -8942,
+     "description": "TRADER JOE'S #127",
+     "row_index": 1
+    },
+    {
+     "date": "{{today-61}}",
+     "amount": -11734,
+     "description": "SAFEWAY #1871",
+     "row_index": 2
+    },
+    {
+     "date": "{{today-59}}",
+     "amount": 56005,
+     "description": "AUTOMATIC PAYMENT - THANK YOU",
+     "row_index": 3
+    },
+    {
+     "date": "{{today-57}}",
+     "amount": -4910,
+     "description": "SHELL OIL 57442",
+     "row_index": 4
+    },
+    {
+     "date": "{{today-56}}",
+     "amount": -3000,
+     "description": "KAISER PERMANENTE COPAY",
+     "row_index": 5
+    },
+    {
+     "date": "{{today-55}}",
+     "amount": -1549,
+     "description": "NETFLIX.COM",
+     "row_index": 6
+    },
+    {
+     "date": "{{today-54}}",
+     "amount": -1199,
+     "description": "SPOTIFY USA",
+     "row_index": 7
+    },
+    {
+     "date": "{{today-51}}",
+     "amount": -2045,
+     "description": "CHIPOTLE 2231",
+     "row_index": 8
+    },
+    {
+     "date": "{{today-50}}",
+     "amount": -10000,
+     "description": "AMERICAN RED CROSS",
+     "row_index": 9
+    },
+    {
+     "date": "{{today-48}}",
+     "amount": -9120,
+     "description": "TRADER JOE'S #127",
+     "row_index": 10
+    },
+    {
+     "date": "{{today-47}}",
+     "amount": -9500,
+     "description": "ANNUAL MEMBERSHIP FEE",
+     "row_index": 11
+    },
+    {
+     "date": "{{today-45}}",
+     "amount": -4890,
+     "description": "SHELL OIL 57442",
+     "row_index": 12
+    },
+    {
+     "date": "{{today-42}}",
+     "amount": -5998,
+     "description": "AMAZON.COM*7H2QX",
+     "row_index": 13
+    }
+   ],
+   "minimum_due": 3500,
+   "payment_due_date": "{{today-11}}",
+   "credit_limit": 1500000,
+   "apr_bp": 2449
+  },
+  "the second statement"
+ ],
+ [
+  "purch_add_bill",
+  {
+   "vendor": "PG&E",
+   "number": "PGE-7712",
+   "bill_date": "{{today-37}}",
+   "due_date": "{{today-23}}",
+   "amount": 23680,
+   "currency": "USD",
+   "category": "utilities",
+   "file_name": "pge-statement.pdf"
+  },
+  "emailed by PG&E"
+ ],
+ [
+  "purch_add_bill",
+  {
+   "vendor": "Comcast",
+   "number": "C-4403",
+   "bill_date": "{{today-36}}",
+   "due_date": "{{today-21}}",
+   "amount": 8999,
+   "currency": "USD",
+   "category": "internet"
+  },
+  "emailed by Comcast"
+ ],
+ [
+  "purch_import_statement",
+  {
+   "name": "checking-3.pdf",
+   "hash": "hometry-acc-0001-p3",
+   "kind": "bank",
+   "account_id": "ACC-0001",
+   "currency": "USD",
+   "period_start": "{{today-35}}",
+   "period_end": "{{today-6}}",
+   "opening_balance": 1095337,
+   "closing_balance": 1412739,
+   "rows": [
+    {
+     "date": "{{today-33}}",
+     "amount": 385000,
+     "description": "ACME CORP PAYROLL",
+     "row_index": 1
+    },
+    {
+     "date": "{{today-32}}",
+     "amount": -305240,
+     "description": "ROCKET MORTGAGE PMT 5520",
+     "row_index": 2
+    },
+    {
+     "date": "{{today-30}}",
+     "amount": -72887,
+     "description": "CHASE CREDIT CRD AUTOPAY",
+     "row_index": 3
+    },
+    {
+     "date": "{{today-28}}",
+     "amount": -50000,
+     "description": "TRANSFER TO SAV 3302",
+     "row_index": 4
+    },
+    {
+     "date": "{{today-26}}",
+     "amount": -23680,
+     "description": "PGANDE WEB ONLINE",
+     "row_index": 5
+    },
+    {
+     "date": "{{today-23}}",
+     "amount": -48700,
+     "description": "TOYOTA FINANCIAL PMT",
+     "row_index": 6
+    },
+    {
+     "date": "{{today-21}}",
+     "amount": -8999,
+     "description": "COMCAST CABLE AUTOPAY",
+     "row_index": 7
+    },
+    {
+     "date": "{{today-19}}",
+     "amount": 385000,
+     "description": "ACME CORP PAYROLL",
+     "row_index": 8
+    },
+    {
+     "date": "{{today-15}}",
+     "amount": -13250,
+     "description": "GEICO AUTO INS",
+     "row_index": 9
+    },
+    {
+     "date": "{{today-10}}",
+     "amount": 70158,
+     "description": "ACME CORP EXP REIMB",
+     "row_index": 10
+    }
+   ]
+  },
+  "the latest statement"
+ ],
+ [
+  "purch_import_statement",
+  {
+   "name": "savings-3.pdf",
+   "hash": "hometry-acc-0002-p3",
+   "kind": "bank",
+   "account_id": "ACC-0002",
+   "currency": "USD",
+   "period_start": "{{today-35}}",
+   "period_end": "{{today-6}}",
+   "opening_balance": 1350850,
+   "closing_balance": 1401300,
+   "rows": [
+    {
+     "date": "{{today-28}}",
+     "amount": 50000,
+     "description": "TRANSFER FROM CHK 3301",
+     "row_index": 1
+    },
+    {
+     "date": "{{today-6}}",
+     "amount": 450,
+     "description": "INTEREST PAYMENT",
+     "row_index": 2
+    }
+   ]
+  },
+  "the latest statement"
+ ],
+ [
+  "purch_import_statement",
+  {
+   "name": "sapphire-3.pdf",
+   "hash": "hometry-acc-0003-p3",
+   "kind": "card",
+   "account_id": "ACC-0003",
+   "currency": "USD",
+   "period_start": "{{today-35}}",
+   "period_end": "{{today-6}}",
+   "opening_balance": -72887,
+   "closing_balance": -178846,
+   "rows": [
+    {
+     "date": "{{today-33}}",
+     "amount": -9242,
+     "description": "TRADER JOE'S #127",
+     "row_index": 1
+    },
+    {
+     "date": "{{today-31}}",
+     "amount": -12234,
+     "description": "SAFEWAY #1871",
+     "row_index": 2
+    },
+    {
+     "date": "{{today-30}}",
+     "amount": -41218,
+     "description": "MARRIOTT SEATTLE",
+     "row_index": 3
+    },
+    {
+     "date": "{{today-30}}",
+     "amount": -28940,
+     "description": "ALASKA AIR",
+     "row_index": 4
+    },
+    {
+     "date": "{{today-29}}",
+     "amount": 72887,
+     "description": "AUTOMATIC PAYMENT - THANK YOU",
+     "row_index": 5
+    },
+    {
+     "date": "{{today-27}}",
+     "amount": -4610,
+     "description": "SHELL OIL 57442",
+     "row_index": 6
+    },
+    {
+     "date": "{{today-25}}",
+     "amount": -1549,
+     "description": "NETFLIX.COM",
+     "row_index": 7
+    },
+    {
+     "date": "{{today-24}}",
+     "amount": -1199,
+     "description": "SPOTIFY USA",
+     "row_index": 8
+    },
+    {
+     "date": "{{today-23}}",
+     "amount": 2999,
+     "description": "AMAZON.COM*7H2QX RETURN",
+     "row_index": 9
+    },
+    {
+     "date": "{{today-21}}",
+     "amount": -2245,
+     "description": "CHIPOTLE 2231",
+     "row_index": 10
+    },
+    {
+     "date": "{{today-19}}",
+     "amount": -64999,
+     "description": "BEST BUY 00412",
+     "row_index": 11
+    },
+    {
+     "date": "{{today-18}}",
+     "amount": -9120,
+     "description": "TRADER JOE'S #127",
+     "row_index": 12
+    },
+    {
+     "date": "{{today-15}}",
+     "amount": -4890,
+     "description": "SHELL OIL 57442",
+     "row_index": 13
+    },
+    {
+     "date": "{{today-14}}",
+     "amount": -1599,
+     "description": "CVS/PHARMACY #9821",
+     "row_index": 14
+    }
+   ],
+   "minimum_due": 3577,
+   "payment_due_date": "{{today+19}}",
+   "credit_limit": 1500000,
+   "apr_bp": 2449
+  },
+  "the latest statement"
+ ],
+ [
+  "purch_review_batch",
+  {
+   "rows": [
+    {
+     "transaction_id": "T-0001",
+     "status": "income",
+     "category": "salary",
+     "vendor": "Acme Corp"
+    },
+    {
+     "transaction_id": "T-0005",
+     "status": "purchase",
+     "category": "utilities",
+     "vendor": "PG&E"
+    },
+    {
+     "transaction_id": "T-0007",
+     "status": "purchase",
+     "category": "internet",
+     "vendor": "Comcast"
+    },
+    {
+     "transaction_id": "T-0008",
+     "status": "income",
+     "category": "salary",
+     "vendor": "Acme Corp"
+    },
+    {
+     "transaction_id": "T-0009",
+     "status": "recurring",
+     "category": "insurance",
+     "vendor": "GEICO"
+    },
+    {
+     "transaction_id": "T-0024",
+     "status": "income",
+     "category": "salary",
+     "vendor": "Acme Corp"
+    },
+    {
+     "transaction_id": "T-0028",
+     "status": "purchase",
+     "category": "utilities",
+     "vendor": "PG&E"
+    },
+    {
+     "transaction_id": "T-0030",
+     "status": "purchase",
+     "category": "internet",
+     "vendor": "Comcast"
+    },
+    {
+     "transaction_id": "T-0031",
+     "status": "income",
+     "category": "salary",
+     "vendor": "Acme Corp"
+    },
+    {
+     "transaction_id": "T-0032",
+     "status": "recurring",
+     "category": "insurance",
+     "vendor": "GEICO"
+    },
+    {
+     "transaction_id": "T-0048",
+     "status": "income",
+     "category": "salary",
+     "vendor": "Acme Corp"
+    },
+    {
+     "transaction_id": "T-0052",
+     "status": "purchase",
+     "category": "utilities",
+     "vendor": "PG&E"
+    },
+    {
+     "transaction_id": "T-0054",
+     "status": "purchase",
+     "category": "internet",
+     "vendor": "Comcast"
+    },
+    {
+     "transaction_id": "T-0055",
+     "status": "income",
+     "category": "salary",
+     "vendor": "Acme Corp"
+    },
+    {
+     "transaction_id": "T-0056",
+     "status": "recurring",
+     "category": "insurance",
+     "vendor": "GEICO"
+    }
+   ],
+   "reason": "Maya went through the statements with Claude"
+  },
+  null
+ ],
+ [
+  "purch_review_batch",
+  {
+   "rows": [
+    {
+     "transaction_id": "T-0011",
+     "status": "income",
+     "category": "interest",
+     "vendor": "Wells Fargo"
+    },
+    {
+     "transaction_id": "T-0034",
+     "status": "income",
+     "category": "interest",
+     "vendor": "Wells Fargo"
+    },
+    {
+     "transaction_id": "T-0059",
+     "status": "income",
+     "category": "interest",
+     "vendor": "Wells Fargo"
+    }
+   ],
+   "reason": "Maya went through the statements with Claude"
+  },
+  null
+ ],
+ [
+  "purch_review_batch",
+  {
+   "rows": [
+    {
+     "transaction_id": "T-0012",
+     "status": "purchase",
+     "category": "groceries",
+     "vendor": "Trader Joe's"
+    },
+    {
+     "transaction_id": "T-0013",
+     "status": "purchase",
+     "category": "groceries",
+     "vendor": "Safeway"
+    },
+    {
+     "transaction_id": "T-0015",
+     "status": "purchase",
+     "category": "fuel",
+     "vendor": "Shell"
+    },
+    {
+     "transaction_id": "T-0016",
+     "status": "recurring",
+     "category": "streaming",
+     "vendor": "Netflix"
+    },
+    {
+     "transaction_id": "T-0017",
+     "status": "recurring",
+     "category": "streaming",
+     "vendor": "Spotify"
+    },
+    {
+     "transaction_id": "T-0018",
+     "status": "purchase",
+     "category": "medical",
+     "vendor": "CVS"
+    },
+    {
+     "transaction_id": "T-0019",
+     "status": "purchase",
+     "category": "dining",
+     "vendor": "Chipotle"
+    },
+    {
+     "transaction_id": "T-0020",
+     "status": "purchase",
+     "category": "groceries",
+     "vendor": "Trader Joe's"
+    },
+    {
+     "transaction_id": "T-0021",
+     "status": "purchase",
+     "category": "fuel",
+     "vendor": "Shell"
+    },
+    {
+     "transaction_id": "T-0022",
+     "status": "purchase",
+     "category": "household",
+     "vendor": "Target"
+    },
+    {
+     "transaction_id": "T-0023",
+     "status": "purchase",
+     "category": "household",
+     "vendor": "Amazon"
+    },
+    {
+     "transaction_id": "T-0035",
+     "status": "purchase",
+     "category": "groceries",
+     "vendor": "Trader Joe's"
+    },
+    {
+     "transaction_id": "T-0036",
+     "status": "purchase",
+     "category": "groceries",
+     "vendor": "Safeway"
+    },
+    {
+     "transaction_id": "T-0038",
+     "status": "purchase",
+     "category": "fuel",
+     "vendor": "Shell"
+    },
+    {
+     "transaction_id": "T-0039",
+     "status": "purchase",
+     "category": "medical",
+     "vendor": "Kaiser Permanente"
+    },
+    {
+     "transaction_id": "T-0040",
+     "status": "recurring",
+     "category": "streaming",
+     "vendor": "Netflix"
+    },
+    {
+     "transaction_id": "T-0041",
+     "status": "recurring",
+     "category": "streaming",
+     "vendor": "Spotify"
+    },
+    {
+     "transaction_id": "T-0042",
+     "status": "purchase",
+     "category": "dining",
+     "vendor": "Chipotle"
+    },
+    {
+     "transaction_id": "T-0043",
+     "status": "purchase",
+     "category": "donations",
+     "vendor": "American Red Cross"
+    },
+    {
+     "transaction_id": "T-0044",
+     "status": "purchase",
+     "category": "groceries",
+     "vendor": "Trader Joe's"
+    },
+    {
+     "transaction_id": "T-0045",
+     "status": "fee",
+     "category": "annual fee"
+    },
+    {
+     "transaction_id": "T-0046",
+     "status": "purchase",
+     "category": "fuel",
+     "vendor": "Shell"
+    },
+    {
+     "transaction_id": "T-0047",
+     "status": "purchase",
+     "category": "household",
+     "vendor": "Amazon"
+    },
+    {
+     "transaction_id": "T-0060",
+     "status": "purchase",
+     "category": "groceries",
+     "vendor": "Trader Joe's"
+    },
+    {
+     "transaction_id": "T-0061",
+     "status": "purchase",
+     "category": "groceries",
+     "vendor": "Safeway"
+    },
+    {
+     "transaction_id": "T-0062",
+     "status": "purchase",
+     "category": "travel",
+     "vendor": "Marriott"
+    },
+    {
+     "transaction_id": "T-0063",
+     "status": "purchase",
+     "category": "travel",
+     "vendor": "Alaska Airlines"
+    },
+    {
+     "transaction_id": "T-0065",
+     "status": "purchase",
+     "category": "fuel",
+     "vendor": "Shell"
+    },
+    {
+     "transaction_id": "T-0066",
+     "status": "recurring",
+     "category": "streaming",
+     "vendor": "Netflix"
+    },
+    {
+     "transaction_id": "T-0067",
+     "status": "recurring",
+     "category": "streaming",
+     "vendor": "Spotify"
+    },
+    {
+     "transaction_id": "T-0069",
+     "status": "purchase",
+     "category": "dining",
+     "vendor": "Chipotle"
+    },
+    {
+     "transaction_id": "T-0070",
+     "status": "purchase",
+     "category": "electronics",
+     "vendor": "Best Buy"
+    },
+    {
+     "transaction_id": "T-0071",
+     "status": "purchase",
+     "category": "groceries",
+     "vendor": "Trader Joe's"
+    },
+    {
+     "transaction_id": "T-0072",
+     "status": "purchase",
+     "category": "fuel",
+     "vendor": "Shell"
+    },
+    {
+     "transaction_id": "T-0073",
+     "status": "purchase",
+     "category": "medical",
+     "vendor": "CVS"
+    }
+   ],
+   "reason": "Maya went through the statements with Claude"
+  },
+  null
+ ],
+ [
+  "purch_review_transaction",
+  {
+   "transaction_id": "T-0062",
+   "status": "purchase",
+   "category": "travel",
+   "reimbursable_by": "Acme Corp, expenses",
+   "claim_ref": "ER-2207",
+   "reason": "Maya: the Seattle client trip, on expense report ER-2207"
+  },
+  null
+ ],
+ [
+  "purch_review_transaction",
+  {
+   "transaction_id": "T-0063",
+   "status": "purchase",
+   "category": "travel",
+   "reimbursable_by": "Acme Corp, expenses",
+   "claim_ref": "ER-2207",
+   "reason": "Maya: the Seattle client trip, on expense report ER-2207"
+  },
+  null
+ ],
+ [
+  "purch_pair_transfer",
+  {
+   "out_transaction_id": "T-0003",
+   "in_transaction_id": "T-0014",
+   "reason": "the card paid in full from checking"
+  },
+  null
+ ],
+ [
+  "purch_pair_transfer",
+  {
+   "out_transaction_id": "T-0004",
+   "in_transaction_id": "T-0010",
+   "reason": "the monthly move to savings"
+  },
+  null
+ ],
+ [
+  "purch_pair_transfer",
+  {
+   "out_transaction_id": "T-0026",
+   "in_transaction_id": "T-0037",
+   "reason": "the card paid in full from checking"
+  },
+  null
+ ],
+ [
+  "purch_pair_transfer",
+  {
+   "out_transaction_id": "T-0027",
+   "in_transaction_id": "T-0033",
+   "reason": "the monthly move to savings"
+  },
+  null
+ ],
+ [
+  "loan_link_payment",
+  {
+   "loan_id": "LN-0001",
+   "transaction_id": "T-0002",
+   "reason": "the mortgage payment"
+  },
+  null
+ ],
+ [
+  "loan_link_payment",
+  {
+   "loan_id": "LN-0002",
+   "transaction_id": "T-0006",
+   "reason": "the car payment"
+  },
+  null
+ ],
+ [
+  "loan_link_payment",
+  {
+   "loan_id": "LN-0001",
+   "transaction_id": "T-0025",
+   "reason": "the mortgage payment"
+  },
+  null
+ ],
+ [
+  "loan_link_payment",
+  {
+   "loan_id": "LN-0002",
+   "transaction_id": "T-0029",
+   "reason": "the car payment"
+  },
+  null
+ ],
+ [
+  "purch_approve_bill",
+  {
+   "bill_id": "B-0001",
+   "note": "Maya: pay it"
+  },
+  null
+ ],
+ [
+  "purch_record_bill_payment",
+  {
+   "bill_id": "B-0001",
+   "paid_at": "{{today-86}}",
+   "method": "bank_transfer",
+   "transaction_id": "T-0005"
+  },
+  null
+ ],
+ [
+  "purch_record_bill_payment",
+  {
+   "bill_id": "B-0002",
+   "paid_at": "{{today-81}}",
+   "method": "direct_debit",
+   "transaction_id": "T-0007"
+  },
+  null
+ ],
+ [
+  "purch_approve_bill",
+  {
+   "bill_id": "B-0003",
+   "note": "Maya: pay it"
+  },
+  null
+ ],
+ [
+  "purch_record_bill_payment",
+  {
+   "bill_id": "B-0003",
+   "paid_at": "{{today-56}}",
+   "method": "bank_transfer",
+   "transaction_id": "T-0028"
+  },
+  null
+ ],
+ [
+  "purch_record_bill_payment",
+  {
+   "bill_id": "B-0004",
+   "paid_at": "{{today-51}}",
+   "method": "direct_debit",
+   "transaction_id": "T-0030"
+  },
+  null
+ ],
+ [
+  "purch_record_bill_payment",
+  {
+   "bill_id": "B-0006",
+   "paid_at": "{{today-21}}",
+   "method": "direct_debit",
+   "transaction_id": "T-0054"
+  },
+  null
+ ],
+ [
+  "purch_add_receipt",
+  {
+   "name": "cvs-receipt.jpg",
+   "hash": "hometry-cvs-receipt",
+   "vendor": "CVS",
+   "date": "{{today-83}}",
+   "total": 2399,
+   "currency": "USD"
+  },
+  "Maya took a photo"
+ ],
+ [
+  "purch_add_receipt",
+  {
+   "name": "bestbuy-receipt.jpg",
+   "hash": "hometry-bestbuy-receipt",
+   "vendor": "Best Buy",
+   "date": "{{today-19}}",
+   "total": 64999,
+   "currency": "USD",
+   "return_by": "{{today+11}}",
+   "warranty_until": "{{today+346}}"
+  },
+  "Maya took a photo"
+ ],
+ [
+  "purch_match_receipt",
+  {
+   "receipt_id": "R-0001",
+   "transaction_id": "T-0018",
+   "reason": "same shop, same day, same total"
+  },
+  null
+ ],
+ [
+  "purch_match_receipt",
+  {
+   "receipt_id": "R-0002",
+   "transaction_id": "T-0070",
+   "reason": "same shop, same day, same total"
+  },
+  null
+ ],
+ [
+  "purch_record_value",
+  {
+   "account_id": "ACC-0004",
+   "as_of": "{{today-36}}",
+   "amount": 41151275,
+   "according_to": "Rocket Mortgage monthly statement"
+  },
+  "Maya: from the mortgage statement"
+ ],
+ [
+  "purch_add_bill",
+  {
+   "vendor": "Alder Dental",
+   "number": "AD-3381",
+   "bill_date": "{{today-10}}",
+   "due_date": "{{today+10}}",
+   "amount": 18500,
+   "currency": "USD",
+   "category": "medical",
+   "file_name": "alder-dental.pdf"
+  },
+  "the dentist's bill, in the mail"
+ ],
+ [
+  "purch_tag_category",
+  {
+   "category": "medical",
+   "tag": "medical",
+   "reason": "Maya: for the medical deduction"
+  },
+  null
+ ],
+ [
+  "purch_tag_category",
+  {
+   "category": "donations",
+   "tag": "charitable",
+   "reason": "Maya: we itemize gifts"
+  },
+  null
+ ]
+]

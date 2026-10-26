@@ -1827,8 +1827,11 @@ async function renderPage() {
   }
   if (view === 'home' && !(REG.user && REG.spaces.length > 1)) {
     const demo = REG.demo && !REG.user;
-    head(demo ? 'Demo books' : (REG.space || 'These books'), demo ? 'Example books for a made-up company, private to you, swept after 24 hours. Every module is in, with data. Poke at anything; nothing here is real.' : 'What is in this space, by module.');
     const sum = await fetch(wsUrl('/api/space/summary'), { cache: 'no-store' }).then(r => r.json());
+    const names = (sum.modules || []).map(m => m.name).filter(n => n !== 'core');
+    const whose = names.length && names.every(n => ['purchases', 'loans'].includes(n)) ? 'a made-up household: checking, savings, a credit card, a mortgage and a car loan, three months of statements'
+      : names.length && names.every(n => n === 'jobhunt') ? 'a made-up job search' : names.length && names.every(n => ['solo', 'bridge'].includes(n)) ? 'a made-up freelancer' : null;
+    head(demo ? 'Demo books' : (REG.space || 'These books'), demo ? (whose ? `Example books for ${whose}. Private to you, swept after 24 hours. Poke at anything; nothing here is real.` : 'Example books for a made-up company, private to you, swept after 24 hours. Every module is in, with data. Poke at anything; nothing here is real.') : 'What is in this space, by module.');
     const grid = $('<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;max-width:1200px"></div>');
     for (const m of sum.modules || []) {
       const def = MODULES.find(x => x.name === m.name); if (!def) continue;
@@ -2065,7 +2068,9 @@ async function renderPage() {
     const tiles = $('<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;max-width:1100px;margin-bottom:12px"></div>');
     for (const c of y.spending) tiles.append($(`<div class="tile"><div class="k">Spending ${y.year} · ${c.currency}</div><div class="v">${c.amount_display}</div><div class="s">net of refunds and paybacks</div></div>`));
     const li = y.interest_paid.loans.reduce((n, x) => n + x.amount, 0) + y.interest_paid.cards.reduce((n, x) => n + x.amount, 0);
-    if (li) tiles.append($(`<div class="tile"><div class="k">Interest paid</div><div class="v">${[...y.interest_paid.loans.map(x => x.interest_display), ...y.interest_paid.cards.filter(x => x.amount).map(x => x.amount_display)].join(' + ')}</div><div class="s">${[...y.interest_paid.loans.map(x => esc(x.name)), ...y.interest_paid.cards.filter(x => x.amount).map(x => esc(x.name))].join(', ')}</div></div>`));
+    const ip = [...y.interest_paid.loans.map(x => ({ name: x.name, amount: x.amount, cur: x.currency, d: x.interest_display })), ...y.interest_paid.cards.filter(x => x.amount).map(x => ({ name: x.name, amount: x.amount, cur: x.currency, d: x.amount_display }))];
+    const oneCur = ip.length > 1 && ip.every(x => x.cur && x.cur === ip[0].cur);
+    if (li) tiles.append($(`<div class="tile"><div class="k">Interest paid</div><div class="v">${ip.length === 1 ? ip[0].d : oneCur ? new Intl.NumberFormat('en-US', { style: 'currency', currency: ip[0].cur }).format(li / 100) : ip.map(x => x.d).join(' + ')}</div><div class="s">${ip.map(x => `${esc(x.name)} ${x.d}`).join(', ')}</div></div>`));
     for (const e of y.interest_earned) tiles.append($(`<div class="tile"><div class="k">Interest earned</div><div class="v">${e.amount_display}</div><div class="s">${y.interest_earned_rows} row${y.interest_earned_rows === 1 ? '' : 's'}</div></div>`));
     if (y.missing_receipts) tiles.append($(`<div class="tile"><div class="k">Missing receipts</div><div class="v" style="color:var(--warn)">${y.missing_receipts}</div><div class="s">in tagged categories</div></div>`));
     main.append(tiles);

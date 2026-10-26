@@ -868,7 +868,7 @@ function year({ year: y } = {}) {
   return { year: yr,
     spending: Object.entries(total).map(([c, v]) => ({ currency: c, amount: v, amount_display: money(v, c) })),
     tagged, untagged_note: tags.size ? null : 'No category carries a tax tag yet: tag the categories that matter at tax time (medical, charitable, business, home office, education, childcare).',
-    interest_paid: { cards: cc.items.map(x => ({ name: x.name, amount: x.interest, amount_display: x.interest_display })), loans: loanInterest },
+    interest_paid: { cards: cc.items.map(x => ({ name: x.name, currency: x.currency, amount: x.interest, amount_display: x.interest_display })), loans: loanInterest },
     interest_earned: Object.entries(earned).map(([c, v]) => ({ currency: c, amount: v, amount_display: money(v, c) })), interest_earned_rows: earnedRows.length,
     fees: cc.items.map(x => ({ name: x.name, amount: x.fees, amount_display: x.fees_display })),
     reimbursements_waiting: rb.waiting_total, reimbursements_waiting_count: rb.count,

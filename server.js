@@ -39,10 +39,11 @@ const UI = path.join(__dirname, 'ui');
 const crypto = require('crypto');
 
 const sandboxExists = (name) => fs.existsSync(path.join(wsp.DATA_DIR, `ws_${name}.db`));
-// Sandbox flavor rides in the NAME: try-h… is a jobhunt demo (hunt mounts, hunt story),
+// Sandbox flavor rides in the NAME: try-h… is a jobhunt demo (hunt mounts, hunt story), try-p… a household's
+// personal finances,
 // anything else is the business demo. 'h' is not a hex digit, so random names never collide.
 const seedSandbox = (name) => {
-  const fixture = name.startsWith('try-h') ? 'hunttry' : name.startsWith('try-s') ? 'solotry' : 'try';
+  const fixture = name.startsWith('try-h') ? 'hunttry' : name.startsWith('try-s') ? 'solotry' : name.startsWith('try-p') ? 'hometry' : 'try';
   require('./src/fixtures.js').load(fixture, name);
   return name;
 };
@@ -52,6 +53,7 @@ const seedSandbox = (name) => {
 const DEMO_MOUNTS = ['core', 'o2c', 'p2p', 'inventory', 'crm', 'prospect', 'solo', 'purchases', 'bridge', 'gl', 'bankrec', 'salestax', 'loans'];   // the demo shows everything but the job hunt
 const HUNT_MOUNTS = ['core', 'jobhunt'];   // the free job-hunt offering: one module + the platform
 const SOLO_MOUNTS = ['core', 'solo', 'bridge'];   // the freelancer invoice generator, and the hand-over to their accountant
+const HOME_MOUNTS = ['core', 'purchases', 'loans'];   // a household's money: accounts, cards, loans, bills, the year
 const KIND_MOUNTS = { hunt: HUNT_MOUNTS, solo: SOLO_MOUNTS };
 const mountsFor = (w) => { try {
   const sp = users.spaceOf(w);
@@ -68,7 +70,7 @@ const mountsFor = (w) => { try {
   // A local server honours SAYBOOKS_MODULES the way mcp-server.js does, so a client can be handed
   // the same subset over HTTP as over stdio.
   if (!DEMO) return process.env.SAYBOOKS_MODULES ? process.env.SAYBOOKS_MODULES.split(',').map(x => x.trim()).filter(Boolean) : null;
-  return w.startsWith('try-h') ? HUNT_MOUNTS : w.startsWith('try-s') ? SOLO_MOUNTS : DEMO_MOUNTS;
+  return w.startsWith('try-h') ? HUNT_MOUNTS : w.startsWith('try-s') ? SOLO_MOUNTS : w.startsWith('try-p') ? HOME_MOUNTS : DEMO_MOUNTS;
 } catch { return null; } };
 /** What is in one space, by module: used or not, the numbers that matter for its kind, last activity. Computed inside its own database. */
 function spaceSummary(s) {
@@ -111,7 +113,7 @@ function spaceSummary(s) {
     return { ws: s.ws, name: s.display_name, role: s.role, kind, demo, modules, summary, last, agent_writes_7d: agent7 };
   });
 }
-const FLAVOR_PREFIX = { hunt: 'h', solo: 's' };   // both non-hex, so random names never collide
+const FLAVOR_PREFIX = { hunt: 'h', solo: 's', home: 'p' };   // all non-hex, so random names never collide
 const newVisitorWs = (flavor) => seedSandbox(`try-${FLAVOR_PREFIX[flavor] || ''}${crypto.randomBytes(5).toString('hex')}`);
 
 if (DEMO) {
@@ -660,7 +662,7 @@ const server = http.createServer(async (req, res) => {
         wsp.dbFor(sp.ws);
         if (body.sample) {
           const set = mounts || known;
-          const story = set.length === 1 && set[0] === 'jobhunt' ? 'hunttry' : set.length === 1 && set[0] === 'solo' ? 'solotry' : 'try';
+          const story = set.length === 1 && set[0] === 'jobhunt' ? 'hunttry' : set.length === 1 && set[0] === 'solo' ? 'solotry' : set.every(m => ['purchases', 'loans'].includes(m)) ? 'hometry' : 'try';
           try { require('./src/fixtures.js').load(story, sp.ws, { mounts: set }); } catch (e) { console.error('[space/create] sample:', e.message); }
         }
         users.recordAcquisition(sp.ws, 'space', users.parseSrcCookie(req.headers.cookie));

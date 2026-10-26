@@ -28,6 +28,17 @@ function dueOnOrAfter(loan, day) {
   return here >= day ? here : (m === 12 ? mk(y + 1, 1) : mk(y, m + 1));
 }
 
+/** A regular payment covers the due date nearest to it, so a payment made a week early is that month's,
+ *  not the month before's; the next due is the one after. Extra principal covers no due date. */
+function nextDueAfter(loan, rows) {
+  const reg = rows.filter(p => p.amount >= loan.payment);
+  const last = reg[reg.length - 1];
+  if (!last) return dueOnOrAfter(loan, H.addDays(loan.balance_date, 1));
+  const after = dueOnOrAfter(loan, last.date), prev = dueOnOrAfter(loan, H.addDays(after, -35));
+  const nearest = Date.parse(last.date) - Date.parse(prev) < Date.parse(after) - Date.parse(last.date) ? prev : after;
+  return dueOnOrAfter(loan, H.addDays(nearest, 1));
+}
+
 /** The split a row of this size would get by the schedule, with the balance as it stands before it. */
 function scheduleSplit(loan, before, amount) {
   const interest = monthly(before, loan.rate_bp);
@@ -43,8 +54,8 @@ function history(loan, asOf) {
 }
 
 /** P-L4: twelve months ahead and the payoff, by the rate and the scheduled payment. Never paid off when the payment does not cover the interest. */
-function projection(loan, from, bal) {
-  const out = []; let b = bal, due = dueOnOrAfter(loan, H.addDays(from, 1)), months = 0, interestLeft = 0;
+function projection(loan, firstDue, bal) {
+  const out = []; let b = bal, due = firstDue, months = 0, interestLeft = 0;
   if (b <= 0) return { ahead: [], payoff_date: null, months_left: 0, interest_left: 0 };
   if (loan.payment <= monthly(b, loan.rate_bp)) return { ahead: [], payoff_date: null, months_left: null, interest_left: null, never: true };
   while (b > 0 && months < 600) {
@@ -62,13 +73,13 @@ function loanView(id, asOf = H.today()) {
   const h = history(loan, asOf);
   const last = h.rows[h.rows.length - 1] || null;
   const from = last ? last.date : loan.balance_date;
-  const pr = projection(loan, from, h.balance);
+  const nextDue = nextDueAfter(loan, h.rows);
+  const pr = projection(loan, nextDue, h.balance);
   // P-L5: the lender's own figure, where one was stated (purchases' values on the loan account), against the derived balance on that day.
   let lenderFig = null; try { lenderFig = db().prepare('SELECT * FROM purch_valuation WHERE account_id = ? AND as_of <= ? AND as_of > ? ORDER BY as_of DESC, id DESC').get(acc.id, asOf, loan.balance_date); } catch { /* none */ }
   const tie = lenderFig ? (() => { const ours = history(loan, lenderFig.as_of).balance; const theirs = -lenderFig.value; return { as_of: lenderFig.as_of, source: lenderFig.source, lender: theirs, lender_display: money(theirs, cur), ours, ours_display: money(ours, cur), ties: ours === theirs, difference: theirs - ours, difference_display: money(theirs - ours, cur) }; })() : null;
   const year = asOf.slice(0, 4);
   const thisYear = h.rows.filter(p => p.date.startsWith(year));
-  const nextDue = dueOnOrAfter(loan, H.addDays(from, 1));
   return { ...loan, name: acc.name, status: h.balance <= 0 ? 'paid off' : 'open', account: acc.name, rate: pct(loan.rate_bp),
     balance_display: money(loan.balance, cur), payment_display: money(loan.payment, cur), escrow_display: money(loan.escrow, cur),
     owed: h.balance, owed_display: money(h.balance, cur), owed_as_of: from,
@@ -163,6 +174,6 @@ function upcoming(from, to) {
 const DERIVATION_ACCOUNTS = [{ account: 'Opening Balance Equity', kind: 'equity', when: 'what a loan was owed when its record starts' }];
 
 /** purchases' year summary: interest paid per loan in a year. */
-const yearInterest = (y) => interest({ year: y }).items.map(x => ({ name: x.name, kind: x.kind, amount: x.interest, interest_display: x.interest_display, payments: x.payments }));
+const yearInterest = (y) => interest({ year: y }).items.map(x => ({ name: x.name, kind: x.kind, currency: x.currency, amount: x.interest, interest_display: x.interest_display, payments: x.payments }));
 
 module.exports = { yearInterest, upcoming, loanView, loans, candidates, interest, scheduleSplit, history, dueOnOrAfter, statementRowPosts, statementRowMatches, accountBalance, journalLines, DERIVATION_ACCOUNTS, interestCategory, purchases, monthly };
