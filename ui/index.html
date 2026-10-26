@@ -1980,7 +1980,7 @@ async function renderPage() {
   }
   if (view === 'purchcards') {
     head('Cards', 'What each card statement says is due, the payments seen toward it, the interest and fees you paid this year, and money back linked to what it refunds.');
-    const [du, co, rc] = await Promise.all([api('purch_card_dues', {}), api('purch_card_costs', {}), api('purch_refunds', {}).then(r => ({ count: r.suggestions, items: r.suggested, note: r.note }))]);
+    const [du, co, rc] = await Promise.all([api('purch_card_dues', {}), api('purch_card_costs', {}), api('purch_refunds', {}).then(r => ({ count: r.suggestions, items: r.suggested, note: r.note, linked: r.linked || [] }))]);
     if (!du.count) main.append($('<div class="card doc" style="max-width:640px;margin-bottom:14px">No credit cards yet. Import a card statement and it is added; pass the minimum payment, due date, limit and rate with it.</div>'));
     else {
       const t = $('<table><thead><tr><th>Card</th><th>Statement</th><th class="num">Balance</th><th class="num">Minimum</th><th>Due</th><th class="num">Paid since</th><th>State</th><th class="num">Limit</th><th class="num">Used</th><th>Rate</th></tr></thead><tbody></tbody></table>');
@@ -2004,6 +2004,11 @@ async function renderPage() {
         if (linkCmd) { const b = buttonFor(linkCmd); b.textContent = 'Link'; b.onclick = () => openForm(linkCmd, { refund_transaction_id: x.refund.id, purchase_transaction_id: c.id }); tr.lastElementChild.append(b); }
         t3.querySelector('tbody').append(tr); }
       main.append(t3);
+    }
+    if (rc.linked.length) {
+      main.append($('<div class="sub" style="margin-top:18px">Money back, linked</div>'));
+      const t4 = $('<table><thead><tr><th>Refund</th><th>Day</th><th>As printed</th><th class="num">Back</th><th>Reverses</th><th>Reason</th></tr></thead><tbody></tbody></table>');
+      rowsInto(t4, rc.linked, x => `<td>${x.id}</td><td style="font-size:12.5px">${x.refund.date}</td><td style="font-size:12.5px">${esc(x.refund.description)}</td><td class="num">${x.refund.amount_display}</td><td style="font-size:12.5px">${x.purchase.id} · ${x.purchase.date} · ${esc(x.purchase.description)} · ${x.purchase.amount_display}</td><td style="font-size:12.5px">${esc(x.reason || '')}</td>`, 'purch_refund');
     }
   }
   if (view === 'purchloans') {
