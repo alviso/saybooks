@@ -54,7 +54,10 @@ const DEMO_MOUNTS = ['core', 'o2c', 'p2p', 'inventory', 'crm', 'prospect', 'solo
 const HUNT_MOUNTS = ['core', 'jobhunt'];   // the free job-hunt offering: one module + the platform
 const SOLO_MOUNTS = ['core', 'solo', 'bridge'];   // the freelancer invoice generator, and the hand-over to their accountant
 const HOME_MOUNTS = ['core', 'purchases', 'loans'];   // a household's money: accounts, cards, loans, bills, the year
-const KIND_MOUNTS = { hunt: HUNT_MOUNTS, solo: SOLO_MOUNTS };
+const KIND_MOUNTS = { hunt: HUNT_MOUNTS, solo: SOLO_MOUNTS, home: HOME_MOUNTS };
+/** The free door a set of chosen modules belongs to, if any: invoicing, a job hunt, or a household's money. */
+const kindOf = (mounts) => !mounts || !mounts.length ? null : mounts.length === 1 && mounts[0] === 'solo' ? 'solo' : mounts.length === 1 && mounts[0] === 'jobhunt' ? 'hunt'
+  : mounts.includes('purchases') && mounts.every(m => ['purchases', 'loans'].includes(m)) ? 'home' : null;
 const mountsFor = (w) => { try {
   const sp = users.spaceOf(w);
   // bridge rides along wherever there is a journal to hand over: it exports what o2c and solo derive.
@@ -64,8 +67,8 @@ const mountsFor = (w) => { try {
     ...(chosen.includes('p2p') ? ['purchases'] : []),   // p2p's bills and vendors are the purchases area's
     ...(chosen.some(m => m === 'o2c' || m === 'p2p') ? ['inventory'] : []),   // stock that is bought or sold has a value
     ...(chosen.includes('p2p') || (chosen.includes('purchases') && chosen.some(m => m === 'o2c' || m === 'solo')) ? ['bankrec'] : []),   // statements against recorded payments
-    ...(chosen.some(m => m === 'o2c' || m === 'solo') ? ['salestax'] : []),
-    ...(chosen.includes('purchases') || chosen.includes('p2p') ? ['loans'] : []),   // a mortgage or car loan sits beside the accounts   // tax charged on invoices is owed to someone
+    ...(chosen.some(m => m === 'o2c' || m === 'solo') ? ['salestax'] : []),   // tax charged on invoices is owed to someone
+    ...(chosen.includes('purchases') || chosen.includes('p2p') ? ['loans'] : []),   // a mortgage or car loan sits beside the accounts
     ...(chosen.includes('crm') ? ['prospect'] : [])])]; return KIND_MOUNTS[sp.kind] || null; }
   // A local server honours SAYBOOKS_MODULES the way mcp-server.js does, so a client can be handed
   // the same subset over HTTP as over stdio.
@@ -299,6 +302,7 @@ const server = http.createServer(async (req, res) => {
         ['/', mtime(path.join(UI, 'landing.html')), 'weekly', '1.0', 'What Saybooks is: books you keep by talking, under rules that refuse a guess, on saybooks.io with Claude or entirely on your Mac.'],
         ['/solo', mtime(path.join(UI, 'solo.html')), 'weekly', '0.9', 'Free invoicing for freelancers who work with Claude: describe the work, get a numbered invoice, a link and a PDF; reminders for overdue ones, sent by you.'],
         ['/hunt', mtime(path.join(UI, 'hunt.html')), 'weekly', '0.9', 'Free job-hunt tracker for people running their search with Claude: postings, applications, interviews, a duplicate guard.'],
+        ['/personal', mtime(path.join(UI, 'personal.html')), 'weekly', '0.9', 'Personal finances kept by Claude from your bank and card statements: accounts and net worth, a credit card, loans, bills and what is due, receipts and the year.'],
         ['/docs', mtime(path.join(UI, 'docs.html')), 'weekly', '0.8', 'Connecting Claude, keys and roles, spaces and modules, documents, the ledger bridge, export and delete, self-hosting.'],
         ['/about', mtime(path.join(UI, 'about.html')), 'monthly', '0.5', 'Who builds Saybooks and why: Peter Varga, thirty years of enterprise software, now in Portland.'],
         ['/hostel', mtime(path.join(UI, 'hostel.html')), 'weekly', '0.8', 'Saybooks for Mac and iPhone (the Mac app is called hostel): a model on your own Mac keeps your books, and the iPhone asks from anywhere, sealed through your own iCloud. Download, requirements, what stays on the Mac.'],
@@ -616,7 +620,7 @@ const server = http.createServer(async (req, res) => {
           if (DEMO) {
             const used = RS.modulesUsed(dump, R.MODULES);
             const mounts = used.length ? used : R.MODULES.map(m => m.name).filter(m => m !== 'core');
-            const kind = mounts.length === 1 ? ({ solo: 'solo', jobhunt: 'hunt' }[mounts[0]] || null) : null;
+            const kind = kindOf(mounts);
             const name = String(url.searchParams.get('name') || `${dump.workspace || 'Imported'} books`).trim().slice(0, 60);
             const sp = users.createSpace(entry.user.id, name, undefined, kind, mounts);
             try { const out = RS.restoreInto(sp.ws, dump, entry.user.email || entry.user.name || 'owner'); return send(res, 200, { ws: sp.ws, name: sp.display_name, mounts, ...out }); }
@@ -661,7 +665,7 @@ const server = http.createServer(async (req, res) => {
         const known = R.MODULES.map(m => m.name).filter(m => m !== 'core');
         let mounts = Array.isArray(body.mounts) ? [...new Set(body.mounts.map(String).filter(m => known.includes(m)))] : null;
         if (mounts && !mounts.length) return send(res, 400, { error: 'pick at least one module' });
-        const kind = mounts && mounts.length === 1 ? ({ solo: 'solo', jobhunt: 'hunt' }[mounts[0]] || null) : null;
+        const kind = kindOf(mounts);
         const sp = users.createSpace(entry.user.id, name, undefined, kind, mounts);
         wsp.dbFor(sp.ws);
         if (body.sample) {
@@ -802,6 +806,7 @@ const server = http.createServer(async (req, res) => {
     const file = p === '/' ? (DEMO ? 'landing.html' : 'index.html')
                : (p === '/app' || p === '/app/') ? 'index.html'
                : (p === '/hunt' || p === '/hunt/') ? 'hunt.html'
+               : (p === '/personal' || p === '/personal/') ? 'personal.html'
                : (p === '/solo' || p === '/solo/') ? 'solo.html'
                : (p === '/admin' || p === '/admin/') ? 'admin.html'
                : (p === '/privacy' || p === '/privacy/') ? 'privacy.html'

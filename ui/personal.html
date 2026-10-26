@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Personal finances kept by Claude, from your own statements · Saybooks</title>
+<meta name="description" content="Hand Claude your bank and card statements. It keeps your accounts, credit card, mortgage and car loan, bills and receipts under rules: every balance traces to a statement, nothing is assumed paid, and the decisions stay yours.">
+<meta property="og:title" content="Personal finances kept by Claude, from your own statements · Saybooks">
+<meta property="og:description" content="Accounts and net worth, a credit card, loans that tie to the lender, bills and what is due, receipts and the year. Kept by your agent from the statements you hand it, under rules. Export or delete everything, any time.">
+<meta property="og:url" content="https://saybooks.io/personal"><link rel="canonical" href="https://saybooks.io/personal"><meta property="og:type" content="website"><meta property="og:image" content="https://saybooks.io/card.png?v=3"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://saybooks.io/card.png?v=3">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Saybooks Personal finances","url":"https://saybooks.io/personal","applicationCategory":"FinanceApplication","operatingSystem":"Web, macOS","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Personal finances kept by an AI agent from your own bank and card statements: accounts and net worth, transfers counted once, a credit card, loans split into principal and interest, bills and what is due, receipts and a year summary.","license":"https://www.gnu.org/licenses/agpl-3.0.html","isAccessibleForFree":true,"creator":{"@type":"Organization","name":"Saybooks","url":"https://saybooks.io/"}}</script>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,500..700,100,0&family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="/site.css">
+<style>
+.phero{display:grid;grid-template-columns:1.05fr 1fr;gap:56px;align-items:center;padding:36px 0 0}
+.phero h1{margin:0 0 22px} .phero .lede{margin:0 0 28px}
+.warn{margin-top:6px;background:var(--sun-soft);border-radius:12px;padding:10px 14px;border-left:4px solid var(--sun);font-size:15px;line-height:1.5}
+.feat .card{padding:28px 28px 26px} .feat h3{margin:0 0 8px} .feat .card p{margin:0;color:var(--ink2);font-size:16px}
+.howto{counter-reset:s;display:grid;gap:18px}
+.howto .card{display:grid;grid-template-columns:56px 1fr;gap:18px;padding:26px 28px}
+.howto .card::before{counter-increment:s;content:counter(s);display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--green);color:#fff;font:700 19px var(--sans)}
+.howto .card > div{min-width:0} .field code{overflow-wrap:anywhere}
+.howto h3{margin:6px 0 8px;font-size:22px} .howto p{margin:0 0 8px;color:var(--ink2)}
+.field{margin-top:14px;display:grid;gap:8px;max-width:520px}
+.field span{font:700 12px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.field code,.prompt{display:block;font:14.5px/1.55 var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px 14px;color:var(--ink)}
+.prompt{background:var(--forest);color:#DDEFE3;border:none;padding:16px 18px;margin:12px 0 14px;white-space:pre-wrap}
+.yours{background:var(--green-soft);border-radius:28px;padding:40px 44px}
+.yours ul{margin:18px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:16px 32px}
+.yours li{color:var(--ink2)} .yours li b{display:block;color:var(--ink);font:600 19px var(--serif);margin-bottom:2px}
+.also{margin-top:26px;color:var(--ink2);font-size:16px}
+code.inl{font:14px var(--mono);background:var(--paper2);border-radius:6px;padding:1px 6px;overflow-wrap:anywhere}
+@media (max-width:980px){ .phero{grid-template-columns:1fr;gap:36px} .yours{padding:30px 24px} .yours ul{grid-template-columns:1fr} .howto .card{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="top">
+    <a class="mark" href="/"><svg width="18" height="21" viewBox="0 0 22 26" fill="none" stroke="#1E7A4C" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".35"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".65"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span></a>
+    <div class="links"><a href="/hostel">Mac &amp; iPhone</a><a href="/solo">Invoicing</a><a href="/hunt">Job hunt</a><a class="on" href="/personal">Finances</a><a href="/docs">Docs</a><a href="/notes">Notes</a></div>
+    <div class="auth"><a class="btn line small" href="/auth/google">Sign in</a><a class="btn solid small" href="/app?demo=home">Try it now</a></div>
+  </nav>
+
+  <header class="phero">
+    <div>
+      <span class="kicker">Household books</span>
+      <h1>Your household's money, <span class="hl">on the record.</span></h1>
+      <p class="lede">Hand your agent the bank and card statements. It keeps the accounts, the card, the mortgage and the car loan, the bills and the receipts, under rules: every balance traces to a statement or a figure you gave, nothing is assumed paid, and the decisions about your money stay yours.</p>
+      <div class="ctas">
+        <a class="btn solid" href="/auth/google?next=home">Start free with Google</a>
+        <a class="btn line" href="/app?demo=home">See it working first</a>
+      </div>
+      <p class="fine" data-who>The demo is a live sandbox with a made-up household in it: three months of statements, a credit card, a mortgage and a car loan. No account needed. No credit card, no trial clock; export or delete everything, any time.</p>
+    </div>
+    <div class="replay" aria-label="A bill showing unpaid, already paid from checking">
+      <div class="cap"><span>Before you pay it twice</span><span>household</span></div>
+      <div class="r you"><span class="say">What's coming up this month?</span></div>
+      <div class="r ai"><span class="who ai">Claude</span><span class="say">Ten things in the next month, $6,149.83 together, against $28,140.39 in checking and savings. One looks wrong:</span><span class="warn">PG&amp;E's bill of <b>$236.80</b> shows unpaid past its due date, well above the usual $150.20. But checking <b>already paid exactly $236.80</b> to PG&amp;E, three days before it was due.</span><span class="say" style="margin-top:6px">Did you pay it online? Approving it is yours; then I'll record the payment against that row.</span></div>
+    </div>
+  </header>
+
+  <section class="feat">
+    <span class="kicker">What the rules keep straight</span>
+    <h2>The things a household's money gets wrong</h2>
+    <p class="sub">Suggestions come to you to confirm. Nothing is quietly decided behind your back.</p>
+    <div class="grid2">
+      <div class="card"><h3>Counted once</h3><p>Paying the card from checking shows on both statements. The two sides are paired, so the move is neither spending nor income, and a refund comes off the purchase it reverses instead of looking like income.</p></div>
+      <div class="card"><h3>Loans that tie to the lender</h3><p>Each payment is split into principal, interest and escrow, as the lender printed it or by the schedule, and it says which. Record the lender's balance and it is checked against ours, to the cent.</p></div>
+      <div class="card"><h3>Your money, your decision</h3><p>Approving a bill and putting a vendor on autopay are refused to any agent, whatever its role. Your agent records what happened; nothing is assumed paid until a statement shows it.</p></div>
+      <div class="card"><h3>Totals, not advice</h3><p>Tag what matters at tax time and the year sums it, names the receipts still missing, and gives interest paid and earned. What is deductible stays your accountant's call; there are no budgets telling you what to do.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">See it work</span>
+    <h2>Five short demos</h2>
+    <p class="sub">Recorded live against a made-up household. Every record and refusal on screen is real output; nothing is a mockup. <a href="https://www.youtube.com/playlist?list=PLMhDqYJzdhos">The playlist on YouTube</a>.</p>
+    <div class="demos3">
+      <div class="democard"><button class="demo" type="button" data-yt="yZwTzWqXFy0" aria-label="Play the demo: Accounts and net worth"><img src="/demo-personal-1.jpg" alt="" loading="lazy" width="1280" height="800"><span class="play">Watch · 1:10</span></button><h3>Accounts and net worth</h3><p>Statements that chain, the car's value with its source, and transfers counted once.</p></div>
+      <div class="democard"><button class="demo" type="button" data-yt="Qib0Uy5Wnfc" aria-label="Play the demo: The credit card"><img src="/demo-personal-2.jpg" alt="" loading="lazy" width="1280" height="800"><span class="play">Watch · 0:55</span></button><h3>The credit card</h3><p>What is due and when, a refund linked to the order it reverses, and what the card cost this year.</p></div>
+      <div class="democard"><button class="demo" type="button" data-yt="vQS--XWEkAE" aria-label="Play the demo: The mortgage and the car loan"><img src="/demo-personal-3.jpg" alt="" loading="lazy" width="1280" height="800"><span class="play">Watch · 0:58</span></button><h3>The mortgage and the car loan</h3><p>The lender's statement, split as printed and tied to the cent, and interest paid this year.</p></div>
+      <div class="democard"><button class="demo" type="button" data-yt="nSpQosYYag8" aria-label="Play the demo: Bills and what is due"><img src="/demo-personal-4.jpg" alt="" loading="lazy" width="1280" height="800"><span class="play">Watch · 1:14</span></button><h3>Bills and what is due</h3><p>Everything due against the cash, a bill already paid, and the approvals that stay yours.</p></div>
+      <div class="democard"><button class="demo" type="button" data-yt="MJ3uoKbRFyI" aria-label="Play the demo: Receipts and the year"><img src="/demo-personal-5.jpg" alt="" loading="lazy" width="1280" height="800"><span class="play">Watch · 0:58</span></button><h3>Receipts and the year</h3><p>Return and warranty dates, a work trip paid back, and the year as the record has it.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">How it works</span>
+    <h2>Three steps with Claude</h2>
+    <p class="sub">Everything the agent records shows up in your browser too: same data, same rules, one audit trail.</p>
+    <div class="howto">
+      <div class="card"><div><h3>Sign in</h3><p>You get your own private space for the household. Nothing to install, and nothing logs into your bank.</p></div></div>
+      <div class="card"><div><h3>Add Saybooks to Claude as a connector</h3><p>In the Claude app open <b>Customize, Connectors, Add</b> (or <a href="https://claude.ai/customize/connectors">claude.ai/customize/connectors</a>), paste the address below and continue. Claude sends you to sign in with Google and asks which books to open and what the agent may do: pick your household, leave <b>owner</b>, and you're connected. Revoke it any time under <b>Share this space</b>.</p>
+        <div class="field"><span>Name</span><code>household</code><span>Remote MCP server URL</span><code>https://saybooks.io/mcp/household</code></div></div></div>
+      <div class="card"><div><h3>Start a session, attach a statement and paste this</h3>
+        <div class="prompt">You keep my household's books, connected to my Saybooks space through the "household" connector. Call core_schema first to learn the rules. Then add the account this statement belongs to, import it whole, and tell me what needs a word from me.</div>
+        <p>One statement per account to begin. From then on, just talk: <em>"the mortgage statement came"</em>, <em>"what is due this month?"</em>, <em>"Acme paid my trip back"</em>.</p>
+        <p>Works with any agent that speaks MCP. In Claude Code: <code class="inl">claude mcp add household -t http https://saybooks.io/mcp/household</code>, then <code class="inl">/mcp</code> to sign in.</p></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="yours">
+      <span class="kicker">Your data, actually yours</span>
+      <h2>Nothing touches your bank</h2>
+      <ul>
+        <li><b>Files are the boundary</b>No bank feed and no bank password, by design. Your agent reads the statements you hand it, and a statement is taken whole when its rows add up to its printed balances, or refused with the gap named.</li>
+        <li><b>It never moves money</b>Saybooks records what happened. It never pays a bill, charges a card or sends anything; you stay the only one who does.</li>
+        <li><b>Export and delete</b>One click downloads every table as one file, audit log included. One button permanently removes your space, its database and every access key.</li>
+        <li><b>Or keep it on your Mac</b>The same books run in <a href="/hostel">Saybooks for Mac</a>, with a model on your own machine. Move them across any time.</li>
+      </ul>
+      <p class="also">The rules it keeps are written down and executed: the <a href="/specs/purchases">personal finances spec</a> and the <a href="/specs/loans">loans spec</a>. Also free: <a href="/solo">invoicing for freelancers</a> and <a href="/hunt">a job-hunt tracker</a>.</p>
+    </div>
+  </section>
+</div>
+
+<footer class="site">
+  <div class="wrap">
+    <div class="fcols">
+      <div><a class="mark" href="/"><svg width="18" height="21" viewBox="0 0 22 26" fill="none" stroke="#6BBF8C" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".35"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".65"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span></a><p>Books you keep by talking, under rules that refuse a guess, with every act on the record. Built in Portland, Oregon by <a href="/about">Peter Varga</a>.</p></div>
+      <div><b>Books</b><a href="/solo">Invoicing</a><a href="/hunt">Job hunt</a><a href="/personal">Personal finances</a><a href="/app?demo=1">Order to cash</a><a href="/app?demo=1">CRM and prospects</a><a href="/docs#ledger">Ledger hand-over</a></div>
+      <div><b>Get it</b><a href="/app?demo=1">saybooks.io</a><a href="/hostel">Mac and iPhone</a><a href="/docs#connect">Claude connector</a><a href="https://github.com/alviso/saybooks">Source code</a></div>
+      <div><b>Read</b><a href="/docs">Docs</a><a href="/specs">Specs</a><a href="/notes">Notes</a><a href="/notes/local-models">Local models</a><a href="/session/harborline">A full session</a></div>
+      <div><b>Company</b><a href="/about">About</a><a href="/privacy">Privacy</a><a href="https://portlandaiworks.com/">Portland AI Works</a><a href="mailto:hello@saybooks.io">hello@saybooks.io</a></div>
+    </div>
+    <div class="legal">Open source under AGPL-3.0. Saybooks never emails a customer, charges a card or moves money; it records what happened.</div>
+  </div>
+</footer>
+<script>(function(){try{if(/(?:^|; )sb_src=/.test(document.cookie))return;var q=new URLSearchParams(location.search);var r='';try{r=document.referrer?new URL(document.referrer).host:''}catch(e){}if(r===location.host)r='';var v={r:r,p:location.pathname+(location.search?location.search.slice(0,80):''),s:q.get('utm_source')||'',m:q.get('utm_medium')||'',c:q.get('utm_campaign')||'',t:new Date().toISOString().slice(0,10)};document.cookie='sb_src='+encodeURIComponent(JSON.stringify(v))+'; Path=/; Max-Age=2592000; SameSite=Lax'}catch(e){}})();</script>
+<script src="/site.js" defer></script>
+</body>
+</html>

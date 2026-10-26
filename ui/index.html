@@ -445,6 +445,21 @@ function soloOnboarding() {
   return card;
 }
 
+/* A fresh household teaches too: connect Claude, then hand it the statements. */
+function homeOnboarding() {
+  const step = (n, title, body) => `<div style="display:flex;gap:12px;margin-top:${n === 1 ? 14 : 16}px"><div style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;text-align:center;line-height:26px;font-weight:700">${n}</div><div>${title}${body}</div></div>`;
+  const card = $(`<div class="card" style="max-width:660px;margin-top:6px">
+    <h2 style="margin-bottom:6px">Start your household's books</h2>
+    ${step(1, '<b>Add Saybooks to Claude</b>', '<div class="doc" style="margin-top:2px">In the Claude app: <b>Customize → Connectors → Add</b> — Name: <b>household</b> · Remote MCP server URL: <b>https://saybooks.io/mcp/household</b> · Continue.</div>')}
+    ${step(2, '<b>Sign in and pick this space</b>', '<div class="doc" style="margin-top:2px">Claude sends you to Google, then asks which books to open and what the agent may do. Pick your household, leave <b>owner</b>, Allow. The key it gets appears under <b id="hoShare" style="color:var(--accent);cursor:pointer">Share this space…</b>, where you can revoke it.</div>')}
+    ${step(3, '<b>Open a new session, attach a statement and paste this</b> <a id="hoCopy" style="color:var(--accent);cursor:pointer;font-weight:400">(copy)</a>', '<div id="hoPrompt" style="margin-top:6px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font:12px/1.55 var(--mono);white-space:pre-wrap">You keep my household\'s books, connected to my Saybooks space through the "household" connector. Call core_schema first to learn the rules. Then add the account this statement belongs to, import it whole, and tell me what needs a word from me.</div><div class="doc" style="margin-top:6px">One statement per account to begin: checking, savings, each card. Then just talk: <i>"the mortgage statement came"</i>, <i>"what is due this month?"</i>, <i>"Acme paid my trip back"</i>. Values for a house or a car are your figures with their source; it never estimates one.</div>')}
+  </div>`);
+  card.querySelector('#hoShare').onclick = () => document.getElementById('inviteBtn')?.click();
+  card.querySelector('#hoCopy').onclick = () => navigator.clipboard.writeText(card.querySelector('#hoPrompt').textContent).then(
+    () => toast('✓ starter prompt copied'), () => toast('✗ copy failed — select and copy by hand'));
+  return card;
+}
+
 /* A fresh hunt space teaches instead of showing bare table headers. */
 function huntOnboarding() {
   const card = $(`<div class="card" style="max-width:660px;margin-top:6px">
@@ -1912,11 +1927,12 @@ async function renderPage() {
     add.onclick = () => { selected = null; view = 'newspace'; render(); };
     grid.append(add);
     main.append(grid);
-    main.append($('<p class="sub" style="margin-top:14px;max-width:1100px">A new space picks its own modules, empty or with sample data. Invoicing and job-hunt spaces also come from their own doors: <a href="/solo">saybooks.io/solo</a> and <a href="/hunt">saybooks.io/hunt</a>.</p>'));
+    main.append($('<p class="sub" style="margin-top:14px;max-width:1100px">A new space picks its own modules, empty or with sample data. Invoicing, job-hunt and household spaces also come from their own doors: <a href="/solo">saybooks.io/solo</a>, <a href="/hunt">saybooks.io/hunt</a> and <a href="/personal">saybooks.io/personal</a>.</p>'));
   }
   if (view === 'purchover') {
     head('Overview', 'What you buy, from statements and receipts your agent read. Sums stay per currency.');
     const sp = await api('purch_spend', {});
+    if (!sp.transactions && !(REG.demo && !REG.user)) { const acc = await api('purch_accounts', {}).catch(() => ({ count: 0 })); if (!acc.count) { main.append(homeOnboarding()); return; } }
     const curs = Object.keys(sp.spend_by_currency || {});
     const tiles = $('<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;max-width:1100px;margin-bottom:16px"></div>');
     for (const c of curs) { const ms = (sp.by_month || []).filter(x => x.currency === c); const m = ms[ms.length - 1]; tiles.append($(`<div class="tile"><div class="k">Latest month on record · ${c}</div><div class="v">${m ? m.amount_display : '—'}</div><div class="s">${m ? m.month + ' · ' : ''}${sp.spend_by_currency[c].amount_display} on record, ${sp.spend_by_currency[c].count} purchases${sp.covered_through ? ` · statements through ${sp.covered_through}` : ''}</div></div>`)); }

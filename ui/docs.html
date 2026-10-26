@@ -18,7 +18,7 @@
 <div class="wrap">
   <nav class="top">
     <a class="mark" href="/"><svg width="18" height="21" viewBox="0 0 22 26" fill="none" stroke="#1E7A4C" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".35"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".65"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span></a>
-    <div class="links"><a href="/hostel">Mac &amp; iPhone</a><a href="/solo">Invoicing</a><a href="/hunt">Job hunt</a><a class="on" href="/docs">Docs</a><a href="/notes">Notes</a></div>
+    <div class="links"><a href="/hostel">Mac &amp; iPhone</a><a href="/solo">Invoicing</a><a href="/hunt">Job hunt</a><a href="/personal">Finances</a><a class="on" href="/docs">Docs</a><a href="/notes">Notes</a></div>
     <div class="auth"><a class="btn line small" href="/auth/google">Sign in</a><a class="btn solid small" href="/app?demo=1">Try it now</a></div>
   </nav>
   <main class="prose">
@@ -33,7 +33,7 @@
   <ol>
     <li><b>Sign in with Google</b> at <a href="/app">saybooks.io/app</a>. The demo books you tried stay yours, and a chooser sets up your own space: name it, tick the modules it carries, empty or with sample data. Nothing to install.</li>
     <li><b>Add Saybooks to Claude.</b> In the Claude app: <b>Customize → Connectors → Add</b> (<a href="https://claude.ai/customize/connectors">claude.ai/customize/connectors</a>). Name it, paste the address, Continue.
-      <div class="mock"><div class="mocktabs"><span>Which books?</span><button type="button" class="on" data-name="invoices" data-url="https://saybooks.io/mcp/invoices">Invoicing</button><button type="button" data-name="hunt" data-url="https://saybooks.io/mcp/hunt">Job hunt</button><button type="button" data-name="books" data-url="https://saybooks.io/mcp/books">Order to cash</button><button type="button" data-name="books" data-url="https://saybooks.io/mcp">Any</button></div>
+      <div class="mock"><div class="mocktabs"><span>Which books?</span><button type="button" class="on" data-name="invoices" data-url="https://saybooks.io/mcp/invoices">Invoicing</button><button type="button" data-name="hunt" data-url="https://saybooks.io/mcp/hunt">Job hunt</button><button type="button" data-name="household" data-url="https://saybooks.io/mcp/household">Personal finances</button><button type="button" data-name="books" data-url="https://saybooks.io/mcp/books">Order to cash</button><button type="button" data-name="books" data-url="https://saybooks.io/mcp">Any</button></div>
         <div class="mocklabel">Name</div><div class="mockfield" id="mockName">invoices</div><div class="mocklabel" style="margin-top:8px">Remote MCP server URL</div><div class="mockfield" id="mockUrl">https://saybooks.io/mcp/invoices</div></div>
       <script>(function(){var t=document.querySelector('.mocktabs');t.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;t.querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x===b)});document.getElementById('mockName').textContent=b.dataset.name;document.getElementById('mockUrl').textContent=b.dataset.url;});})();</script></li>
     <li><b>Sign in and choose.</b> Claude sends you to Google, then to a Saybooks page that asks which of your books to open, what the agent may do (owner by default, so it can set up the company profile with you), and the name it gets in the audit log. Allow, and Claude reports the connector as connected. Every action it takes from then on is logged under that name.</li>
@@ -46,6 +46,7 @@
     <tr><td><code>https://saybooks.io/mcp</code></td><td>any of your spaces; consent asks which</td></tr>
     <tr><td><code>https://saybooks.io/mcp/invoices</code></td><td>your invoicing spaces only</td></tr>
     <tr><td><code>https://saybooks.io/mcp/hunt</code></td><td>your job-hunt spaces only</td></tr>
+    <tr><td><code>https://saybooks.io/mcp/household</code></td><td>your household spaces only (personal finances and loans)</td></tr>
     <tr><td><code>https://saybooks.io/mcp/books</code></td><td>your full order-to-cash spaces only</td></tr>
     <tr><td><code>https://saybooks.io/mcp/s/&lt;space id&gt;</code></td><td>exactly that space, for two of the same kind; the id is the <code>ws=</code> part of the space's URL</td></tr>
   </tbody></table>
@@ -107,7 +108,14 @@
   </ul>
 
   <h2 id="purchases">Purchases</h2>
-  <p>Full-books spaces carry a Purchases area: what you buy, from bank and card statements and receipts <b>your agent reads</b>. Nothing in Saybooks parses a file. The agent hands over the rows and the balances the statement prints; the statement is accepted whole when the rows reconcile to those balances, or refused with the gap named. Every row remembers its statement, its row number and the line as read. The same file is never imported twice; rows already on record are skipped and listed back.</p>
+  <p>Household spaces (start one at <a href="/personal">saybooks.io/personal</a>) and full-books spaces carry a Purchases area, shown as <b>Personal finances</b>: what you buy, from bank and card statements and receipts <b>your agent reads</b>. Nothing in Saybooks parses a file. The agent hands over the rows and the balances the statement prints; the statement is accepted whole when the rows reconcile to those balances, or refused with the gap named. Every row remembers its statement, its row number and the line as read. The same file is never imported twice; rows already on record are skipped and listed back.</p>
+  <div class="demos3">
+    <div class="democard"><button class="demo" type="button" data-yt="yZwTzWqXFy0" aria-label="Play the demo: Accounts and net worth"><img src="/demo-personal-1.jpg" alt="" loading="lazy" width="1280" height="800"><span class="play">Watch · 1:10</span></button><h3>Accounts and net worth</h3></div>
+    <div class="democard"><button class="demo" type="button" data-yt="Qib0Uy5Wnfc" aria-label="Play the demo: The credit card"><img src="/demo-personal-2.jpg" alt="" loading="lazy" width="1280" height="800"><span class="play">Watch · 0:55</span></button><h3>The credit card</h3></div>
+    <div class="democard"><button class="demo" type="button" data-yt="vQS--XWEkAE" aria-label="Play the demo: The mortgage and the car loan"><img src="/demo-personal-3.jpg" alt="" loading="lazy" width="1280" height="800"><span class="play">Watch · 0:58</span></button><h3>The mortgage and the car loan</h3></div>
+    <div class="democard"><button class="demo" type="button" data-yt="nSpQosYYag8" aria-label="Play the demo: Bills and what is due"><img src="/demo-personal-4.jpg" alt="" loading="lazy" width="1280" height="800"><span class="play">Watch · 1:14</span></button><h3>Bills and what is due</h3></div>
+    <div class="democard"><button class="demo" type="button" data-yt="MJ3uoKbRFyI" aria-label="Play the demo: Receipts and the year"><img src="/demo-personal-5.jpg" alt="" loading="lazy" width="1280" height="800"><span class="play">Watch · 0:58</span></button><h3>Receipts and the year</h3></div>
+  </div>
   <ul>
     <li><b>Accounts and net worth.</b> Every statement belongs to an account, and importing one adds its account to the register by itself. Each account shows its balance from its latest statement and the day it is from; statements that do not chain (a missing month, an opening that is not the last closing) are named. A house, a car or an outside loan gets a value you state, with where the figure comes from. Net worth is what is held less what is owed, each figure dated.</li>
     <li><b>Transfers between your accounts.</b> Paying the card from checking shows on both statements. Your agent suggests the two sides (same amount, a few days apart, worded as a payment) and pairs them with a reason; the move is then counted once and is neither spending nor income. A transfer with only one side so far is listed, with whether the other account's statement should already show it.</li>
@@ -223,7 +231,7 @@ npm test                  # the 24-gate contract and every conformance scenario<
   <div class="wrap">
     <div class="fcols">
       <div><a class="mark" href="/"><svg width="18" height="21" viewBox="0 0 22 26" fill="none" stroke="#6BBF8C" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".35"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".65"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span></a><p>Books you keep by talking, under rules that refuse a guess, with every act on the record. Built in Portland, Oregon by <a href="/about">Peter Varga</a>.</p></div>
-      <div><b>Books</b><a href="/solo">Invoicing</a><a href="/hunt">Job hunt</a><a href="/app?demo=1">Personal finances</a><a href="/app?demo=1">Order to cash</a><a href="/app?demo=1">CRM and prospects</a><a href="/docs#ledger">Ledger hand-over</a></div>
+      <div><b>Books</b><a href="/solo">Invoicing</a><a href="/hunt">Job hunt</a><a href="/personal">Personal finances</a><a href="/app?demo=1">Order to cash</a><a href="/app?demo=1">CRM and prospects</a><a href="/docs#ledger">Ledger hand-over</a></div>
       <div><b>Get it</b><a href="/app?demo=1">saybooks.io</a><a href="/hostel">Mac and iPhone</a><a href="/docs#connect">Claude connector</a><a href="https://github.com/alviso/saybooks">Source code</a></div>
       <div><b>Read</b><a href="/docs">Docs</a><a href="/specs">Specs</a><a href="/notes">Notes</a><a href="/notes/local-models">Local models</a><a href="/session/harborline">A full session</a></div>
       <div><b>Company</b><a href="/about">About</a><a href="/privacy">Privacy</a><a href="https://portlandaiworks.com/">Portland AI Works</a><a href="mailto:hello@saybooks.io">hello@saybooks.io</a></div>

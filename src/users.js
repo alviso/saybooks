@@ -48,7 +48,7 @@ function db() {
     revoked_at TEXT,
     PRIMARY KEY (ws, email)
   )`);
-  // kind: what a space mounts — null = full books, 'hunt' = the free job-hunt offering.
+  // kind: what a space mounts — null = full books, 'hunt' = the free job-hunt offering, 'solo' invoicing, 'home' a household's money.
   const cols = _db.prepare('PRAGMA table_info(space)').all().map(c => c.name);
   if (!cols.includes('kind')) _db.exec('ALTER TABLE space ADD COLUMN kind TEXT');
   // mounts: the modules a space carries, chosen when it was made (JSON array, core implied).

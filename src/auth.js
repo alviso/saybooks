@@ -22,7 +22,7 @@ function loginRedirect(res, next, returnWs, returnTo) {
   // Intent rides in the state COOKIE, not the URL — the callback trusts only what we set.
   // A private link (?ws=) opened signed-out rides along the same way and is honoured only if
   // the user who comes back is a member of that space.
-  const intent = ['hunt', 'solo'].includes(next) ? ':' + next : '';
+  const intent = ['hunt', 'solo', 'home'].includes(next) ? ':' + next : '';
   const back = returnWs && /^[a-z0-9-]{4,40}$/.test(returnWs) && !/^try-/.test(returnWs) ? ':ws-' + returnWs : '';
   // A relative path to come back to (the OAuth consent page). Only our own paths, base64url so the cookie stays one token.
   const rt = !back && returnTo && /^\/oauth\/consent\?pend=[a-f0-9]+$/.test(returnTo) ? ':rt-' + Buffer.from(returnTo).toString('base64url') : '';
@@ -42,7 +42,7 @@ const post = (url, form) => fetch(url, {
 async function callback(req, res, url) {
   const state = url.searchParams.get('state');
   const code = url.searchParams.get('code');
-  const [, cookieState, intent, returnWs, returnTo] = /(?:^|;\s*)sb_oauth=([a-f0-9]+)(?::(hunt|solo))?(?::ws-([a-z0-9-]+))?(?::rt-([A-Za-z0-9_-]+))?/.exec(req.headers.cookie || '') || [];
+  const [, cookieState, intent, returnWs, returnTo] = /(?:^|;\s*)sb_oauth=([a-f0-9]+)(?::(hunt|solo|home))?(?::ws-([a-z0-9-]+))?(?::rt-([A-Za-z0-9_-]+))?/.exec(req.headers.cookie || '') || [];
   const fail = (why) => { res.writeHead(302, { location: '/?login=failed' }); res.end(); console.error('[auth]', why); };
   if (!code || !state || state !== cookieState) return fail('state mismatch or missing code');
 
@@ -60,11 +60,11 @@ async function callback(req, res, url) {
   const fs = require('fs');
   const path = require('path');
   let landing = '/app';
-  if (intent === 'hunt' || intent === 'solo') {
+  if (intent === 'hunt' || intent === 'solo' || intent === 'home') {
     // A flavored door: find or create their kind-matching space (empty books — real work
     // starts from zero), and land them in it. No demo fixtures, no 'My books'.
-    const name = intent === 'hunt' ? 'My job hunt' : 'My invoices';
-    let sp = users.spacesFor(user.id).map(s => users.spaceOf(s.ws)).find(s => s && s.kind === intent);
+    const name = intent === 'hunt' ? 'My job hunt' : intent === 'home' ? 'My household' : 'My invoices';
+    let sp = users.spacesFor(user.id).map(s => users.spaceOf(s.ws)).find(s => s && s.kind === intent && !s.demo);   // never the example books
     if (!sp) { sp = users.createSpace(user.id, name, undefined, intent); wsp.dbFor(sp.ws); users.recordAcquisition(sp.ws, 'space', users.parseSrcCookie(req.headers.cookie)); }
     landing = '/app?ws=' + sp.ws;
   } else if (!users.spacesFor(user.id).length) {
@@ -73,6 +73,12 @@ async function callback(req, res, url) {
       // A flavored demo sandbox claims as a matching-kind space — the visitor keeps the flavor too.
       if (cur.startsWith('try-h')) users.claimSpace(user.id, cur, 'My job hunt', 'hunt');
       else if (cur.startsWith('try-s')) users.claimSpace(user.id, cur, 'My invoices', 'solo');
+      else if (cur.startsWith('try-p')) {
+        // Maya's household is example books, not theirs: it stays as a demo space, and their own household starts empty.
+        users.claimSpace(user.id, cur, 'Demo household', 'home', null, true);
+        const sp = users.createSpace(user.id, 'My household', undefined, 'home'); wsp.dbFor(sp.ws);
+        landing = '/app?ws=' + sp.ws;
+      }
       else {
         // The demo they poked at stays, sample data and all, as its own space; their real books
         // start empty from the chooser, which is where the workbench lands them next.

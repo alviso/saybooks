@@ -179,8 +179,8 @@ async function memberForBearer(req) {
 // Claude allows one connector per URL per organization, and one of our connections opens one
 // space. So each kind of books gets an address of its own, and any single space can have one
 // too. The path decides what consent may offer; the token is still bound to one space.
-const KINDS = { invoices: 'solo', hunt: 'hunt', books: null };
-const RESOURCE_RE = /^\/mcp(?:\/(invoices|hunt|books)|\/s\/([a-z0-9][a-z0-9-]{3,40}))?\/?$/;
+const KINDS = { invoices: 'solo', hunt: 'hunt', household: 'home', books: null };
+const RESOURCE_RE = /^\/mcp(?:\/(invoices|hunt|household|books)|\/s\/([a-z0-9][a-z0-9-]{3,40}))?\/?$/;
 /** Parse a resource path (or full URL) into a filter: { kind } | { ws } | {} for the general door; null if not ours. */
 function resourceFilter(resource) {
   if (!resource) return {};
@@ -231,7 +231,7 @@ async function consentGet(req, res, url, user) {
   const client = (await clientsStore.getClient(pend.client_id).catch(() => null)) || {};
   const spaces = users.spacesFor(user.id).map(s => ({ ...s, kind: (users.spaceOf(s.ws) || {}).kind || null })).filter(s => spaceMatches(s, filter));
   if (!spaces.length) {
-    const door = filter.kind === 'solo' ? '<a href="/solo">saybooks.io/solo</a>' : filter.kind === 'hunt' ? '<a href="/hunt">saybooks.io/hunt</a>' : '<a href="/app">saybooks.io/app</a>';
+    const door = filter.kind === 'solo' ? '<a href="/solo">saybooks.io/solo</a>' : filter.kind === 'hunt' ? '<a href="/hunt">saybooks.io/hunt</a>' : filter.kind === 'home' ? '<a href="/personal">saybooks.io/personal</a>' : '<a href="/app">saybooks.io/app</a>';
     const what = filter.ws ? 'that space' : filter.label ? `${filter.label === 'books' ? 'full' : filter.label} books` : 'books';
     return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(PAGE('No matching space', `<h1>You have no ${esc(what)} yet.</h1><p>${filter.ws ? 'You are not a member of the space this connector points at. Ask its owner for an invitation, or connect to one of your own spaces through ' + '<a href="/docs#connect">another address</a>.' : 'Open ' + door + ' once to create it, then connect again.'}</p>`));
   }
@@ -295,7 +295,7 @@ function build(publicUrl) {
   const meta = { ...createOAuthMetadata({ provider, issuerUrl: issuer, scopesSupported: ['books'], serviceDocumentationUrl: new URL('/docs', issuer) }), client_id_metadata_document_supported: true };
   app.get('/.well-known/oauth-authorization-server', (_req, res) => res.json(meta));
   // Protected-resource metadata for every door: the general /mcp, the kind doors, and per-space ones.
-  app.get(/^\/\.well-known\/oauth-protected-resource(\/mcp(?:\/(?:invoices|hunt|books)|\/s\/[a-z0-9-]+)?)$/, (req, res) => {
+  app.get(/^\/\.well-known\/oauth-protected-resource(\/mcp(?:\/(?:invoices|hunt|household|books)|\/s\/[a-z0-9-]+)?)$/, (req, res) => {
     const rp = req.params[0] || '/mcp';
     if (!isResourcePath(rp)) return res.status(404).end();
     res.json({ resource: new URL(rp, issuer).href, authorization_servers: [issuer.href], scopes_supported: ['books'], resource_documentation: new URL('/docs', issuer).href, bearer_methods_supported: ['header'] });
