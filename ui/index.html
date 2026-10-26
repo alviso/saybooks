@@ -330,7 +330,7 @@ function openForm(spec, prefill = {}) {
     let el;
     if (f.widget === 'lines') {
       el = linesEditor(f, state);
-    } else if (f.widget === 'lookup' || f.widget === 'select') {
+    } else if ((f.widget === 'lookup' && REG.lookups[f.entity]) || f.widget === 'select') {
       el = document.createElement('select');
       el.append(new Option(f.required ? '— choose —' : '— none —', ''));
       for (const o of (f.widget === 'lookup' ? (REG.lookups[f.entity]||[]) : f.options.map(v=>({id:v,label:v}))))
@@ -346,7 +346,9 @@ function openForm(spec, prefill = {}) {
         const r = new FileReader(); r.onload = () => { state[f.key] = r.result; }; r.readAsDataURL(file);
       };
     } else if (f.widget === 'checkbox') {
-      el = Object.assign(document.createElement('input'), { type:'checkbox', checked: state[f.key] !== false });
+      /* shown as it will be sent: ticked only when prefilled true or the field defaults true */
+      if (state[f.key] === undefined && f.default !== undefined) state[f.key] = f.default;
+      el = Object.assign(document.createElement('input'), { type:'checkbox', checked: state[f.key] === true });
       el.style.width = 'auto'; el.onchange = () => state[f.key] = el.checked;
     } else {
       el = document.createElement(f.widget === 'textarea' ? 'textarea' : 'input');
@@ -366,9 +368,11 @@ function openForm(spec, prefill = {}) {
     }
     wrap.append(el); form.append(wrap);
   }
-  const why = $(`<label><b>Reason <i style="display:inline">(optional — goes into the audit trail)</i></b></label>`);
-  const whyIn = document.createElement('input'); whyIn.oninput = () => state._reason = whyIn.value || undefined;
-  why.append(whyIn); form.append(why);
+  if (!spec.fields.some(f => f.key === 'reason')) {   // a command's own reason already goes into the audit trail
+    const why = $(`<label><b>Reason <i style="display:inline">(optional — goes into the audit trail)</i></b></label>`);
+    const whyIn = document.createElement('input'); whyIn.oninput = () => state._reason = whyIn.value || undefined;
+    why.append(whyIn); form.append(why);
+  }
 
   const err = $('<div class="err" hidden></div>');
   const foot = $('<footer></footer>');
@@ -587,6 +591,7 @@ async function detail(type, id) {
         if (Array.isArray(src) && src.length) p[f2.key] = src.map(row => Object.fromEntries(f2.of.map(cc => [cc.key, row[cc.key]]).filter(([, v]) => v !== undefined && v !== null)));
         continue;
       }
+      if (f2.key === 'reason') continue;   // the reason is for this act, never the entity's own earlier one
       const v = entity[f2.key];
       if (v !== undefined && v !== null) p[f2.key] = v;
     }

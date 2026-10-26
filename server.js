@@ -531,6 +531,10 @@ const server = http.createServer(async (req, res) => {
           account:  H.db().prepare('SELECT id, name AS label FROM account ORDER BY name').all(),
           campaign: H.db().prepare('SELECT id, name AS label FROM campaign ORDER BY status = \'active\' DESC, name').all(),
           p2p_po:   H.db().prepare('SELECT id, id AS label FROM p2p_po ORDER BY id DESC').all(),
+          ...(() => { const q = (sql) => { try { return H.db().prepare(sql).all(); } catch { return []; } };   // tables of modules this space may not carry
+            return { purch_account: q('SELECT id, name AS label FROM purch_account WHERE closed_on IS NULL ORDER BY id'),
+              loan_loan: q('SELECT l.id, a.name AS label FROM loan_loan l JOIN purch_account a ON a.id = l.account_id ORDER BY l.id'),
+              purch_bill_series: q("SELECT s.id, v.name || ', ' || s.cadence AS label FROM purch_bill_series s JOIN purch_vendor v ON v.id = s.vendor_id WHERE s.status = 'active' ORDER BY s.id") }; })(),
         },
         areas: R.MODULES.filter(m => m.implements && (!mounts || mounts.includes(m.name))).map(m => m.implements.area),
       }, undefined, cookie));

@@ -215,6 +215,7 @@ const formSpec = (opts = {}) => COMMANDS.filter(c => inMount(c, opts.modules)).m
     label: a.ui.label || key.replace(/_/g, ' ').replace(/^./, s => s.toUpperCase()),
     widget: a.ui.widget,
     entity: a.ui.entity,
+    default: a.ui.default,
     options: a.enum,
     human_only: a.human_only || undefined,
     of: a.ui.of && Object.entries(a.ui.of).map(([k, v]) => ({

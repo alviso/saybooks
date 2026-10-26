@@ -67,7 +67,7 @@ defineCommand({
     name:       { ...f.text('What it is called on the quote and invoice.'), required: true },
     unit_price: { ...f.money('List price per unit.'), required: true },
     on_hand:    f.int('Opening quantity on hand.'),
-    stocked:    f.bool('False for services — never depletes, never blocks a shipment.'),
+    stocked:    f.bool('False for services — never depletes, never blocks a shipment.', { default: true }),
     tax_rate_bp: f.int('Default tax rate in basis points (875 = 8.75%). 0 or omitted = untaxed. Billing snapshots this rate per line.'),
   },
   handler(a, { db, at }) {

@@ -783,7 +783,7 @@ function upcoming({ days = 30, as_of } = {}) {
     if (sr.due_day) { const [y, m] = dueOn.split('-').map(Number); const last = new Date(Date.UTC(y, m, 0)).getUTCDate(); const d = `${y}-${String(m).padStart(2, '0')}-${String(Math.min(sr.due_day, last)).padStart(2, '0')}`; dueOn = d >= sr.next_expected ? d : addMonths(d, 1); }
     if (!inWin(dueOn)) continue;
     const has = db().prepare("SELECT 1 FROM purch_bill WHERE vendor_id = ? AND bill_date >= ? AND status <> 'rejected'").get(sr.vendor_id, H.addDays(sr.next_expected, -BILL_GRACE));
-    if (!has) items.push({ date: dueOn, kind: 'expected bill', ref: sr.id, what: sr.vendor, amount: sr.typical, currency: sr.currency, state: sr.missing ? 'missing' : 'not received yet, usual amount' });
+    if (!has) items.push({ date: dueOn, kind: 'expected bill', ref: sr.id, what: sr.vendor, amount: sr.typical, currency: sr.currency, state: sr.missing ? 'missing' : sr.autopay ? `not received yet, usual amount, autopay from ${sr.autopay.account}` : 'not received yet, usual amount' });
   }
   for (const mod of require('../../registry.js').MODULES) if (mod.api && typeof mod.api.upcoming === 'function') for (const x of mod.api.upcoming(from, to)) items.push(x);
   items.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
