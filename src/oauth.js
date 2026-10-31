@@ -213,7 +213,10 @@ const spaceMatches = (s, f) => !f ? true : f.ws ? s.ws === f.ws : ('kind' in f) 
 // a code only ever goes to a redirect its client registered. So the person deciding has to see
 // that destination. The consent page names it, and flags a host Saybooks doesn't recognize,
 // because a client's name is whatever the client says it is.
-const KNOWN_HOSTS = ['claude.ai', 'claude.com', 'chatgpt.com'];
+// Google's connected apps (Gemini) redirect to three exact hosts; never all of
+// googleusercontent.com, which serves anyone's content.
+const KNOWN_HOSTS = ['claude.ai', 'claude.com', 'chatgpt.com',
+  'oauth-redirect.googleusercontent.com', 'oauth-redirect-sandbox.googleusercontent.com', 'oauth-redirect-test.googleusercontent.com'];
 const LOOPBACK = new Set(['127.0.0.1', 'localhost', '[::1]', '::1']);
 /** { label, kind }: kind is 'known' (a listed host), 'local' (this device only) or 'unknown'. */
 function destinationOf(redirectUri) {
