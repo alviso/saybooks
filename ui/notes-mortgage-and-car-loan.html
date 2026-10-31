@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tracking a mortgage and a car loan with AI · Saybooks notes</title><link rel="canonical" href="https://saybooks.io/notes/mortgage-and-car-loan">
+<meta name="description" content="Claude keeps a mortgage and a car loan from your own statements: each payment split into principal, interest and escrow, the lender&#x27;s balance checked to the cent, the payoff date and the interest paid this year.">
+<meta property="og:type" content="article"><meta property="og:title" content="Tracking a mortgage and a car loan with AI"><meta property="og:description" content="Claude keeps a mortgage and a car loan from your own statements: each payment split into principal, interest and escrow, the lender&#x27;s balance checked to the cent, the payoff date and the interest paid this year."><meta property="og:url" content="https://saybooks.io/notes/mortgage-and-car-loan"><meta property="og:image" content="https://saybooks.io/demo-personal-3.jpg"><meta property="article:published_time" content="2026-10-31"><meta property="article:author" content="Peter Varga">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Tracking a mortgage and a car loan with AI"><meta name="twitter:image" content="https://saybooks.io/demo-personal-3.jpg">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "Tracking a mortgage and a car loan with AI", "description": "Claude keeps a mortgage and a car loan from your own statements: each payment split into principal, interest and escrow, the lender's balance checked to the cent, the payoff date and the interest paid this year.", "url": "https://saybooks.io/notes/mortgage-and-car-loan", "datePublished": "2026-10-31", "dateModified": "2026-10-31", "inLanguage": "en", "image": "https://saybooks.io/demo-personal-3.jpg", "author": {"@type": "Person", "name": "Peter Varga", "url": "https://portlandaiworks.com/"}, "publisher": {"@type": "Organization", "name": "Saybooks", "url": "https://saybooks.io/", "logo": "https://saybooks.io/icon-512.png"}, "isPartOf": {"@type": "WebSite", "name": "Saybooks", "url": "https://saybooks.io/"}, "video": {"@type": "VideoObject", "name": "The mortgage and the car loan", "description": "Claude keeps a mortgage and a car loan from your own statements: each payment split into principal, interest and escrow, the lender's balance checked to the cent, the payoff date and the interest paid this year.", "thumbnailUrl": "https://saybooks.io/demo-personal-3.jpg", "uploadDate": "2026-10-25", "embedUrl": "https://www.youtube-nocookie.com/embed/vQS--XWEkAE", "contentUrl": "https://www.youtube.com/watch?v=vQS--XWEkAE"}}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Saybooks", "item": "https://saybooks.io/"}, {"@type": "ListItem", "position": 2, "name": "Notes", "item": "https://saybooks.io/notes"}, {"@type": "ListItem", "position": 3, "name": "Tracking a mortgage and a car loan with AI", "item": "https://saybooks.io/notes/mortgage-and-car-loan"}]}</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,500..700,100,0&family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="/site.css">
+</head>
+<body>
+<div class="wrap">
+  <nav class="top">
+    <a class="mark" href="/"><svg width="18" height="21" viewBox="0 0 22 26" fill="none" stroke="#1E7A4C" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".35"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".65"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span></a>
+    <div class="links"><a href="/hostel">Mac &amp; iPhone</a><a href="/solo">Invoicing</a><a href="/hunt">Job hunt</a><a href="/personal">Finances</a><a href="/docs">Docs</a><a class="on" href="/notes">Notes</a></div>
+    <div class="auth"><a class="btn line small" href="/auth/google">Sign in</a><a class="btn solid small" href="/app?demo=1">Try it now</a></div>
+  </nav>
+  <main class="prose">
+  <div class="kicker">Notes · 31 October 2026</div>
+  <h1>Tracking a mortgage and a car loan with AI</h1>
+  <p class="asof">By <a href="/about">Peter Varga</a>. The loans demo is below and the other four are <a href="https://www.youtube.com/playlist?list=PLMhDqYJzdhos">on YouTube</a>; the rules are in <a href="/specs/loans">the loans spec</a>.</p>
+  <button class="demo" type="button" data-yt="vQS--XWEkAE" aria-label="Play the demo: The mortgage and the car loan"><img src="/demo-personal-3.jpg" alt="" width="1280" height="800"><span class="play">Watch the demo · 0:58</span></button>
+  <article>
+  <p>A mortgage payment is one line on a checking statement. It says how much went to the lender. It doesn't say how much of it paid down the loan, how much was interest, and how much went into escrow for taxes and insurance. That split is what you need to know what you still owe, when the loan ends, and how much interest you paid this year.</p>
+  <p>In Saybooks, Claude keeps your loans from your own statements. This is how it works.</p>
+  <p><b>A loan starts from the lender's figures.</b> What was owed on a given day, the fixed rate, the monthly payment, the escrow collected with it and the due day, each with where it came from. Nothing is assumed.</p>
+  <p><b>Each payment is split, and says how.</b> When the lender's statement arrives, you hand it to Claude and it links the checking row to the loan with the split exactly as the lender printed it. If the statement hasn't come yet, the payment is split by the schedule (a month's interest on what was owed, the escrow, the rest to principal), and the record says it was split by the schedule, not by the lender. The split always adds up to the row, to the cent.</p>
+  <p><b>The lender's balance is checked against ours.</b> When a statement prints what is still owed, that figure is recorded next to the one the books arrive at. If they match, you see that they match. If they don't, the difference is named and left for you to look at, never quietly absorbed.</p>
+  <p><b>What you get from it.</b> For each loan: what is owed and as of when, the next payment, the payoff date, months and interest left, and interest paid this year, with mortgage interest as its own figure for whoever does your taxes. The loans count against your net worth next to the accounts and the house.</p>
+  <p>One detail from building it, because it is the kind of thing a household actually runs into. In the demo household the mortgage payment went out on 24 August, a week before it was due on 1 September, and the list of what was due still showed September as unpaid. Paying early is normal. The rule now is that a regular payment covers the nearest due date, so an early payment counts for the month it was meant for.</p>
+  <p>What it doesn't do, on purpose: variable rates, refinances and lines of credit are out for now (after a refinance you start a new loan from the new figures). It never pays anything. There's no bank feed and nothing logs into your bank; Claude reads the statements you give it, and a statement is taken whole only when its rows add up to its printed balances.</p>
+  <p>The <a href="/app?demo=home">household demo</a> has a mortgage and a car loan in it with three months of statements, no account needed. How to connect your own is on <a href="/personal">the personal finances page</a>.</p>
+  <p>More: <a href="https://www.youtube.com/playlist?list=PLMhDqYJzdhos">all five personal finance demos</a>.</p>
+  </article>
+  </main>
+</div>
+<footer class="site">
+  <div class="wrap">
+    <div class="fcols">
+      <div><a class="mark" href="/"><svg width="18" height="21" viewBox="0 0 22 26" fill="none" stroke="#6BBF8C" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".35"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".65"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span></a><p>Books you keep by talking, under rules that refuse a guess, with every act on the record. Built in Portland, Oregon by <a href="/about">Peter Varga</a>.</p></div>
+      <div><b>Books</b><a href="/solo">Invoicing</a><a href="/hunt">Job hunt</a><a href="/personal">Personal finances</a><a href="/app?demo=1">Order to cash</a><a href="/app?demo=1">CRM and prospects</a><a href="/docs#ledger">Ledger hand-over</a></div>
+      <div><b>Get it</b><a href="/app?demo=1">saybooks.io</a><a href="/hostel">Mac and iPhone</a><a href="/docs#connect">Claude connector</a><a href="https://github.com/alviso/saybooks">Source code</a></div>
+      <div><b>Read</b><a href="/docs">Docs</a><a href="/specs">Specs</a><a href="/notes">Notes</a><a href="/notes/local-models">Local models</a><a href="/session/harborline">A full session</a></div>
+      <div><b>Company</b><a href="/about">About</a><a href="/privacy">Privacy</a><a href="https://portlandaiworks.com/">Portland AI Works</a><a href="mailto:hello@saybooks.io">hello@saybooks.io</a></div>
+    </div>
+    <div class="legal">Open source under AGPL-3.0. Saybooks never emails a customer, charges a card or moves money; it records what happened.</div>
+  </div>
+</footer>
+<script src="/site.js" defer></script>
+</body>
+</html>

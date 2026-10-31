@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bookkeeping with Claude: what it does, and the five things it can&#x27;t · Saybooks notes</title><link rel="canonical" href="https://saybooks.io/notes/bookkeeping-with-claude">
+<meta name="description" content="What AI bookkeeping looks like when the AI is Claude: purchase orders, inventory, the bank reconciliation, sales tax and the month-end close, kept by talking, and the five acts no agent is allowed.">
+<meta property="og:type" content="article"><meta property="og:title" content="Bookkeeping with Claude: what it does, and the five things it can&#x27;t"><meta property="og:description" content="What AI bookkeeping looks like when the AI is Claude: purchase orders, inventory, the bank reconciliation, sales tax and the month-end close, kept by talking, and the five acts no agent is allowed."><meta property="og:url" content="https://saybooks.io/notes/bookkeeping-with-claude"><meta property="og:image" content="https://saybooks.io/demo-process-3.jpg"><meta property="article:published_time" content="2026-10-31"><meta property="article:author" content="Peter Varga">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Bookkeeping with Claude: what it does, and the five things it can&#x27;t"><meta name="twitter:image" content="https://saybooks.io/demo-process-3.jpg">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "Bookkeeping with Claude: what it does, and the five things it can't", "description": "What AI bookkeeping looks like when the AI is Claude: purchase orders, inventory, the bank reconciliation, sales tax and the month-end close, kept by talking, and the five acts no agent is allowed.", "url": "https://saybooks.io/notes/bookkeeping-with-claude", "datePublished": "2026-10-31", "dateModified": "2026-10-31", "inLanguage": "en", "image": "https://saybooks.io/demo-process-3.jpg", "author": {"@type": "Person", "name": "Peter Varga", "url": "https://portlandaiworks.com/"}, "publisher": {"@type": "Organization", "name": "Saybooks", "url": "https://saybooks.io/", "logo": "https://saybooks.io/icon-512.png"}, "isPartOf": {"@type": "WebSite", "name": "Saybooks", "url": "https://saybooks.io/"}, "video": {"@type": "VideoObject", "name": "Closing the month", "description": "What AI bookkeeping looks like when the AI is Claude: purchase orders, inventory, the bank reconciliation, sales tax and the month-end close, kept by talking, and the five acts no agent is allowed.", "thumbnailUrl": "https://saybooks.io/demo-process-3.jpg", "uploadDate": "2026-10-24", "embedUrl": "https://www.youtube-nocookie.com/embed/nG5BT1qdukM", "contentUrl": "https://www.youtube.com/watch?v=nG5BT1qdukM"}}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Saybooks", "item": "https://saybooks.io/"}, {"@type": "ListItem", "position": 2, "name": "Notes", "item": "https://saybooks.io/notes"}, {"@type": "ListItem", "position": 3, "name": "Bookkeeping with Claude: what it does, and the five things it can't", "item": "https://saybooks.io/notes/bookkeeping-with-claude"}]}</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,500..700,100,0&family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="/site.css">
+</head>
+<body>
+<div class="wrap">
+  <nav class="top">
+    <a class="mark" href="/"><svg width="18" height="21" viewBox="0 0 22 26" fill="none" stroke="#1E7A4C" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".35"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".65"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span></a>
+    <div class="links"><a href="/hostel">Mac &amp; iPhone</a><a href="/solo">Invoicing</a><a href="/hunt">Job hunt</a><a href="/personal">Finances</a><a href="/docs">Docs</a><a class="on" href="/notes">Notes</a></div>
+    <div class="auth"><a class="btn line small" href="/auth/google">Sign in</a><a class="btn solid small" href="/app?demo=1">Try it now</a></div>
+  </nav>
+  <main class="prose">
+  <div class="kicker">Notes · 31 October 2026</div>
+  <h1>Bookkeeping with Claude: what it does, and the five things it can&#x27;t</h1>
+  <p class="asof">By <a href="/about">Peter Varga</a>. The five process demos are <a href="https://www.youtube.com/playlist?list=PLPEkxX4HVTlI">on YouTube</a>; every rule mentioned here is written down and executed in <a href="/specs">the specs</a>.</p>
+  <button class="demo" type="button" data-yt="nG5BT1qdukM" aria-label="Play the demo: Closing the month"><img src="/demo-process-3.jpg" alt="" width="1280" height="720"><span class="play">Watch the demo · 1:05</span></button>
+  <article>
+  <p>Saybooks is a set of books Claude keeps for a small business. You add it to the Claude app as a connector, and from then on you say what happened: the vendor's invoice came, the delivery was two boxes short, here is October's bank statement. Claude calls the same commands the buttons in the web app call, under the same rules, and every act lands in one audit log with who did it and why.</p>
+  <p>If you searched for AI bookkeeping and wondered what that means in practice, this is what it does in my books, and where it stops.</p>
+  <p><b>Buying.</b> "Order 60 type B widgets from Pacific Widget Works at $48 each, plus their freight" becomes a purchase order at the vendor's price. When the delivery comes, Claude records what was counted and the packing slip number. Receiving more than is still open on a line is refused with the numbers. The vendor's bill is checked line by line against what was ordered and received, and a bill that doesn't match can be recorded but not approved for payment.</p>
+  <p><b>Stock.</b> Each delivery moves the item's average cost, and goods leave at the average of that moment, so every sale has a cost and a margin. "I counted 345 gaskets, three were damaged in the move" posts the difference to its own account, so shrinkage doesn't hide in the cost of sales.</p>
+  <p><b>The bank.</b> Claude puts a statement against the books and names every difference: a check that hasn't cleared, a deposit nobody has tied to a payment yet. It suggests which deposit pays which invoices, by amount, date and name, and the amounts have to add up exactly. A difference nothing explains is shown, never absorbed.</p>
+  <p><b>Sales tax.</b> The return for a month or a quarter comes from the invoices as they were issued, with the tax they actually charged. Nothing is recomputed.</p>
+  <p><b>The month end.</b> A checklist of what blocks a close and what is merely open, and adjusting entries said with the figures and a reason.</p>
+  <p>Then there are five things Claude can't do in these books, whatever role its key has:</p>
+  <ol>
+    <li>Approve paying a bill.</li>
+    <li>Loosen the price tolerance on a three-way match.</li>
+    <li>Sign off a bank reconciliation.</li>
+    <li>Record a sales tax filing.</li>
+    <li>Close the month.</li>
+  </ol>
+  <p>Each one is refused to any agent, and the refusal goes into the same audit log as everything that succeeded. These aren't lines in a prompt that a model might skip. They're part of each command, so a different model, or a smaller one on a laptop, hits the same wall. Claude prepares all five; a person does them.</p>
+  <p>A refusal reads like this, word for word from the books: <i>"Credit check failed for Contoso Ltd. Order $2,500.00; available $1,000.00 (limit $1,000.00 less open AR $0.00 and committed $0.00). Short by $1,500.00."</i> Claude relays it and asks what to do. It doesn't split the order to get under the limit, and it doesn't raise the limit, because raising a limit is its own logged act by someone allowed to.</p>
+  <p>Two more boundaries, on purpose. Saybooks never moves money: it doesn't pay bills, charge cards or email customers. You pay from your bank and Claude records the payment once the statement shows it. And it doesn't replace QuickBooks or Xero. It hands a period over to your accountant's ledger as a Xero manual journal, QuickBooks journal entries or a CSV, mapped to their chart of accounts, and nothing is posted into their system over an API.</p>
+  <p>You can try all of this without an account in <a href="/app?demo=1">the demo</a>, a live sandbox with a made-up company in it. The setup is <a href="/docs#connect">in the docs</a>, and the code is <a href="https://github.com/alviso/saybooks">on GitHub</a> under the AGPL.</p>
+  <p>More: <a href="https://www.youtube.com/playlist?list=PLPEkxX4HVTlI">all five process demos</a>.</p>
+  </article>
+  </main>
+</div>
+<footer class="site">
+  <div class="wrap">
+    <div class="fcols">
+      <div><a class="mark" href="/"><svg width="18" height="21" viewBox="0 0 22 26" fill="none" stroke="#6BBF8C" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10a5 5 0 0 1 0 6" opacity=".35"/><path d="M10.5 7a9.5 9.5 0 0 1 0 12" opacity=".65"/><path d="M16.5 3.5a14.5 14.5 0 0 1 0 19"/></svg><span>SAYBOOKS</span></a><p>Books you keep by talking, under rules that refuse a guess, with every act on the record. Built in Portland, Oregon by <a href="/about">Peter Varga</a>.</p></div>
+      <div><b>Books</b><a href="/solo">Invoicing</a><a href="/hunt">Job hunt</a><a href="/personal">Personal finances</a><a href="/app?demo=1">Order to cash</a><a href="/app?demo=1">CRM and prospects</a><a href="/docs#ledger">Ledger hand-over</a></div>
+      <div><b>Get it</b><a href="/app?demo=1">saybooks.io</a><a href="/hostel">Mac and iPhone</a><a href="/docs#connect">Claude connector</a><a href="https://github.com/alviso/saybooks">Source code</a></div>
+      <div><b>Read</b><a href="/docs">Docs</a><a href="/specs">Specs</a><a href="/notes">Notes</a><a href="/notes/local-models">Local models</a><a href="/session/harborline">A full session</a></div>
+      <div><b>Company</b><a href="/about">About</a><a href="/privacy">Privacy</a><a href="https://portlandaiworks.com/">Portland AI Works</a><a href="mailto:hello@saybooks.io">hello@saybooks.io</a></div>
+    </div>
+    <div class="legal">Open source under AGPL-3.0. Saybooks never emails a customer, charges a card or moves money; it records what happened.</div>
+  </div>
+</footer>
+<script src="/site.js" defer></script>
+</body>
+</html>

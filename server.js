@@ -308,6 +308,9 @@ const server = http.createServer(async (req, res) => {
         ['/hostel', mtime(path.join(UI, 'hostel.html')), 'weekly', '0.8', 'Saybooks for Mac and iPhone (the Mac app is called hostel): a model on your own Mac keeps your books, and the iPhone asks from anywhere, sealed through your own iCloud. Download, requirements, what stays on the Mac.'],
         ['/notes', mtime(path.join(UI, 'notes.html')), 'weekly', '0.6', 'Notes from building Saybooks, with the numbers in them.'],
         ['/notes/local-models', mtime(path.join(UI, 'notes-local-models.html')), 'monthly', '0.7', 'Smart model, average MCP. Small model, smart MCP: a 26B local model keeping the books on a laptop, and the six fixes it forced in the tools.'],
+        ['/notes/bookkeeping-with-claude', mtime(path.join(UI, 'notes-bookkeeping-with-claude.html')), 'monthly', '0.7', 'Bookkeeping with Claude: what it does across purchasing, stock, the bank, sales tax and the month end, and the five acts no agent is allowed.'],
+        ['/notes/mortgage-and-car-loan', mtime(path.join(UI, 'notes-mortgage-and-car-loan.html')), 'monthly', '0.7', "Tracking a mortgage and a car loan with AI: payments split into principal, interest and escrow, the lender's balance checked to the cent, payoff date and interest this year."],
+        ['/notes/job-search-tracker', mtime(path.join(UI, 'notes-job-search-tracker.html')), 'monthly', '0.7', 'A job search tracker for Claude: postings, applications and interviews on the record, a guard against applying twice through two agencies, no invented dates.'],
         ['/specs', mtime(path.join(__dirname, 'specs')), 'weekly', '0.8', 'Every rule the system enforces, written down and executed: acts, invariants, scenarios, last conformance run.'],
         ...areas.map(a => [`/specs/${a}`, mtime(path.join(__dirname, 'specs', a, 'spec.md')), 'weekly', '0.7', `The ${a} specification: its acts, invariants and executable scenarios.`]),
         ['/privacy', mtime(path.join(UI, 'privacy.html')), 'monthly', '0.3', 'What is stored, why, for how long, and how to take it with you or delete it.'],
@@ -815,6 +818,7 @@ const server = http.createServer(async (req, res) => {
                : (p === '/hostel' || p === '/hostel/') ? 'hostel.html'
                : (p === '/notes' || p === '/notes/') ? 'notes.html'
                : (p === '/notes/local-models' || p === '/notes/local-models/') ? 'notes-local-models.html'
+               : /^\/notes\/(bookkeeping-with-claude|mortgage-and-car-loan|job-search-tracker)\/?$/.test(p) ? `notes-${p.split('/')[2]}.html`
                // Unlinked pages: a real session published for one reader. Never indexed, never in the sitemap.
                : /^\/session\/harborline\/?$/.test(p) ? 'session-harborline.html'
                : path.basename(p);
@@ -827,7 +831,7 @@ const server = http.createServer(async (req, res) => {
       const headers = /\.(png|jpg|mp4)$/.test(full) ? { 'cache-control': 'public, max-age=86400' } : {};
       // Public pages are the same bytes for everyone: let a crawler and a browser keep them a
       // few minutes. The workbench is somebody's books and stays no-store.
-      const PUBLIC_PAGES = ['landing.html', 'solo.html', 'hunt.html', 'docs.html', 'about.html', 'privacy.html', 'notes.html', 'notes-local-models.html', 'hostel.html'];
+      const PUBLIC_PAGES = ['landing.html', 'solo.html', 'hunt.html', 'docs.html', 'about.html', 'privacy.html', 'notes.html', 'notes-local-models.html', 'notes-bookkeeping-with-claude.html', 'notes-mortgage-and-car-loan.html', 'notes-job-search-tracker.html', 'hostel.html'];
       if (PUBLIC_PAGES.includes(file)) headers['cache-control'] = 'public, max-age=300, stale-while-revalidate=86400';
       // The workbench is a person's books, never a search result: crawlable (so the directive is seen), indexed never.
       if (file === 'index.html' || file === 'admin.html' || file.startsWith('session-')) headers['x-robots-tag'] = 'noindex, nofollow';
