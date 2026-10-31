@@ -8,9 +8,15 @@ read({ name: 'hunt_due', title: 'Due', summary: 'What needs attention: overdue a
   args: { horizon_days: f.int('Default 7.') },
   handler: (a) => V.due(a.horizon_days ?? 7) });
 
-read({ name: 'hunt_pipeline', title: 'Pipeline', summary: 'The board: every non-terminal item with stage, last touch, open next action.',
+// Counts lead the answer: a long board can be cut short by the client reading it (Gemini read
+// 58 of 84 items and reported 58), and the totals must survive a partial read.
+read({ name: 'hunt_pipeline', title: 'Pipeline', summary: 'The board: counts by stage first, then every non-terminal item with stage, last touch, open next action.',
   args: { status: f.text('Filter to one stage; "skipped" shows the skip list (pattern memory, JH-8).') },
-  handler: (a) => V.pipeline(a.status) });
+  handler: (a) => {
+    const items = V.pipeline(a.status), by_stage = {};
+    for (const r of items) { const st = r.app_status || r.posting_status; by_stage[st] = (by_stage[st] || 0) + 1; }
+    return { counts: { total: items.length, by_stage }, items };
+  } });
 
 read({ name: 'hunt_get_posting', title: 'Posting', summary: 'One posting whole: facts, evaluation, application, interviews, touch history, open next action.',
   args: { posting_id: { ...f.text('e.g. JP-0001.'), required: true } },

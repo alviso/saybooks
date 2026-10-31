@@ -196,7 +196,7 @@ const DETAILS = [
   ['purch_refund', '"RFD-0001"'],
   ['loan_loan', '(await api("loan_loans",{})).items?.[0]?.id'],
   ['purch_bill_series', '(await api("purch_bill_series",{})).items?.[0]?.id'],
-  ['posting', '(await api("hunt_pipeline",{}))[0]?.id'],
+  ['posting', '(await api("hunt_pipeline",{})).items[0]?.id'],
 ];
 let dbad = 0, dseen = 0;
 for (const [type, expr] of DETAILS) {

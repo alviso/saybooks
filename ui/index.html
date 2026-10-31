@@ -1612,7 +1612,7 @@ async function renderPage() {
     const d = await api('hunt_due', {});
     const quiet = !d.overdue.length && !d.upcoming.length && !d.open_actions_count && !d.suggest_ghosted.length && !d.missing_end_client_count && !d.upcoming_interviews.length;
     if (quiet) {
-      const anyPostings = (await api('hunt_pipeline', {})).length;
+      const anyPostings = (await api('hunt_pipeline', {})).items.length;
       if (!anyPostings) { main.append(huntOnboarding()); return; }
       main.append($('<div class="card doc" style="max-width:560px">Nothing due — every open pursuit is waiting on them, not you. Log a touch when something happens.</div>'));
       return;
@@ -1652,7 +1652,7 @@ async function renderPage() {
       stages.append(p2);
     }
     main.append(stages);
-    const rows = await api('hunt_pipeline', huntStage ? { status: huntStage } : {});
+    const rows = (await api('hunt_pipeline', huntStage ? { status: huntStage } : {})).items;
     if (!rows.length && !huntStage) { main.append(huntOnboarding()); return; }
     // The skip list's value is its reasons (JH-8): they take the next-action column's place.
     const skips = huntStage === 'skipped';
