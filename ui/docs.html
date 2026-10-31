@@ -25,9 +25,9 @@
 
   <div class="kicker">Documentation</div>
   <h1>Using Saybooks</h1>
-  <p class="asof" style="font-size:13px;color:var(--muted);margin:0 0 1em">Last updated 24 October 2026.</p>
-  <p>Saybooks is a place Claude can keep your records, under rules it cannot break, with everything it does written down where you can check it. This page covers what a person needs: connecting Claude, what keys and roles mean, spaces and their modules, documents, personal finances, getting your data out, and running it yourself. The rules themselves are in the <a href="/specs">specs</a>.</p>
-  <div class="toc"><a href="#connect">Connect Claude</a><a href="#local">A local model</a><a href="#talk">Talking to it</a><a href="#keys">Keys and roles</a><a href="#spaces">Spaces</a><a href="#documents">Documents</a><a href="#purchases">Purchases</a><a href="#purchasing">Purchasing</a><a href="#inventory">Inventory</a><a href="#bank">Bank</a><a href="#salestax">Sales tax</a><a href="#close">Month-end</a><a href="#ledger">Ledger</a><a href="#refusals">Refusals</a><a href="#data">Export and delete</a><a href="#selfhost">Run it yourself</a><a href="#faq">Questions</a></div>
+  <p class="asof" style="font-size:13px;color:var(--muted);margin:0 0 1em">Last updated 31 October 2026.</p>
+  <p>Saybooks is a place Claude can keep your records, under rules it cannot break, with everything it does written down where you can check it. This page covers what a person needs: connecting Claude or Gemini, what keys and roles mean, spaces and their modules, documents, personal finances, getting your data out, and running it yourself. The rules themselves are in the <a href="/specs">specs</a>.</p>
+  <div class="toc"><a href="#connect">Connect Claude</a><a href="#gemini">Gemini</a><a href="#local">A local model</a><a href="#talk">Talking to it</a><a href="#keys">Keys and roles</a><a href="#spaces">Spaces</a><a href="#documents">Documents</a><a href="#purchases">Purchases</a><a href="#purchasing">Purchasing</a><a href="#inventory">Inventory</a><a href="#bank">Bank</a><a href="#salestax">Sales tax</a><a href="#close">Month-end</a><a href="#ledger">Ledger</a><a href="#refusals">Refusals</a><a href="#data">Export and delete</a><a href="#selfhost">Run it yourself</a><a href="#faq">Questions</a></div>
 
   <h2 id="connect">Connect Claude</h2>
   <ol>
@@ -55,6 +55,16 @@
   <h3>Keys instead of sign-in</h3>
   <p>A script, a second agent, or a client without OAuth can use a key directly. In the sidebar open <b>Share this space…</b>, type a name for the agent, pick its role, press <b>Mint key</b>, and use the URL that appears: <code>https://saybooks.io/mcp/m-…</code>. The link is the key: whoever holds it acts as your delegate with that role. Revoke it from the same dialog; the connection made through sign-in above is a key of exactly this kind, minted for you at consent, and shows up in the same list.</p>
   <div class="note"><b>After an update, remove and re-add the connector.</b> Claude caches a connector's tool list when it is added. If Saybooks gains a command and your Claude cannot see it, or a tool has fewer arguments than the schema says, that is the cache: remove the connector, add it again, start a new chat.</div>
+
+  <h2 id="gemini">Connect Gemini</h2>
+  <p>Saybooks is not in Gemini's own list of apps yet. Until it is, Gemini connects to it as a custom app, through Gemini's Developer Mode in a web browser. It takes a minute, and the books, keys and rules are the same as with Claude.</p>
+  <ol>
+    <li><b>Open Developer Mode</b> at <a href="https://gemini.google.com/devmode">gemini.google.com/devmode</a> (or <b>Settings → Gemini Apps Developer Mode</b>). Use a personal Google account: a work account's administrator may have custom apps turned off, and Gemini then answers any address with "Verify the URL and try again".</li>
+    <li><b>Add Saybooks.</b> In <b>Choose an app</b>, click <b>+ Create new</b> and enter one of the addresses <a href="#connect">above</a> as the MCP Server URL, for example <code>https://saybooks.io/mcp/household</code>. Leave the client id and secret empty; Gemini registers itself. Accept the custom-app notice and connect.</li>
+    <li><b>Link and choose, in one go.</b> Google asks you to link your account, then sends you to the same Saybooks page Claude uses: which books, what Gemini may do, its name in the audit log. Google's side of the link expires after a few minutes, so allow straight away rather than leaving the page open.</li>
+    <li><b>Save the app</b> as Saybooks, check its tools are listed, and ask: <i>"@Saybooks what is due in the next month?"</i></li>
+  </ol>
+  <p>Gemini asks you before every write: Saybooks marks each command that changes the books, and Gemini shows what it is about to send with Allow and Deny. Saybooks still applies the key's role after that, so a read-only key is refused even if you allow. Gemini can read a very long answer only in part, so the job-hunt board answers with its counts first; on a long board, ask for one stage at a time.</p>
 
   <h2 id="local">Run it with a local model</h2>
   <p><b>The easy way is <a href="/hostel">Saybooks for Mac</a></b> (the app is called hostel): a free app that runs the model and Saybooks together on your Mac and passes the model the whole doctrine, which LM Studio does not. It comes with an iPhone app that asks your Mac from anywhere. What follows is the by-hand route.</p>
