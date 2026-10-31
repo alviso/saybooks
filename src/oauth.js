@@ -89,6 +89,10 @@ const clientsStore = {
   },
 };
 
+/** Gemini and Google's other connected apps register with Google's own redirect hosts. */
+const GOOGLE_REDIRECT = /^https:\/\/oauth-redirect(?:-sandbox|-test)?\.googleusercontent\.com\//;
+const isGoogleClient = (client) => !!client && Array.isArray(client.redirect_uris) && client.redirect_uris.some(u => GOOGLE_REDIRECT.test(String(u)));
+
 // ---------------------------------------------------------------- the provider
 const provider = {
   get clientsStore() { return clientsStore; },
@@ -139,6 +143,12 @@ const provider = {
     if (!r || r.client_id !== client.client_id) throw new Error('invalid refresh token');
     if (r.expires_at < now()) { db().prepare('DELETE FROM oauth_token WHERE token = ?').run(refreshToken); throw new Error('refresh token expired'); }
     if (!members.resolve(r.key)) throw new Error('the key behind this token was revoked');
+    // Google's connected apps expect the same refresh token back every time, its expiry
+    // extended ("persistent linking"); a rotated one can break the link. Everyone else rotates.
+    if (isGoogleClient(client)) {
+      db().prepare('UPDATE oauth_token SET expires_at = ? WHERE token = ?').run(now() + REFRESH_TTL, refreshToken);
+      return issueTokens(r.client_id, r.key, r.ws, r.user_id, r.scope, refreshToken);
+    }
     db().prepare('DELETE FROM oauth_token WHERE token = ?').run(refreshToken);   // rotate
     return issueTokens(r.client_id, r.key, r.ws, r.user_id, r.scope);
   },
@@ -159,11 +169,12 @@ const provider = {
   },
 };
 
-function issueTokens(clientId, key, ws, userId, scope) {
-  const access = 'at-' + rand(24), refresh = 'rt-' + rand(24), t = now();
+/** Pass keepRefresh to hand back an existing refresh token instead of minting one. */
+function issueTokens(clientId, key, ws, userId, scope, keepRefresh = null) {
+  const access = 'at-' + rand(24), refresh = keepRefresh || 'rt-' + rand(24), t = now();
   const ins = db().prepare('INSERT INTO oauth_token (token, kind, client_id, key, ws, user_id, scope, expires_at, created_at) VALUES (?,?,?,?,?,?,?,?,?)');
   ins.run(access, 'access', clientId, key, ws, userId, scope || null, t + ACCESS_TTL, t);
-  ins.run(refresh, 'refresh', clientId, key, ws, userId, scope || null, t + REFRESH_TTL, t);
+  if (!keepRefresh) ins.run(refresh, 'refresh', clientId, key, ws, userId, scope || null, t + REFRESH_TTL, t);
   return { access_token: access, token_type: 'bearer', expires_in: ACCESS_TTL, refresh_token: refresh, ...(scope ? { scope } : {}) };
 }
 
@@ -171,7 +182,11 @@ function issueTokens(clientId, key, ws, userId, scope) {
 async function memberForBearer(req) {
   const m = /^Bearer\s+(\S+)$/i.exec(req.headers.authorization || '');
   if (!m) return null;
-  try { const info = await provider.verifyAccessToken(m[1]); return { ...info.extra.member, oauth: { client_id: info.clientId, user_id: info.extra.user_id } }; }
+  try {
+    const info = await provider.verifyAccessToken(m[1]);
+    const google = isGoogleClient(await clientsStore.getClient(info.clientId).catch(() => null));
+    return { ...info.extra.member, oauth: { client_id: info.clientId, user_id: info.extra.user_id, google } };
+  }
   catch { return null; }
 }
 
@@ -314,4 +329,4 @@ function handle(req, res, publicUrl) { if (!app) build(publicUrl); return app(re
 
 function sweep() { const t = now(); db().prepare('DELETE FROM oauth_pending WHERE expires_at < ?').run(t); db().prepare('DELETE FROM oauth_code WHERE expires_at < ?').run(t); db().prepare('DELETE FROM oauth_token WHERE expires_at < ?').run(t); }
 
-module.exports = { provider, clientsStore, handles, handle, memberForBearer, consentGet, consentPost, sweep, isResourcePath, resourceFilter, destinationOf };
+module.exports = { provider, clientsStore, isGoogleClient, handles, handle, memberForBearer, consentGet, consentPost, sweep, isResourcePath, resourceFilter, destinationOf };

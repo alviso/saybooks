@@ -58,7 +58,7 @@ actor_kind=agent, in the same audit trail as their clicks. Play freely; nothing 
     { capabilities: { tools: {} }, instructions: ownedNote + R.instructions(BASE, { modules: mounts }) + demoNote + CACHE_NOTE },
   );
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: R.mcpTools({ modules: mounts }) }));
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: R.mcpTools({ modules: mounts, writesDestructive: !!member.oauth?.google }) }));
 
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const { name, arguments: args = {} } = req.params;
