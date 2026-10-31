@@ -49,7 +49,7 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
     // same as on the web door; without it logo_url reached the handler and was refused.
     const prepared = await R.prepare(name, rest);
     const out = R.execute(name, prepared, { workspace, actor, actor_kind: 'agent', session, reason: _reason, modules: mount.modules });
-    return { content: [{ type: 'text', text: typeof out === 'string' ? out : JSON.stringify(out, null, 1) }] };
+    return { content: [{ type: 'text', text: typeof out === 'string' ? out : JSON.stringify(out) }] };
   } catch (e) {
     // Business refusals come back as text the model should relay, not swallow.
     // A refusal must read as one even to a client that drops the isError flag: some models

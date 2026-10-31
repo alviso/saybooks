@@ -9,13 +9,18 @@ read({ name: 'hunt_due', title: 'Due', summary: 'What needs attention: overdue a
   handler: (a) => V.due(a.horizon_days ?? 7) });
 
 // Counts lead the answer: a long board can be cut short by the client reading it (Gemini read
-// 58 of 84 items and reported 58), and the totals must survive a partial read.
-read({ name: 'hunt_pipeline', title: 'Pipeline', summary: 'The board: counts by stage first, then every non-terminal item with stage, last touch, open next action.',
+// 58 of 84 items and reported 58), and the totals must survive a partial read. Empty fields are
+// left out of each item to keep the board small; past LONG items the answer says to slice it.
+const LONG = 40;
+read({ name: 'hunt_pipeline', title: 'Pipeline', summary: 'The board: counts by stage first, then every non-terminal item with stage, last touch, open next action. On a long board, filter by status.',
   args: { status: f.text('Filter to one stage; "skipped" shows the skip list (pattern memory, JH-8).') },
   handler: (a) => {
-    const items = V.pipeline(a.status), by_stage = {};
+    const items = V.pipeline(a.status).map(r => Object.fromEntries(Object.entries(r).filter(([, v]) => v !== null))), by_stage = {};
     for (const r of items) { const st = r.app_status || r.posting_status; by_stage[st] = (by_stage[st] || 0) + 1; }
-    return { counts: { total: items.length, by_stage }, items };
+    const note = !a.status && items.length > LONG
+      ? `${items.length} items. A client may not read a list this long whole: trust these counts, and pass status (${Object.keys(by_stage).join(', ')}) to read one stage at a time.`
+      : undefined;
+    return { counts: { total: items.length, by_stage }, ...(note ? { note } : {}), items };
   } });
 
 read({ name: 'hunt_get_posting', title: 'Posting', summary: 'One posting whole: facts, evaluation, application, interviews, touch history, open next action.',

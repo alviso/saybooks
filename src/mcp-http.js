@@ -74,14 +74,15 @@ actor_kind=agent, in the same audit trail as their clicks. Play freely; nothing 
       // they pass through untouched.
       if (out && typeof out === 'object' && Array.isArray(out._attachments)) {
         const { _attachments, ...rest } = out;
-        const content = [{ type: 'text', text: JSON.stringify(rest, null, 1) }];
+        const content = [{ type: 'text', text: JSON.stringify(rest) }];
         for (const a of _attachments) {
           if (a.kind === 'image') content.push({ type: 'image', data: a.data, mimeType: a.mime });
           else content.push({ type: 'resource_link', uri: a.uri || `saybooks://${a.name}`, name: a.name, mimeType: a.mime, description: a.description || a.name });
         }
         return { content };
       }
-      return { content: [{ type: 'text', text: typeof out === 'string' ? out : JSON.stringify(out, null, 1) }] };
+      // Compact JSON: indentation is a third of a long answer, and some clients cut long answers short.
+      return { content: [{ type: 'text', text: typeof out === 'string' ? out : JSON.stringify(out) }] };
     } catch (e) {
       // Business refusals come back as text the model should relay, not swallow.
       // A refusal must read as one even to a client that drops the isError flag: some models
