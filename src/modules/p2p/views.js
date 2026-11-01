@@ -115,6 +115,9 @@ function matchOf(billId) {
   const problems = [];
   const out = lines.map(l => {
     const received = db().prepare('SELECT COALESCE(SUM(qty), 0) n FROM p2p_receipt_line WHERE po_line_id = ?').get(l.po_line_id).n;
+    // Which receipts make up "received": a person approving the bill sees the deliveries themselves.
+    const receipts = l.stocked ? db().prepare(`SELECT r.id AS receipt_id, r.received_at, r.reference, rl.qty FROM p2p_receipt_line rl
+      JOIN p2p_receipt r ON r.id = rl.receipt_id WHERE rl.po_line_id = ? ORDER BY r.received_at, r.id`).all(l.po_line_id) : [];
     const before = db().prepare(`SELECT COALESCE(SUM(bl.qty), 0) n FROM p2p_bill_line bl JOIN purch_bill b ON b.id = bl.bill_id
       WHERE bl.po_line_id = ? AND bl.bill_id <> ? AND b.status IN ('approved','paid')`).get(l.po_line_id, billId).n;
     const basis = l.stocked ? received : l.ordered;
@@ -125,11 +128,12 @@ function matchOf(billId) {
     const over = l.po_price ? (l.unit_price - l.po_price) / l.po_price * 100 : 0;
     const name = `${l.item_id}${l.item_name && l.item_name !== l.item_id ? ` (${l.item_name})` : ''}`;
     if (!price_ok) problems.push(`${name} is billed at ${money(l.unit_price, cur)}, the order says ${money(l.po_price, cur)} (${pct(over)} over)`);
+    const onReceipts = receipts.length ? ` (${receipts.map(r => r.receipt_id + (r.reference ? ` slip ${r.reference}` : '')).join(', ')})` : '';
     if (!qty_ok) problems.push(l.stocked
-      ? `${name}: ${l.qty} billed${before ? ` on top of ${before} already billed` : ''}, ${received} received`
+      ? `${name}: ${l.qty} billed${before ? ` on top of ${before} already billed` : ''}, ${received} received${onReceipts}`
       : `${name}: ${l.qty} billed${before ? ` on top of ${before} already billed` : ''}, ${l.ordered} ordered`);
     return { item_id: l.item_id, item_name: l.item_name || l.item_id, stocked: !!l.stocked, billed_qty: l.qty, billed_before: before,
-      against: l.stocked ? 'received' : 'ordered', against_qty: basis, ordered: l.ordered, received: l.stocked ? received : null,
+      against: l.stocked ? 'received' : 'ordered', against_qty: basis, ordered: l.ordered, received: l.stocked ? received : null, receipts,
       billed_price: l.unit_price, order_price: l.po_price, billed_price_display: money(l.unit_price, cur), order_price_display: money(l.po_price, cur),
       price_difference: l.unit_price - l.po_price, price_difference_pct: Number(over.toFixed(1)), qty_ok, price_ok };
   });

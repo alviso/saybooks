@@ -437,10 +437,15 @@ for (const tag of R.PERMISSIONS) {
   const po = execute('p2p_create_po', { vendor: 'Gate17 Steel', lines: [{ item_id: 'G17-SH', qty: 10, unit_price: 8500 }, { item_id: 'G17-FRT', qty: 1, unit_price: 5000 }] }, asAgent);
   execute('p2p_issue_po', { po_id: po.id }, asAgent);
   const before = wsp.use(WS, () => H.db().prepare("SELECT on_hand FROM item WHERE id = 'G17-SH'").get().on_hand);
-  execute('p2p_receive_goods', { po_id: po.id, lines: [{ item_id: 'G17-SH', qty: 10 }], received_at: '2026-09-10' }, asAgent);
+  execute('p2p_receive_goods', { po_id: po.id, lines: [{ item_id: 'G17-SH', qty: 10 }], received_at: '2026-09-10', reference: 'PS-1717' }, asAgent);
   assert.strictEqual(wsp.use(WS, () => H.db().prepare("SELECT on_hand FROM item WHERE id = 'G17-SH'").get().on_hand), before + 10, 'a receipt raises stock through core');
   const high = execute('p2p_record_vendor_bill', { po_id: po.id, number: 'G17-1', bill_date: '2026-09-11', terms_days: 30,
     lines: [{ item_id: 'G17-SH', qty: 10, unit_price: 9000 }, { item_id: 'G17-FRT', qty: 1, unit_price: 5000 }] }, asAgent);
+  const m = execute('p2p_bill_match', { bill_id: high.id }, human);
+  const shelf = m.lines.find(l => l.item_id === 'G17-SH'), freight = m.lines.find(l => l.item_id === 'G17-FRT');
+  assert.ok(m.po_id === po.id && shelf.receipts.length === 1 && shelf.receipts[0].reference === 'PS-1717' && shelf.receipts[0].qty === 10,
+    'the match names the purchase order and, per line, the receipts behind what was received, with their packing slips');
+  assert.deepStrictEqual(freight.receipts, [], 'a service is matched against what was ordered and has no receipts');
   let held = null;
   try { execute('purch_approve_bill', { bill_id: high.id }, human); } catch (e) { held = e.message; }
   assert.ok(held && /does not match/.test(held) && /\$90\.00/.test(held) && /\$85\.00/.test(held), 'a person approving a bill over the order is refused with the numbers');
@@ -467,7 +472,7 @@ for (const tag of R.PERMISSIONS) {
   const j2 = execute('core_journal', { from: '2026-09-25', to: '2026-09-25' }, human);
   const pay = j2.entries.find(e => e.lines.some(l => l.account === 'Gate17 Checking'));
   assert.ok(pay && pay.lines.some(l => l.account === 'Accounts Payable' && l.debit === 95000), 'the statement row that paid a bill on an order clears accounts payable, not spending again');
-  ok('3-way match: a person is held to it, an agent cannot loosen it, and receipt, approval and payment post balanced');
+  ok('3-way match: each line names its receipts, a person is held to it, an agent cannot loosen it, and receipt, approval and payment post balanced');
 }
 
 // ------------------------------------------ 18. stock moves: the record adds up to the shelf

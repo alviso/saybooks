@@ -89,7 +89,8 @@ a later version; the numbers stay reserved so references do not move.
 
 pos (by state, with what is still to arrive), po (lines with ordered, received and billed
 quantities; its receipts and bills), goods_received, unbilled_receipts with value, and the
-bill_match report.
+bill_match report (each line names the receipts behind its received quantity, with their dates and
+packing slips).
 
 ## 7. Contract vs freedom
 
