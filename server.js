@@ -141,6 +141,13 @@ if (DEMO) {
   sweep();
 }
 
+// The operator: the SAYBOOKS_ADMIN Google account, nobody else.
+const isAdmin = (req) => {
+  const admin = process.env.SAYBOOKS_ADMIN;
+  const u = auth.enabled() && auth.sessionUser(req);
+  return !!(admin && u && u.email.toLowerCase() === admin.toLowerCase());
+};
+
 const send = (res, code, body, type = 'application/json; charset=utf-8', headers = {}) => {
   res.writeHead(code, { 'content-type': type, 'cache-control': 'no-store', ...headers });
   res.end(typeof body === 'string' || Buffer.isBuffer(body) ? body : JSON.stringify(body));
@@ -277,6 +284,14 @@ const server = http.createServer(async (req, res) => {
 
   // Google sign-in (hosted demo only; a local workbench has no auth and needs none).
   if (DEMO && auth.enabled()) {
+    // Visitor stats, rebuilt on the host every 10 minutes from the nginx log (tools/stats) and
+    // mounted read-only. The operator only; anyone else is sent to /admin, which asks for sign-in.
+    if (req.method === 'GET' && (p === '/admin/visitors' || p === '/admin/visitors/')) {
+      if (!isAdmin(req)) return send(res, 302, '', 'text/plain', { location: '/admin' });
+      const page = process.env.SAYBOOKS_STATS_PAGE || '/stats/index.html';
+      if (!fs.existsSync(page)) return send(res, 200, '<!doctype html><meta charset="utf-8"><title>Saybooks · visitors</title><p style="font:15px system-ui;padding:2em">No visitor page yet: it is built on the host by tools/stats/stats-build.sh and mounted at ' + page + '. <a href="/admin">Back to /admin</a></p>', 'text/html; charset=utf-8', { 'x-robots-tag': 'noindex, nofollow' });
+      return send(res, 200, fs.readFileSync(page), 'text/html; charset=utf-8', { 'x-robots-tag': 'noindex, nofollow' });
+    }
     if (p === '/auth/google') return auth.loginRedirect(res, url.searchParams.get('next'), url.searchParams.get('ws'));
     // The public pages ask this to greet a signed-in person instead of offering them a demo. No
     // workspace is touched and nothing is minted; a stranger gets { user: null }.
@@ -548,9 +563,7 @@ const server = http.createServer(async (req, res) => {
     }
     // Operator dashboard data — gated to the SAYBOOKS_ADMIN Google account, nobody else.
     if (req.method === 'GET' && p === '/api/admin/stats') {
-      const admin = process.env.SAYBOOKS_ADMIN;
-      const u = auth.enabled() && auth.sessionUser(req);
-      if (!admin || !u || u.email.toLowerCase() !== admin.toLowerCase()) return send(res, 403, { error: 'admin only' });
+      if (!isAdmin(req)) return send(res, 403, { error: 'admin only' });
       try {
         const born = fs.readdirSync(wsp.DATA_DIR).filter(f => /^ws_try-.*\.db$/.test(f)).length;
         let funnel = { touched: 0, engaged: 0, wrote: 0, agent: 0 };
