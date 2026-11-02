@@ -1,0 +1,113 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "saybooks",
+  "version": "0.4.0",
+  "description": "Books your AI keeps from your own bank statements: cards, loans, bills, receipts and the tax year.",
+  "author": {
+    "name": "Peter Varga",
+    "email": "hello@saybooks.io",
+    "url": "https://saybooks.io"
+  },
+  "homepage": "https://saybooks.io/personal",
+  "repository": "https://github.com/alviso/saybooks",
+  "license": "AGPL-3.0-only",
+  "keywords": [
+    "personal finance",
+    "bank statements",
+    "net worth",
+    "credit card",
+    "mortgage",
+    "bills",
+    "taxes",
+    "bookkeeping"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Saybooks",
+        "shortDescription": "Books from your statements",
+        "longDescription": "Saybooks is a set of books ChatGPT keeps for you from your own bank and card statements. There is no bank feed and no bank password. You hand ChatGPT a statement, and it is taken whole only when its rows add up to the balances printed on it, or refused with the gap named. Any bank that gives you a statement, in any currency.\n\nFrom there it keeps your accounts and net worth, transfers between your own accounts counted once, the credit card and what is due on it, loans and the mortgage split into principal, interest and escrow the way the lender prints them, bills and what is due next, receipts with their return and warranty dates, money paid back for work expenses, and a year summary for whoever does your taxes.\n\nThe rules are enforced on ChatGPT exactly as on a person. It prepares; approving a bill for payment stays yours, and Saybooks never moves money. When ChatGPT is refused, it tells you why and who can decide. Every change goes into one audit trail: what was done, by whom, when, and the reason given. The same books open in your browser at saybooks.io the moment ChatGPT writes them.\n\nWho it is for: people who want their household's money kept as real books, from the statements they already get, without linking a bank.\n\nLimits, honestly: it does not do budgets and does not connect to banks; you supply the statements. It does not convert between currencies; sums stay per currency. It never pays, transfers or charges anything. A full card number is never stored, only the last four digits.\n\nFree to use. Open source under AGPL-3.0 at github.com/alviso/saybooks. Saybooks also keeps invoicing for freelancers, a job-hunt tracker, and order-to-cash books for small businesses.",
+        "developerName": "Peter Varga",
+        "category": "Finance",
+        "capabilities": [
+          "Import bank and card statements only when they add up to the printed balances",
+          "Accounts, net worth, and transfers between your accounts counted once",
+          "What a credit card owes, and bills and payments coming up",
+          "Mortgage and car loan payments split as the lender prints them",
+          "A year summary for taxes, with missing receipts named",
+          "One audit trail of every change, by you or the assistant"
+        ],
+        "websiteURL": "https://saybooks.io/personal",
+        "supportURL": "https://saybooks.io/support",
+        "privacyPolicyURL": "https://saybooks.io/privacy",
+        "termsOfServiceURL": "https://saybooks.io/terms",
+        "defaultPrompt": [
+          "What do I owe on my credit card, and when is it due?",
+          "What bills and payments are coming up this month?",
+          "Here is my latest bank statement. Add it to my books."
+        ],
+        "brandColor": "#1E7A4C",
+        "brandColorDark": "#6BBF8C",
+        "composerIcon": "./assets/icon.png",
+        "logo": "./assets/logo.png"
+      },
+      "onboardingSkill": "./skills/get-started/SKILL.md",
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "What a credit card owes and when it is due",
+              "prompt": "What do I owe on my credit card, and when is it due?",
+              "tools_triggered": "purch_card_dues",
+              "expected_behavior": "Names the Chase Sapphire Visa ending 4417 with its statement balance of $1,788.46, the minimum of $35.77, the due date printed on the statement, and whether anything has been paid toward it."
+            },
+            {
+              "description": "Net worth with the source of every figure",
+              "prompt": "What's my net worth, and where does each number come from?",
+              "tools_triggered": "purch_net_worth",
+              "expected_behavior": "Gives $345,764.60. Held: checking $14,127.39 and savings $14,013.00 from their statements, the 2022 RAV4 at $23,500.00 as stated from Kelley Blue Book, and the other stated values. Owed: the card $1,788.46, the mortgage $411,512.75 and the auto loan $17,574.58. Each figure names its statement or stated source."
+            },
+            {
+              "description": "Bills and payments coming up, with overdue ones flagged",
+              "prompt": "What bills and payments are coming up, and is anything overdue?",
+              "tools_triggered": "purch_upcoming",
+              "expected_behavior": "Lists what is due with amounts and the cash left after each. The PG&E bill PGE-7712 ($236.80) is overdue, the Alder Dental bill ($185.00) is waiting for approval, Comcast is on autopay from checking, and the mortgage ($3,052.40) and auto loan ($487.00) payments are listed with their state."
+            },
+            {
+              "description": "Figures for the tax preparer",
+              "prompt": "What should I give my tax preparer for this year? Mortgage interest and donations.",
+              "tools_triggered": "purch_year, loan_interest",
+              "expected_behavior": "Mortgage interest of $4,292.75 for the year from the linked payments, and charitable giving of $100.00 (American Red Cross) with its missing receipt named. No figure is invented."
+            },
+            {
+              "description": "Transfers between the person's own accounts counted once (a write)",
+              "prompt": "Some of the rows waiting for review are money moving between my own accounts. Pair them so they're counted once.",
+              "tools_triggered": "purch_transactions, purch_pair_transfer",
+              "expected_behavior": "Pairs the $500.00 move from checking to savings (T-0051 with T-0058) and the $728.87 card payment (T-0050 with T-0064). The rows waiting for review drop from 8 to 4, and each pairing is in the audit log with ChatGPT as the actor and its reason."
+            }
+          ],
+          "negative": [
+            {
+              "description": "Moving money is not supported",
+              "prompt": "Pay my Visa balance from checking."
+            },
+            {
+              "description": "Approving a bill is the person's act, refused to the assistant",
+              "prompt": "Approve the Alder Dental bill for payment."
+            },
+            {
+              "description": "A full card number is never stored",
+              "prompt": "Save my card number 4111 1111 1111 1111 on the Visa account."
+            }
+          ]
+        },
+        "commerce": false,
+        "commerce_description": "Saybooks does not sell anything, take payments or move money. It records payments after they happened."
+      },
+      "publication": {
+        "countries": [],
+        "release_notes": "First release: household books from bank and card statements."
+      }
+    }
+  }
+}
