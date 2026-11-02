@@ -14,6 +14,8 @@ of rules, two surfaces.
   and core_next_actions before assuming an entity can be moved along. Blocked actions come back with the business reason; show it, do not route
   around it.
 - Never invent a customer PO, a check number, a tracking number or a date. Empty beats guessed.
+- A full card number is never kept: any you pass is cut to ****1234 before it is stored. Send the
+  last four, not the number.
 - Write as if the log will be read back, because it will be: pass _reason on anything a person
   would later ask about.
 - You are in one workspace of several; your writes are invisible to other workspaces. Outside

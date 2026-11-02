@@ -50,6 +50,8 @@
  *                    decision and says whose; stopped, the next bill waits for approval again
  *  26. the year      expenses paid back leave personal spending and their categories in the books;
  *                    the year sums tagged spending and gives loan and card interest from the record
+ *  27. card numbers  a full card number handed to any write keeps only its last four, in the
+ *                    books and in the audit log; hashes and long reference numbers are left alone
  *
  * A PR that adds a hand-written form, a prefix-less command, or a cross-module UPDATE
  * fails here, not in review.
@@ -750,6 +752,26 @@ for (const tag of R.PERMISSIONS) {
     assert.ok(y.interest_paid.loans.some(l => l.amount === 162500) && y.interest_paid.cards.some(c => c.amount === 1840), 'interest paid on the loan and the card, from the record');
   });
   ok('the year: an expense paid back leaves personal spending and the books; tagged spending summed with missing receipts; interest from loans and cards');
+}
+
+// ------------------------------------------ 27. card numbers: the last four, in the books and the log
+{
+  const G = 'gate27-cards'; wsp.wipe(G);
+  const p27 = { workspace: G, actor: 'test', actor_kind: 'human', role: 'owner' }, a27 = { ...p27, actor_kind: 'agent' };
+  H.withClock('2026-12-10', () => {
+    execute('purch_import_statement', { name: 'chk.csv', hash: 'sha256:a4111111111111111f9', kind: 'bank', account: 'G27 Checking 4111 1111 1111 1111', currency: 'USD',
+      period_start: '2026-11-01', period_end: '2026-11-30', opening_balance: 100000, closing_balance: 87400,
+      rows: [{ row_index: 1, date: '2026-11-05', amount: -12500, description: 'ONLINE PMT CARD 4111 1111 1111 1111 THANK YOU' },
+             { row_index: 2, date: '2026-11-09', amount: -100, description: 'USPS 9400 1000 0000 0000 0000 00 REF 9400100000000000000000' }] }, a27);
+    const rows = execute('purch_transactions', {}, p27).items || execute('purch_transactions', {}, p27);
+    const text = JSON.stringify(rows).split('sha256:a4111111111111111f9').join('');
+    assert.ok(!/4111[ -]?1111[ -]?1111[ -]?1111/.test(text) && /\*\*\*\*1111/.test(text), 'the stored row keeps the last four only');
+    assert.ok(text.includes('9400 1000 0000 0000 0000 00') && text.includes('9400100000000000000000'), 'a tracking number is not a card number');
+    const log = wsp.use(G, () => H.db().prepare("SELECT args_json FROM command_log WHERE command = 'purch_import_statement'").all().map(r => r.args_json).join(' '));
+    assert.ok(!/4111[ -]?1111[ -]?1111[ -]?1111/.test(log.split('sha256:a4111111111111111f9').join('')), 'the audit log never holds the full number either');
+    assert.ok(log.includes('sha256:a4111111111111111f9'), 'a hash is never cut into');
+  });
+  ok('card numbers: a write keeps the last four, in the books and the audit log; hashes and tracking numbers untouched');
 }
 
 console.log(`\n${n} contract checks passed across ${MODULES.length} modules, ${COMMANDS.length} commands.`);

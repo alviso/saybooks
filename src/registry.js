@@ -300,6 +300,8 @@ function execute(name, args = {}, ctx = {}) {
   const cmd = byName[name];
   if (!cmd) throw new Rejected(`unknown command ${name}`);
   if (!ctx.workspace) throw new Error(`execute(${name}): ctx.workspace is required`);
+  // A full card number never reaches the books or the log: a write's arguments keep the last four.
+  if (cmd.intent !== 'read') args = require('./cardnumbers.js').mask(args, cmd.redact || []);
   // The audit reason: _reason from the caller, else a command's own `reason` argument (void,
   // review, match — where the reason is part of the record, it is the audit reason too).
   const argReason = args && typeof args.reason === 'string' && args.reason.trim() ? args.reason.trim() : null;
