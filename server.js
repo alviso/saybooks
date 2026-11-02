@@ -324,6 +324,7 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, fs.readFileSync(page), 'text/html; charset=utf-8', { 'x-robots-tag': 'noindex, nofollow' });
     }
     if (p === '/auth/google') return auth.loginRedirect(res, url.searchParams.get('next'), url.searchParams.get('ws'));
+    if (p === '/auth/review') return auth.review(req, res, url, ipOf(req));
     // The public pages ask this to greet a signed-in person instead of offering them a demo. No
     // workspace is touched and nothing is minted; a stranger gets { user: null }.
     // Search engines: the public pages, the docs, and every spec page. Nothing private: the
@@ -360,6 +361,8 @@ const server = http.createServer(async (req, res) => {
         ['/specs', mtime(path.join(__dirname, 'specs')), 'weekly', '0.8', 'Every rule the system enforces, written down and executed: acts, invariants, scenarios, last conformance run.'],
         ...areas.map(a => [`/specs/${a}`, mtime(path.join(__dirname, 'specs', a, 'spec.md')), 'weekly', '0.7', `The ${a} specification: its acts, invariants and executable scenarios.`]),
         ['/privacy', mtime(path.join(UI, 'privacy.html')), 'monthly', '0.3', 'What is stored, why, for how long, and how to take it with you or delete it.'],
+        ['/terms', mtime(path.join(UI, 'terms.html')), 'monthly', '0.3', 'The terms for using saybooks.io and the apps: free, your books are yours, it records and never moves money, not advice.'],
+        ['/support', mtime(path.join(UI, 'support.html')), 'monthly', '0.4', 'How to get help: connecting an assistant, refusals, export and delete, the Mac app, and reporting a bug or a security problem.'],
       ];
       // llms.txt: the same map, in the plainest form a reader can take. No marketing sentence
       // that is not also true on the page it points at.
@@ -869,6 +872,8 @@ const server = http.createServer(async (req, res) => {
                : (p === '/solo' || p === '/solo/') ? 'solo.html'
                : (p === '/admin' || p === '/admin/') ? 'admin.html'
                : (p === '/privacy' || p === '/privacy/') ? 'privacy.html'
+               : (p === '/terms' || p === '/terms/') ? 'terms.html'
+               : (p === '/support' || p === '/support/') ? 'support.html'
                : (p === '/docs' || p === '/docs/') ? 'docs.html'
                : (p === '/about' || p === '/about/') ? 'about.html'
                : (p === '/hostel' || p === '/hostel/') ? 'hostel.html'
@@ -887,7 +892,7 @@ const server = http.createServer(async (req, res) => {
       const headers = /\.(png|jpg|mp4)$/.test(full) ? { 'cache-control': 'public, max-age=86400' } : {};
       // Public pages are the same bytes for everyone: let a crawler and a browser keep them a
       // few minutes. The workbench is somebody's books and stays no-store.
-      const PUBLIC_PAGES = ['landing.html', 'solo.html', 'hunt.html', 'docs.html', 'about.html', 'privacy.html', 'notes.html', 'notes-local-models.html', 'notes-bookkeeping-with-claude.html', 'notes-mortgage-and-car-loan.html', 'notes-job-search-tracker.html', 'hostel.html'];
+      const PUBLIC_PAGES = ['landing.html', 'solo.html', 'hunt.html', 'docs.html', 'about.html', 'privacy.html', 'terms.html', 'support.html', 'notes.html', 'notes-local-models.html', 'notes-bookkeeping-with-claude.html', 'notes-mortgage-and-car-loan.html', 'notes-job-search-tracker.html', 'hostel.html'];
       if (PUBLIC_PAGES.includes(file)) headers['cache-control'] = 'public, max-age=300, stale-while-revalidate=86400';
       // The workbench is a person's books, never a search result: crawlable (so the directive is seen), indexed never.
       if (file === 'index.html' || file === 'admin.html' || file.startsWith('session-')) headers['x-robots-tag'] = 'noindex, nofollow';

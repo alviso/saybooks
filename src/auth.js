@@ -120,4 +120,72 @@ const sessionUser = (req) => {
   return t ? users.userForSession(t) : null;
 };
 
-module.exports = { enabled, loginRedirect, callback, logout, sessionUser };
+// ---------------------------------------------------------------- directory reviewers
+// A directory's reviewer must sign in without a code by email or text, which a Google account
+// on a new device cannot promise. So each reviewing team gets an email and password of its own,
+// set on the host as SAYBOOKS_REVIEW_ACCOUNTS="email=salt:hash,..." (tools/review-account.js
+// makes one). The account is an ordinary user whose only books are a sample household, seeded
+// on first sign-in; from there consent, keys and the audit log are the same as anyone's.
+// Unset, /auth/review is a 404.
+const reviewAccounts = () => Object.fromEntries((process.env.SAYBOOKS_REVIEW_ACCOUNTS || '').split(',')
+  .map(x => x.trim().split('=')).filter(([e, h]) => e && h && h.includes(':')).map(([e, h]) => [e.toLowerCase(), h]));
+const reviewEnabled = () => Object.keys(reviewAccounts()).length > 0;
+const hashPassword = (password, salt = crypto.randomBytes(16).toString('hex')) => `${salt}:${crypto.scryptSync(password, salt, 32).toString('hex')}`;
+function checkPassword(password, stored) {
+  const [salt, hex] = stored.split(':');
+  const want = Buffer.from(hex, 'hex'), got = crypto.scryptSync(String(password), salt, 32);
+  return want.length === got.length && crypto.timingSafeEqual(want, got);
+}
+const failures = new Map();   // ip -> { n, at }: five wrong passwords in 15 minutes and the door shuts for the rest of them
+const CONSENT = /^\/oauth\/consent\?pend=[a-f0-9]+$/;
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function reviewPage(res, code, next, error) {
+  res.writeHead(code, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex, nofollow' });
+  res.end(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reviewer sign-in · Saybooks</title><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="stylesheet" href="/site.css">
+<style>form{display:grid;gap:12px;max-width:360px;margin-top:1em}label{display:grid;gap:4px;font-weight:600}input{font:inherit;padding:9px 11px;border:1px solid #c9d2cc;border-radius:8px}.err{color:#a3361f;font-weight:600}</style>
+</head><body><div class="wrap"><main class="prose"><div class="kicker">Directory review</div><h1>Reviewer sign-in</h1>
+<p>For the teams reviewing Saybooks for an assistant's directory. Everyone else signs in with Google from <a href="/">the front page</a>. The account opens a sample household with made-up statements, a credit card, a mortgage and a car loan.</p>
+${error ? `<p class="err">${esc(error)}</p>` : ''}
+<form method="post" action="/auth/review"><input type="hidden" name="next" value="${esc(next || '')}">
+<label>Email<input name="email" type="email" autocomplete="username" required></label>
+<label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+<button class="btn solid" type="submit">Sign in</button></form>
+<p class="asof">After signing in, connect the assistant to <code>https://saybooks.io/mcp</code> in this same browser: its sign-in step comes straight to the page that asks which books to open. Questions: <a href="mailto:hello@saybooks.io">hello@saybooks.io</a>.</p>
+</main></div></body></html>`);
+}
+
+function review(req, res, url, ip) {
+  if (!reviewEnabled()) { res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' }); return res.end('{"error":"not found"}'); }
+  if (req.method === 'GET') return reviewPage(res, 200, CONSENT.test(url.searchParams.get('next') || '') ? url.searchParams.get('next') : '');
+  if (req.method !== 'POST') { res.writeHead(405, { allow: 'GET, POST' }); return res.end(); }
+  let raw = '';
+  req.on('data', c => { raw += c; if (raw.length > 1e4) req.destroy(); });
+  req.on('end', () => {
+    const f = Object.fromEntries(new URLSearchParams(raw));
+    const next = CONSENT.test(f.next || '') ? f.next : '';
+    const now = Date.now(), fl = failures.get(ip);
+    if (fl && now - fl.at > 15 * 60000) failures.delete(ip);
+    if ((failures.get(ip) || { n: 0 }).n >= 5) return reviewPage(res, 429, next, 'Too many wrong passwords from this address. Try again in 15 minutes, or write to hello@saybooks.io.');
+    const email = String(f.email || '').trim().toLowerCase(), stored = reviewAccounts()[email];
+    if (!stored || !checkPassword(f.password || '', stored)) {
+      const cur = failures.get(ip) || { n: 0, at: now }; failures.set(ip, { n: cur.n + 1, at: cur.at });
+      console.error('[auth] review sign-in refused for', email || '(no email)');
+      return reviewPage(res, 401, next, 'That email and password do not match a reviewer account.');
+    }
+    failures.delete(ip);
+    const user = users.upsertUser({ sub: 'review:' + email, email, name: 'Directory reviewer' });
+    let sp = users.spacesFor(user.id)[0];
+    if (!sp) {
+      sp = users.createSpace(user.id, 'Sample household', undefined, 'home');
+      require('./fixtures.js').load('hometry', sp.ws);
+    }
+    const sess = users.createSession(user.id);
+    res.writeHead(302, { location: next || '/app?ws=' + sp.ws, 'set-cookie': `sb_sess=${sess}; Path=/; Max-Age=${30 * 86400}; HttpOnly; Secure; SameSite=Lax` });
+    res.end();
+  });
+  return undefined;
+}
+
+module.exports = { enabled, loginRedirect, callback, logout, sessionUser, review, reviewEnabled, hashPassword };
