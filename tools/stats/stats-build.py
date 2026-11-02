@@ -5,13 +5,14 @@ Adapted from petervarga-site/tools/stats/stats-build.py (the Portland AI Works a
 shares rules.py with. /admin starts counting at the sandbox; this page covers everyone before it:
 who read which page, where they came from, and how far each one got.
 
-Every request lands in one of five buckets, checked in this order:
+Every request lands in one of six buckets, checked in this order:
   excluded    own addresses (STATS_HOME/exclude-ips.txt), any address the admin page answered
               for, and anything under /admin
   crawler     the user agent declares itself, or matches a known scanner fingerprint
   datacenter  a browser-looking user agent from a hosting or cloud network (ASN lookup via
               Team Cymru's DNS service, cached in STATS_HOME/asn-cache.json)
   norender    a browser string that never drew a page (see RENDER below)
+  selfref     drew a page, but arrived saying it came from saybooks.io (see SELFREF below)
   person      everything else
 
 How far a reader got, each step counted once per address and browser in the window:
@@ -140,12 +141,31 @@ for r in rows:
 now = datetime.now(TZ)
 def is_page(r):
     return (200 <= r["status"] < 300 or r["status"] == 304) and r["method"] == "GET" and not ASSET.search(r["path"]) and not NOT_PAGE.match(r["path"])
+def host_of(ref): return re.sub(r'^https?://', '', ref).split("/", 1)[0].split(":", 1)[0].lower()
+
+# SELFREF: a reader whose first request is a page that says it came from saybooks.io, though this
+# address and browser were never here before. Seen 1-2 Nov 2026: hourly at five past, a different
+# home connection each time, old Chrome, the front page "from" the front page, then nothing. A person
+# whose address changes mid-visit looks the same, so the same browser string seen on another address
+# in the 30 minutes before keeps them a person.
+firsts, recent = {}, defaultdict(list)
+for r in rows:
+    if r["key"] not in firsts: firsts[r["key"]] = r
+    recent[r["ua"]].append(r)
+def arrived_inside(r):
+    if r["kind"] != "person" or not is_page(r) or host_of(r["ref"]) not in OWN: return False
+    return not any(o["ip"] != r["ip"] and r["dt"] - timedelta(minutes=30) <= o["dt"] <= r["dt"] for o in recent[r["ua"]])
+selfref_keys = {k for k, r in firsts.items() if arrived_inside(r)}
+for r in rows:
+    if r["kind"] == "person" and r["key"] in selfref_keys: r["kind"] = "selfref"
+
 people_all = [r for r in rows if r["kind"] == "person"]
 people = [r for r in people_all if is_page(r)]
 dc = [r for r in rows if r["kind"] == "datacenter"]
 crawlers = [r for r in rows if r["kind"] == "crawler"]
 excluded = [r for r in rows if r["kind"] == "excluded"]
 norender = [r for r in rows if r["kind"] == "norender" and is_page(r)]
+selfref = [r for r in rows if r["kind"] == "selfref" and is_page(r)]
 def visitors(rs): return len({r["key"] for r in rs})
 def esc(s): return html.escape(str(s))
 def num(n): return f"{n:,}"
@@ -154,7 +174,6 @@ first = min((r["dt"] for r in rows), default=now); last = max((r["dt"] for r in 
 today = now.date()
 
 # ---- where a visit came from ----
-def host_of(ref): return re.sub(r'^https?://', '', ref).split("/", 1)[0].split(":", 1)[0].lower()
 def utm(raw):
     q = parse_qs(urlsplit(raw).query)
     return (q.get("utm_source") or [""])[0].lower()
@@ -438,6 +457,7 @@ dc_nets = Counter(short_net(r["net"]) for r in dc).most_common(8)
 probes = Counter(r["path"] for r in rows if r["status"] == 404).most_common(8)
 out.append('<details><summary>Machines and filtering</summary><div class="cards" style="margin:12px 0">' + "".join(
     f'<div class="card stat"><b>{num(n)}</b><span>{esc(l)}</span></div>' for n, l in [(len(norender), "page views by browsers that never drew a page"),
+    (len(selfref), "page views by browsers that arrived saying they came from saybooks.io"),
     (len(dc), "hits from hosting networks"), (len(crawlers), "declared crawler hits"), (len(excluded), "your own requests and admin views")]) + '</div>')
 out.append('<div class="two"><div class="card tw"><table><tr><th>Crawler</th><th class="r">Hits</th><th>Last seen</th></tr>' +
            ("".join(f'<tr><td>{esc(n)}</td><td class="r">{num(c)}</td><td class="when">{esc(l.strftime("%b %d %H:%M"))}</td></tr>' for n, c, l in named) or '<tr><td colspan="3" class="mut">None.</td></tr>') +
