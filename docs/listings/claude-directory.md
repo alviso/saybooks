@@ -58,6 +58,46 @@ Enterprise org, submitted by an Owner). Character limits are the portal's. Paste
 **Icon URL**: https://saybooks.io/icon-512.png (also https://saybooks.io/icon-1024.png)
 **Slug**: `saybooks` (permanent once published)
 
+## Description v2, household first (drafted 2026-11-01, NOT submitted)
+
+The listing has been in review since 2026-09-05 with the description above. Do not paste this
+until Anthropic says whether editing a listing in review restarts the review. Tagline stays.
+
+    Saybooks is a set of books Claude keeps for you from your own bank and card statements.
+    There is no bank feed and no bank password. You hand Claude a statement, and it is taken
+    whole only when its rows add up to the balances printed on it, or refused with the gap
+    named. Any bank that gives you a statement, in any currency.
+
+    From there Claude keeps your accounts and net worth, transfers counted once, the credit
+    card, loans and the mortgage split the way the lender prints them, bills and what is due
+    next, receipts with their return and warranty dates, reimbursements, and a year summary
+    for whoever does your taxes.
+
+    Every rule in your books is enforced on Claude exactly as on a person. Claude prepares;
+    approving a bill stays yours, and Saybooks never moves money. When Claude is refused it
+    tells you why and who can decide, and the attempt is logged. One audit trail records
+    everything: what was done, by whom (you, a person you invited, or Claude under its own
+    name), when, and the reason given. The same books open in your browser the moment
+    Claude writes them.
+
+    Money is integer cents. Nothing is invented: a missing date, amount or name is asked
+    for, never guessed.
+
+    Connecting takes a minute: add the connector, sign in with Google, pick which books to
+    open and what Claude may do, and name it for the audit log. The key it receives can be
+    revoked at any time. Export or delete everything whenever you like.
+
+    The same system keeps invoicing for freelancers, a job-hunt tracker, and order-to-cash
+    books for small businesses. Open source under AGPL-3.0 at github.com/alviso/saybooks;
+    the rules are public specifications at saybooks.io/specs, and the build fails if the
+    code stops conforming to them. Run it yourself if you would rather not trust a hosted
+    service.
+
+Primary use cases, household first: "Households keeping their books from statements: import a
+month's card statement, see what is due against the cash, split the mortgage payment the way
+the lender printed it, get the year's medical and charitable spending for taxes." Then the
+three below.
+
 ## Use cases
 
 **Primary use cases**

@@ -3,9 +3,16 @@
 **The books you can talk to. The books that stay books.**
 
 Saybooks is an open-source ERP where your agent and your interface are the same system: one
-command registry, one rulebook, one audit trail. Tell Claude to ship the order, issue the
-invoice or import a card statement, or click the button: same command, same rules, same record
-of who did what and why.
+command registry, one rulebook, one audit trail. Tell Claude to import a card statement, issue
+the invoice or ship the order, or click the button: same command, same rules, same record of
+who did what and why.
+
+**For your household: [saybooks.io/personal](https://saybooks.io/personal)**. Hand your agent
+the bank and card statements and it keeps the accounts, the card, the mortgage and the car
+loan, the bills and the receipts, with a year summary for taxes. No bank feed and no bank
+password: a statement is taken only when its rows add up to its printed balances. Any bank,
+any currency. [See a made-up household](https://saybooks.io/app?demo=home) with no signup,
+connect `https://saybooks.io/mcp/household`, or [watch the five-part series](https://www.youtube.com/playlist?list=PLMhDqYJzdhos).
 
 **Live: [saybooks.io](https://saybooks.io)**. Try the demo with no signup, or sign in with Google
 and pick the modules your books carry. Connect Claude by adding `https://saybooks.io/mcp` as a

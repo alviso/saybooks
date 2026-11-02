@@ -1,14 +1,22 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.alviso/saybooks",
-  "description": "Books your agent can keep but cannot break: invoices, orders, receivables, CRM and a job hunt, every rule enforced on the agent as on a person, one audit trail for both. Sign in with Google at connect time; open source, AGPL-3.0.",
-  "status": "active",
+  "title": "Saybooks",
+  "description": "Books your AI keeps from your own bank statements: cards, loans, bills, receipts and the tax year.",
+  "version": "0.4.0",
+  "websiteUrl": "https://saybooks.io/personal",
   "repository": {
     "url": "https://github.com/alviso/saybooks",
-    "source": "github"
+    "source": "github",
+    "id": "1343077188"
   },
-  "version": "0.3.0",
-  "websiteUrl": "https://saybooks.io",
+  "icons": [
+    {
+      "src": "https://saybooks.io/icon-512.png",
+      "mimeType": "image/png",
+      "sizes": ["512x512"]
+    }
+  ],
   "remotes": [
     {
       "type": "streamable-http",

@@ -1,6 +1,0 @@
-# Smithery listing for a remote MCP server behind OAuth. The user signs in with Google at
-# connect time and picks which books to open; no configuration value is needed.
-# See https://saybooks.io/docs#connect
-startCommand:
-  type: http
-  url: https://saybooks.io/mcp

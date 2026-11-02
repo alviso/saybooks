@@ -31,7 +31,7 @@ const session = `mcp-${workspace}-${process.pid}`;
 const actor = process.env.SAYBOOKS_ACTOR || 'claude';
 
 const server = new Server(
-  { name: 'saybooks', version: '0.2.0' },
+  { name: 'saybooks', version: '0.4.0' },
   { capabilities: { tools: {} }, instructions: R.instructions(BASE, mount) },
 );
 

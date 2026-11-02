@@ -54,7 +54,7 @@ person you are working with and they will see your writes appear live, attribute
 actor_kind=agent, in the same audit trail as their clicks. Play freely; nothing here is real.` : '';
 
   const server = new Server(
-    { name: 'saybooks', version: '0.3.0' },
+    { name: 'saybooks', version: '0.4.0' },
     { capabilities: { tools: {} }, instructions: ownedNote + R.instructions(BASE, { modules: mounts }) + demoNote + CACHE_NOTE },
   );
 
