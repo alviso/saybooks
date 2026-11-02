@@ -390,6 +390,8 @@ const server = http.createServer(async (req, res) => {
       if (req.headers['if-none-match'] === etag) { res.writeHead(304, headers); return res.end(); }
       return send(res, 200, body, type, headers);
     }
+    // OpenAI's plugin dashboard checks the domain by fetching this: the exact token, as plain text.
+    if (p === '/.well-known/openai-apps-challenge' && process.env.SAYBOOKS_OPENAI_CHALLENGE) return send(res, 200, process.env.SAYBOOKS_OPENAI_CHALLENGE.trim(), 'text/plain; charset=utf-8');
     if (req.method === 'GET' && p === '/api/spaces') {
       const u = DEMO && auth.enabled() && auth.sessionUser(req);
       if (!u) return send(res, 401, { error: 'sign in first' });
