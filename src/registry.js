@@ -215,9 +215,11 @@ const mcpTools = (opts = {}) => COMMANDS.filter(c => inMount(c, opts.modules)).m
 }));
 
 /** Server instructions compose from the base doctrine plus each mounted module's. */
+// A module's doctrine may be a function of what else is mounted: a household never reads about credit limits.
 const instructions = (base, opts = {}) => [base.trim(),
-  ...MODULES.filter(m => !opts.modules || opts.modules.includes(m.name)).filter(m => m.doctrine)
-    .map(m => `## ${m.name}\n${m.doctrine.trim()}`)].join('\n\n');
+  ...MODULES.filter(m => !opts.modules || opts.modules.includes(m.name))
+    .map(m => [m.name, typeof m.doctrine === 'function' ? m.doctrine(opts.modules) : m.doctrine]).filter(([, d]) => d && d.trim())
+    .map(([name, d]) => `## ${name}\n${d.trim()}`)].join('\n\n');
 
 // ---------------------------------------------------------------- projection 2: UI
 const formSpec = (opts = {}) => COMMANDS.filter(c => inMount(c, opts.modules)).map(c => ({

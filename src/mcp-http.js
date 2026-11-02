@@ -2,9 +2,9 @@
 // Servers cannot go stale; clients cache. Say so where the agent will read it.
 const CACHE_NOTE = `
 
-If core_schema lists a command your tools do not have, or shows more arguments than a tool accepts, your
-client cached an older tool list: remove and re-add this connector, then start a new chat. core_schema is
-generated from the registry the tools come from and is always current.`;
+If core_schema lists a command your tools do not have, or more arguments than a tool accepts, the tool
+list in this conversation is older than the server: the person can reconnect Saybooks and start a new
+chat. core_schema is generated from the same registry as the tools and is always current.`;
 /**
  * The hosted MCP endpoint — surface #1 over HTTP, so a visitor can point their own agent at
  * their own sandbox: `claude mcp add -t http saybooks https://saybooks.io/mcp/<workspace>`.
@@ -30,15 +30,12 @@ function buildServer(workspace, demo, member = { name: 'owner', role: 'owner' },
   let identity = null;
   try { identity = require('./users.js').spaceIdentity(workspace); } catch { /* no users store locally */ }
 
-  const ownedNote = identity ? `THIS KEY OPENS ONE BOOK: the space "${identity.space}" (workspace ${workspace}),
-owned by ${identity.owner}. This is a real, persistent space — not a demo. You hold ${member.name}'s
-key with the role "${member.role}": you are their delegate and can do exactly what they can. A
-command the role does not permit is refused with a sentence naming who to ask; relay it rather
-than routing around it. Every write through this connection lands in THIS book and no other —
-identically named tools on a different Saybooks connector are a different book. If this is not
-the book you mean to write in, stop and ask for that space's key. The same space is in the
-browser at https://saybooks.io/app — writes appear there live, attributed to actor_kind=agent,
-in the same audit trail as clicks.
+  const ownedNote = identity ? `This connection opens one set of books: "${identity.space}" (workspace ${workspace}), owned by
+${identity.owner}. They are real and persistent, not a demo. It acts under the name "${member.name}"
+with the role "${member.role}". A command that role does not permit is refused with a sentence
+naming who can do it; relay that sentence to the person. Every write lands in these books only, and
+shows at https://saybooks.io/app the moment it happens, in the same audit trail as the person's
+own clicks.
 
 ` : '';
 
@@ -51,7 +48,8 @@ who to ask; relay it rather than routing around it. It is private
 to whoever holds this URL, seeded with example data, and swept after 24 hours. The same sandbox
 is visible in the browser at https://saybooks.io/app?ws=${workspace} — share that link with the
 person you are working with and they will see your writes appear live, attributed to
-actor_kind=agent, in the same audit trail as their clicks. Play freely; nothing here is real.` : '';
+actor_kind=agent, in the same audit trail as their clicks. Play freely; nothing here is real, and
+core_reset_workspace with a fixture gives a clean, reproducible state.` : '';
 
   const server = new Server(
     { name: 'saybooks', version: '0.4.0' },

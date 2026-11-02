@@ -578,7 +578,7 @@ const server = http.createServer(async (req, res) => {
         grants: [...(R.ROLE_GRANTS[member.role] || R.ROLE_GRANTS.viewer)],
         workspaces: DEMO ? [ws] : [...new Set([ws, ...wsp.list()])].filter(w => w === ws || !/^(spec-|test-|try-)/.test(w)).sort(),
         doctrine: R.instructions(BASE, { modules: mounts }),
-        modules: R.MODULES.filter(m => !mounts || mounts.includes(m.name)).map(m => ({ name: m.name, doctrine: m.doctrine.trim() })),
+        modules: R.MODULES.filter(m => !mounts || mounts.includes(m.name)).map(m => ({ name: m.name, doctrine: (typeof m.doctrine === 'function' ? m.doctrine(mounts) : m.doctrine || '').trim() })),
         commands: R.formSpec({ modules: mounts }),
         // Presentation bootstrap, not a command: the Orders table's rows. Agents get the
         // same facts through o2c_backorders / core_search / o2c_get_order.

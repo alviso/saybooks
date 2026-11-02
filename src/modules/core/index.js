@@ -17,7 +17,9 @@ const mod = R.defineModule({
               set_credit_limit: 'core_set_credit_limit', hold_customer: 'core_hold_customer', release_customer: 'core_release_customer',
               set_company_profile: 'core_set_company_profile', update_customer: 'core_update_customer' },
   env_argmap: { item: 'item_id', customer: 'customer_id' },
-  doctrine: `Master data is slow-moving and load-bearing. A credit limit of 0 means prepay only —
+  // Customers, items and the company profile matter to books that sell; a household's books never use them.
+  doctrine: (mods) => mods && !mods.some(m => ['o2c', 'solo', 'p2p', 'crm', 'inventory', 'salestax'].includes(m)) ? '' :
+`Master data is slow-moving and load-bearing. A credit limit of 0 means prepay only —
 a real position, not a missing value. Set stocked=false for services; they never deplete and
 never block a shipment. Never invent a customer to make another command work. A fresh space
 is set up by conversation: core_setup_status lists what the company profile still needs and

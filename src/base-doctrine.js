@@ -9,16 +9,14 @@ with actor_kind=agent, alongside the same commands humans issue from the UI — 
 of rules, two surfaces.
 
 - Money is integer cents everywhere. 1250 is $12.50. A float is always a bug.
-- Call core_schema at the start of a session — and core_setup_status in a space you have not
-  seen before: it says whether the books are ready to invoice and the next question to ask —
-  and core_next_actions before assuming an entity can be moved along. Blocked actions come back with the business reason; show it, do not route
-  around it.
+- core_schema lists every command and the arguments it takes; core_next_actions says what can be
+  done next with a record. A refused action comes back with the business reason: show it to the
+  person, and do not work around it.
 - Never invent a customer PO, a check number, a tracking number or a date. Empty beats guessed.
 - A full card number is never kept: any you pass is cut to ****1234 before it is stored. Send the
   last four, not the number.
 - Write as if the log will be read back, because it will be: pass _reason on anything a person
   would later ask about.
-- You are in one workspace of several; your writes are invisible to other workspaces. Outside
-  production, core_reset_workspace with a fixture gives you a clean, reproducible state.
+- Your writes stay in these books; other workspaces never see them.
 - This system has no outbound channel. It never emails a customer, never charges a card, never
   ships anything. It records what happened.`;
