@@ -153,6 +153,37 @@ const send = (res, code, body, type = 'application/json; charset=utf-8', headers
   res.end(typeof body === 'string' || Buffer.isBuffer(body) ? body : JSON.stringify(body));
 };
 
+// Discovery before connecting (MCP Server Cards, SEP-2127). The registry entry is the one
+// description of the server; the card is cut from it, with the running version and the protocol
+// versions the SDK negotiates. No tools: they depend on the space and the role, and a client
+// lists them after sign-in, which is why the spec leaves them out.
+let discovery = null;
+const discoveryDoc = (p) => {
+  if (!/^\/(mcp\/server-card|\.well-known\/ai-catalog\.json|\.well-known\/mcp\/server-card\.json)$/.test(p)) return null;
+  if (!discovery) {
+    const sj = JSON.parse(fs.readFileSync(path.join(__dirname, 'docs', 'listings', 'server.json'), 'utf8'));
+    const version = require('./package.json').version;
+    const { SUPPORTED_PROTOCOL_VERSIONS } = require('@modelcontextprotocol/sdk/types.js');
+    const remote = sj.remotes[0];
+    const card = {
+      $schema: 'https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json',
+      name: sj.name, version, title: sj.title, description: sj.description,
+      websiteUrl: sj.websiteUrl, repository: sj.repository, icons: sj.icons,
+      remotes: sj.remotes.map(r => ({ type: r.type, url: r.url, supportedProtocolVersions: SUPPORTED_PROTOCOL_VERSIONS })),
+    };
+    // The earlier draft's shape, at the earlier draft's path, for the scanners still reading it.
+    const { $schema, ...rest } = card;
+    const draft = { ...rest, serverInfo: { name: 'saybooks', title: sj.title, version }, transport: { type: remote.type, endpoint: remote.url }, capabilities: { tools: {} } };
+    const catalog = { specVersion: '1.0', entries: [{ identifier: `urn:air:${new URL(remote.url).hostname}:mcp:saybooks`, type: 'application/mcp-server-card+json', url: `${remote.url}/server-card` }] };
+    discovery = {
+      '/mcp/server-card': [JSON.stringify(card, null, 2), 'application/mcp-server-card+json'],
+      '/.well-known/ai-catalog.json': [JSON.stringify(catalog, null, 2), 'application/ai-catalog+json'],
+      '/.well-known/mcp/server-card.json': [JSON.stringify(draft, null, 2), 'application/json; charset=utf-8'],
+    };
+  }
+  return discovery[p];
+};
+
 /**
  * Who is here, and where: resolves the request to { ws, member: {name, role} }.
  * Three demo entries, in priority order:
@@ -304,7 +335,7 @@ const server = http.createServer(async (req, res) => {
         // rather than left to the wildcard: several of them read only their own stanza, and a
         // product whose whole pitch is "the rules are public" should be readable by the things
         // people ask about products.
-        const rules = 'Allow: /\nDisallow: /api/\nDisallow: /doc/\nDisallow: /journal/\nDisallow: /session/\nDisallow: /mcp\nDisallow: /oauth/\nDisallow: /authorize\nDisallow: /token\nDisallow: /register\nDisallow: /admin\n';
+        const rules = 'Allow: /\nDisallow: /api/\nDisallow: /doc/\nDisallow: /journal/\nDisallow: /session/\nAllow: /mcp/server-card\nDisallow: /mcp\nDisallow: /oauth/\nDisallow: /authorize\nDisallow: /token\nDisallow: /register\nDisallow: /admin\n';
         const agents = ['*', 'Googlebot', 'Google-Extended', 'Bingbot', 'GPTBot', 'OAI-SearchBot', 'ChatGPT-User',
                         'ClaudeBot', 'Claude-User', 'Claude-SearchBot', 'PerplexityBot', 'Perplexity-User',
                         'Applebot', 'Applebot-Extended', 'CCBot', 'meta-externalagent', 'Bytespider'];
@@ -344,6 +375,18 @@ const server = http.createServer(async (req, res) => {
     }
     // The home view: every space the person belongs to, with what is going on in each.
     // Numbers are computed per space inside its own database; nothing crosses spaces.
+    // The server card, the AI Catalog that points at it, and the earlier draft's path. Public,
+    // read-only and cacheable; open to browsers by the spec's CORS rule.
+    if (discoveryDoc(p)) {
+      const cors = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET', 'access-control-allow-headers': 'Content-Type, If-None-Match', 'access-control-expose-headers': 'ETag' };
+      if (req.method === 'OPTIONS') return send(res, 204, '', 'text/plain', cors);
+      if (req.method !== 'GET') return send(res, 405, { error: 'GET only' }, undefined, { ...cors, allow: 'GET' });
+      const [body, type] = discoveryDoc(p);
+      const etag = `"${crypto.createHash('sha256').update(body).digest('base64url').slice(0, 16)}"`;
+      const headers = { ...cors, 'cache-control': 'public, max-age=3600', etag };
+      if (req.headers['if-none-match'] === etag) { res.writeHead(304, headers); return res.end(); }
+      return send(res, 200, body, type, headers);
+    }
     if (req.method === 'GET' && p === '/api/spaces') {
       const u = DEMO && auth.enabled() && auth.sessionUser(req);
       if (!u) return send(res, 401, { error: 'sign in first' });
