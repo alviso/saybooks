@@ -1,15 +1,17 @@
 # ChatGPT directory submission
 
-Copy for the OpenAI platform dashboard (platform.openai.com/plugins), drafted 2026-11-02. Not
-submitted. Requirements as read on 2026-11-02 from developers.openai.com/apps-sdk/deploy/submission.
+Copy for the OpenAI platform dashboard (platform.openai.com/plugins), drafted 2026-11-02.
+Submitted 2026-11-02 as plugin version 0.4.0 under Peter Varga's verified individual identity;
+in review. While it is in review, keep tool names, schemas and the server instructions stable
+(changes are held for a rescan) and keep the reviewer account and its Sample household working. Requirements as read on 2026-11-02 from developers.openai.com/apps-sdk/deploy/submission.
 
 ## Before submitting
 
-- [ ] Individual or business verification in the OpenAI organization settings (Owner role).
-- [ ] Domain verification: the dashboard's token served at
+- [x] Individual verification in the OpenAI organization settings (Owner role).
+- [x] Domain verification: the dashboard's token served at
       `https://saybooks.io/.well-known/openai-apps-challenge` (needs a deploy).
-- [ ] Walkthrough video of Saybooks inside ChatGPT, made-up data only.
-- [ ] The ZIP package the dashboard asks for (format to be read from the dashboard).
+- [x] Walkthrough video of Saybooks inside ChatGPT, made-up data only (unlisted on YouTube).
+- [x] The ZIP package: built from `chatgpt-plugin/` in this folder.
 - [x] Terms, support and privacy pages live (2026-11-02).
 - [x] Reviewer sign-in live with `openai-review@saybooks.io` (2026-11-02).
 - [x] Full card numbers cut to the last four before anything is stored (contract gate 27).
