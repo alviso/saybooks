@@ -52,6 +52,8 @@
  *                    the year sums tagged spending and gives loan and card interest from the record
  *  27. card numbers  a full card number handed to any write keeps only its last four, in the
  *                    books and in the audit log; hashes and long reference numbers are left alone
+ *  28. directories   an assistant's tool list has unique names and titles, every hint an explicit
+ *                    boolean, and every write that removes, ends or overwrites marked destructive
  *
  * A PR that adds a hand-written form, a prefix-less command, or a cross-module UPDATE
  * fails here, not in review.
@@ -772,6 +774,21 @@ for (const tag of R.PERMISSIONS) {
     assert.ok(log.includes('sha256:a4111111111111111f9'), 'a hash is never cut into');
   });
   ok('card numbers: a write keeps the last four, in the books and the audit log; hashes and tracking numbers untouched');
+}
+
+// ------------------------------------------- 28. directories: the tool list a reviewer scans
+{
+  const list = mcpTools();
+  const dup = (k) => Object.entries(list.reduce((m, t) => ((m[k(t)] = (m[k(t)] || 0) + 1), m), {})).filter(([, n]) => n > 1).map(([t]) => t);
+  assert.deepStrictEqual(dup(t => t.name), [], 'tool names are unique');
+  assert.deepStrictEqual(dup(t => t.title), [], 'tool titles are unique in one list; a title two modules share carries its module');
+  for (const t of list) for (const h of ['readOnlyHint', 'destructiveHint', 'openWorldHint']) assert.strictEqual(typeof t.annotations[h], 'boolean', `${t.name} ${h} is an explicit boolean`);
+  const hint = (n) => list.find(t => t.name === n).annotations;
+  for (const n of ['purch_discard_source', 'purch_rename_category', 'purch_split_transaction', 'purch_end_subscription', 'core_replay_scenario', 'core_set_company_logo'])
+    assert.ok(hint(n).destructiveHint, `${n} is marked destructive`);
+  assert.ok(hint('core_set_company_logo').openWorldHint && !hint('purch_accounts').openWorldHint, 'only a tool that fetches an address the person names is open-world');
+  assert.ok(!hint('purch_import_statement').destructiveHint && !hint('purch_accounts').destructiveHint, 'additive writes and reads are not destructive');
+  ok('directories: unique names and titles, explicit hints, writes that remove or overwrite marked destructive');
 }
 
 console.log(`\n${n} contract checks passed across ${MODULES.length} modules, ${COMMANDS.length} commands.`);

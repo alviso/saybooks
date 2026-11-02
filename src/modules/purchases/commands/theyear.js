@@ -12,7 +12,7 @@ const read = (def) => defineCommand({ intent: 'read', scope: 'collection', group
 defineCommand({
   name: 'purch_record_reimbursement',
   permission: 'cash.write',
-  title: 'Paid back', group: 'Purchases', subject: 'purch_reimbursement', scope: 'collection',
+  title: 'Record paid back', group: 'Purchases', subject: 'purch_reimbursement', scope: 'collection',
   summary: 'Tie money in to the work expenses it paid back. They must add up to it exactly; together they are no longer personal spending.',
   doctrine: `Work expenses are marked when reviewed (reimbursable_by, claim_ref). When the employer or client
 pays them back, read purch_reimbursements, find the expenses the money covers (often one claim), show

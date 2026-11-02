@@ -91,7 +91,7 @@ Money is integer minor units; sums are per currency and never cross.`,
     acts: {
       import_statement: 'purch_import_statement', discard_source: 'purch_discard_source', review_transaction: 'purch_review_transaction', review_batch: 'purch_review_batch', split_transaction: 'purch_split_transaction', set_vendor: 'purch_set_vendor', vocabulary: 'purch_vocabulary', rename_category: 'purch_rename_category',
       add_receipt: 'purch_add_receipt', match_receipt: 'purch_match_receipt', unmatch_receipt: 'purch_unmatch_receipt',
-      declare_subscription: 'purch_declare_subscription', cancel_subscription: 'purch_cancel_subscription',
+      declare_subscription: 'purch_declare_subscription', cancel_subscription: 'purch_end_subscription',
       sources: 'purch_sources', source: 'purch_source', transactions: 'purch_transactions', purchases: 'purch_purchases',
       subscriptions: 'purch_subscriptions', receipts: 'purch_receipts', spend: 'purch_spend',
       add_rule: 'purch_add_rule', end_rule: 'purch_end_rule', accept_suggestions: 'purch_accept_suggestions', rules: 'purch_rules',

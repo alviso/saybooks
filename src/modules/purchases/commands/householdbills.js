@@ -66,9 +66,9 @@ defineCommand({
 defineCommand({
   name: 'purch_set_autopay',
   permission: 'cash.write',
-  title: 'Autopay', group: 'Purchases', subject: 'purch_bill_series',
+  title: 'Record autopay', group: 'Purchases', subject: 'purch_bill_series',
   human_only: 'Letting a vendor take its bills from an account on its own is the person\'s standing decision to pay them.',
-  summary: 'Put a vendor\'s bills on autopay from one account, or take them off. Its bills then count as approved by this standing decision, and say so.',
+  summary: 'Record that the person set a vendor\'s bills to be paid automatically from one account (at their bank or with the vendor), or stopped it. Saybooks pays nothing: from then on that vendor\'s bills count as approved by this standing decision, and say so.',
   doctrine: 'A person sets autopay in the app, whatever an agent\'s role: it approves paying every bill of that vendor ahead. An agent records the bills, and the payments when the statement shows them.',
   effects: ['vendor\'s bills approved ahead from one account, or no longer'],
   guards: [ (sr) => sr.status === 'active' || `${sr.id} has ended.` ],

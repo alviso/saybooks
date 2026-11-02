@@ -38,10 +38,10 @@ defineCommand({
 });
 
 defineCommand({
-  name: 'purch_cancel_subscription',
+  name: 'purch_end_subscription',
   permission: 'cash.write',
-  title: 'Cancel subscription', group: 'Purchases', subject: 'purch_subscription',
-  summary: 'Record that a subscription was cancelled, with a reason. Periods after the cancellation are no longer expected.',
+  title: 'End subscription', group: 'Purchases', subject: 'purch_subscription',
+  summary: 'Record that a subscription ended because the person cancelled it with the vendor, with a reason. Periods after that are no longer expected. Saybooks cancels nothing with the vendor; it only stops expecting the charge.',
   doctrine: 'Cancelled is a fact the person states, not something the module infers: a subscription that stops charging shows as lapsed on its own, and stays that way until the person says it was cancelled. Record when, if they know, in the reason.',
   effects: ['subscription cancelled'],
   guards: [ (s) => s.status !== 'cancelled' || `${s.id} is already cancelled.` ],
