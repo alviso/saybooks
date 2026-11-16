@@ -16,6 +16,7 @@ const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 defineCommand({
   name: 'purch_add_rule',
+  additive: true,
   permission: 'cash.write',
   title: 'Add standing rule', group: 'Purchases', subject: 'purch_rule', scope: 'collection',
   summary: 'Remember something ahead of time ("the next five days are the Texas conference, book it to travel"): matching rows get a suggested category until someone reviews them.',

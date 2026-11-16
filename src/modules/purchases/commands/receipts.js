@@ -5,6 +5,7 @@ const V = require('../views.js');
 
 defineCommand({
   name: 'purch_add_receipt',
+  additive: true,
   permission: 'cash.write',
   title: 'Add receipt', group: 'Purchases', subject: 'purch_receipt', scope: 'collection',
   summary: 'Record a receipt you read: vendor, date, total, and the file\'s name and hash. Candidates to match come back; matching is a separate act.',

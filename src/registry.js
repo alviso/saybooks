@@ -190,11 +190,11 @@ const inMount = (c, modules) => !modules || modules.includes(c.module);
  *  GL + AR only. Tool-count discipline is per session, not per deployment. Pass
  *  {writesDestructive: true} for a client whose rules call every write destructive (Google's
  *  connected apps do), so it asks the person before each one. */
-// Destructive is anything that is not purely additive: removing, ending, cancelling, closing,
-// undoing a link, or rewriting many rows at once. Being able to undo it does not make it additive.
-// A command whose name does not say so declares `destructive: true` (overwriting the logo, say),
-// and `open_world: true` when it reaches an address the person names rather than these books.
-const DESTRUCTIVE = /_(void|cancel|delete|reset|revoke|write_off|refund|discard|rename|split|end|unlink|unpair|unmatch|close|reopen|reject|replay)(_|$)/;
+// Every write is destructive unless it is purely additive: it adds new records and changes no
+// record that was there before the call. Changing a field, moving a status, linking, ending or
+// removing all count, and being able to undo it does not make it additive. A command that only
+// adds declares `additive: true` (contract gate 28 watches its SQL to hold it to that), and
+// `open_world: true` when it reaches an address the person names rather than these books.
 
 // Two modules may name an act alike (CRM and the job hunt both "Add contact"); the UI shows each in
 // its own module, but an assistant sees one list. There the shared title carries its module.
@@ -209,9 +209,9 @@ const mcpTools = (opts = {}) => COMMANDS.filter(c => inMount(c, opts.modules)).m
   title: mcpTitle(c),
   description: description(c),
   inputSchema: { type: 'object', properties: strip(c.args), required: [...c.required], additionalProperties: false },
-  // Hints for clients and directories: reads are safe to call freely; the few acts that end
-  // something are flagged; nothing here reaches outside the books (no email, no money).
-  annotations: { title: mcpTitle(c), readOnlyHint: c.intent === 'read', destructiveHint: c.intent !== 'read' && (!!opts.writesDestructive || !!c.destructive || DESTRUCTIVE.test(c.name)), idempotentHint: c.intent === 'read', openWorldHint: !!c.open_world },
+  // Hints for clients and directories: reads are safe to call freely; a write is flagged unless
+  // it only adds; nothing here reaches outside the books (no email, no money) but the logo fetch.
+  annotations: { title: mcpTitle(c), readOnlyHint: c.intent === 'read', destructiveHint: c.intent !== 'read' && (!!opts.writesDestructive || !c.additive), idempotentHint: c.intent === 'read', openWorldHint: !!c.open_world },
 }));
 
 /** Server instructions compose from the base doctrine plus each mounted module's. */

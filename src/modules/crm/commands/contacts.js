@@ -7,6 +7,7 @@ const HUMAN_WHY = 'automating the relationship graph risks the human relationshi
 
 defineCommand({
   name: 'crm_add_contact',
+  additive: true,
   title: 'Add contact', group: 'CRM', subject: 'account',
   permission: 'sales.write',
   summary: 'Record a person at an account — named with a source, or as a gap.',

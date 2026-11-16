@@ -20,6 +20,7 @@ const POSTING_FIELDS = {
 
 defineCommand({
   name: 'hunt_add_posting',
+  additive: true,
   title: 'New posting', group: 'Jobhunt', subject: 'posting', scope: 'collection',
   permission: 'sales.write',
   summary: 'Record a JD encountered. Runs the duplicate guard; its warnings ride the result.',

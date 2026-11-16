@@ -10,6 +10,7 @@ const FORMATS = Object.keys(V.FORMATS);
 
 defineCommand({
   name: 'bridge_export',
+  additive: true,
   permission: 'billing.write',
   title: 'Export to the ledger', group: 'Ledger', subject: 'bridge_export', scope: 'collection',
   summary: 'Hand the period over: build the file in the ledger\'s shape, record what went out, and return a download link.',

@@ -69,6 +69,7 @@ defineCommand({
 
 defineCommand({
   name: 'hunt_add_contact',
+  additive: true,
   title: 'Add contact', group: 'Jobhunt', subject: 'posting', scope: 'collection',
   permission: 'sales.write',
   summary: 'Add a person. A source is mandatory — how we know them.',
@@ -119,6 +120,7 @@ defineCommand({
 
 defineCommand({
   name: 'hunt_add_resume_version',
+  additive: true,
   title: 'Register resume version', group: 'Jobhunt', subject: 'posting', scope: 'collection',
   permission: 'sales.write',
   summary: 'Register a resume version so applications can point at what was actually sent.',

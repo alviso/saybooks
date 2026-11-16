@@ -7,6 +7,7 @@ const core = () => R.MODULES.find(m => m.name === 'core').api;
 
 defineCommand({
   name: 'crm_log_activity',
+  additive: true,
   title: 'Log activity', group: 'CRM', subject: 'account',
   permission: 'sales.write', guardless: true,
   summary: 'Record a touch: what happened, when it actually happened, with whom.',

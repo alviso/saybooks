@@ -13,6 +13,7 @@ const read = (def) => defineCommand({ intent: 'read', scope: 'collection', group
 
 defineCommand({
   name: 'purch_declare_bill_series',
+  additive: true,
   permission: 'cash.write',
   title: 'Expect a bill', group: 'Purchases', subject: 'purch_bill_series', scope: 'collection',
   summary: 'Say a vendor\'s bill comes every period (the electric bill, the phone, insurance), so a missing one, or one well above the usual amount, is named.',

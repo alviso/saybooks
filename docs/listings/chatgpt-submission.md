@@ -1,9 +1,43 @@
 # ChatGPT directory submission
 
 Copy for the OpenAI platform dashboard (platform.openai.com/plugins), drafted 2026-11-02.
-Submitted 2026-11-02 as plugin version 0.4.0 under Peter Varga's verified individual identity;
-in review. While it is in review, keep tool names, schemas and the server instructions stable
+Submitted 2026-11-02 as plugin version 0.4.0 under Peter Varga's verified individual identity.
+While it is in review, keep tool names, schemas and the server instructions stable
 (changes are held for a rescan) and keep the reviewer account and its Sample household working. Requirements as read on 2026-11-02 from developers.openai.com/apps-sdk/deploy/submission.
+
+## Review 1: not approved (16 November 2026)
+
+OpenAI: "One or more of your tool's annotations do not appear to match the tool's behavior",
+asking for every hint set to true or false with a justification. Every hint already was a
+boolean; the mismatch was destructiveHint. Their guidelines
+(developers.openai.com/apps-sdk/app-submission-guidelines) allow false "only for additive writes
+without destructive or irreversible effects" and count overwriting as destructive, while the
+list we sent marked field changes and status moves (set price, review a transaction, approve a
+bill, pair transfers) as non-destructive. Fixed: every write is destructive unless the command
+declares `additive: true`, and contract gate 28 watches the SQL of every additive write and every
+read during the suite. On the household door (the reviewer's Sample household) that is 92 tools:
+41 read-only, 11 additive writes, 40 destructive writes, one open-world (the logo fetch).
+
+Justification to paste with the resubmission:
+
+    Every tool sets readOnlyHint, destructiveHint and openWorldHint to true or false.
+
+    readOnlyHint is true for the tools that only read or compute (accounts, transactions, net
+    worth, card dues, upcoming bills, the tax year). They change nothing.
+
+    destructiveHint is now true for every write that changes or removes anything already in the
+    books: editing an account or customer, reviewing or recategorizing a transaction, pairing
+    transfers, linking a loan payment, approving or rejecting a bill, ending a subscription,
+    closing an account, granting or revoking access. Our first submission marked field and status
+    changes as non-destructive; that was the mismatch, and it is fixed. destructiveHint is false
+    only for writes that add new records and change nothing that was there before: importing a
+    statement, adding an account, receipt, bill, rule, loan, value, subscription or bill series,
+    and creating a customer or item. A test watches the database statements these tools run and
+    fails if one of them changes an existing row.
+
+    openWorldHint is false for every tool but one. They act only inside the person's own Saybooks
+    books, send nothing and move no money. core_set_company_logo is true because it fetches a
+    public https URL the person gives.
 
 ## Before submitting
 

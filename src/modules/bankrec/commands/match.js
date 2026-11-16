@@ -85,6 +85,7 @@ defineCommand({
 
 defineCommand({
   name: 'rec_sign_off',
+  additive: true,
   permission: 'credit.authority',
   title: 'Sign off the reconciliation', group: 'Bank reconciliation', subject: 'bankrec_signoff', scope: 'collection',
   human_only: 'A reconciliation is a person\'s word that the bank and the books were looked at and agree.',

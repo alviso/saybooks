@@ -19,6 +19,7 @@ const BILL_LINE = {
 
 defineCommand({
   name: 'p2p_record_vendor_bill',
+  additive: true,
   permission: 'cash.write',
   title: 'Record a bill on this order', group: 'Purchasing', subject: 'p2p_po',
   summary: 'Record a vendor\'s bill against an order, line by line as printed. It is matched against what was ordered and received; a person approves paying it only when it matches.',

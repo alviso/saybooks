@@ -11,6 +11,7 @@ const LINE = {
 
 defineCommand({
   name: 'o2c_create_quote',
+  additive: true,
   permission: 'sales.write',
   title: 'New quote', group: 'Quote', subject: 'quote', scope: 'collection',
   summary: 'Draft a quote for a customer.',

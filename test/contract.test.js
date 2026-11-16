@@ -53,7 +53,8 @@
  *  27. card numbers  a full card number handed to any write keeps only its last four, in the
  *                    books and in the audit log; hashes and long reference numbers are left alone
  *  28. directories   an assistant's tool list has unique names and titles, every hint an explicit
- *                    boolean, and every write that removes, ends or overwrites marked destructive
+ *                    boolean, and every write destructive unless it only adds; a command that says
+ *                    it only adds ran in this suite and changed no row that was there before it
  *
  * A PR that adds a hand-written form, a prefix-less command, or a cross-module UPDATE
  * fails here, not in review.
@@ -70,6 +71,41 @@ const { COMMANDS, MODULES, mcpTools, formSpec, execute } = R;
 const tools = mcpTools(), forms = formSpec();
 let n = 0;
 const ok = (msg) => { n++; console.log(`  ok ${msg}`); };
+
+// Gate 28 holds the hints to what a command does, not to its name: while a read or an additive
+// write runs, every statement it executes is watched. A read writes nothing. In an additive write,
+// an UPDATE or DELETE that changes rows may only touch a table the same call inserted into (its
+// own new rows); an upsert can overwrite, so it never counts.
+const additiveRuns = {}, additiveBreaches = [], readRuns = {}, readBreaches = [];
+{
+  const frames = [];
+  for (const c of COMMANDS.filter(c => c.additive || c.intent === 'read')) {
+    const h = c.handler, read = c.intent === 'read', runs = read ? readRuns : additiveRuns;
+    c.handler = function (...a) {
+      frames.push({ name: c.name, read, inserted: new Set() });
+      try { const r = h.apply(this, a); runs[c.name] = (runs[c.name] || 0) + 1; return r; } finally { frames.pop(); }
+    };
+  }
+  const Database = require('better-sqlite3');
+  const proto = Object.getPrototypeOf(new Database(':memory:').prepare('SELECT 1'));
+  const run = proto.run;
+  proto.run = function (...a) {
+    const result = run.apply(this, a);
+    const top = frames[frames.length - 1];
+    if (top) {
+      const sql = this.source.replace(/\s+/g, ' ').trim();
+      const m = /^(INSERT(?: OR (\w+))? INTO|UPDATE|DELETE FROM|REPLACE INTO)\s+["'`]?([a-z_]+)/i.exec(sql);
+      if (m && top.read) readBreaches.push(`${top.name}: ${sql.slice(0, 120)}`);
+      else if (m) {
+        const verb = m[1].toUpperCase(), table = m[3].toLowerCase();
+        const upsert = /^REPLACE|OR REPLACE/.test(verb) || /ON CONFLICT.*DO UPDATE/i.test(sql);
+        if (verb.startsWith('INSERT') && !upsert) top.inserted.add(table);
+        else if (upsert || (result.changes > 0 && !top.inserted.has(table))) additiveBreaches.push(`${top.name}: ${sql.slice(0, 120)}`);
+      }
+    }
+    return result;
+  };
+}
 
 // ---------------------------------------------------------------- 1. parity
 assert.strictEqual(tools.length, COMMANDS.length);
@@ -784,11 +820,29 @@ for (const tag of R.PERMISSIONS) {
   assert.deepStrictEqual(dup(t => t.title), [], 'tool titles are unique in one list; a title two modules share carries its module');
   for (const t of list) for (const h of ['readOnlyHint', 'destructiveHint', 'openWorldHint']) assert.strictEqual(typeof t.annotations[h], 'boolean', `${t.name} ${h} is an explicit boolean`);
   const hint = (n) => list.find(t => t.name === n).annotations;
-  for (const n of ['purch_discard_source', 'purch_rename_category', 'purch_split_transaction', 'purch_end_subscription', 'core_replay_scenario', 'core_set_company_logo'])
-    assert.ok(hint(n).destructiveHint, `${n} is marked destructive`);
+  // OpenAI's rule (developers.openai.com/apps-sdk/app-submission-guidelines): false only for
+  // additive writes; overwriting, cancelling and revoking are destructive. Their reviewers turned
+  // the 2 Nov list down for marking field changes and status moves non-destructive.
+  const REMOVES = /_(void|cancel|delete|reset|revoke|write_off|refund|discard|rename|split|end|unlink|unpair|unmatch|close|reopen|reject|replay|update|set)(_|$)/;
+  for (const c of COMMANDS) {
+    const a = hint(c.name);
+    if (c.intent === 'read') { assert.ok(a.readOnlyHint && !a.destructiveHint && !c.additive, `${c.name}: a read is read-only and not destructive`); continue; }
+    assert.ok(!a.readOnlyHint, `${c.name}: a write is not read-only`);
+    assert.strictEqual(a.destructiveHint, !c.additive, `${c.name}: a write is destructive unless it declares additive`);
+    assert.ok(!(c.additive && REMOVES.test(c.name)), `${c.name}: its name says it changes or removes, so it cannot be additive`);
+  }
+  for (const n of ['core_set_price', 'core_set_company_profile', 'core_set_company_logo', 'core_invite', 'purch_review_transaction', 'purch_approve_bill', 'purch_update_account', 'hunt_apply', 'o2c_confirm_order'])
+    assert.ok(hint(n).destructiveHint, `${n} changes what is there, so it is marked destructive`);
   assert.ok(hint('core_set_company_logo').openWorldHint && !hint('purch_accounts').openWorldHint, 'only a tool that fetches an address the person names is open-world');
-  assert.ok(!hint('purch_import_statement').destructiveHint && !hint('purch_accounts').destructiveHint, 'additive writes and reads are not destructive');
-  ok('directories: unique names and titles, explicit hints, writes that remove or overwrite marked destructive');
+  assert.ok(mcpTools({ writesDestructive: true }).every(t => t.annotations.readOnlyHint || t.annotations.destructiveHint), 'a client that calls every write destructive gets every write marked');
+  // The one additive command no scenario reaches runs here, in a space of its own.
+  { const G = 'gate28-hints'; wsp.wipe(G);
+    execute('purch_declare_subscription', { vendor: 'G28 Streaming', cadence: 'monthly', amount: 1599, currency: 'USD' }, { workspace: G, actor: 'test', actor_kind: 'agent', role: 'owner' }); }
+  const unrun = COMMANDS.filter(c => c.additive && !additiveRuns[c.name]).map(c => c.name);
+  assert.deepStrictEqual(unrun, [], 'every command that says it only adds ran in this suite');
+  assert.deepStrictEqual(additiveBreaches, [], 'a command that says it only adds changed no row that was there before it');
+  assert.deepStrictEqual(readBreaches, [], 'a read-only command wrote nothing');
+  ok(`directories: unique names and titles, explicit hints, writes destructive unless additive; ${Object.keys(additiveRuns).length} additive commands and ${Object.keys(readRuns).length} reads watched, no existing row changed and no read wrote`);
 }
 
 console.log(`\n${n} contract checks passed across ${MODULES.length} modules, ${COMMANDS.length} commands.`);

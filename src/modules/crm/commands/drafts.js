@@ -40,6 +40,7 @@ function screen(db, campaign_id, parts) {
 
 defineCommand({
   name: 'crm_draft_message',
+  additive: true,
   permission: 'sales.write',
   title: 'Draft a message', group: 'CRM', subject: 'account', scope: 'collection',
   summary: 'Write a message to a contact for a person to read, edit and send from their own mailbox. Nothing is sent.',

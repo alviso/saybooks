@@ -61,6 +61,7 @@ function writeLines(db, invoiceId, lines, loc) {
 
 defineCommand({
   name: 'solo_draft_invoice',
+  additive: true,
   permission: 'billing.write',
   title: 'Draft invoice', group: 'Invoicing', subject: 'solo_invoice', scope: 'collection',
   summary: 'Start an invoice as an editable draft. Nothing is final until you issue it.',
@@ -206,6 +207,7 @@ deferred list). Reissue corrected work as a fresh draft.`,
 
 defineCommand({
   name: 'solo_record_payment',
+  additive: true,
   permission: 'cash.write',
   title: 'Record payment', group: 'Cash', subject: 'solo_payment', scope: 'collection',
   summary: 'Money arrived. Recording it and deciding what it settles are two acts.',

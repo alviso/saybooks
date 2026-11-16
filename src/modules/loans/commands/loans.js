@@ -9,6 +9,7 @@ const KINDS = ['mortgage', 'auto', 'student', 'personal', 'other'];
 
 defineCommand({
   name: 'loan_add',
+  additive: true,
   permission: 'cash.write',
   title: 'Add a loan', group: 'Loans', subject: 'loan_loan', scope: 'collection',
   summary: 'Start a loan from the lender\'s figures: what was owed on a day, the rate, the monthly payment, escrow and the due day. The schedule, payoff date and interest are worked out from these.',

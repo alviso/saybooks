@@ -21,6 +21,7 @@ const ENTRY_LINE = {
 
 defineCommand({
   name: 'gl_record_entry',
+  additive: true,
   permission: 'billing.write',
   title: 'New adjusting entry', group: 'Month-end', subject: 'gl_entry', scope: 'collection',
   summary: 'An adjusting entry for the close: an accrual, depreciation, a correction. Balanced, dated in an open period, with a reason. An accrual can reverse itself on the 1st of the next month.',

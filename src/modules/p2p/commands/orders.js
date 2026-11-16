@@ -26,6 +26,7 @@ const RECEIVE_LINE = {
 
 defineCommand({
   name: 'p2p_create_po',
+  additive: true,
   permission: 'cash.write',
   title: 'New purchase order', group: 'Purchasing', subject: 'p2p_po', scope: 'collection',
   summary: 'Draft an order to a vendor: what, how many, at the price they quoted. A draft commits to nothing until it is issued.',

@@ -12,6 +12,7 @@ const isDate = (k, v) => { if (!/^\d{4}-\d{2}-\d{2}$/.test(String(v || ''))) thr
 
 defineCommand({
   name: 'tax_record_filing',
+  additive: true,
   permission: 'credit.authority',
   title: 'Record a filed return', group: 'Sales tax', subject: 'tax_filing', scope: 'collection',
   human_only: 'Filing a sales tax return is the person\'s signature to the tax agency.',
@@ -51,6 +52,7 @@ defineCommand({
 
 defineCommand({
   name: 'tax_record_payment',
+  additive: true,
   permission: 'cash.write',
   title: 'Record the tax payment', group: 'Sales tax', subject: 'tax_filing',
   summary: 'Record that a filed return was paid: the day, the amount and the reference. It clears the liability, and the bank reconciliation waits for the statement row that shows it.',

@@ -12,6 +12,7 @@ const read = (def) => defineCommand({ intent: 'read', scope: 'collection', group
 
 defineCommand({
   name: 'purch_add_account',
+  additive: true,
   permission: 'cash.write',
   title: 'Add account', group: 'Accounts', subject: 'purch_account', scope: 'collection',
   summary: 'Add an account to the register: a bank or savings account, a credit card, a loan, or something with a value (a house, a car).',
@@ -96,6 +97,7 @@ defineCommand({
 
 defineCommand({
   name: 'purch_record_value',
+  additive: true,
   permission: 'cash.write',
   title: 'Record a value', group: 'Accounts', subject: 'purch_account',
   summary: 'State what something without statements is worth, or what is still owed on it, on a day, with where the figure comes from: a house, a car, an outside loan.',

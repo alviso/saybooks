@@ -133,6 +133,7 @@ const ROW = {
 
 defineCommand({
   name: 'purch_import_statement',
+  additive: true,
   permission: 'cash.write',
   title: 'Import statement', group: 'Purchases', subject: 'purch_source', scope: 'collection',
   summary: 'Hand over one statement: the balances it prints and its lines as you were given them. Accepted whole, or refused with the gap named.',

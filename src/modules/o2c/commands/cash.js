@@ -9,6 +9,7 @@ const fullyUsed = (cn) => `Credit note ${cn.id} is fully used — ${H.money(cn.t
 
 defineCommand({
   name: 'o2c_record_payment',
+  additive: true,
   permission: 'cash.write',
   title: 'Record payment', group: 'Cash', subject: 'payment', scope: 'collection',
   summary: 'Record cash received from a customer.',

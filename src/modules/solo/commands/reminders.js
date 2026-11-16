@@ -38,6 +38,7 @@ function checkFacts(inv, subject, body) {
 
 defineCommand({
   name: 'solo_draft_reminder',
+  additive: true,
   permission: 'billing.write',
   title: 'Draft a reminder', group: 'Invoicing', subject: 'solo_invoice',
   summary: 'Write a payment reminder for an overdue invoice. It is a draft the person sends from their own mailbox; Saybooks never sends it.',

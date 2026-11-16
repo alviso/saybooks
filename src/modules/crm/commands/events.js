@@ -11,6 +11,7 @@ const CLOSED = (e) => `${e.id} is ${e.status}${e.status_reason ? ` (${e.status_r
 
 defineCommand({
   name: 'crm_add_event',
+  additive: true,
   permission: 'sales.write',
   title: 'Add event', group: 'CRM', subject: 'account',
   summary: 'Put something that is going to happen on an account: a workshop, a call, a deadline. With the source the date came from.',

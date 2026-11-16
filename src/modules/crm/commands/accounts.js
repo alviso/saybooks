@@ -13,6 +13,7 @@ const NARRATIVE = {
 
 defineCommand({
   name: 'crm_add_account',
+  additive: true,
   title: 'New account', group: 'CRM', subject: 'account', scope: 'collection',
   permission: 'sales.write',
   summary: 'Add a researched account to the list.',

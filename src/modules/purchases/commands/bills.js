@@ -54,6 +54,7 @@ function addBill(db, a, { at, actor }) {
 
 defineCommand({
   name: 'purch_add_bill',
+  additive: true,
   permission: 'cash.write',
   title: 'Add a bill', group: 'Purchases', subject: 'purch_bill', scope: 'collection',
   summary: 'Record a bill a vendor sent: who, their number, the dates, the amount. It waits for a person to approve paying it; nothing is paid from here.',

@@ -5,6 +5,7 @@ const api = () => MODULES.find(m => m.name === 'core').api;
 
 defineCommand({
   name: 'core_create_customer',
+  additive: true,
   permission: 'sales.write',
   title: 'New customer', group: 'Master data', subject: 'customer', scope: 'collection',
   summary: 'Create a customer we can sell to.',
@@ -57,6 +58,7 @@ authority, not contact details. Issued documents keep the bill-to block they wer
 
 defineCommand({
   name: 'core_create_item',
+  additive: true,
   permission: 'sales.write',
   title: 'New item', group: 'Master data', subject: 'item', scope: 'collection',
   summary: 'Create a sellable item.',
@@ -298,7 +300,7 @@ async function fetchLogo(url) {
 defineCommand({
   name: 'core_set_company_logo',
   permission: 'workspace.admin',
-  destructive: true, open_world: true,   // replaces the logo; fetches the https URL the person gives
+  open_world: true,   // fetches the https URL the person gives
   title: 'Company logo', group: 'Master data', subject: 'company_profile', scope: 'collection',
   summary: 'Put your logo on the invoice document. Upload a file, or give a public https URL and it is fetched once.',
   doctrine: `Branding, not a fact: the logo is NOT part of the frozen seller block, so changing it

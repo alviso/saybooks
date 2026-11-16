@@ -22,6 +22,7 @@ const ROW = {
 
 defineCommand({
   name: 'pros_import_rows',
+  additive: true,
   permission: 'sales.write',
   title: 'Import a pull', group: 'Prospects', subject: 'pros_source', scope: 'collection',
   summary: 'Hand over one pulled list: what it was bought or scraped under, and its rows. These are not accounts and never become accounts here.',

@@ -6,6 +6,7 @@ const V = require('../views.js');
 
 defineCommand({
   name: 'o2c_create_order',
+  additive: true,
   permission: 'sales.write',
   title: 'New order', group: 'Order', subject: 'order', scope: 'collection',
   summary: 'Raise a sales order directly, without a quote.',

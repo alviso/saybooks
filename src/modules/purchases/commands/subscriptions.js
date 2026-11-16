@@ -5,6 +5,7 @@ const V = require('../views.js');
 
 defineCommand({
   name: 'purch_declare_subscription',
+  additive: true,
   permission: 'cash.write',
   title: 'Declare subscription', group: 'Purchases', subject: 'purch_subscription', scope: 'collection',
   summary: 'Declare a recurring charge from one you have seen. The record then confirms it period by period.',

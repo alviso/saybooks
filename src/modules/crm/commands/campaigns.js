@@ -8,6 +8,7 @@ const CLAIM_WHY = "what this business may assert about itself is the business's 
 
 defineCommand({
   name: 'crm_create_campaign',
+  additive: true,
   title: 'New campaign', group: 'CRM', subject: 'campaign', scope: 'collection',
   permission: 'sales.write',
   summary: 'Open a campaign: a named goal that accounts will be pursued under.',

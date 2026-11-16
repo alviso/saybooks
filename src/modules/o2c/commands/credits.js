@@ -77,6 +77,7 @@ price plus the tax as invoiced — the customer gets back what they were billed,
 
 defineCommand({
   name: 'o2c_create_credit_note',
+  additive: true,
   permission: 'credit.authority',
   title: 'Credit note', group: 'Credits', subject: 'credit_note', scope: 'collection',
   summary: 'Raise a credit note: the universal downward correction.',
