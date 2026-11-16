@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "saybooks",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Books your AI keeps from your own bank statements: cards, loans, bills, receipts and the tax year.",
   "author": {
     "name": "Peter Varga",
