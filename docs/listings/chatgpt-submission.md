@@ -18,6 +18,11 @@ declares `additive: true`, and contract gate 28 watches the SQL of every additiv
 read during the suite. On the household door (the reviewer's Sample household) that is 92 tools:
 41 read-only, 11 additive writes, 40 destructive writes, one open-world (the logo fetch).
 
+Resubmitted 2026-11-16 as plugin version 0.4.1 (the hint fix deployed in 053f27a, the price line
+"Free to use." dropped from the long description after the metadata check flagged pricing). The
+dashboard's MCP rescan and metadata check both came back with no findings; the six attestations
+were ticked as before and the text below went into Additional Submission Context. In review.
+
 Justification to paste with the resubmission:
 
     Every tool sets readOnlyHint, destructiveHint and openWorldHint to true or false.
